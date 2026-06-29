@@ -5,6 +5,7 @@
     { "nombre": "Ana Lucía Rodríguez", "cedula": "V-18.222.111", "estado": "Hospitalizado", "ubicacion": "Hospital Vargas de Caracas", "fuente": "Registro hospitalario", "actualizado": "2026-06-28T08:45:00.000Z" },
     { "nombre": "Carlos Eduardo Blanco", "cedula": "V-14.555.099", "estado": "Localizado con vida", "ubicacion": "Caraballeda, Vargas", "fuente": "Reporte familiar", "actualizado": "2026-06-27T19:20:00.000Z" },
     { "nombre": "Rosa Elena Marcano", "cedula": "V-7.111.234", "estado": "Sin información reciente", "ubicacion": "Última vez: Los Corales, La Guaira", "fuente": "Lista comunitaria", "actualizado": "2026-06-26T22:00:00.000Z" },
-    { "nombre": "Pedro Antonio Silva", "cedula": "V-20.333.876", "estado": "En refugio", "ubicacion": "Refugio El Hatillo, Caracas", "fuente": "Cruz Roja", "actualizado": "2026-06-28T12:10:00.000Z" }
+    { "nombre": "Pedro Antonio Silva", "cedula": "V-20.333.876", "estado": "En refugio", "ubicacion": "Refugio El Hatillo, Caracas", "fuente": "Cruz Roja", "actualizado": "2026-06-28T12:10:00.000Z" },
+    { "nombre": "Gustavo Adolfo Rincón", "cedula": "V-5.123.456", "estado": "Fallecido", "ubicacion": "La Guaira", "fuente": "Registro oficial", "actualizado": "2026-06-27T15:00:00.000Z" }
   ]
 }

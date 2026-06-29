@@ -138,6 +138,27 @@
     }
     .conteo { color: var(--color-muted); font-size: 0.82rem; }
 
+    /* Panel de filtros colapsable en móvil (en desktop siempre visible) */
+    .filtros-summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 9px 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--color-text);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-input);
+    }
+    .filtros-summary::-webkit-details-marker { display: none; }
+    .filtros-summary::after { content: '▾'; color: var(--color-muted); float: right; }
+    .filtros-acc[open] .filtros-summary::after { content: '▴'; }
+    .filtros-acc:not([open]) .filtros-summary { margin-bottom: 12px; }
+    @media (min-width: 1024px) {
+      .filtros-summary { display: none; }
+      .filtros-acc > .filtros { display: flex !important; }
+    }
+
     /* ── Grid de tarjetas ──────────────────────────────────── */
     .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
 
@@ -314,6 +335,8 @@
     <section id="tab-donaciones" role="tabpanel" aria-labelledby="tab-btn-donaciones">
       <div id="banner" class="banner-aviso oculto" role="status"></div>
 
+      <details class="filtros-acc" open>
+        <summary class="filtros-summary">⚙️ Filtros</summary>
       <div class="filtros" role="search">
         <div class="toggles" role="group" aria-label="Filtrar por tipo">
           <button class="toggle-btn" data-tipo="todos" aria-pressed="true">Ver todos</button>
@@ -326,6 +349,7 @@
         </select>
         <p class="conteo" id="conteo" aria-live="polite"></p>
       </div>
+      </details>
 
       <div id="carga" class="estado-msg">
         <div class="spinner" aria-hidden="true"></div>
@@ -427,7 +451,8 @@
       { nombre: 'Ana Lucía Rodríguez', cedula: 'V-18.222.111', estado: 'Hospitalizado', ubicacion: 'Hospital Vargas de Caracas', fuente: 'Registro hospitalario', actualizado: '2026-06-28T08:45:00.000Z' },
       { nombre: 'Carlos Eduardo Blanco', cedula: 'V-14.555.099', estado: 'Localizado con vida', ubicacion: 'Caraballeda, Vargas', fuente: 'Reporte familiar', actualizado: '2026-06-27T19:20:00.000Z' },
       { nombre: 'Rosa Elena Marcano', cedula: 'V-7.111.234', estado: 'Sin información reciente', ubicacion: 'Última vez: Los Corales, La Guaira', fuente: 'Lista comunitaria', actualizado: '2026-06-26T22:00:00.000Z' },
-      { nombre: 'Pedro Antonio Silva', cedula: 'V-20.333.876', estado: 'En refugio', ubicacion: 'Refugio El Hatillo, Caracas', fuente: 'Cruz Roja', actualizado: '2026-06-28T12:10:00.000Z' }
+      { nombre: 'Pedro Antonio Silva', cedula: 'V-20.333.876', estado: 'En refugio', ubicacion: 'Refugio El Hatillo, Caracas', fuente: 'Cruz Roja', actualizado: '2026-06-28T12:10:00.000Z' },
+      { nombre: 'Gustavo Adolfo Rincón', cedula: 'V-5.123.456', estado: 'Fallecido', ubicacion: 'La Guaira', fuente: 'Registro oficial', actualizado: '2026-06-27T15:00:00.000Z' }
     ] };
 
     // Previene XSS: escapa todo dato externo/de usuario antes de insertarlo en el DOM.

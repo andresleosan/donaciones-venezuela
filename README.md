@@ -47,6 +47,10 @@ La app es **mobile first**, funciona **parcialmente offline** (cachea los últim
    - *Quién tiene acceso:* **Cualquier usuario**
 5. Autoriza los permisos cuando lo pida y copia la **URL `.../exec`** que te da.
 
+> ⚠️ **Al actualizar el código del Apps Script más adelante**, no crees otra "Nueva implementación" (eso genera una URL `/exec` distinta y tendrías que volver a tocar `index.html`). Usa **Implementar → Gestionar implementaciones → editar ✏️ → Versión: _Nueva versión_ → Implementar**: así la misma URL `/exec` toma el código nuevo.
+>
+> 📌 Dos errores típicos al configurar: (a) `SHEET_ID` es **solo el ID** del Sheet (lo que va entre `/d/` y `/edit`), **no** la URL `/exec` del script; (b) el `/exec` redirige internamente a `script.googleusercontent.com` — por eso el `vercel.json` incluye ese dominio en la CSP (si lo quitas, el navegador bloquea los datos y la app cae a modo demo).
+
 ### Paso 3 — Conectar `index.html`
 1. Abre `index.html` en un editor.
 2. Busca, al inicio del `<script>`, la línea `const APPS_SCRIPT_URL = ...`.
