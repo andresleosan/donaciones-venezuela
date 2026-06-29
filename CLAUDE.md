@@ -10,11 +10,13 @@ App web de respuesta a los terremotos de Venezuela (2026). La spec fuente de ver
 
 ## Arquitectura
 
-Una sola página, dos pestañas (Donaciones / Buscar familiar) conmutadas por JS sin recargar.
+Una sola página, tres pestañas (Donaciones / Buscar familiar / Agregar) conmutadas por JS sin recargar (`cambiarTab` recorre el array `TABS`).
 
 **Donaciones:** el navegador hace `fetch` a `APPS_SCRIPT_URL` (`.../exec`). El backend es Google Apps Script (`apps-script/codigo.gs`) que lee el Google Sheet `lugares`, agrupa las filas por lugar, **calcula el matching de insumos en `doGet`** y devuelve el JSON. Respaldo en 3 niveles dentro de `cargarDatos()`: fetch en vivo → cache `localStorage` (`vz_donaciones_cache`) → `DATOS_FALLBACK` embebido. Modo demo cuando `APPS_SCRIPT_URL` contiene `YOUR_SCRIPT_ID` (lee `data/ejemplo.json`).
 
 **Buscar familiar:** `POST` a `BUSCAR_WEBHOOK_URL` (webhook N8N de un tercero). Vacío o con fallo → modo demo buscando en `data/familiares-ejemplo.json` / `FAMILIARES_FALLBACK`.
+
+**Agregar:** `POST` a `APPS_SCRIPT_URL` → `doPost` en `codigo.gs` valida y hace `appendRow` al Sheet (mismas columnas A–H). El `fetch` se manda **sin cabecera `Content-Type`** a propósito: así es una petición "simple" y evita el preflight CORS (OPTIONS) que Apps Script **no** responde; el servidor lee el cuerpo crudo con `JSON.parse(e.postData.contents)`. Tras tocar `doPost` hay que **redeploy con _Nueva versión_** o el `/exec` sigue ejecutando el código viejo. Los `id` del formulario llevan prefijo `ag-` para no chocar con `id="categoria"` del filtro de Donaciones.
 
 ### Invariantes que se deben mantener sincronizados
 
