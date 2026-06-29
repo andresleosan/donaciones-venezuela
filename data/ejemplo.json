@@ -1,0 +1,93 @@
+{
+  "lugares": [
+    {
+      "tipo": "Centro",
+      "nombre": "Iglesia San José",
+      "ubicacion": "Los Corales, La Guaira",
+      "telefono": "+58 412 555 1234",
+      "necesita": [
+        {
+          "nombre": "Gasas estériles",
+          "categoria": "Medicinas",
+          "coincidencias": [
+            { "nombre_lugar": "Hospital El Algodonal", "tipo": "Hospital", "telefono": "+58 212 555 5000", "ubicacion": "El Algodonal, Caracas" }
+          ]
+        },
+        {
+          "nombre": "Agua embotellada",
+          "categoria": "Bebidas",
+          "coincidencias": [
+            { "nombre_lugar": "Refugio Naiguatá", "tipo": "Centro", "telefono": "+58 414 555 2200", "ubicacion": "Naiguatá, Vargas" }
+          ]
+        },
+        { "nombre": "Leche en polvo", "categoria": "Alimentos", "coincidencias": [] }
+      ],
+      "tiene_disponible": [
+        { "nombre": "Ropa de adulto", "categoria": "Ropa" },
+        { "nombre": "Mantas", "categoria": "Otros" }
+      ],
+      "actualizado": "2026-06-28T12:00:00.000Z"
+    },
+    {
+      "tipo": "Centro",
+      "nombre": "Refugio Naiguatá",
+      "ubicacion": "Naiguatá, Vargas",
+      "telefono": "+58 414 555 2200",
+      "necesita": [
+        { "nombre": "Colchonetas", "categoria": "Otros", "coincidencias": [] },
+        {
+          "nombre": "Pañales",
+          "categoria": "Higiene",
+          "coincidencias": [
+            { "nombre_lugar": "Comunidad El Hatillo", "tipo": "Centro", "telefono": "+58 416 555 7788", "ubicacion": "El Hatillo, Caracas" }
+          ]
+        }
+      ],
+      "tiene_disponible": [
+        { "nombre": "Agua embotellada", "categoria": "Bebidas" }
+      ],
+      "actualizado": "2026-06-28T13:30:00.000Z"
+    },
+    {
+      "tipo": "Centro",
+      "nombre": "Comunidad El Hatillo",
+      "ubicacion": "El Hatillo, Caracas",
+      "telefono": "+58 416 555 7788",
+      "necesita": [
+        { "nombre": "Arroz", "categoria": "Alimentos", "coincidencias": [] },
+        { "nombre": "Jabón", "categoria": "Higiene", "coincidencias": [] }
+      ],
+      "tiene_disponible": [
+        { "nombre": "Pañales", "categoria": "Higiene" },
+        { "nombre": "Calzado", "categoria": "Ropa" }
+      ],
+      "actualizado": "2026-06-28T09:15:00.000Z"
+    },
+    {
+      "tipo": "Hospital",
+      "nombre": "Hospital El Algodonal",
+      "ubicacion": "El Algodonal, Caracas",
+      "telefono": "+58 212 555 5000",
+      "necesita": [
+        { "nombre": "Analgésicos", "categoria": "Medicinas", "coincidencias": [] },
+        { "nombre": "Oxímetros", "categoria": "Equipos médicos", "coincidencias": [] }
+      ],
+      "tiene_disponible": [
+        { "nombre": "Gasas estériles", "categoria": "Suministros quirúrgicos" }
+      ],
+      "actualizado": "2026-06-28T14:00:00.000Z"
+    },
+    {
+      "tipo": "Hospital",
+      "nombre": "Hospital Vargas de Caracas",
+      "ubicacion": "San José, Caracas",
+      "telefono": "+58 212 555 6100 (Donaciones)",
+      "necesita": [
+        { "nombre": "Sueros fisiológicos", "categoria": "Fluidos IV", "coincidencias": [] },
+        { "nombre": "Guantes", "categoria": "Suministros quirúrgicos", "coincidencias": [] }
+      ],
+      "tiene_disponible": [],
+      "actualizado": "2026-06-28T11:45:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Logs y temporales
+*.log
+.cache/
+
+# Variables de entorno (no hay backend Node, pero por si acaso)
+.env
+.env.local
+
+# Vercel
+.vercel

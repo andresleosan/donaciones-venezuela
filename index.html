@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Conecta donadores con centros de acopio y hospitales tras los terremotos de Venezuela, y busca familiares en los registros disponibles." />
+  <title>🆘 Donaciones Venezuela</title>
+  <link rel="icon" href="data:," /><!-- evita el 404 de favicon -->
+  <link rel="apple-touch-icon" href="data:," />
+  <style>
+    /* ── Tokens de diseño ─────────────────────────────────── */
+    :root {
+      --color-emergency: #dc2626;
+      --color-centro: #1d4ed8;
+      --color-necesita: #15803d;
+      --color-disponible: #0369a1;
+      --color-match: #7c3aed;
+      --color-surface: #ffffff;
+      --color-bg: #f1f5f9;
+      --color-text: #0f172a;
+      --color-muted: #64748b;
+      --color-border: #e2e8f0;
+      --color-amber: #f59e0b;
+      --radius-input: 8px;
+      --radius-card: 12px;
+      --radius-header: 16px;
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--color-text);
+      background: var(--color-bg);
+      line-height: 1.5;
+    }
+    a { color: inherit; }
+
+    /* ── Header ────────────────────────────────────────────── */
+    header.app {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      box-shadow: var(--shadow-card);
+    }
+    .header-inner { max-width: 1200px; margin: 0 auto; padding: 12px 16px; }
+    .header-inner h1 { font-size: 1.25rem; margin: 0; }
+    .header-inner .subtitulo { color: var(--color-muted); font-size: 0.85rem; margin: 2px 0 0; }
+    .banner-emergencia {
+      margin-top: 10px;
+      background: var(--color-emergency);
+      color: #fff;
+      border-radius: var(--radius-input);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* ── Tabs ──────────────────────────────────────────────── */
+    .tabs { display: flex; gap: 6px; margin-top: 12px; }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--color-muted);
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-input);
+      cursor: pointer;
+    }
+    .tab-btn[aria-selected="true"] {
+      color: #fff;
+      background: var(--color-emergency);
+      border-color: var(--color-emergency);
+    }
+
+    /* ── Layout principal ──────────────────────────────────── */
+    main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .oculto { display: none !important; }
+
+    /* ── Banners de estado ─────────────────────────────────── */
+    .banner-aviso {
+      background: #fffbeb;
+      border: 1px solid var(--color-amber);
+      color: #92400e;
+      border-radius: var(--radius-input);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+
+    /* ── Filtros ───────────────────────────────────────────── */
+    .filtros {
+      position: sticky;
+      top: 0;
+      background: var(--color-bg);
+      padding: 10px 0;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+    .toggles { display: flex; gap: 6px; }
+    .toggle-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-input);
+      cursor: pointer;
+    }
+    .toggle-btn[aria-pressed="true"] {
+      background: var(--color-text);
+      color: #fff;
+      border-color: var(--color-text);
+    }
+    .filtros input[type="search"],
+    .filtros select {
+      width: 100%;
+      padding: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-input);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+    .conteo { color: var(--color-muted); font-size: 0.82rem; }
+
+    /* ── Grid de tarjetas ──────────────────────────────────── */
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+
+    article.card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-top: 4px solid var(--color-centro);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    article.card.hospital { border-top-color: var(--color-emergency); }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 2px 8px;
+      border-radius: var(--radius-input);
+      color: #fff;
+    }
+    .badge.tipo-centro { background: var(--color-centro); }
+    .badge.tipo-hospital { background: var(--color-emergency); }
+    .badge.cat {
+      background: var(--color-bg);
+      color: var(--color-muted);
+      font-weight: 600;
+    }
+
+    .card h3 { margin: 4px 0 0; font-size: 1.05rem; }
+    .meta { color: var(--color-muted); font-size: 0.85rem; margin: 0; }
+
+    .lista-titulo { font-size: 0.8rem; font-weight: 700; margin: 6px 0 2px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .lista-titulo.necesita { color: var(--color-necesita); }
+    .lista-titulo.disponible { color: var(--color-disponible); }
+    ul.insumos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+    ul.insumos li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.9rem; }
+
+    details.match { width: 100%; }
+    details.match > summary {
+      cursor: pointer;
+      list-style: none;
+      display: inline-block;
+      background: #f5f3ff;
+      color: var(--color-match);
+      border: 1px solid var(--color-match);
+      border-radius: var(--radius-input);
+      padding: 2px 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    details.match > summary::-webkit-details-marker { display: none; }
+    .match-body {
+      margin-top: 6px;
+      padding: 8px;
+      background: #faf5ff;
+      border: 1px solid #e9d5ff;
+      border-radius: var(--radius-input);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .match-lugar { font-size: 0.85rem; }
+    .match-lugar strong { color: var(--color-match); }
+
+    .acciones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .btn-accion {
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+      text-decoration: none;
+      padding: 9px 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: var(--radius-input);
+      border: 1px solid var(--color-border);
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    .btn-accion.wa { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .btn-accion.call { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+    .btn-accion.mini { flex: none; min-width: 0; padding: 6px 10px; font-size: 0.8rem; }
+    .timestamp { color: var(--color-muted); font-size: 0.72rem; margin-top: 4px; }
+
+    /* ── Estados (carga / vacío) ───────────────────────────── */
+    .estado-msg { text-align: center; color: var(--color-muted); padding: 32px 16px; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-emergency);
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      animation: girar 0.8s linear infinite;
+    }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    /* ── Buscar familiar ───────────────────────────────────── */
+    .intro { color: var(--color-muted); font-size: 0.9rem; }
+    .form-familiar { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+    .form-familiar input {
+      flex: 1; min-width: 200px;
+      padding: 11px;
+      font-size: 1rem;
+      font-family: inherit;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-input);
+    }
+    .form-familiar button {
+      padding: 11px 18px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: #fff;
+      background: var(--color-emergency);
+      border: none;
+      border-radius: var(--radius-input);
+      cursor: pointer;
+    }
+    .card-persona {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-necesita);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .card-persona.delicado { border-left-color: var(--color-muted); background: #f8fafc; }
+    .estado-persona { display: inline-block; font-weight: 700; font-size: 0.85rem; padding: 2px 8px; border-radius: var(--radius-input); background: #ecfdf5; color: var(--color-necesita); }
+    .estado-persona.delicado { background: #f1f5f9; color: #334155; }
+    .apoyo {
+      margin-top: 10px; padding: 8px 12px;
+      background: #f8fafc; border: 1px solid var(--color-border);
+      border-radius: var(--radius-input); font-size: 0.83rem; color: #334155;
+    }
+    .disclaimer { margin-top: 16px; color: var(--color-muted); font-size: 0.78rem; border-top: 1px solid var(--color-border); padding-top: 10px; }
+
+    /* ── Responsive ────────────────────────────────────────── */
+    @media (min-width: 640px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .header-inner h1 { font-size: 1.5rem; }
+    }
+    @media (min-width: 1024px) {
+      .grid { grid-template-columns: 1fr 1fr 1fr; }
+      .filtros { flex-direction: row; align-items: center; flex-wrap: wrap; }
+      .filtros .toggles { flex: 0 0 auto; }
+      .filtros input[type="search"] { flex: 1 1 220px; width: auto; }
+      .filtros select { flex: 0 0 220px; width: auto; }
+      .conteo { flex-basis: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app">
+    <div class="header-inner">
+      <h1>🆘 Donaciones Venezuela</h1>
+      <p class="subtitulo">Conectamos donadores con centros de acopio y hospitales</p>
+      <div class="banner-emergencia" role="alert">
+        Emergencia — Terremotos del 24 de junio de 2026 (magnitud 7.2 y 7.5). La ayuda urge.
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Secciones">
+        <button class="tab-btn" id="tab-btn-donaciones" role="tab" aria-selected="true" aria-controls="tab-donaciones">🎁 Donaciones</button>
+        <button class="tab-btn" id="tab-btn-familiar" role="tab" aria-selected="false" aria-controls="tab-familiar">🔍 Buscar familiar</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ═══ PESTAÑA DONACIONES ═══ -->
+    <section id="tab-donaciones" role="tabpanel" aria-labelledby="tab-btn-donaciones">
+      <div id="banner" class="banner-aviso oculto" role="status"></div>
+
+      <div class="filtros" role="search">
+        <div class="toggles" role="group" aria-label="Filtrar por tipo">
+          <button class="toggle-btn" data-tipo="todos" aria-pressed="true">Ver todos</button>
+          <button class="toggle-btn" data-tipo="Centro" aria-pressed="false">📍 Centros</button>
+          <button class="toggle-btn" data-tipo="Hospital" aria-pressed="false">🏥 Hospitales</button>
+        </div>
+        <input type="search" id="busqueda" placeholder="Buscar por nombre o ubicación..." aria-label="Buscar por nombre o ubicación" />
+        <select id="categoria" aria-label="Filtrar por categoría de insumo">
+          <option value="">Cualquier insumo</option>
+        </select>
+        <p class="conteo" id="conteo" aria-live="polite"></p>
+      </div>
+
+      <div id="carga" class="estado-msg">
+        <div class="spinner" aria-hidden="true"></div>
+        Cargando datos...
+      </div>
+
+      <div id="grid" class="grid" aria-live="polite"></div>
+
+      <div id="sin-resultados" class="estado-msg oculto">
+        <p>😕 No encontramos lugares con esos criterios.</p>
+        <button class="btn-accion mini" id="btn-ver-todos">Ver todos</button>
+      </div>
+    </section>
+
+    <!-- ═══ PESTAÑA BUSCAR FAMILIAR ═══ -->
+    <section id="tab-familiar" role="tabpanel" aria-labelledby="tab-btn-familiar" class="oculto">
+      <p class="intro">
+        Busca el nombre o cédula de tu familiar en los registros disponibles.
+        Esta herramienta consulta fuentes públicas y no garantiza información completa.
+      </p>
+
+      <div id="familiar-banner" class="banner-aviso oculto" role="status"></div>
+
+      <form class="form-familiar" id="form-familiar">
+        <input type="text" id="familiar-query" placeholder="Nombre completo o cédula (ej: V-12345678)" aria-label="Nombre completo o cédula" autocomplete="off" />
+        <button type="submit">🔍 Buscar</button>
+      </form>
+
+      <div id="familiar-carga" class="estado-msg oculto">
+        <div class="spinner" aria-hidden="true"></div>
+        Buscando...
+      </div>
+
+      <div id="familiar-resultados" aria-live="polite"></div>
+
+      <p class="disclaimer">
+        La información proviene de fuentes de terceros y puede no estar actualizada al 100 %.
+        Ante una emergencia médica, contacta a los servicios de emergencia locales.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    'use strict';
+
+    // ── CONFIGURACIÓN ─────────────────────────────────────────
+    // Pega aquí la URL .../exec de tu Google Apps Script. Mientras contenga
+    // "YOUR_SCRIPT_ID" la app corre en MODO DEMO con datos de ejemplo.
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+
+    // TODO: el compañero comparte la URL del webhook de N8N mañana; reemplazar aquí.
+    // Mientras esté vacía, "Buscar familiar" usa datos mock (modo demo).
+    const BUSCAR_WEBHOOK_URL = "";
+    // TODO: confirmar con compañero si el webhook requiere auth y cómo proteger la key.
+    const BUSCAR_WEBHOOK_TOKEN = ''; // NO hardcodear secretos: index.html es código público.
+
+    const CACHE_KEY = 'vz_donaciones_cache';
+    const WA_MENSAJE = 'Hola, vi en la app de Donaciones Venezuela que necesitan ayuda. ¿Cómo puedo contribuir?';
+    const LINEA_APOYO = 'Línea de apoyo psicológico: 0800-AYUDA (ejemplo — sustituir por la línea oficial vigente).';
+
+    // Datos de respaldo (3 centros + 2 hospitales) con matching ya calculado:
+    // permiten que la app funcione incluso abierta directamente con file:// (sin servidor).
+    const DATOS_FALLBACK = {
+      lugares: [
+        { tipo: 'Centro', nombre: 'Iglesia San José', ubicacion: 'Los Corales, La Guaira', telefono: '+58 412 555 1234',
+          necesita: [
+            { nombre: 'Gasas estériles', categoria: 'Medicinas', coincidencias: [ { nombre_lugar: 'Hospital El Algodonal', tipo: 'Hospital', telefono: '+58 212 555 5000', ubicacion: 'El Algodonal, Caracas' } ] },
+            { nombre: 'Agua embotellada', categoria: 'Bebidas', coincidencias: [ { nombre_lugar: 'Refugio Naiguatá', tipo: 'Centro', telefono: '+58 414 555 2200', ubicacion: 'Naiguatá, Vargas' } ] },
+            { nombre: 'Leche en polvo', categoria: 'Alimentos', coincidencias: [] }
+          ],
+          tiene_disponible: [ { nombre: 'Ropa de adulto', categoria: 'Ropa' }, { nombre: 'Mantas', categoria: 'Otros' } ],
+          actualizado: '2026-06-28T12:00:00.000Z' },
+        { tipo: 'Centro', nombre: 'Refugio Naiguatá', ubicacion: 'Naiguatá, Vargas', telefono: '+58 414 555 2200',
+          necesita: [
+            { nombre: 'Colchonetas', categoria: 'Otros', coincidencias: [] },
+            { nombre: 'Pañales', categoria: 'Higiene', coincidencias: [ { nombre_lugar: 'Comunidad El Hatillo', tipo: 'Centro', telefono: '+58 416 555 7788', ubicacion: 'El Hatillo, Caracas' } ] }
+          ],
+          tiene_disponible: [ { nombre: 'Agua embotellada', categoria: 'Bebidas' } ],
+          actualizado: '2026-06-28T13:30:00.000Z' },
+        { tipo: 'Centro', nombre: 'Comunidad El Hatillo', ubicacion: 'El Hatillo, Caracas', telefono: '+58 416 555 7788',
+          necesita: [ { nombre: 'Arroz', categoria: 'Alimentos', coincidencias: [] }, { nombre: 'Jabón', categoria: 'Higiene', coincidencias: [] } ],
+          tiene_disponible: [ { nombre: 'Pañales', categoria: 'Higiene' }, { nombre: 'Calzado', categoria: 'Ropa' } ],
+          actualizado: '2026-06-28T09:15:00.000Z' },
+        { tipo: 'Hospital', nombre: 'Hospital El Algodonal', ubicacion: 'El Algodonal, Caracas', telefono: '+58 212 555 5000',
+          necesita: [ { nombre: 'Analgésicos', categoria: 'Medicinas', coincidencias: [] }, { nombre: 'Oxímetros', categoria: 'Equipos médicos', coincidencias: [] } ],
+          tiene_disponible: [ { nombre: 'Gasas estériles', categoria: 'Suministros quirúrgicos' } ],
+          actualizado: '2026-06-28T14:00:00.000Z' },
+        { tipo: 'Hospital', nombre: 'Hospital Vargas de Caracas', ubicacion: 'San José, Caracas', telefono: '+58 212 555 6100 (Donaciones)',
+          necesita: [ { nombre: 'Sueros fisiológicos', categoria: 'Fluidos IV', coincidencias: [] }, { nombre: 'Guantes', categoria: 'Suministros quirúrgicos', coincidencias: [] } ],
+          tiene_disponible: [],
+          actualizado: '2026-06-28T11:45:00.000Z' }
+      ]
+    };
+
+    // Respaldo para "Buscar familiar" (cuando file:// impide leer el JSON mock).
+    const FAMILIARES_FALLBACK = { registros: [
+      { nombre: 'María Pérez González', cedula: 'V-12.345.678', estado: 'Localizado con vida', ubicacion: 'Refugio Naiguatá, Vargas', fuente: 'Lista Cruz Roja', actualizado: '2026-06-28T10:00:00.000Z' },
+      { nombre: 'José Rafael Mendoza', cedula: 'V-9.876.543', estado: 'En refugio', ubicacion: 'Refugio Maiquetía, La Guaira', fuente: 'Protección Civil', actualizado: '2026-06-28T11:30:00.000Z' },
+      { nombre: 'Ana Lucía Rodríguez', cedula: 'V-18.222.111', estado: 'Hospitalizado', ubicacion: 'Hospital Vargas de Caracas', fuente: 'Registro hospitalario', actualizado: '2026-06-28T08:45:00.000Z' },
+      { nombre: 'Carlos Eduardo Blanco', cedula: 'V-14.555.099', estado: 'Localizado con vida', ubicacion: 'Caraballeda, Vargas', fuente: 'Reporte familiar', actualizado: '2026-06-27T19:20:00.000Z' },
+      { nombre: 'Rosa Elena Marcano', cedula: 'V-7.111.234', estado: 'Sin información reciente', ubicacion: 'Última vez: Los Corales, La Guaira', fuente: 'Lista comunitaria', actualizado: '2026-06-26T22:00:00.000Z' },
+      { nombre: 'Pedro Antonio Silva', cedula: 'V-20.333.876', estado: 'En refugio', ubicacion: 'Refugio El Hatillo, Caracas', fuente: 'Cruz Roja', actualizado: '2026-06-28T12:10:00.000Z' }
+    ] };
+
+    // Previene XSS: escapa todo dato externo/de usuario antes de insertarlo en el DOM.
+    function escaparHTML(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    const e = escaparHTML; // alias corto para las plantillas
+
+    // minúsculas + sin acentos + trim (igual criterio que el Apps Script).
+    function normalizar(t) {
+      return String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    }
+
+    // ── ESTADO ────────────────────────────────────────────────
+    const estado = {
+      lugares: [],
+      filtroTipo: 'todos',
+      filtroCategoria: '',
+      busqueda: ''
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+
+    // ── TABS ──────────────────────────────────────────────────
+    function cambiarTab(destino) {
+      const esDon = destino === 'donaciones';
+      $('#tab-donaciones').classList.toggle('oculto', !esDon);
+      $('#tab-familiar').classList.toggle('oculto', esDon);
+      $('#tab-btn-donaciones').setAttribute('aria-selected', String(esDon));
+      $('#tab-btn-familiar').setAttribute('aria-selected', String(!esDon));
+    }
+
+    // ── FETCH Y CACHE (donaciones) ────────────────────────────
+    function guardarCache(lugares) {
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(lugares)); } catch (err) { /* sin localStorage: ignorar */ }
+    }
+    function leerCache() {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (err) { return null; }
+    }
+
+    async function cargarDatos() {
+      const demo = APPS_SCRIPT_URL.includes('YOUR_SCRIPT_ID');
+      // En file:// el navegador bloquea leer JSON local (CORS): usamos el respaldo embebido directo.
+      const esFile = location.protocol === 'file:';
+      try {
+        if (demo && esFile) { estado.lugares = DATOS_FALLBACK.lugares; guardarCache(estado.lugares); mostrarBanner('demo'); return; }
+        const url = demo ? 'data/ejemplo.json' : APPS_SCRIPT_URL;
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (data && data.error) throw new Error(data.error);
+        estado.lugares = (data && data.lugares) || [];
+        guardarCache(estado.lugares);
+        mostrarBanner(demo ? 'demo' : null);
+      } catch (err) {
+        const cache = leerCache();
+        if (cache && cache.length) {
+          estado.lugares = cache;
+          mostrarBanner('offline');
+        } else {
+          estado.lugares = DATOS_FALLBACK.lugares;
+          mostrarBanner('demo');
+        }
+      } finally {
+        $('#carga').classList.add('oculto');
+        poblarCategorias();
+        aplicarFiltros();
+      }
+    }
+
+    function mostrarBanner(tipo) {
+      const b = $('#banner');
+      if (!tipo) { b.classList.add('oculto'); return; }
+      b.textContent = tipo === 'offline'
+        ? 'Sin conexión. Mostrando los últimos datos guardados.'
+        : 'Modo demo — datos de ejemplo, no reales. Configura el Apps Script para ver datos en vivo.';
+      b.classList.remove('oculto');
+    }
+
+    // ── RENDER (donaciones) ───────────────────────────────────
+    function tarjetaLugar(lugar) {
+      const esHosp = normalizar(lugar.tipo).indexOf('hospital') === 0;
+      const necesita = (lugar.necesita || []).map(itemNecesita).join('');
+      const disponible = (lugar.tiene_disponible || []).map(itemDisponible).join('');
+
+      return `
+        <article class="card ${esHosp ? 'hospital' : ''}">
+          <div>
+            <span class="badge ${esHosp ? 'tipo-hospital' : 'tipo-centro'}">${esHosp ? 'HOSPITAL' : 'CENTRO'}</span>
+          </div>
+          <h3>${e(lugar.nombre)}</h3>
+          <p class="meta">📍 ${e(lugar.ubicacion)}</p>
+          <p class="meta">📞 ${e(lugar.telefono)}</p>
+          ${necesita ? `<p class="lista-titulo necesita">Necesita</p><ul class="insumos">${necesita}</ul>` : ''}
+          ${disponible ? `<p class="lista-titulo disponible">Tiene disponible</p><ul class="insumos">${disponible}</ul>` : ''}
+          <div class="acciones">
+            <a class="btn-accion call" href="${telHref(lugar.telefono)}" aria-label="Llamar a ${e(lugar.nombre)}">📞 Llamar</a>
+            <a class="btn-accion wa" href="${waHref(lugar.telefono)}" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp a ${e(lugar.nombre)}">💬 WhatsApp</a>
+          </div>
+          <p class="timestamp">Actualizado: ${e(fecha(lugar.actualizado))}</p>
+        </article>`;
+    }
+
+    function itemNecesita(n) {
+      const coincidencias = (n.coincidencias || []);
+      let badge = '';
+      if (coincidencias.length) {
+        const cuerpo = coincidencias.map(bloqueCoincidencia).join('');
+        badge = `<details class="match"><summary>🔗 Disponible en ${coincidencias.length} lugar${coincidencias.length > 1 ? 'es' : ''}</summary><div class="match-body">${cuerpo}</div></details>`;
+      }
+      return `<li><span>🟢 ${e(n.nombre)}</span> <span class="badge cat">${e(n.categoria)}</span> ${badge}</li>`;
+    }
+
+    function itemDisponible(d) {
+      return `<li><span>🔵 ${e(d.nombre)}</span> <span class="badge cat">${e(d.categoria)}</span></li>`;
+    }
+
+    // Contacto dirigido al lugar que TIENE el insumo (no al que lo necesita).
+    function bloqueCoincidencia(c) {
+      return `
+        <div class="match-lugar">
+          <strong>${e(c.nombre_lugar)}</strong> (${e(c.tipo)}) — ${e(c.ubicacion)}
+          <div class="meta">📞 ${e(c.telefono)}</div>
+          <div class="acciones">
+            <a class="btn-accion call mini" href="${telHref(c.telefono)}" aria-label="Llamar a ${e(c.nombre_lugar)}">📞 Llamar</a>
+            <a class="btn-accion wa mini" href="${waHref(c.telefono)}" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp a ${e(c.nombre_lugar)}">💬 WhatsApp</a>
+          </div>
+        </div>`;
+    }
+
+    function render(lugares) {
+      const grid = $('#grid');
+      const vacio = $('#sin-resultados');
+      if (!lugares.length) {
+        grid.innerHTML = '';
+        vacio.classList.remove('oculto');
+        return;
+      }
+      vacio.classList.add('oculto');
+      grid.innerHTML = lugares.map(tarjetaLugar).join('');
+    }
+
+    // ── FILTROS ───────────────────────────────────────────────
+    function lugarTieneCategoria(lugar, cat) {
+      if (!cat) return true;
+      const todos = (lugar.necesita || []).concat(lugar.tiene_disponible || []);
+      return todos.some((i) => i.categoria === cat);
+    }
+
+    function aplicarFiltros() {
+      const q = normalizar(estado.busqueda);
+      const filtrados = estado.lugares.filter((l) => {
+        if (estado.filtroTipo !== 'todos' && normalizar(l.tipo).indexOf(normalizar(estado.filtroTipo)) !== 0) return false;
+        if (!lugarTieneCategoria(l, estado.filtroCategoria)) return false;
+        if (q && !(normalizar(l.nombre).includes(q) || normalizar(l.ubicacion).includes(q))) return false;
+        return true;
+      });
+      render(filtrados);
+      $('#conteo').textContent = `Mostrando ${filtrados.length} de ${estado.lugares.length} lugares`;
+    }
+
+    function poblarCategorias() {
+      const set = new Set();
+      estado.lugares.forEach((l) => {
+        (l.necesita || []).concat(l.tiene_disponible || []).forEach((i) => { if (i.categoria) set.add(i.categoria); });
+      });
+      const sel = $('#categoria');
+      sel.innerHTML = '<option value="">Cualquier insumo</option>';
+      Array.from(set).sort().forEach((cat) => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
+      });
+    }
+
+    let debounceTimer = null;
+    function onBusqueda(valor) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => { estado.busqueda = valor; aplicarFiltros(); }, 300);
+    }
+
+    // ── CONTACTO ──────────────────────────────────────────────
+    function soloDigitos(tel) { return String(tel || '').replace(/[^0-9]/g, ''); }
+    function telHref(tel) { return 'tel:' + String(tel || '').replace(/[^0-9+]/g, ''); }
+    function waHref(tel) { return 'https://wa.me/' + soloDigitos(tel) + '?text=' + encodeURIComponent(WA_MENSAJE); }
+    function fecha(iso) {
+      if (!iso) return 'sin fecha';
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    // ── BUSCAR FAMILIAR ───────────────────────────────────────
+    async function cargarFamiliaresMock() {
+      // En file:// el fetch local falla por CORS; devolvemos el respaldo embebido sin intentarlo.
+      if (location.protocol === 'file:') return FAMILIARES_FALLBACK.registros;
+      try {
+        const resp = await fetch('data/familiares-ejemplo.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        return data.registros || (Array.isArray(data) ? data : (data.resultados || []));
+      } catch (err) {
+        return FAMILIARES_FALLBACK.registros;
+      }
+    }
+
+    async function buscarFamiliar(query) {
+      query = (query || '').trim();
+      if (!query) return;
+      $('#familiar-carga').classList.remove('oculto');
+      $('#familiar-resultados').innerHTML = '';
+      const demo = !BUSCAR_WEBHOOK_URL;
+      try {
+        if (demo) throw new Error('demo');
+        const resp = await fetch(BUSCAR_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query })
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        mostrarFamiliarBanner(false);
+        renderFamiliar(data.resultados || [], !!(data.encontrado) || (data.resultados || []).length > 0);
+      } catch (err) {
+        // Modo demo / sin conexión: buscar en el mock local.
+        const regs = await cargarFamiliaresMock();
+        const qn = normalizar(query);
+        const qd = query.replace(/[^0-9]/g, '');
+        const matches = regs.filter((r) =>
+          normalizar(r.nombre).includes(qn) || (qd && soloDigitos(r.cedula).includes(qd)));
+        mostrarFamiliarBanner(true);
+        renderFamiliar(matches, matches.length > 0);
+      } finally {
+        $('#familiar-carga').classList.add('oculto');
+      }
+    }
+
+    function mostrarFamiliarBanner(demo) {
+      const b = $('#familiar-banner');
+      if (!demo) { b.classList.add('oculto'); return; }
+      b.textContent = 'Modo demo — resultados de ejemplo, no reales.';
+      b.classList.remove('oculto');
+    }
+
+    function esDelicado(estadoTxt) {
+      const n = normalizar(estadoTxt);
+      return n.indexOf('fallec') !== -1;
+    }
+
+    function renderFamiliar(resultados, encontrado) {
+      const cont = $('#familiar-resultados');
+      if (!encontrado || !resultados.length) {
+        cont.innerHTML = `<div class="estado-msg"><p>No encontramos a esta persona en los registros disponibles.</p>
+          <p>Esto no significa que no esté bien — muchas listas se actualizan constantemente.
+          Intenta de nuevo más tarde o revisa la ortografía del nombre.</p></div>`;
+        return;
+      }
+      cont.innerHTML = resultados.map(tarjetaPersona).join('');
+    }
+
+    function tarjetaPersona(p) {
+      const delicado = esDelicado(p.estado);
+      const apoyo = delicado ? `<div class="apoyo">Sentimos profundamente esta noticia. ${e(LINEA_APOYO)}</div>` : '';
+      return `
+        <article class="card-persona ${delicado ? 'delicado' : ''}">
+          <h3>${e(p.nombre)}</h3>
+          <p class="meta">Cédula: ${e(p.cedula)}</p>
+          <p><span class="estado-persona ${delicado ? 'delicado' : ''}">${e(p.estado)}</span></p>
+          ${p.ubicacion ? `<p class="meta">📍 ${e(p.ubicacion)}</p>` : ''}
+          ${p.fuente ? `<p class="meta">Fuente: ${e(p.fuente)}</p>` : ''}
+          <p class="timestamp">Actualizado: ${e(fecha(p.actualizado))}</p>
+          ${apoyo}
+        </article>`;
+    }
+
+    // ── INIT ──────────────────────────────────────────────────
+    function init() {
+      // Tabs
+      $('#tab-btn-donaciones').addEventListener('click', () => cambiarTab('donaciones'));
+      $('#tab-btn-familiar').addEventListener('click', () => cambiarTab('familiar'));
+
+      // Filtros: tipo
+      document.querySelectorAll('.toggle-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          estado.filtroTipo = btn.dataset.tipo;
+          document.querySelectorAll('.toggle-btn').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+          aplicarFiltros();
+        });
+      });
+      // Filtros: categoría + búsqueda
+      $('#categoria').addEventListener('change', (ev) => { estado.filtroCategoria = ev.target.value; aplicarFiltros(); });
+      $('#busqueda').addEventListener('input', (ev) => onBusqueda(ev.target.value));
+      $('#btn-ver-todos').addEventListener('click', () => {
+        estado.filtroTipo = 'todos'; estado.filtroCategoria = ''; estado.busqueda = '';
+        $('#busqueda').value = ''; $('#categoria').value = '';
+        document.querySelectorAll('.toggle-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === 'todos')));
+        aplicarFiltros();
+      });
+
+      // Buscar familiar (submit = botón o Enter)
+      $('#form-familiar').addEventListener('submit', (ev) => { ev.preventDefault(); buscarFamiliar($('#familiar-query').value); });
+
+      cargarDatos();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
