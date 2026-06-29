@@ -111,3 +111,34 @@ function leerLugares() {
 
   return lista;
 }
+
+// ── ESCRITURA (POST): alta de un lugar/insumo desde la app ────────────────
+function doPost(e) {
+  try {
+    var datos = JSON.parse(e.postData.contents);
+
+    // Campos obligatorios.
+    if (!datos.tipo || !datos.nombre || !datos.insumo || !datos.estado) {
+      throw new Error('Faltan campos obligatorios: tipo, nombre, insumo, estado');
+    }
+
+    var hoja = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+    if (!hoja) throw new Error('No existe la hoja "' + SHEET_NAME + '" en el Sheet indicado');
+
+    // Columnas A..H: Tipo, Nombre, Ubicacion, Telefono, Insumo, Categoria, Estado, Actualizado.
+    hoja.appendRow([
+      String(datos.tipo).trim(),
+      String(datos.nombre).trim(),
+      String(datos.ubicacion || '').trim(),
+      String(datos.telefono || '').trim(),
+      String(datos.insumo).trim(),
+      String(datos.categoria || 'Otros').trim(),
+      String(datos.estado).trim(),
+      new Date().toISOString()
+    ]);
+
+    return responder({ exito: true, mensaje: 'Lugar/insumo agregado exitosamente' });
+  } catch (err) {
+    return responder({ exito: false, error: String(err && err.message ? err.message : err) });
+  }
+}

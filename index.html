@@ -313,6 +313,46 @@
       .filtros select { flex: 0 0 220px; width: auto; }
       .conteo { flex-basis: 100%; }
     }
+
+    /* ── Agregar (formulario) ──────────────────────────────── */
+    .agregar-container { max-width: 600px; margin: 0 auto; }
+    .agregar-container h2 { font-size: 1.3rem; margin: 0 0 6px; }
+    .agregar-help { color: var(--color-muted); font-size: 0.9rem; margin: 0 0 20px; }
+    .form-group { display: flex; flex-direction: column; margin-bottom: 14px; }
+    .form-group label { font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 11px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--color-text);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-input);
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--color-emergency);
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+    }
+    .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-submit, .btn-reset {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: var(--radius-input);
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+    }
+    .btn-submit { background: var(--color-emergency); color: #fff; border-color: var(--color-emergency); }
+    .btn-reset { background: var(--color-bg); color: var(--color-text); }
+    .form-mensaje { margin-top: 16px; padding: 11px; border-radius: var(--radius-input); font-size: 0.92rem; text-align: center; }
+    .form-mensaje.exito { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .form-mensaje.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
   </style>
 </head>
 <body>
@@ -326,6 +366,7 @@
       <nav class="tabs" role="tablist" aria-label="Secciones">
         <button class="tab-btn" id="tab-btn-donaciones" role="tab" aria-selected="true" aria-controls="tab-donaciones">🎁 Donaciones</button>
         <button class="tab-btn" id="tab-btn-familiar" role="tab" aria-selected="false" aria-controls="tab-familiar">🔍 Buscar familiar</button>
+        <button class="tab-btn" id="tab-btn-agregar" role="tab" aria-selected="false" aria-controls="tab-agregar">➕ Agregar</button>
       </nav>
     </div>
   </header>
@@ -389,6 +430,78 @@
         La información proviene de fuentes de terceros y puede no estar actualizada al 100 %.
         Ante una emergencia médica, contacta a los servicios de emergencia locales.
       </p>
+    </section>
+
+    <!-- ═══ PESTAÑA AGREGAR ═══ -->
+    <section id="tab-agregar" role="tabpanel" aria-labelledby="tab-btn-agregar" class="oculto">
+      <div class="agregar-container">
+        <h2>Agregar un lugar o insumo</h2>
+        <p class="agregar-help">Reporta un nuevo centro, hospital o insumo. Se guarda directo en la base y aparece en Donaciones al recargar.</p>
+
+        <form id="form-agregar" autocomplete="off">
+          <div class="form-group">
+            <label for="ag-tipo">* Tipo de lugar</label>
+            <select id="ag-tipo" required>
+              <option value="">— Selecciona —</option>
+              <option value="Centro">Centro de acopio</option>
+              <option value="Hospital">Hospital</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="ag-nombre">* Nombre del lugar</label>
+            <input type="text" id="ag-nombre" placeholder="Ej: Iglesia San José" required />
+          </div>
+
+          <div class="form-group">
+            <label for="ag-ubicacion">Ubicación / sector</label>
+            <input type="text" id="ag-ubicacion" placeholder="Ej: Los Corales, La Guaira" />
+          </div>
+
+          <div class="form-group">
+            <label for="ag-telefono">Teléfono de contacto</label>
+            <input type="tel" id="ag-telefono" placeholder="Ej: +58 412 555 1234" />
+          </div>
+
+          <div class="form-group">
+            <label for="ag-insumo">* Insumo (qué necesita o tiene)</label>
+            <input type="text" id="ag-insumo" placeholder="Ej: Gasas estériles, Agua embotellada…" required />
+          </div>
+
+          <div class="form-group">
+            <label for="ag-categoria">Categoría</label>
+            <select id="ag-categoria">
+              <option value="Otros">Otros</option>
+              <option value="Alimentos">Alimentos</option>
+              <option value="Bebidas">Bebidas</option>
+              <option value="Medicinas">Medicinas</option>
+              <option value="Higiene">Higiene</option>
+              <option value="Ropa">Ropa</option>
+              <option value="Equipos médicos">Equipos médicos</option>
+              <option value="Suministros quirúrgicos">Suministros quirúrgicos</option>
+              <option value="Fluidos IV">Fluidos IV</option>
+              <option value="Herramientas">Herramientas</option>
+              <option value="Mascotas">Mascotas</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="ag-estado">* ¿Lo necesita o lo tiene disponible?</label>
+            <select id="ag-estado" required>
+              <option value="">— Selecciona —</option>
+              <option value="Necesita">Necesita</option>
+              <option value="Tiene disponible">Tiene disponible</option>
+            </select>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-submit">Agregar</button>
+            <button type="reset" class="btn-reset">Limpiar</button>
+          </div>
+
+          <div id="agregar-mensaje" class="form-mensaje oculto" role="status"></div>
+        </form>
+      </div>
     </section>
   </main>
 
@@ -482,12 +595,12 @@
     const $ = (sel) => document.querySelector(sel);
 
     // ── TABS ──────────────────────────────────────────────────
+    const TABS = ['donaciones', 'familiar', 'agregar'];
     function cambiarTab(destino) {
-      const esDon = destino === 'donaciones';
-      $('#tab-donaciones').classList.toggle('oculto', !esDon);
-      $('#tab-familiar').classList.toggle('oculto', esDon);
-      $('#tab-btn-donaciones').setAttribute('aria-selected', String(esDon));
-      $('#tab-btn-familiar').setAttribute('aria-selected', String(!esDon));
+      TABS.forEach((t) => {
+        $('#tab-' + t).classList.toggle('oculto', t !== destino);
+        $('#tab-btn-' + t).setAttribute('aria-selected', String(t === destino));
+      });
     }
 
     // ── FETCH Y CACHE (donaciones) ────────────────────────────
@@ -736,11 +849,53 @@
         </article>`;
     }
 
+    // ── AGREGAR (alta de lugar/insumo) ────────────────────────
+    async function enviarAgregar(ev) {
+      ev.preventDefault();
+      const datos = {
+        tipo: $('#ag-tipo').value,
+        nombre: $('#ag-nombre').value.trim(),
+        ubicacion: $('#ag-ubicacion').value.trim(),
+        telefono: $('#ag-telefono').value.trim(),
+        insumo: $('#ag-insumo').value.trim(),
+        categoria: $('#ag-categoria').value,
+        estado: $('#ag-estado').value
+      };
+      const msg = $('#agregar-mensaje');
+      msg.className = 'form-mensaje';        // visible, neutro
+      msg.textContent = 'Enviando…';
+
+      if (APPS_SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
+        msg.className = 'form-mensaje error';
+        msg.textContent = '❌ Modo demo: configura APPS_SCRIPT_URL para poder guardar.';
+        return;
+      }
+      try {
+        // Sin cabecera Content-Type: así es una petición "simple" y evita el
+        // preflight CORS (OPTIONS) que Apps Script no responde. doPost lee el
+        // cuerpo crudo con JSON.parse(e.postData.contents), así que funciona igual.
+        const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(datos) });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const res = await resp.json();
+        if (res.exito) {
+          msg.className = 'form-mensaje exito';
+          msg.textContent = '✅ ' + (res.mensaje || 'Agregado.');
+          $('#form-agregar').reset();
+          setTimeout(cargarDatos, 1500);     // refresca Donaciones con el nuevo dato
+        } else {
+          msg.className = 'form-mensaje error';
+          msg.textContent = '❌ Error: ' + (res.error || 'no se pudo guardar');
+        }
+      } catch (err) {
+        msg.className = 'form-mensaje error';
+        msg.textContent = '❌ Error de conexión: ' + err.message;
+      }
+    }
+
     // ── INIT ──────────────────────────────────────────────────
     function init() {
       // Tabs
-      $('#tab-btn-donaciones').addEventListener('click', () => cambiarTab('donaciones'));
-      $('#tab-btn-familiar').addEventListener('click', () => cambiarTab('familiar'));
+      TABS.forEach((t) => $('#tab-btn-' + t).addEventListener('click', () => cambiarTab(t)));
 
       // Filtros: tipo
       document.querySelectorAll('.toggle-btn').forEach((btn) => {
@@ -762,6 +917,9 @@
 
       // Buscar familiar (submit = botón o Enter)
       $('#form-familiar').addEventListener('submit', (ev) => { ev.preventDefault(); buscarFamiliar($('#familiar-query').value); });
+
+      // Agregar lugar/insumo (submit)
+      $('#form-agregar').addEventListener('submit', enviarAgregar);
 
       cargarDatos();
     }
