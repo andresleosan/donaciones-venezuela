@@ -9,6 +9,12 @@
         {
           "nombre": "Gasas estériles",
           "categoria": "Medicinas",
+          "cantidadNecesaria": 80,
+          "cantidadRecibida": 18,
+          "porcentaje": 23,
+          "urgencia": "Crítico",
+          "unidad": "paquetes",
+          "yaCubierto": false,
           "coincidencias": [
             { "nombre_lugar": "Hospital El Algodonal", "tipo": "Hospital", "telefono": "+58 212 555 5000", "ubicacion": "El Algodonal, Caracas" }
           ]
@@ -16,11 +22,30 @@
         {
           "nombre": "Agua embotellada",
           "categoria": "Bebidas",
+          "cantidadNecesaria": 100,
+          "cantidadRecibida": 12,
+          "porcentaje": 12,
+          "urgencia": "Crítico",
+          "unidad": "cajas",
+          "yaCubierto": false,
           "coincidencias": [
             { "nombre_lugar": "Refugio Naiguatá", "tipo": "Centro", "telefono": "+58 414 555 2200", "ubicacion": "Naiguatá, Vargas" }
           ]
         },
-        { "nombre": "Leche en polvo", "categoria": "Alimentos", "coincidencias": [] }
+        {
+          "nombre": "Leche en polvo",
+          "categoria": "Alimentos",
+          "cantidadNecesaria": 50,
+          "cantidadRecibida": 22,
+          "porcentaje": 44,
+          "urgencia": "Moderado",
+          "unidad": "latas",
+          "yaCubierto": false,
+          "coincidencias": []
+        }
+      ],
+      "cubiertos": [
+        { "nombre": "Mantas", "categoria": "Otros", "cantidadNecesaria": 60, "cantidadRecibida": 60, "unidad": "unidades", "yaCubierto": true }
       ],
       "tiene_disponible": [
         { "nombre": "Ropa de adulto", "categoria": "Ropa" },
@@ -34,14 +59,33 @@
       "ubicacion": "Naiguatá, Vargas",
       "telefono": "+58 414 555 2200",
       "necesita": [
-        { "nombre": "Colchonetas", "categoria": "Otros", "coincidencias": [] },
+        {
+          "nombre": "Colchonetas",
+          "categoria": "Otros",
+          "cantidadNecesaria": 70,
+          "cantidadRecibida": 31,
+          "porcentaje": 44,
+          "urgencia": "Moderado",
+          "unidad": "unidades",
+          "yaCubierto": false,
+          "coincidencias": []
+        },
         {
           "nombre": "Pañales",
           "categoria": "Higiene",
+          "cantidadNecesaria": 120,
+          "cantidadRecibida": 74,
+          "porcentaje": 62,
+          "urgencia": "Normal",
+          "unidad": "paquetes",
+          "yaCubierto": false,
           "coincidencias": [
             { "nombre_lugar": "Comunidad El Hatillo", "tipo": "Centro", "telefono": "+58 416 555 7788", "ubicacion": "El Hatillo, Caracas" }
           ]
         }
+      ],
+      "cubiertos": [
+        { "nombre": "Agua embotellada", "categoria": "Bebidas", "cantidadNecesaria": 45, "cantidadRecibida": 45, "unidad": "cajas", "yaCubierto": true }
       ],
       "tiene_disponible": [
         { "nombre": "Agua embotellada", "categoria": "Bebidas" }
@@ -54,8 +98,28 @@
       "ubicacion": "El Hatillo, Caracas",
       "telefono": "+58 416 555 7788",
       "necesita": [
-        { "nombre": "Arroz", "categoria": "Alimentos", "coincidencias": [] },
-        { "nombre": "Jabón", "categoria": "Higiene", "coincidencias": [] }
+        {
+          "nombre": "Arroz",
+          "categoria": "Alimentos",
+          "cantidadNecesaria": 90,
+          "cantidadRecibida": 48,
+          "porcentaje": 53,
+          "urgencia": "Moderado",
+          "unidad": "kg",
+          "yaCubierto": false,
+          "coincidencias": []
+        },
+        {
+          "nombre": "Jabón",
+          "categoria": "Higiene",
+          "cantidadNecesaria": 75,
+          "cantidadRecibida": 18,
+          "porcentaje": 24,
+          "urgencia": "Crítico",
+          "unidad": "unidades",
+          "yaCubierto": false,
+          "coincidencias": []
+        }
       ],
       "tiene_disponible": [
         { "nombre": "Pañales", "categoria": "Higiene" },
@@ -69,8 +133,31 @@
       "ubicacion": "El Algodonal, Caracas",
       "telefono": "+58 212 555 5000",
       "necesita": [
-        { "nombre": "Analgésicos", "categoria": "Medicinas", "coincidencias": [] },
-        { "nombre": "Oxímetros", "categoria": "Equipos médicos", "coincidencias": [] }
+        {
+          "nombre": "Analgésicos",
+          "categoria": "Medicinas",
+          "cantidadNecesaria": 200,
+          "cantidadRecibida": 86,
+          "porcentaje": 43,
+          "urgencia": "Moderado",
+          "unidad": "unidades",
+          "yaCubierto": false,
+          "coincidencias": []
+        },
+        {
+          "nombre": "Oxímetros",
+          "categoria": "Equipos médicos",
+          "cantidadNecesaria": 25,
+          "cantidadRecibida": 5,
+          "porcentaje": 20,
+          "urgencia": "Crítico",
+          "unidad": "unidades",
+          "yaCubierto": false,
+          "coincidencias": []
+        }
+      ],
+      "cubiertos": [
+        { "nombre": "Gasas estériles", "categoria": "Suministros quirúrgicos", "cantidadNecesaria": 100, "cantidadRecibida": 100, "unidad": "paquetes", "yaCubierto": true }
       ],
       "tiene_disponible": [
         { "nombre": "Gasas estériles", "categoria": "Suministros quirúrgicos" }
@@ -83,11 +170,78 @@
       "ubicacion": "San José, Caracas",
       "telefono": "+58 212 555 6100 (Donaciones)",
       "necesita": [
-        { "nombre": "Sueros fisiológicos", "categoria": "Fluidos IV", "coincidencias": [] },
-        { "nombre": "Guantes", "categoria": "Suministros quirúrgicos", "coincidencias": [] }
+        {
+          "nombre": "Sueros fisiológicos",
+          "categoria": "Fluidos IV",
+          "cantidadNecesaria": 160,
+          "cantidadRecibida": 37,
+          "porcentaje": 23,
+          "urgencia": "Crítico",
+          "unidad": "bolsas",
+          "yaCubierto": false,
+          "coincidencias": []
+        },
+        {
+          "nombre": "Guantes",
+          "categoria": "Suministros quirúrgicos",
+          "cantidadNecesaria": 300,
+          "cantidadRecibida": 185,
+          "porcentaje": 62,
+          "urgencia": "Normal",
+          "unidad": "pares",
+          "yaCubierto": false,
+          "coincidencias": []
+        }
       ],
       "tiene_disponible": [],
       "actualizado": "2026-06-28T11:45:00.000Z"
+    }
+  ],
+  "motorizados": [
+    {
+      "id": "MOT-DEMO1",
+      "nombre": "Carlos Rodríguez",
+      "tipoVehiculo": "Moto",
+      "placa": "MBK-401",
+      "zonaOperacion": "La Guaira - Caracas",
+      "telefono": "+58 412 111 2222",
+      "totalTrayectos": 22,
+      "totalKm": 487,
+      "activo": true,
+      "fechaRegistro": "2026-06-23T10:00:00.000Z",
+      "ultimoTrayecto": "2026-06-29T22:00:00.000Z",
+      "linkDonacion": "",
+      "infoDonacion": "Banco Mercantil · 0412-111-2222 · CI: 8123456"
+    },
+    {
+      "id": "MOT-DEMO2",
+      "nombre": "María González",
+      "tipoVehiculo": "Carro",
+      "placa": "GAB-852",
+      "zonaOperacion": "Caracas Este",
+      "telefono": "+58 414 333 4444",
+      "totalTrayectos": 9,
+      "totalKm": 201,
+      "activo": true,
+      "fechaRegistro": "2026-06-26T14:30:00.000Z",
+      "ultimoTrayecto": "2026-06-28T18:20:00.000Z",
+      "linkDonacion": "https://link.mercadopago.com/demo",
+      "infoDonacion": "Zelle: mariagonzalez@email.com"
+    },
+    {
+      "id": "MOT-DEMO3",
+      "nombre": "Luis Herrera",
+      "tipoVehiculo": "Motocarro",
+      "placa": "LAR-219",
+      "zonaOperacion": "Catia - La Pastora",
+      "telefono": "+58 424 777 1188",
+      "totalTrayectos": 15,
+      "totalKm": 264,
+      "activo": true,
+      "fechaRegistro": "2026-06-25T09:15:00.000Z",
+      "ultimoTrayecto": "2026-06-29T16:10:00.000Z",
+      "linkDonacion": "",
+      "infoDonacion": "Pago móvil · Banco Provincial · 0424-777-1188 · CI: 10999888"
     }
   ]
 }

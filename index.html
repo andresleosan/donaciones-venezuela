@@ -300,8 +300,336 @@
     }
     .btn-accion.wa { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
     .btn-accion.call { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+    .btn-accion.registrar { background: #fff7ed; color: #9a3412; border-color: #fed7aa; cursor: pointer; font-family: inherit; }
     .btn-accion.mini { flex: none; min-width: 0; padding: 6px 10px; font-size: 0.8rem; }
+    .btn-accion.historial { flex: 1 1 100%; background: #f8fafc; color: #334155; cursor: pointer; font-family: inherit; }
+    button.btn-accion { cursor: pointer; font-family: inherit; }
     .timestamp { color: var(--color-muted); font-size: 0.72rem; margin-top: 4px; }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .voluntarios-badge {
+      color: #9a3412;
+      background: #ffedd5;
+      border: 1px solid #fed7aa;
+      border-radius: var(--radius-input);
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    ul.insumos li.necesidad-item {
+      display: block;
+      padding: 8px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
+    ul.insumos li.necesidad-item:last-child { border-bottom: 0; }
+    .insumo-linea {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .insumo-main { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .insumo-faltan { color: var(--color-muted); font-size: 0.78rem; font-weight: 700; }
+    .badge.urgencia {
+      background: #f8fafc;
+      border: 1px solid currentColor;
+      font-size: 0.62rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .badge.urgencia.critico { color: #dc2626; }
+    .badge.urgencia.moderado { color: #b45309; }
+    .badge.urgencia.normal { color: #15803d; }
+    .barra-progreso {
+      width: 100%;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .barra-progreso span {
+      display: block;
+      width: var(--progreso, 0%);
+      max-width: 100%;
+      height: 100%;
+      background: var(--barra, var(--color-necesita));
+      border-radius: inherit;
+    }
+    .barra-meta {
+      margin-top: 3px;
+      color: var(--color-muted);
+      font-size: 0.72rem;
+    }
+    .ya-cubierto-seccion {
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid #eef2f7;
+    }
+    .ya-cubierto-titulo {
+      color: #15803d;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .ya-cubierto-lista { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cubierto-chip {
+      background: #ecfdf5;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-input);
+      padding: 4px 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    /* ── Motorizados ───────────────────────────────────────── */
+    .seccion-motorizados {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--color-border);
+    }
+    .seccion-header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .seccion-titulo {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--color-text);
+      margin: 0;
+    }
+    .seccion-subtitulo {
+      font-size: 0.85rem;
+      color: var(--color-muted);
+      margin: 0;
+      flex: 1 1 260px;
+    }
+    .btn-registrar-mot {
+      background: var(--color-match);
+      color: #fff;
+      border: none;
+      padding: 10px 14px;
+      border-radius: var(--radius-input);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn-registrar-mot:hover { background: #6d28d9; }
+    .grid-motorizados {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+    .tarjeta-mot {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-match);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 14px;
+    }
+    .mot-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .mot-nombre { font-size: 1rem; font-weight: 800; color: var(--color-text); margin-right: 6px; }
+    .badge-tipo-mot {
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      margin-right: 4px;
+    }
+    .badge-activo { color: #16a34a; font-size: 0.74rem; font-weight: 800; }
+    .badge-inactivo { color: #9ca3af; font-size: 0.74rem; font-weight: 800; }
+    .mot-info { font-size: 0.8rem; color: var(--color-muted); margin-bottom: 12px; }
+    .mot-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: #f8fafc;
+      border: 1px solid #eef2f7;
+      border-radius: var(--radius-input);
+    }
+    .mot-stat { min-width: 0; }
+    .mot-stat-num { display: block; font-size: 1.2rem; font-weight: 800; color: var(--color-match); line-height: 1.1; }
+    .mot-stat-label { display: block; font-size: 0.68rem; color: var(--color-muted); margin-top: 2px; overflow-wrap: anywhere; }
+    .mot-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-ver-trayectos,
+    .btn-donar-mot,
+    .btn-wa-mot {
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+    }
+    .btn-ver-trayectos { background: #fff; border: 1px solid var(--color-border); color: #374151; }
+    .btn-donar-mot { background: #fef9c3; border: 1px solid #fde047; color: #713f12; }
+    .btn-wa-mot { background: #dcfce7; border: 1px solid #86efac; color: #14532d; }
+    .btn-ver-trayectos:hover { background: #f8fafc; }
+    .btn-donar-mot:hover { background: #fef08a; }
+    .btn-wa-mot:hover { background: #bbf7d0; }
+
+    /* ── Modales y toast ───────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(15, 23, 42, 0.58);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-panel {
+      width: min(560px, 100%);
+      max-height: min(86vh, 760px);
+      overflow: auto;
+      background: var(--color-surface);
+      border-radius: var(--radius-card);
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+      border: 1px solid var(--color-border);
+    }
+    .modal-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .modal-title { margin: 0; font-size: 1.05rem; line-height: 1.25; }
+    .modal-subtitle { color: var(--color-muted); font-size: 0.82rem; margin: 4px 0 0; }
+    .modal-close {
+      border: 0;
+      background: #f1f5f9;
+      color: var(--color-muted);
+      border-radius: 999px;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+    .modal-body { padding: 18px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+    .modal-actions .btn-submit,
+    .modal-actions .btn-reset { flex: 0 1 auto; min-width: 128px; }
+    .modal-error {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: var(--radius-input);
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      font-size: 0.86rem;
+    }
+    .modal-error.visible { display: block; }
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 14px;
+      padding: 4px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-input);
+      background: #f8fafc;
+    }
+    .segmented label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.86rem;
+      cursor: pointer;
+    }
+    .segmented input { accent-color: var(--color-emergency); }
+    .trayecto-lista { display: flex; flex-direction: column; gap: 12px; }
+    .trayecto-item {
+      padding-bottom: 12px;
+      border-bottom: 1px solid #eef2f7;
+    }
+    .trayecto-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .trayecto-fecha { color: var(--color-muted); font-size: 0.78rem; font-weight: 700; }
+    .trayecto-ruta { font-weight: 800; margin-top: 2px; }
+    .trayecto-meta { color: var(--color-muted); font-size: 0.84rem; margin-top: 3px; }
+    .modal-donacion-header-stat { font-size: 0.95rem; color: #374151; margin-bottom: 12px; line-height: 1.5; }
+    .modal-donacion-header-stat strong { color: var(--color-match); font-size: 1.25rem; }
+    .modal-donacion-info {
+      background: #fefce8;
+      border: 1px solid #fde047;
+      border-radius: var(--radius-input);
+      padding: 14px;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      color: #1c1917;
+      font-weight: 600;
+      margin: 12px 0;
+      white-space: pre-line;
+    }
+    .btn-link-pago {
+      display: block;
+      background: var(--color-match);
+      color: #fff;
+      text-align: center;
+      padding: 12px;
+      border-radius: var(--radius-input);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    .btn-link-pago:hover { background: #6d28d9; }
+    .modal-disclaimer { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 10px; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 60;
+      max-width: min(92vw, 460px);
+      padding: 12px 14px;
+      border-radius: var(--radius-input);
+      box-shadow: var(--shadow-card);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .toast.exito { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .toast.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .toast.info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
 
     /* ── Estados (carga / vacío) ───────────────────────────── */
     .estado-msg { text-align: center; color: var(--color-muted); padding: 32px 16px; }
@@ -360,6 +688,11 @@
     @media (min-width: 640px) {
       .grid { grid-template-columns: 1fr 1fr; }
       .header-inner h1 { font-size: 1.5rem; }
+    }
+    @media (max-width: 420px) {
+      .mot-stats { grid-template-columns: 1fr; }
+      .modal-actions .btn-submit,
+      .modal-actions .btn-reset { width: 100%; }
     }
     @media (min-width: 1024px) {
       .grid { grid-template-columns: 1fr 1fr 1fr; }
@@ -482,6 +815,15 @@
         <p>😕 No encontramos lugares con esos criterios.</p>
         <button class="btn-accion mini" id="btn-ver-todos">Ver todos</button>
       </div>
+
+      <section id="seccion-motorizados" class="seccion-motorizados" aria-labelledby="motorizados-titulo">
+        <div class="seccion-header">
+          <h2 id="motorizados-titulo" class="seccion-titulo">🏍️ Motorizados y domiciliarios</h2>
+          <p class="seccion-subtitulo">Repartidores que conectan los centros de acopio. Su labor en km.</p>
+          <button id="btn-registrar-motorizado" class="btn-registrar-mot" type="button">+ Registrarme como motorizado</button>
+        </div>
+        <div id="grid-motorizados" class="grid-motorizados" aria-live="polite"></div>
+      </section>
     </section>
 
     <!-- ═══ PESTAÑA BUSCAR FAMILIAR ═══ -->
@@ -585,6 +927,8 @@
     </section>
   </main>
 
+  <div id="modal-root"></div>
+
   <script>
     'use strict';
 
@@ -599,7 +943,9 @@
     // TODO: confirmar con compañero si el webhook requiere auth y cómo proteger la key.
     const BUSCAR_WEBHOOK_TOKEN = ''; // NO hardcodear secretos: index.html es código público.
 
+    const SANDBOX_MODE = APPS_SCRIPT_URL.includes('YOUR_SCRIPT_ID');
     const CACHE_KEY = 'vz_donaciones_cache';
+    const CACHE_MOTORIZADOS_KEY = 'vz_motorizados_cache';
     const WA_MENSAJE = 'Hola, vi en la app de Donaciones Venezuela que necesitan ayuda. ¿Cómo puedo contribuir?';
     const LINEA_APOYO = 'Línea de apoyo psicológico: 0800-AYUDA (ejemplo — sustituir por la línea oficial vigente).';
 
@@ -609,33 +955,57 @@
       lugares: [
         { tipo: 'Centro', nombre: 'Iglesia San José', ubicacion: 'Los Corales, La Guaira', telefono: '+58 412 555 1234',
           necesita: [
-            { nombre: 'Gasas estériles', categoria: 'Medicinas', coincidencias: [ { nombre_lugar: 'Hospital El Algodonal', tipo: 'Hospital', telefono: '+58 212 555 5000', ubicacion: 'El Algodonal, Caracas' } ] },
-            { nombre: 'Agua embotellada', categoria: 'Bebidas', coincidencias: [ { nombre_lugar: 'Refugio Naiguatá', tipo: 'Centro', telefono: '+58 414 555 2200', ubicacion: 'Naiguatá, Vargas' } ] },
-            { nombre: 'Leche en polvo', categoria: 'Alimentos', coincidencias: [] }
+            { nombre: 'Gasas estériles', categoria: 'Medicinas', cantidadNecesaria: 80, cantidadRecibida: 18, porcentaje: 23, urgencia: 'Crítico', unidad: 'paquetes', yaCubierto: false, coincidencias: [ { nombre_lugar: 'Hospital El Algodonal', tipo: 'Hospital', telefono: '+58 212 555 5000', ubicacion: 'El Algodonal, Caracas' } ] },
+            { nombre: 'Agua embotellada', categoria: 'Bebidas', cantidadNecesaria: 100, cantidadRecibida: 12, porcentaje: 12, urgencia: 'Crítico', unidad: 'cajas', yaCubierto: false, coincidencias: [ { nombre_lugar: 'Refugio Naiguatá', tipo: 'Centro', telefono: '+58 414 555 2200', ubicacion: 'Naiguatá, Vargas' } ] },
+            { nombre: 'Leche en polvo', categoria: 'Alimentos', cantidadNecesaria: 50, cantidadRecibida: 22, porcentaje: 44, urgencia: 'Moderado', unidad: 'latas', yaCubierto: false, coincidencias: [] }
           ],
+          cubiertos: [ { nombre: 'Mantas', categoria: 'Otros', cantidadNecesaria: 60, cantidadRecibida: 60, unidad: 'unidades', yaCubierto: true } ],
           tiene_disponible: [ { nombre: 'Ropa de adulto', categoria: 'Ropa' }, { nombre: 'Mantas', categoria: 'Otros' } ],
           actualizado: '2026-06-28T12:00:00.000Z' },
         { tipo: 'Centro', nombre: 'Refugio Naiguatá', ubicacion: 'Naiguatá, Vargas', telefono: '+58 414 555 2200',
           necesita: [
-            { nombre: 'Colchonetas', categoria: 'Otros', coincidencias: [] },
-            { nombre: 'Pañales', categoria: 'Higiene', coincidencias: [ { nombre_lugar: 'Comunidad El Hatillo', tipo: 'Centro', telefono: '+58 416 555 7788', ubicacion: 'El Hatillo, Caracas' } ] }
+            { nombre: 'Colchonetas', categoria: 'Otros', cantidadNecesaria: 70, cantidadRecibida: 31, porcentaje: 44, urgencia: 'Moderado', unidad: 'unidades', yaCubierto: false, coincidencias: [] },
+            { nombre: 'Pañales', categoria: 'Higiene', cantidadNecesaria: 120, cantidadRecibida: 74, porcentaje: 62, urgencia: 'Normal', unidad: 'paquetes', yaCubierto: false, coincidencias: [ { nombre_lugar: 'Comunidad El Hatillo', tipo: 'Centro', telefono: '+58 416 555 7788', ubicacion: 'El Hatillo, Caracas' } ] }
           ],
+          cubiertos: [ { nombre: 'Agua embotellada', categoria: 'Bebidas', cantidadNecesaria: 45, cantidadRecibida: 45, unidad: 'cajas', yaCubierto: true } ],
           tiene_disponible: [ { nombre: 'Agua embotellada', categoria: 'Bebidas' } ],
           actualizado: '2026-06-28T13:30:00.000Z' },
         { tipo: 'Centro', nombre: 'Comunidad El Hatillo', ubicacion: 'El Hatillo, Caracas', telefono: '+58 416 555 7788',
-          necesita: [ { nombre: 'Arroz', categoria: 'Alimentos', coincidencias: [] }, { nombre: 'Jabón', categoria: 'Higiene', coincidencias: [] } ],
+          necesita: [
+            { nombre: 'Arroz', categoria: 'Alimentos', cantidadNecesaria: 90, cantidadRecibida: 48, porcentaje: 53, urgencia: 'Moderado', unidad: 'kg', yaCubierto: false, coincidencias: [] },
+            { nombre: 'Jabón', categoria: 'Higiene', cantidadNecesaria: 75, cantidadRecibida: 18, porcentaje: 24, urgencia: 'Crítico', unidad: 'unidades', yaCubierto: false, coincidencias: [] }
+          ],
           tiene_disponible: [ { nombre: 'Pañales', categoria: 'Higiene' }, { nombre: 'Calzado', categoria: 'Ropa' } ],
           actualizado: '2026-06-28T09:15:00.000Z' },
         { tipo: 'Hospital', nombre: 'Hospital El Algodonal', ubicacion: 'El Algodonal, Caracas', telefono: '+58 212 555 5000',
-          necesita: [ { nombre: 'Analgésicos', categoria: 'Medicinas', coincidencias: [] }, { nombre: 'Oxímetros', categoria: 'Equipos médicos', coincidencias: [] } ],
+          necesita: [
+            { nombre: 'Analgésicos', categoria: 'Medicinas', cantidadNecesaria: 200, cantidadRecibida: 86, porcentaje: 43, urgencia: 'Moderado', unidad: 'unidades', yaCubierto: false, coincidencias: [] },
+            { nombre: 'Oxímetros', categoria: 'Equipos médicos', cantidadNecesaria: 25, cantidadRecibida: 5, porcentaje: 20, urgencia: 'Crítico', unidad: 'unidades', yaCubierto: false, coincidencias: [] }
+          ],
+          cubiertos: [ { nombre: 'Gasas estériles', categoria: 'Suministros quirúrgicos', cantidadNecesaria: 100, cantidadRecibida: 100, unidad: 'paquetes', yaCubierto: true } ],
           tiene_disponible: [ { nombre: 'Gasas estériles', categoria: 'Suministros quirúrgicos' } ],
           actualizado: '2026-06-28T14:00:00.000Z' },
         { tipo: 'Hospital', nombre: 'Hospital Vargas de Caracas', ubicacion: 'San José, Caracas', telefono: '+58 212 555 6100 (Donaciones)',
-          necesita: [ { nombre: 'Sueros fisiológicos', categoria: 'Fluidos IV', coincidencias: [] }, { nombre: 'Guantes', categoria: 'Suministros quirúrgicos', coincidencias: [] } ],
+          necesita: [
+            { nombre: 'Sueros fisiológicos', categoria: 'Fluidos IV', cantidadNecesaria: 160, cantidadRecibida: 37, porcentaje: 23, urgencia: 'Crítico', unidad: 'bolsas', yaCubierto: false, coincidencias: [] },
+            { nombre: 'Guantes', categoria: 'Suministros quirúrgicos', cantidadNecesaria: 300, cantidadRecibida: 185, porcentaje: 62, urgencia: 'Normal', unidad: 'pares', yaCubierto: false, coincidencias: [] }
+          ],
           tiene_disponible: [],
           actualizado: '2026-06-28T11:45:00.000Z' }
+      ],
+      motorizados: [
+        { id: 'MOT-DEMO1', nombre: 'Carlos Rodríguez', tipoVehiculo: 'Moto', placa: 'MBK-401', zonaOperacion: 'La Guaira - Caracas', telefono: '+58 412 111 2222', totalTrayectos: 22, totalKm: 487, activo: true, fechaRegistro: '2026-06-23T10:00:00.000Z', ultimoTrayecto: '2026-06-29T22:00:00.000Z', linkDonacion: '', infoDonacion: 'Banco Mercantil · 0412-111-2222 · CI: 8123456' },
+        { id: 'MOT-DEMO2', nombre: 'María González', tipoVehiculo: 'Carro', placa: 'GAB-852', zonaOperacion: 'Caracas Este', telefono: '+58 414 333 4444', totalTrayectos: 9, totalKm: 201, activo: true, fechaRegistro: '2026-06-26T14:30:00.000Z', ultimoTrayecto: '2026-06-28T18:20:00.000Z', linkDonacion: 'https://link.mercadopago.com/demo', infoDonacion: 'Zelle: mariagonzalez@email.com' },
+        { id: 'MOT-DEMO3', nombre: 'Luis Herrera', tipoVehiculo: 'Motocarro', placa: 'LAR-219', zonaOperacion: 'Catia - La Pastora', telefono: '+58 424 777 1188', totalTrayectos: 15, totalKm: 264, activo: true, fechaRegistro: '2026-06-25T09:15:00.000Z', ultimoTrayecto: '2026-06-29T16:10:00.000Z', linkDonacion: '', infoDonacion: 'Pago móvil · Banco Provincial · 0424-777-1188 · CI: 10999888' }
       ]
     };
+    const MOTORIZADOS_FALLBACK = DATOS_FALLBACK.motorizados;
+    const TRAYECTOS_FALLBACK = [
+      { timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOT-DEMO1', motorizadoNombre: 'Carlos Rodríguez', origen: 'Centro San José', destino: 'Hospital Vargas', kmRecorridos: 18, insumoTransportado: 'Agua embotellada · 20 cajas', observaciones: '' },
+      { timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOT-DEMO1', motorizadoNombre: 'Carlos Rodríguez', origen: 'Punto de acopio El Junquito', destino: 'Iglesia Lourdes', kmRecorridos: 9, insumoTransportado: 'Alimentos enlatados', observaciones: '' },
+      { timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOT-DEMO2', motorizadoNombre: 'María González', origen: 'Chacao', destino: 'Hospital El Algodonal', kmRecorridos: 22, insumoTransportado: 'Sueros fisiológicos', observaciones: '' },
+      { timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOT-DEMO3', motorizadoNombre: 'Luis Herrera', origen: 'Catia', destino: 'La Pastora', kmRecorridos: 11, insumoTransportado: 'Pañales y agua', observaciones: '' }
+    ];
 
     // Respaldo para "Buscar familiar" (cuando file:// impide leer el JSON mock).
     const FAMILIARES_FALLBACK = { registros: [
@@ -664,9 +1034,14 @@
       return String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     }
 
+    function esNecesita(estadoTxt) {
+      return normalizar(estadoTxt).indexOf('necesita') === 0;
+    }
+
     // ── ESTADO ────────────────────────────────────────────────
     const estado = {
       lugares: [],
+      motorizados: [],
       filtroTipo: 'todos',
       filtroCategoria: '',
       busqueda: ''
@@ -687,27 +1062,35 @@
     function guardarCache(lugares) {
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(lugares)); } catch (err) { /* sin localStorage: ignorar */ }
     }
+    function guardarCacheMotorizados(motorizados) {
+      try { localStorage.setItem(CACHE_MOTORIZADOS_KEY, JSON.stringify(motorizados)); } catch (err) { /* sin localStorage: ignorar */ }
+    }
     function leerCache() {
       try {
         const raw = localStorage.getItem(CACHE_KEY);
         return raw ? JSON.parse(raw) : null;
       } catch (err) { return null; }
     }
+    function leerCacheMotorizados() {
+      try {
+        const raw = localStorage.getItem(CACHE_MOTORIZADOS_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (err) { return null; }
+    }
 
     async function cargarDatos() {
-      const demo = APPS_SCRIPT_URL.includes('YOUR_SCRIPT_ID');
       // En file:// el navegador bloquea leer JSON local (CORS): usamos el respaldo embebido directo.
       const esFile = location.protocol === 'file:';
       try {
-        if (demo && esFile) { estado.lugares = DATOS_FALLBACK.lugares; guardarCache(estado.lugares); mostrarBanner('demo'); return; }
-        const url = demo ? 'data/ejemplo.json' : APPS_SCRIPT_URL;
+        if (SANDBOX_MODE && esFile) { estado.lugares = DATOS_FALLBACK.lugares; guardarCache(estado.lugares); mostrarBanner('demo'); return; }
+        const url = SANDBOX_MODE ? 'data/ejemplo.json' : APPS_SCRIPT_URL;
         const resp = await fetch(url, { cache: 'no-store' });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
         if (data && data.error) throw new Error(data.error);
         estado.lugares = (data && data.lugares) || [];
         guardarCache(estado.lugares);
-        mostrarBanner(demo ? 'demo' : null);
+        mostrarBanner(SANDBOX_MODE ? 'demo' : null);
       } catch (err) {
         const cache = leerCache();
         if (cache && cache.length) {
@@ -734,24 +1117,65 @@
     }
 
     // ── RENDER (donaciones) ───────────────────────────────────
+    function numeroSeguro(valor, fallback = 0) {
+      const n = Number(valor);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function datosCantidad(insumo) {
+      const necesaria = Math.max(0, numeroSeguro(insumo.cantidadNecesaria, 0));
+      const recibida = Math.max(0, numeroSeguro(insumo.cantidadRecibida, 0));
+      const unidad = insumo.unidad || 'unidades';
+      const recibidaCap = necesaria > 0 ? Math.min(recibida, necesaria) : recibida;
+      const porcentaje = necesaria > 0 ? Math.min(100, Math.round((recibidaCap / necesaria) * 100)) : numeroSeguro(insumo.porcentaje, 0);
+      return { necesaria, recibida: recibidaCap, faltan: Math.max(0, necesaria - recibidaCap), unidad, porcentaje };
+    }
+
+    function colorUrgencia(urgencia) {
+      const u = normalizar(urgencia);
+      if (u.indexOf('critico') === 0) return '#dc2626';
+      if (u.indexOf('moderado') === 0) return '#f59e0b';
+      return '#16a34a';
+    }
+
+    function claseUrgencia(urgencia) {
+      const u = normalizar(urgencia);
+      if (u.indexOf('critico') === 0) return 'critico';
+      if (u.indexOf('moderado') === 0) return 'moderado';
+      return 'normal';
+    }
+
+    function textoCubierto(item) {
+      const c = datosCantidad(item);
+      if (c.necesaria > 0) return `${e(item.nombre)} · ${c.recibida}/${c.necesaria} ${e(c.unidad)}`;
+      return `${e(item.nombre)} · cubierto`;
+    }
+
     function tarjetaLugar(lugar) {
       const esHosp = normalizar(lugar.tipo).indexOf('hospital') === 0;
       const necesita = (lugar.necesita || []).map(itemNecesita).join('');
       const disponible = (lugar.tiene_disponible || []).map(itemDisponible).join('');
+      const cubiertos = (lugar.cubiertos || []).concat((lugar.necesita || []).filter((i) => i.yaCubierto));
+      const cubiertosHtml = cubiertos.map((i) => `<span class="cubierto-chip">${textoCubierto(i)}</span>`).join('');
+      const voluntarios = lugar.voluntarios || 'abierto';
 
       return `
         <article class="card ${esHosp ? 'hospital' : ''}">
-          <div>
+          <div class="card-head">
             <span class="badge ${esHosp ? 'tipo-hospital' : 'tipo-centro'}">${esHosp ? 'HOSPITAL' : 'CENTRO'}</span>
+            <span class="voluntarios-badge">🧡 Voluntarios: ${e(voluntarios)}</span>
           </div>
           <h3>${e(lugar.nombre)}</h3>
           <p class="meta">📍 ${e(lugar.ubicacion)}</p>
           <p class="meta">📞 ${e(lugar.telefono)}</p>
           ${necesita ? `<p class="lista-titulo necesita">Necesita</p><ul class="insumos">${necesita}</ul>` : ''}
+          ${cubiertosHtml ? `<div class="ya-cubierto-seccion"><div class="ya-cubierto-titulo">YA CUBIERTO</div><div class="ya-cubierto-lista">${cubiertosHtml}</div></div>` : ''}
           ${disponible ? `<p class="lista-titulo disponible">Tiene disponible</p><ul class="insumos">${disponible}</ul>` : ''}
           <div class="acciones">
             <a class="btn-accion call" href="${telHref(lugar.telefono)}" aria-label="Llamar a ${e(lugar.nombre)}">📞 Llamar</a>
             <a class="btn-accion wa" href="${waHref(lugar.telefono)}" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp a ${e(lugar.nombre)}">💬 WhatsApp</a>
+            <button class="btn-accion registrar btn-registrar-mov" type="button" data-lugar="${e(lugar.nombre)}">+ Registrar</button>
+            <button class="btn-accion historial btn-historial" type="button" data-lugar="${e(lugar.nombre)}">📋 Ver historial de movimientos</button>
           </div>
           <p class="timestamp">Actualizado: ${e(fecha(lugar.actualizado))}</p>
         </article>`;
@@ -759,12 +1183,29 @@
 
     function itemNecesita(n) {
       const coincidencias = (n.coincidencias || []);
+      const c = datosCantidad(n);
+      const urgencia = n.urgencia || 'Normal';
       let badge = '';
       if (coincidencias.length) {
         const cuerpo = coincidencias.map(bloqueCoincidencia).join('');
         badge = `<details class="match"><summary>🔗 Disponible en ${coincidencias.length} lugar${coincidencias.length > 1 ? 'es' : ''}</summary><div class="match-body">${cuerpo}</div></details>`;
       }
-      return `<li><span>🟢 ${e(n.nombre)}</span> <span class="badge cat">${e(n.categoria)}</span> ${badge}</li>`;
+      return `
+        <li class="necesidad-item">
+          <div class="insumo-linea">
+            <span class="insumo-main">
+              <strong>${e(n.nombre)}</strong>
+              <span class="badge cat">${e(n.categoria)}</span>
+              <span class="badge urgencia ${claseUrgencia(urgencia)}">${e(urgencia)}</span>
+            </span>
+            <span class="insumo-faltan">faltan ${c.faltan} ${e(c.unidad)}</span>
+          </div>
+          <div class="barra-progreso" aria-label="${e(c.porcentaje + '% cubierto')}">
+            <span style="--progreso:${c.porcentaje}%;--barra:${colorUrgencia(urgencia)}"></span>
+          </div>
+          <div class="barra-meta">${c.recibida}/${c.necesaria || '—'} ${e(c.unidad)}</div>
+          ${badge}
+        </li>`;
     }
 
     function itemDisponible(d) {
@@ -794,12 +1235,13 @@
       }
       vacio.classList.add('oculto');
       grid.innerHTML = lugares.map(tarjetaLugar).join('');
+      bindLugarEvents();
     }
 
     // ── FILTROS ───────────────────────────────────────────────
     function lugarTieneCategoria(lugar, cat) {
       if (!cat) return true;
-      const todos = (lugar.necesita || []).concat(lugar.tiene_disponible || []);
+      const todos = (lugar.necesita || []).concat(lugar.tiene_disponible || [], lugar.cubiertos || []);
       return todos.some((i) => i.categoria === cat);
     }
 
@@ -818,7 +1260,7 @@
     function poblarCategorias() {
       const set = new Set();
       estado.lugares.forEach((l) => {
-        (l.necesita || []).concat(l.tiene_disponible || []).forEach((i) => { if (i.categoria) set.add(i.categoria); });
+        (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []).forEach((i) => { if (i.categoria) set.add(i.categoria); });
       });
       const sel = $('#categoria');
       sel.innerHTML = '<option value="">Cualquier insumo</option>';
@@ -844,6 +1286,612 @@
       if (!iso) return 'sin fecha';
       const d = new Date(iso);
       return isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatearFechaRelativa(iso) {
+      if (!iso) return 'sin fecha';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      const diff = Date.now() - d.getTime();
+      const min = Math.round(diff / 60000);
+      if (min < 1) return 'Ahora';
+      if (min < 60) return `Hace ${min} min`;
+      const horas = Math.round(min / 60);
+      if (horas < 24) return `Hace ${horas} h`;
+      const ayer = new Date();
+      ayer.setDate(ayer.getDate() - 1);
+      const hora = d.toLocaleTimeString('es-VE', { hour: 'numeric', minute: '2-digit' });
+      if (d.toDateString() === ayer.toDateString()) return `Ayer, ${hora}`;
+      if (d.toDateString() === new Date().toDateString()) return `Hoy, ${hora}`;
+      return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
+    }
+
+    function pausa(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function postAccion(payload, respuestaOptimista = {}) {
+      if (SANDBOX_MODE) {
+        await pausa(250);
+        return { success: true, ...respuestaOptimista };
+      }
+      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+      return { success: true, opaque: true, ...respuestaOptimista };
+    }
+
+    function abrirModal({ titulo, subtitulo = '', contenido }) {
+      const root = $('#modal-root');
+      root.innerHTML = `
+        <div class="modal-overlay" role="presentation">
+          <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="modal-header">
+              <div>
+                <h3 id="modal-title" class="modal-title">${titulo}</h3>
+                ${subtitulo ? `<p class="modal-subtitle">${subtitulo}</p>` : ''}
+              </div>
+              <button class="modal-close" type="button" aria-label="Cerrar modal">×</button>
+            </div>
+            <div class="modal-body">${contenido}</div>
+          </section>
+        </div>`;
+
+      const overlay = root.querySelector('.modal-overlay');
+      overlay.addEventListener('click', (ev) => { if (ev.target === overlay) cerrarModal(); });
+      root.querySelector('.modal-close').addEventListener('click', cerrarModal);
+      root.querySelectorAll('[data-modal-cancel]').forEach((btn) => btn.addEventListener('click', cerrarModal));
+      const foco = root.querySelector('input, select, textarea, button, a');
+      if (foco) setTimeout(() => foco.focus(), 0);
+    }
+
+    function cerrarModal() {
+      $('#modal-root').innerHTML = '';
+    }
+
+    function mostrarErrorModal(mensaje) {
+      const box = $('#modal-error');
+      if (!box) return;
+      box.textContent = mensaje;
+      box.classList.add('visible');
+    }
+
+    let toastTimer = null;
+    function mostrarToast(mensaje, tipo = 'info') {
+      const anterior = document.querySelector('.toast');
+      if (anterior) anterior.remove();
+      clearTimeout(toastTimer);
+      const toast = document.createElement('div');
+      toast.className = `toast ${tipo}`;
+      toast.setAttribute('role', 'status');
+      toast.textContent = mensaje;
+      document.body.appendChild(toast);
+      toastTimer = setTimeout(() => toast.remove(), 3600);
+    }
+
+    function bindLugarEvents() {
+      document.querySelectorAll('.btn-registrar-mov').forEach((btn) => {
+        btn.addEventListener('click', () => abrirModalMovimiento(btn.dataset.lugar));
+      });
+      document.querySelectorAll('.btn-historial').forEach((btn) => {
+        btn.addEventListener('click', () => abrirModalHistorial(btn.dataset.lugar));
+      });
+    }
+
+    function buscarLugar(nombre) {
+      return estado.lugares.find((l) => normalizar(l.nombre) === normalizar(nombre));
+    }
+
+    function insumosRegistrables(lugar) {
+      return (lugar.necesita || []).concat(lugar.cubiertos || []);
+    }
+
+    function abrirModalMovimiento(nombreLugar) {
+      const lugar = buscarLugar(nombreLugar);
+      if (!lugar) return mostrarToast('No se encontró el lugar seleccionado.', 'error');
+      const insumos = insumosRegistrables(lugar);
+      if (!insumos.length) return mostrarToast('Este lugar no tiene insumos registrables.', 'error');
+
+      const opciones = insumos.map((item, idx) => {
+        const c = datosCantidad(item);
+        return `<option value="${idx}">${e(item.nombre)} · ${c.recibida}/${c.necesaria || '—'} ${e(c.unidad)}</option>`;
+      }).join('');
+
+      abrirModal({
+        titulo: `+ Registrar movimiento`,
+        subtitulo: e(lugar.nombre),
+        contenido: `
+          <form id="form-movimiento" autocomplete="off">
+            <div class="segmented" role="group" aria-label="Tipo de movimiento">
+              <label><input type="radio" name="tipoMovimiento" value="Entrada" checked /> Entrada</label>
+              <label><input type="radio" name="tipoMovimiento" value="Salida" /> Salida</label>
+            </div>
+            <div class="form-group">
+              <label for="mov-insumo">Insumo</label>
+              <select id="mov-insumo" required>${opciones}</select>
+            </div>
+            <div class="form-group">
+              <label for="mov-cantidad">Cantidad</label>
+              <input id="mov-cantidad" type="number" min="1" step="1" placeholder="Ej: 12" required />
+            </div>
+            <div class="form-group">
+              <label for="mov-voluntario">Nombre del voluntario</label>
+              <input id="mov-voluntario" type="text" placeholder="Anónimo" />
+            </div>
+            <div class="form-group">
+              <label for="mov-observaciones">Observaciones</label>
+              <input id="mov-observaciones" type="text" placeholder="Opcional" />
+            </div>
+            <div id="modal-error" class="modal-error"></div>
+            <div class="modal-actions">
+              <button type="button" class="btn-reset" data-modal-cancel>Cancelar</button>
+              <button type="submit" class="btn-submit">✓ Registrar</button>
+            </div>
+          </form>`
+      });
+
+      $('#form-movimiento').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const idx = numeroSeguro($('#mov-insumo').value, 0);
+        const item = insumos[idx];
+        const cantidad = numeroSeguro($('#mov-cantidad').value, 0);
+        if (!item || cantidad <= 0) return mostrarErrorModal('Selecciona un insumo y una cantidad mayor a 0.');
+
+        const tipoMovimiento = new FormData(ev.currentTarget).get('tipoMovimiento');
+        const payload = {
+          accion: 'registrar_movimiento',
+          tipoMovimiento,
+          nombreLugar: lugar.nombre,
+          tipoLugar: lugar.tipo,
+          insumo: item.nombre,
+          categoria: item.categoria,
+          cantidad,
+          nombreVoluntario: $('#mov-voluntario').value.trim() || 'Anónimo',
+          observaciones: $('#mov-observaciones').value.trim()
+        };
+
+        try {
+          await postAccion(payload);
+          const nuevaCantidad = actualizarMovimientoLocal(payload);
+          cerrarModal();
+          mostrarToast(`Movimiento registrado. Total actual: ${nuevaCantidad}.`, 'exito');
+          if (!SANDBOX_MODE) setTimeout(cargarDatos, 1200);
+        } catch (err) {
+          mostrarErrorModal('No se pudo registrar el movimiento: ' + err.message);
+        }
+      });
+    }
+
+    function actualizarMovimientoLocal(payload) {
+      const lugar = buscarLugar(payload.nombreLugar);
+      if (!lugar) return 0;
+      const listas = [
+        { nombre: 'necesita', items: lugar.necesita || [] },
+        { nombre: 'cubiertos', items: lugar.cubiertos || [] }
+      ];
+      let encontrado = null;
+      let listaOrigen = null;
+      listas.some((lista) => {
+        const item = lista.items.find((i) => normalizar(i.nombre) === normalizar(payload.insumo));
+        if (item) { encontrado = item; listaOrigen = lista; return true; }
+        return false;
+      });
+      if (!encontrado) return 0;
+
+      const c = datosCantidad(encontrado);
+      const delta = numeroSeguro(payload.cantidad, 0);
+      const nueva = payload.tipoMovimiento === 'Salida'
+        ? Math.max(0, c.recibida - delta)
+        : Math.min(c.necesaria || c.recibida + delta, c.recibida + delta);
+
+      encontrado.cantidadRecibida = nueva;
+      encontrado.porcentaje = c.necesaria > 0 ? Math.min(100, Math.round((nueva / c.necesaria) * 100)) : 0;
+      encontrado.yaCubierto = c.necesaria > 0 && nueva >= c.necesaria;
+      lugar.actualizado = new Date().toISOString();
+
+      if (encontrado.yaCubierto && listaOrigen.nombre === 'necesita') {
+        lugar.necesita = (lugar.necesita || []).filter((i) => i !== encontrado);
+        lugar.cubiertos = (lugar.cubiertos || []).concat(encontrado);
+      } else if (!encontrado.yaCubierto && listaOrigen.nombre === 'cubiertos') {
+        lugar.cubiertos = (lugar.cubiertos || []).filter((i) => i !== encontrado);
+        lugar.necesita = (lugar.necesita || []).concat(encontrado);
+      }
+
+      guardarCache(estado.lugares);
+      poblarCategorias();
+      aplicarFiltros();
+      return nueva;
+    }
+
+    function abrirModalHistorial(nombreLugar) {
+      abrirModal({
+        titulo: `📋 Historial de movimientos`,
+        subtitulo: e(nombreLugar),
+        contenido: `<div id="historial-contenido" class="estado-msg"><div class="spinner" aria-hidden="true"></div>Cargando historial...</div>`
+      });
+      cargarHistorialLugar(nombreLugar);
+    }
+
+    async function cargarHistorialLugar(nombreLugar) {
+      const cont = $('#historial-contenido');
+      if (!cont) return;
+      try {
+        const historial = SANDBOX_MODE
+          ? historialDemo(nombreLugar)
+          : await fetch(`${APPS_SCRIPT_URL}?accion=historial&lugar=${encodeURIComponent(nombreLugar)}`, { cache: 'no-store' })
+              .then((r) => r.json())
+              .then((data) => data.historial || []);
+        cont.className = '';
+        cont.innerHTML = renderHistorial(historial);
+      } catch (err) {
+        cont.className = '';
+        cont.innerHTML = renderHistorial(historialDemo(nombreLugar));
+      }
+    }
+
+    function historialDemo(nombreLugar) {
+      const lugar = buscarLugar(nombreLugar);
+      const base = insumosRegistrables(lugar || {}).slice(0, 3);
+      return base.map((item, idx) => ({
+        timestamp: new Date(Date.now() - (idx + 1) * 45 * 60000).toISOString(),
+        tipoLugar: lugar ? lugar.tipo : 'Centro',
+        lugar: nombreLugar,
+        insumo: item.nombre,
+        categoria: item.categoria,
+        tipoMovimiento: idx === 1 ? 'Salida' : 'Entrada',
+        cantidad: idx === 1 ? 3 : 8 + idx,
+        voluntario: idx === 0 ? 'Anónimo' : 'Equipo local',
+        cantidadAcumulada: datosCantidad(item).recibida,
+        observaciones: idx === 0 ? 'Registro demo' : ''
+      }));
+    }
+
+    function renderHistorial(historial) {
+      if (!historial.length) return '<p class="estado-msg">No hay movimientos registrados todavía.</p>';
+      return `<div class="trayecto-lista">${historial.map((h) => `
+        <div class="trayecto-item">
+          <div class="trayecto-fecha">${e(formatearFechaRelativa(h.timestamp))}</div>
+          <div class="trayecto-ruta">${e(h.tipoMovimiento)} · ${e(h.insumo)}</div>
+          <div class="trayecto-meta">${e(h.cantidad)} ${e(h.categoria || '')} · acumulado: ${e(h.cantidadAcumulada)} · ${e(h.voluntario || 'Anónimo')}</div>
+          ${h.observaciones ? `<div class="trayecto-meta">${e(h.observaciones)}</div>` : ''}
+        </div>`).join('')}</div>`;
+    }
+
+    // ── MOTORIZADOS ───────────────────────────────────────────
+    async function cargarMotorizados() {
+      try {
+        if (SANDBOX_MODE && location.protocol === 'file:') {
+          renderMotorizados(MOTORIZADOS_FALLBACK);
+          return;
+        }
+        const url = SANDBOX_MODE ? 'data/ejemplo.json' : `${APPS_SCRIPT_URL}?accion=motorizados`;
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (data && data.error) throw new Error(data.error);
+        if (!data || !Array.isArray(data.motorizados)) throw new Error('Sin motorizados');
+        renderMotorizados(data.motorizados);
+      } catch (err) {
+        const cache = leerCacheMotorizados();
+        renderMotorizados(cache && cache.length ? cache : MOTORIZADOS_FALLBACK);
+      }
+    }
+
+    function renderMotorizados(lista) {
+      const grid = $('#grid-motorizados');
+      if (!grid) return;
+      estado.motorizados = (lista || []).slice().sort((a, b) => numeroSeguro(b.totalKm) - numeroSeguro(a.totalKm));
+      guardarCacheMotorizados(estado.motorizados);
+      if (!estado.motorizados.length) {
+        grid.innerHTML = '<p class="estado-msg">No hay motorizados registrados todavía.</p>';
+        return;
+      }
+      grid.innerHTML = estado.motorizados.map(renderTarjetaMotorizado).join('');
+      bindMotorizadosEvents();
+    }
+
+    function motorizadoActivo(m) {
+      return m.activo === true || String(m.activo).toUpperCase() === 'TRUE';
+    }
+
+    function renderTarjetaMotorizado(m) {
+      const ultimoStr = m.ultimoTrayecto ? formatearFechaRelativa(m.ultimoTrayecto) : 'Sin trayectos aún';
+      const badgeActivo = motorizadoActivo(m)
+        ? '<span class="badge-activo">● Activo</span>'
+        : '<span class="badge-inactivo">○ Inactivo</span>';
+      const telefono = soloDigitos(m.telefono);
+
+      return `
+        <article class="tarjeta-mot" data-mot-id="${e(m.id)}">
+          <div class="mot-header">
+            <div>
+              <span class="mot-nombre">🏍️ ${e(m.nombre)}</span>
+              <span class="badge-tipo-mot">MOTORIZADO</span>
+              ${badgeActivo}
+            </div>
+          </div>
+          <div class="mot-info">📍 Opera en: ${e(m.zonaOperacion || 'Sin zona')} · 🚗 ${e(m.tipoVehiculo || 'Vehículo')}${m.placa ? ' · ' + e(m.placa) : ''}</div>
+          <div class="mot-stats">
+            <div class="mot-stat"><span class="mot-stat-num">${e(m.totalTrayectos || 0)}</span><span class="mot-stat-label">trayectos</span></div>
+            <div class="mot-stat"><span class="mot-stat-num">${e(m.totalKm || 0)} km</span><span class="mot-stat-label">recorridos</span></div>
+            <div class="mot-stat"><span class="mot-stat-num">Último</span><span class="mot-stat-label">${e(ultimoStr)}</span></div>
+          </div>
+          <div class="mot-acciones">
+            <button class="btn-ver-trayectos" type="button" data-mot-id="${e(m.id)}">📋 Ver trayectos</button>
+            ${(m.linkDonacion || m.infoDonacion) ? `<button class="btn-donar-mot" type="button" data-mot-id="${e(m.id)}">💛 Donar a este repartidor</button>` : ''}
+            ${telefono ? `<a class="btn-wa-mot" href="https://wa.me/${telefono}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+          </div>
+        </article>`;
+    }
+
+    function bindMotorizadosEvents() {
+      document.querySelectorAll('.btn-ver-trayectos').forEach((btn) => {
+        btn.addEventListener('click', () => abrirModalTrayectos(btn.dataset.motId));
+      });
+      document.querySelectorAll('.btn-donar-mot').forEach((btn) => {
+        btn.addEventListener('click', () => abrirModalDonacion(btn.dataset.motId));
+      });
+    }
+
+    function buscarMotorizado(id) {
+      return estado.motorizados.find((m) => String(m.id) === String(id));
+    }
+
+    function abrirModalRegistroMotorizado() {
+      abrirModal({
+        titulo: '🏍️ Registrarme como motorizado',
+        contenido: `
+          <form id="form-motorizado" autocomplete="off">
+            <div class="form-group"><label for="mot-nombre">Tu nombre</label><input id="mot-nombre" type="text" placeholder="Juan Pérez" required /></div>
+            <div class="form-group">
+              <label for="mot-vehiculo">Tipo de vehículo</label>
+              <select id="mot-vehiculo" required>
+                <option value="Moto">Moto</option>
+                <option value="Carro">Carro</option>
+                <option value="Camión">Camión</option>
+                <option value="Motocarro">Motocarro</option>
+                <option value="Candola">Candola</option>
+              </select>
+            </div>
+            <div class="form-group"><label for="mot-placa">Placa</label><input id="mot-placa" type="text" placeholder="ABC-123" /></div>
+            <div class="form-group"><label for="mot-zona">Zona donde operas</label><input id="mot-zona" type="text" placeholder="La Guaira - Caracas" required /></div>
+            <div class="form-group"><label for="mot-telefono">WhatsApp</label><input id="mot-telefono" type="tel" placeholder="+58 412 000 1234" /></div>
+            <p class="lista-titulo">Datos para recibir donaciones</p>
+            <div class="form-group"><label for="mot-link">Link de pago</label><input id="mot-link" type="url" placeholder="https://..." /></div>
+            <div class="form-group"><label for="mot-info">Info de pago</label><input id="mot-info" type="text" placeholder="Banco Mercantil · 0414-xxx-xxxx · CI: 12345678" /></div>
+            <div id="modal-error" class="modal-error"></div>
+            <div class="modal-actions">
+              <button type="button" class="btn-reset" data-modal-cancel>Cancelar</button>
+              <button type="submit" class="btn-submit">✓ Registrarme</button>
+            </div>
+          </form>`
+      });
+
+      $('#form-motorizado').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const payload = {
+          accion: 'registrar_motorizado',
+          nombre: $('#mot-nombre').value.trim(),
+          tipoVehiculo: $('#mot-vehiculo').value,
+          placa: $('#mot-placa').value.trim(),
+          zonaOperacion: $('#mot-zona').value.trim(),
+          telefono: $('#mot-telefono').value.trim(),
+          linkDonacion: $('#mot-link').value.trim(),
+          infoDonacion: $('#mot-info').value.trim()
+        };
+        if (!payload.nombre || !payload.tipoVehiculo || !payload.zonaOperacion) {
+          return mostrarErrorModal('Completa nombre, tipo de vehículo y zona de operación.');
+        }
+
+        const idOptimista = 'MOT-' + Date.now().toString(36).toUpperCase();
+        try {
+          const res = await postAccion(payload, { id: idOptimista, nombre: payload.nombre });
+          estado.motorizados.unshift({
+            id: res.id || idOptimista,
+            nombre: payload.nombre,
+            tipoVehiculo: payload.tipoVehiculo,
+            placa: payload.placa,
+            zonaOperacion: payload.zonaOperacion,
+            telefono: payload.telefono,
+            totalTrayectos: 0,
+            totalKm: 0,
+            activo: true,
+            fechaRegistro: new Date().toISOString(),
+            ultimoTrayecto: '',
+            linkDonacion: payload.linkDonacion,
+            infoDonacion: payload.infoDonacion
+          });
+          renderMotorizados(estado.motorizados);
+          cerrarModal();
+          mostrarToast('Motorizado registrado.', 'exito');
+          if (!SANDBOX_MODE) setTimeout(cargarMotorizados, 1200);
+        } catch (err) {
+          mostrarErrorModal('No se pudo registrar: ' + err.message);
+        }
+      });
+    }
+
+    async function abrirModalTrayectos(motorizadoId) {
+      const m = buscarMotorizado(motorizadoId);
+      if (!m) return mostrarToast('No se encontró el motorizado.', 'error');
+      abrirModal({
+        titulo: `📋 Trayectos — ${e(m.nombre)}`,
+        subtitulo: `${e(m.totalTrayectos || 0)} trayectos · ${e(m.totalKm || 0)} km totales`,
+        contenido: `<div id="trayectos-contenido" class="estado-msg"><div class="spinner" aria-hidden="true"></div>Cargando trayectos...</div>`
+      });
+      try {
+        const trayectos = await obtenerTrayectosMotorizado(motorizadoId);
+        const cont = $('#trayectos-contenido');
+        if (!cont) return;
+        cont.className = '';
+        cont.innerHTML = `${renderTrayectos(trayectos)}
+          <div class="modal-actions"><button id="btn-nuevo-trayecto" class="btn-submit" type="button">+ Registrar nuevo trayecto</button></div>`;
+        $('#btn-nuevo-trayecto').addEventListener('click', () => abrirModalNuevoTrayecto(motorizadoId));
+      } catch (err) {
+        const cont = $('#trayectos-contenido');
+        if (cont) cont.innerHTML = '<p class="estado-msg">No se pudieron cargar los trayectos.</p>';
+      }
+    }
+
+    async function obtenerTrayectosMotorizado(motorizadoId) {
+      if (SANDBOX_MODE) return TRAYECTOS_FALLBACK.filter((t) => t.motorizadoId === motorizadoId);
+      try {
+        const resp = await fetch(`${APPS_SCRIPT_URL}?accion=trayectos&motorizadoId=${encodeURIComponent(motorizadoId)}`, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        return data.trayectos || [];
+      } catch (err) {
+        return TRAYECTOS_FALLBACK.filter((t) => t.motorizadoId === motorizadoId);
+      }
+    }
+
+    function renderTrayectos(trayectos) {
+      if (!trayectos.length) return '<p class="estado-msg">No hay trayectos registrados todavía.</p>';
+      return `<div class="trayecto-lista">${trayectos.map((t) => `
+        <div class="trayecto-item">
+          <div class="trayecto-fecha">${e(formatearFechaRelativa(t.timestamp))}</div>
+          <div class="trayecto-ruta">↗ ${e(t.origen)} → ${e(t.destino)}</div>
+          <div class="trayecto-meta">📏 ${e(t.kmRecorridos)} km · 📦 ${e(t.insumoTransportado || 'Varios')}</div>
+          ${t.observaciones ? `<div class="trayecto-meta">${e(t.observaciones)}</div>` : ''}
+        </div>`).join('')}</div>`;
+    }
+
+    function abrirModalNuevoTrayecto(motorizadoId) {
+      const m = buscarMotorizado(motorizadoId);
+      if (!m) return;
+      abrirModal({
+        titulo: `↗ Nuevo trayecto — ${e(m.nombre)}`,
+        contenido: `
+          <form id="form-trayecto" autocomplete="off">
+            <div class="form-group"><label for="tray-origen">Origen</label><input id="tray-origen" type="text" placeholder="Centro de acopio El Junquito" required /></div>
+            <div class="form-group"><label for="tray-destino">Destino</label><input id="tray-destino" type="text" placeholder="Hospital Vargas" required /></div>
+            <div class="form-group"><label for="tray-km">Km recorridos</label><input id="tray-km" type="number" min="0.1" step="0.1" placeholder="18" required /></div>
+            <div class="form-group"><label for="tray-insumo">Insumo transportado</label><input id="tray-insumo" type="text" placeholder="Agua embotellada · 20 cajas" /></div>
+            <div class="form-group"><label for="tray-obs">Observaciones</label><input id="tray-obs" type="text" placeholder="Entregado al coordinador" /></div>
+            <div id="modal-error" class="modal-error"></div>
+            <div class="modal-actions">
+              <button type="button" class="btn-reset" data-modal-cancel>Cancelar</button>
+              <button type="submit" class="btn-submit">✓ Registrar</button>
+            </div>
+          </form>`
+      });
+
+      $('#form-trayecto').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const km = numeroSeguro($('#tray-km').value, 0);
+        const payload = {
+          accion: 'registrar_trayecto',
+          motorizadoId,
+          origen: $('#tray-origen').value.trim(),
+          destino: $('#tray-destino').value.trim(),
+          kmRecorridos: km,
+          insumoTransportado: $('#tray-insumo').value.trim() || 'Varios',
+          observaciones: $('#tray-obs').value.trim()
+        };
+        if (!payload.origen || !payload.destino || km <= 0) {
+          return mostrarErrorModal('Completa origen, destino y kilómetros recorridos.');
+        }
+        try {
+          const nuevosTotales = {
+            totalTrayectos: numeroSeguro(m.totalTrayectos) + 1,
+            totalKm: numeroSeguro(m.totalKm) + km
+          };
+          const res = await postAccion(payload, nuevosTotales);
+          actualizarMotorizadoLocal(motorizadoId, res.totalTrayectos || nuevosTotales.totalTrayectos, res.totalKm || nuevosTotales.totalKm);
+          if (SANDBOX_MODE) {
+            TRAYECTOS_FALLBACK.unshift({
+              timestamp: new Date().toISOString(),
+              motorizadoId,
+              motorizadoNombre: m.nombre,
+              origen: payload.origen,
+              destino: payload.destino,
+              kmRecorridos: km,
+              insumoTransportado: payload.insumoTransportado,
+              observaciones: payload.observaciones
+            });
+          }
+          cerrarModal();
+          mostrarToast('Trayecto registrado.', 'exito');
+          if (!SANDBOX_MODE) setTimeout(cargarMotorizados, 1200);
+        } catch (err) {
+          mostrarErrorModal('No se pudo registrar el trayecto: ' + err.message);
+        }
+      });
+    }
+
+    function actualizarMotorizadoLocal(id, totalTrayectos, totalKm) {
+      const m = buscarMotorizado(id);
+      if (!m) return;
+      m.totalTrayectos = totalTrayectos;
+      m.totalKm = totalKm;
+      m.ultimoTrayecto = new Date().toISOString();
+      renderMotorizados(estado.motorizados);
+    }
+
+    function abrirModalDonacion(motorizadoId) {
+      const m = buscarMotorizado(motorizadoId);
+      if (!m) return;
+      const info = String(m.infoDonacion || '').split('·').map((p) => p.trim()).filter(Boolean).join('\n');
+      const links = String(m.linkDonacion || '').split('|').map((p) => p.trim()).filter(Boolean);
+      abrirModal({
+        titulo: `💛 Donar a ${e(m.nombre)}`,
+        contenido: `
+          <p class="modal-donacion-header-stat"><strong>${e(m.totalKm || 0)} km</strong><br />recorridos transportando donaciones.</p>
+          <p>Puedes reconocer su labor así:</p>
+          ${info ? `<div class="modal-donacion-info">${e(info)}</div>` : '<p class="meta">Este repartidor no agregó datos bancarios.</p>'}
+          ${links.length ? `<a class="btn-link-pago" href="${e(links[0])}" target="_blank" rel="noopener">🔗 Ir al link de pago</a>` : ''}
+          ${info ? '<button id="btn-copiar-donacion" class="btn-reset" type="button">Copiar datos</button>' : ''}
+          <p class="modal-disclaimer">La donación es directa entre tú y el repartidor. Esta app no procesa pagos.</p>
+          <div class="modal-actions"><button type="button" class="btn-submit" data-modal-cancel>Cerrar</button></div>`
+      });
+      const copiar = $('#btn-copiar-donacion');
+      if (copiar) copiar.addEventListener('click', () => copiarTexto(info));
+    }
+
+    async function copiarTexto(texto) {
+      try {
+        await navigator.clipboard.writeText(texto);
+        mostrarToast('Datos copiados.', 'exito');
+      } catch (err) {
+        mostrarToast('No se pudo copiar automáticamente.', 'error');
+      }
+    }
+
+    function agregarLugarLocal(datos) {
+      let lugar = buscarLugar(datos.nombre);
+      if (!lugar) {
+        lugar = {
+          tipo: datos.tipo,
+          nombre: datos.nombre,
+          ubicacion: datos.ubicacion,
+          telefono: datos.telefono,
+          necesita: [],
+          cubiertos: [],
+          tiene_disponible: [],
+          actualizado: new Date().toISOString()
+        };
+        estado.lugares.unshift(lugar);
+      }
+
+      if (esNecesita(datos.estado)) {
+        lugar.necesita.push({
+          nombre: datos.insumo,
+          categoria: datos.categoria || 'Otros',
+          cantidadNecesaria: 1,
+          cantidadRecibida: 0,
+          porcentaje: 0,
+          urgencia: 'Normal',
+          unidad: 'unidades',
+          yaCubierto: false,
+          coincidencias: []
+        });
+      } else {
+        lugar.tiene_disponible.push({ nombre: datos.insumo, categoria: datos.categoria || 'Otros' });
+      }
+
+      lugar.actualizado = new Date().toISOString();
+      guardarCache(estado.lugares);
+      poblarCategorias();
+      aplicarFiltros();
+      mostrarToast('Agregado en modo demo.', 'exito');
     }
 
     // ── BUSCAR FAMILIAR ───────────────────────────────────────
@@ -945,9 +1993,12 @@
       msg.className = 'form-mensaje';        // visible, neutro
       msg.textContent = 'Enviando…';
 
-      if (APPS_SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-        msg.className = 'form-mensaje error';
-        msg.textContent = '❌ Modo demo: configura APPS_SCRIPT_URL para poder guardar.';
+      if (SANDBOX_MODE) {
+        agregarLugarLocal(datos);
+        msg.className = 'form-mensaje exito';
+        msg.textContent = '✅ Modo demo: agregado localmente para esta sesión.';
+        $('#form-agregar').reset();
+        cambiarTab('donaciones');
         return;
       }
       try {
@@ -998,7 +2049,16 @@
       // Agregar lugar/insumo (submit)
       $('#form-agregar').addEventListener('submit', enviarAgregar);
 
+      // Motorizados
+      $('#btn-registrar-motorizado').addEventListener('click', abrirModalRegistroMotorizado);
+
+      // Cierre de modales con ESC
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && $('#modal-root').innerHTML) cerrarModal();
+      });
+
       cargarDatos();
+      cargarMotorizados();
     }
 
     document.addEventListener('DOMContentLoaded', init);
