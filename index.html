@@ -11,49 +11,67 @@
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   <link rel="canonical" href="https://donacionesvenezuela.vercel.app/" />
   <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#0057B8" />
+  <meta name="theme-color" content="#0B1220" />
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Respuesta Humanitaria Venezuela" />
   <meta property="og:locale" content="es_VE" />
   <meta property="og:url" content="https://donacionesvenezuela.vercel.app/" />
   <meta property="og:title" content="Respuesta Humanitaria Venezuela" />
-  <meta property="og:description" content="Conectando ciudadanos, voluntarios, rescatistas y centros de ayuda." />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:description" content="Coordinación de centros de ayuda, hospitales, voluntarios, rescatistas, donaciones y reportes familiares en Venezuela." />
+  <meta property="og:image" content="https://donacionesvenezuela.vercel.app/assets/icons/icon-192.png" />
+  <meta property="og:image:alt" content="Panel visual de coordinación humanitaria para Venezuela" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Respuesta Humanitaria Venezuela" />
   <meta name="twitter:description" content="Centros de ayuda, suministros, voluntarios, rescatistas y búsqueda familiar." />
+  <meta name="twitter:image" content="https://donacionesvenezuela.vercel.app/assets/icons/icon-192.png" />
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebSite",
+    "@type": ["WebSite", "WebApplication"],
     "name": "Respuesta Humanitaria Venezuela",
     "url": "https://donacionesvenezuela.vercel.app/",
-    "inLanguage": "es",
-    "description": "Plataforma nacional de respuesta humanitaria para centros de ayuda, hospitales, voluntarios, rescatistas y familias."
+    "applicationCategory": "EmergencyApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "es-VE",
+    "description": "Plataforma nacional de respuesta humanitaria para centros de ayuda, hospitales, voluntarios, rescatistas, donaciones y familias.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://donacionesvenezuela.vercel.app/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
   }
   </script>
 
   <style>
     :root {
-      --primary: #0057B8;
-      --primary-dark: #004494;
-      --secondary: #E53935;
-      --bg: #F8FAFC;
+      --primary: #1457D9;
+      --primary-dark: #0B3F9F;
+      --rescue: #C2410C;
+      --rescue-soft: #FFF1E8;
+      --volunteer: #047857;
+      --volunteer-soft: #E7F7F0;
+      --critical: #B42318;
+      --warning: #A16207;
+      --success: #15803D;
+      --error: #B42318;
+      --bg: #F6F7F9;
+      --bg-warm: #FBFAF7;
       --surface: #FFFFFF;
-      --surface-alt: #EEF5FF;
-      --text: #1E293B;
-      --muted: #64748B;
-      --border: #D8E0EA;
-      --success: #16A34A;
-      --warning: #F59E0B;
-      --error: #DC2626;
-      --ink: #0F172A;
+      --surface-muted: #F1F5F9;
+      --surface-strong: #FDFEFF;
+      --ink: #0B1220;
+      --text: #263244;
+      --muted: #667085;
+      --border: #D9E1EC;
+      --border-strong: #B8C4D4;
       --radius: 8px;
-      --radius-lg: 14px;
-      --shadow: 0 14px 42px rgba(15, 23, 42, 0.10);
-      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --shadow: 0 18px 44px rgba(11, 18, 32, 0.10);
+      --shadow-soft: 0 8px 24px rgba(11, 18, 32, 0.07);
+      --font: Geist, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --header-height: 68px;
     }
 
     * { box-sizing: border-box; }
@@ -64,10 +82,10 @@
       font-family: var(--font);
       color: var(--text);
       background:
-        linear-gradient(90deg, rgba(0,87,184,0.045) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(0,87,184,0.035) 1px, transparent 1px),
-        var(--bg);
-      background-size: 34px 34px;
+        linear-gradient(90deg, rgba(11,18,32,0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(11,18,32,0.03) 1px, transparent 1px),
+        linear-gradient(180deg, var(--bg-warm), var(--bg));
+      background-size: 32px 32px, 32px 32px, auto;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
@@ -77,14 +95,18 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      opacity: 0.22;
-      background-image: radial-gradient(rgba(15,23,42,0.12) 0.7px, transparent 0.7px);
-      background-size: 13px 13px;
       z-index: -1;
+      opacity: 0.18;
+      background-image: radial-gradient(rgba(11, 18, 32, 0.16) 0.7px, transparent 0.7px);
+      background-size: 14px 14px;
     }
     a { color: inherit; }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
+    img { max-width: 100%; display: block; }
+    h1, h2, h3, p { margin-top: 0; }
+    p, h1, h2, h3, span, strong, a, button, label { overflow-wrap: anywhere; }
+
     .visually-hidden {
       position: absolute;
       width: 1px;
@@ -101,20 +123,23 @@
       top: -52px;
       left: 12px;
       z-index: 100;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
       background: var(--ink);
       color: #fff;
-      padding: 10px 14px;
+      padding: 0 14px;
       border-radius: var(--radius);
       text-decoration: none;
-      font-weight: 700;
+      font-weight: 800;
     }
     .skip-link:focus { top: 12px; }
     :focus { outline: none; }
     :focus-visible {
-      outline: 3px solid rgba(0, 87, 184, 0.72);
+      outline: 3px solid rgba(20, 87, 217, 0.78);
       outline-offset: 3px;
-      scroll-margin-top: 92px;
-      scroll-margin-bottom: 84px;
+      scroll-margin-top: calc(var(--header-height) + 22px);
+      scroll-margin-bottom: 92px;
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -129,20 +154,21 @@
       position: sticky;
       top: 0;
       z-index: 40;
-      background: rgba(255, 255, 255, 0.94);
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(14px);
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid rgba(217, 225, 236, 0.86);
+      backdrop-filter: blur(16px);
     }
     .header-inner {
-      width: min(1180px, calc(100% - 28px));
+      width: min(1220px, calc(100% - 24px));
       margin: 0 auto;
-      min-height: 68px;
+      min-height: var(--header-height);
       display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 18px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
       align-items: center;
     }
     .brand {
+      min-width: 0;
       display: inline-flex;
       align-items: center;
       gap: 10px;
@@ -154,12 +180,13 @@
     .brand-mark {
       width: 38px;
       height: 38px;
+      flex: 0 0 auto;
       display: grid;
       place-items: center;
-      border-radius: 10px;
+      border-radius: var(--radius);
       color: #fff;
-      background: var(--primary);
-      box-shadow: 0 10px 26px rgba(0, 87, 184, 0.24);
+      background: var(--ink);
+      box-shadow: 0 12px 28px rgba(11, 18, 32, 0.18);
     }
     .brand span:last-child { display: none; }
     .top-nav {
@@ -172,28 +199,28 @@
       min-height: 42px;
       border: 0;
       border-radius: var(--radius);
-      padding: 0 12px;
+      padding: 0 11px;
       background: transparent;
       color: var(--muted);
       font-size: 0.91rem;
-      font-weight: 750;
+      font-weight: 760;
       transition: background 0.18s ease, color 0.18s ease, transform 0.08s ease;
     }
-    .nav-link:hover { color: var(--ink); background: #EEF5FF; }
-    .nav-link[aria-current="page"] { color: var(--primary); background: #E6F0FF; }
+    .nav-link:hover { color: var(--ink); background: #EFF4FA; }
+    .nav-link[aria-current="page"] { color: var(--ink); background: #EAF0FF; }
     .nav-link:active { transform: translateY(1px); }
     .status-pill {
+      min-height: 36px;
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      min-height: 36px;
       padding: 0 10px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       color: var(--muted);
       background: #fff;
       font-size: 0.78rem;
-      font-weight: 750;
+      font-weight: 800;
       white-space: nowrap;
     }
     .status-dot {
@@ -206,27 +233,27 @@
     .status-dot.cache { background: var(--primary); }
 
     main {
-      width: min(1180px, calc(100% - 28px));
+      width: min(1220px, calc(100% - 24px));
       margin: 0 auto;
-      padding: 22px 0 88px;
+      padding: 18px 0 92px;
     }
     .view { display: none; }
-    .view.active { display: block; }
+    .view.active { display: block; animation: viewIn 0.22s ease both; }
+    @keyframes viewIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
     .hero {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 20px;
+      gap: 18px;
       align-items: stretch;
-      min-height: 460px;
-      padding: 20px 0 26px;
+      padding: 12px 0 18px;
     }
     .hero-copy {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 18px;
-      padding: 24px 0;
+      gap: 16px;
+      min-width: 0;
     }
     .eyebrow {
       width: fit-content;
@@ -234,37 +261,37 @@
       gap: 8px;
       align-items: center;
       padding: 7px 10px;
-      border: 1px solid #BCD6F8;
+      border: 1px solid #C7D2E2;
       border-radius: var(--radius);
-      background: #EAF3FF;
-      color: var(--primary-dark);
-      font-size: 0.78rem;
-      font-weight: 850;
-    }
-    h1, h2, h3, p { margin-top: 0; }
-    h1 {
-      margin-bottom: 0;
-      max-width: 760px;
+      background: rgba(255, 255, 255, 0.82);
       color: var(--ink);
-      font-size: clamp(2.45rem, 10vw, 5.8rem);
+      font-size: 0.76rem;
+      font-weight: 860;
+    }
+    h1 {
+      max-width: 780px;
+      margin-bottom: 0;
+      color: var(--ink);
+      font-size: clamp(2.35rem, 11vw, 5.9rem);
       line-height: 0.94;
       letter-spacing: 0;
       text-wrap: balance;
     }
     .hero-subtitle {
-      max-width: 680px;
+      max-width: 690px;
       margin: 0;
-      color: #334155;
-      font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+      color: #344054;
+      font-size: clamp(1.03rem, 2.4vw, 1.34rem);
       line-height: 1.55;
       text-wrap: pretty;
     }
-    .hero-actions, .section-actions, .card-actions, .inline-actions {
+    .hero-actions, .section-actions, .card-actions, .inline-actions, .form-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       align-items: center;
     }
+    .hero-actions .btn { flex: 1 1 100%; }
     .btn {
       min-height: 44px;
       display: inline-flex;
@@ -276,51 +303,61 @@
       padding: 0 15px;
       text-decoration: none;
       font-size: 0.94rem;
-      font-weight: 800;
-      transition: transform 0.08s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+      font-weight: 820;
+      transition: transform 0.08s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
     }
-    .btn:active { transform: translateY(1px); }
-    .btn-primary { color: #fff; background: var(--primary); box-shadow: 0 14px 30px rgba(0, 87, 184, 0.23); }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-secondary { color: #fff; background: var(--secondary); box-shadow: 0 14px 30px rgba(229, 57, 53, 0.18); }
-    .btn-secondary:hover { background: #C92F2B; }
+    .btn:active { transform: translateY(1px) scale(0.99); }
+    .btn-primary { color: #fff; background: var(--ink); box-shadow: 0 14px 30px rgba(11, 18, 32, 0.18); }
+    .btn-primary:hover { background: #1A2435; }
+    .btn-secondary { color: #fff; background: var(--critical); box-shadow: 0 14px 30px rgba(180, 35, 24, 0.18); }
+    .btn-secondary:hover { background: #971C13; }
     .btn-ghost { color: var(--ink); border-color: var(--border); background: #fff; }
-    .btn-ghost:hover { border-color: #A9BAD0; background: #F3F7FC; }
-    .btn-soft { color: var(--primary-dark); background: #EAF3FF; border-color: #C6DBF6; }
-    .btn-soft:hover { background: #DDEBFE; }
-    .btn-danger { color: #fff; background: var(--secondary); }
-    .btn-small { min-height: 36px; padding: 0 11px; font-size: 0.82rem; }
+    .btn-ghost:hover { border-color: var(--border-strong); background: #F6F8FB; }
+    .btn-soft { color: var(--primary-dark); background: #EAF0FF; border-color: #CAD8FF; }
+    .btn-soft:hover { background: #DEE8FF; }
+    .btn-danger { color: #fff; background: var(--critical); }
+    .btn-small { min-height: 38px; padding: 0 11px; font-size: 0.82rem; }
 
     .hero-visual {
       position: relative;
-      min-height: 340px;
+      min-height: 286px;
       overflow: hidden;
-      border-radius: var(--radius-lg);
-      background:
-        linear-gradient(135deg, rgba(0,87,184,0.94), rgba(0,67,148,0.92)),
-        #0057B8;
+      border-radius: var(--radius);
+      background: #0B1220;
       box-shadow: var(--shadow);
       color: #fff;
+      isolation: isolate;
     }
-    .hero-map {
+    .hero-image {
       position: absolute;
-      inset: 18px;
-      border: 1px solid rgba(255,255,255,0.22);
-      border-radius: 12px;
+      top: 18px;
+      right: 18px;
+      width: min(42%, 164px);
+      height: auto;
+      opacity: 0.16;
+      filter: saturate(0.85) drop-shadow(0 18px 34px rgba(0,0,0,0.34));
+      z-index: 0;
+    }
+    .hero-visual::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
       background:
-        linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(255,255,255,0.12) 1px, transparent 1px);
-      background-size: 42px 42px;
+        linear-gradient(180deg, rgba(11,18,32,0.28), rgba(11,18,32,0.82)),
+        linear-gradient(90deg, rgba(255,255,255,0.11) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,0.11) 1px, transparent 1px);
+      background-size: auto, 42px 42px, 42px 42px;
     }
     .route-line {
       position: absolute;
-      left: 14%;
-      right: 12%;
-      top: 48%;
+      left: 12%;
+      right: 10%;
+      top: 43%;
       height: 3px;
-      background: repeating-linear-gradient(90deg, #fff 0 12px, transparent 12px 20px);
-      transform: rotate(-10deg);
-      opacity: 0.76;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,0.88) 0 12px, transparent 12px 20px);
+      transform: rotate(-9deg);
+      opacity: 0.78;
     }
     .map-pin {
       position: absolute;
@@ -328,57 +365,66 @@
       height: 14px;
       border: 3px solid #fff;
       border-radius: 50%;
-      background: var(--secondary);
-      box-shadow: 0 0 0 10px rgba(255,255,255,0.12);
+      background: var(--critical);
+      box-shadow: 0 0 0 10px rgba(255,255,255,0.14);
     }
-    .pin-a { left: 18%; top: 34%; }
-    .pin-b { left: 56%; top: 45%; background: var(--success); }
-    .pin-c { right: 17%; bottom: 24%; background: var(--warning); }
+    .pin-a { left: 18%; top: 32%; }
+    .pin-b { left: 56%; top: 43%; background: var(--success); }
+    .pin-c { right: 16%; bottom: 25%; background: #D97706; }
     .ops-panel {
       position: absolute;
-      left: 22px;
-      right: 22px;
-      bottom: 22px;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
       display: grid;
-      gap: 10px;
+      gap: 8px;
     }
     .ops-card {
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,0.26);
+      padding: 11px;
+      border: 1px solid rgba(255,255,255,0.28);
       border-radius: var(--radius);
-      background: rgba(255,255,255,0.12);
-      backdrop-filter: blur(10px);
+      background: rgba(255,255,255,0.14);
+      backdrop-filter: blur(12px);
     }
-    .ops-label { display: block; font-size: 0.76rem; opacity: 0.84; }
-    .ops-value { display: block; font-size: 1rem; font-weight: 850; }
+    .ops-label { display: block; font-size: 0.74rem; opacity: 0.84; }
+    .ops-value { display: block; font-size: 0.98rem; font-weight: 860; }
 
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      margin-top: 4px;
+      margin-top: 2px;
+    }
+    .stat-card, .dashboard-card {
+      min-width: 0;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
     }
     .stat-card {
-      min-height: 104px;
-      padding: 15px;
-      border-radius: var(--radius);
-      background: #fff;
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      min-height: 96px;
+      padding: 14px;
     }
-    .stat-num {
+    .stat-num, .dashboard-value {
       display: block;
       font-family: var(--mono);
       font-variant-numeric: tabular-nums;
-      color: var(--primary);
-      font-size: clamp(1.55rem, 6vw, 2.2rem);
+      color: var(--ink);
       line-height: 1;
-      font-weight: 850;
+      font-weight: 860;
     }
-    .stat-label { display: block; margin-top: 8px; color: var(--muted); font-size: 0.82rem; font-weight: 750; }
+    .stat-num { font-size: clamp(1.48rem, 6vw, 2.15rem); }
+    .stat-label, .dashboard-label {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 780;
+    }
 
     .section {
-      margin-top: 32px;
+      margin-top: 30px;
       padding-top: 18px;
       border-top: 1px solid var(--border);
     }
@@ -391,23 +437,43 @@
     .section-title {
       margin-bottom: 0;
       color: var(--ink);
-      font-size: clamp(1.45rem, 4vw, 2.25rem);
+      font-size: clamp(1.45rem, 4vw, 2.35rem);
       line-height: 1.08;
       letter-spacing: 0;
       text-wrap: balance;
     }
     .section-copy { max-width: 68ch; margin: 0; color: var(--muted); }
 
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .dashboard-card {
+      min-height: 126px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+      padding: 15px;
+      border-left: 4px solid var(--primary);
+    }
+    .dashboard-card.volunteer { border-left-color: var(--volunteer); }
+    .dashboard-card.rescue { border-left-color: var(--rescue); }
+    .dashboard-card.critical { border-left-color: var(--critical); }
+    .dashboard-card.neutral { border-left-color: var(--ink); }
+    .dashboard-value { font-size: clamp(1.75rem, 7vw, 2.65rem); }
+    .dashboard-meta { margin: 0; color: var(--muted); font-size: 0.84rem; }
+
     .notice {
       display: none;
       margin: 0 0 14px;
       padding: 10px 12px;
       border-radius: var(--radius);
-      border: 1px solid #F7D48C;
-      background: #FFFBEB;
-      color: #8A5200;
+      border: 1px solid #F4CA64;
+      background: #FFFAE8;
+      color: #734B00;
       font-size: 0.88rem;
-      font-weight: 700;
+      font-weight: 760;
     }
     .notice.visible { display: block; }
 
@@ -418,31 +484,45 @@
       margin-bottom: 16px;
       padding: 12px;
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      background: rgba(255,255,255,0.82);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.86);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
     }
-    .field { display: grid; gap: 6px; }
+    .field { display: grid; gap: 6px; min-width: 0; }
     .field label, .field-label {
       color: var(--ink);
       font-size: 0.82rem;
-      font-weight: 850;
+      font-weight: 840;
     }
     input, select, textarea {
       width: 100%;
-      min-height: 44px;
+      min-height: 46px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background: #fff;
       color: var(--text);
       padding: 10px 11px;
+      box-shadow: 0 1px 0 rgba(11, 18, 32, 0.02);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
     }
-    textarea { min-height: 92px; resize: vertical; }
-    input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--primary); }
-    .segmented {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+    textarea { min-height: 104px; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: #98A2B3; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(20, 87, 217, 0.12);
     }
+    input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] {
+      border-color: var(--error);
+      background: #FFFBFA;
+    }
+    .field-error {
+      margin: 0;
+      color: var(--error);
+      font-size: 0.8rem;
+      font-weight: 760;
+    }
+
+    .segmented { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip-btn {
       min-height: 38px;
       border: 1px solid var(--border);
@@ -455,54 +535,78 @@
     }
     .chip-btn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; min-width: 0; }
     .card {
+      min-width: 0;
       display: flex;
       flex-direction: column;
       gap: 12px;
       padding: 15px;
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius);
       background: #fff;
-      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+      box-shadow: var(--shadow-soft);
     }
     .card-bordered { border: 1px solid var(--border); }
+    .place-card { border-top: 4px solid var(--primary); }
+    .place-card.hospital { border-top-color: var(--critical); }
+    .place-card.refugio { border-top-color: var(--volunteer); }
+    .person-card.volunteer { border-top: 4px solid var(--volunteer); }
+    .person-card.rescue { border-top: 4px solid var(--rescue); }
+    .family-card { border-top: 4px solid var(--ink); }
     .card-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 10px;
+      min-width: 0;
     }
+    .card-top > div { min-width: 0; }
     .icon-box {
       width: 42px;
       height: 42px;
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      border-radius: 10px;
-      color: var(--primary);
-      background: #EAF3FF;
-      font-size: 1.2rem;
+      border-radius: var(--radius);
+      color: var(--primary-dark);
+      background: #EAF0FF;
+      font-size: 1.04rem;
+      font-weight: 900;
     }
-    .icon-box.red { color: var(--secondary); background: #FEECEC; }
-    .icon-box.green { color: var(--success); background: #EAF8EF; }
-    .card h3 { margin: 0; color: var(--ink); font-size: 1.05rem; line-height: 1.24; }
+    .icon-box.red { color: var(--critical); background: #FFF0F0; }
+    .icon-box.green { color: var(--volunteer); background: var(--volunteer-soft); }
+    .icon-box.rescue { color: var(--rescue); background: var(--rescue-soft); }
+    .card h3 { margin: 0; color: var(--ink); font-size: 1.05rem; line-height: 1.24; text-wrap: balance; }
     .meta { margin: 0; color: var(--muted); font-size: 0.88rem; }
+    .meta strong { color: var(--text); }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 10px;
+      border-radius: var(--radius);
+      background: var(--surface-muted);
+    }
+    .meta-grid span { color: var(--muted); font-size: 0.82rem; font-weight: 730; }
     .badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
     .badge {
       display: inline-flex;
       align-items: center;
       min-height: 24px;
+      max-width: 100%;
       padding: 0 8px;
       border-radius: 6px;
-      background: #EFF6FF;
+      background: #EFF4FF;
       color: var(--primary-dark);
       font-size: 0.72rem;
       font-weight: 850;
+      line-height: 1.2;
     }
-    .badge.red { background: #FEECEC; color: #B42318; }
-    .badge.green { background: #EAF8EF; color: #0F7A35; }
-    .badge.yellow { background: #FFF7E6; color: #935A00; }
-    .badge.gray { background: #F1F5F9; color: #475569; }
+    .badge.red { background: #FFF0F0; color: var(--critical); }
+    .badge.green { background: var(--volunteer-soft); color: var(--volunteer); }
+    .badge.yellow { background: #FFF7E6; color: var(--warning); }
+    .badge.gray { background: #EEF2F7; color: #475467; }
+    .badge.rescue { background: var(--rescue-soft); color: var(--rescue); }
     .supply-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
     .supply-item {
       display: grid;
@@ -529,14 +633,14 @@
     }
     details.match summary {
       width: fit-content;
-      min-height: 32px;
+      min-height: 36px;
       display: inline-flex;
       align-items: center;
       border-radius: var(--radius);
-      padding: 0 9px;
+      padding: 0 10px;
       color: var(--primary-dark);
-      background: #EAF3FF;
-      border: 1px solid #C6DBF6;
+      background: #EAF0FF;
+      border: 1px solid #CAD8FF;
       cursor: pointer;
       font-weight: 850;
       font-size: 0.78rem;
@@ -545,36 +649,49 @@
     .match-body { display: grid; gap: 8px; margin-top: 8px; }
     .match-place { padding: 9px; border-radius: var(--radius); background: #fff; border: 1px solid var(--border); }
     .empty-state {
-      padding: 26px;
-      border: 1px dashed #B7C5D8;
-      border-radius: var(--radius-lg);
-      background: rgba(255,255,255,0.78);
+      padding: 24px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.82);
       color: var(--muted);
       text-align: center;
-      font-weight: 700;
+      font-weight: 760;
     }
 
     .form-panel {
       margin-top: 16px;
       padding: 15px;
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius);
       border: 1px solid var(--border);
       background: #fff;
-      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+      box-shadow: var(--shadow-soft);
     }
-    .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .form-message { display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius); font-weight: 750; }
-    .form-message.visible { display: block; }
-    .form-message.success { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
-    .form-message.error { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
-    .form-message.info { background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; }
-
-    .help-grid, .urgent-grid {
+    .form-panel h3 { margin-bottom: 6px; color: var(--ink); }
+    .form-panel .section-copy { margin-bottom: 14px; }
+    .registry-shell { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+    .registry-side {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
+      gap: 10px;
+      padding: 15px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: var(--shadow-soft);
     }
+    .volunteer-shell .form-panel, .volunteer-shell .registry-side { border-top: 4px solid var(--volunteer); }
+    .rescue-shell .form-panel, .rescue-shell .registry-side { border-top: 4px solid var(--rescue); }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .form-actions { margin-top: 12px; }
+    .form-message { display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius); font-weight: 760; }
+    .form-message.visible { display: block; }
+    .form-message.success { background: #E9F8EF; color: #0F6B34; border: 1px solid #BDEACD; }
+    .form-message.error { background: #FFF0F0; color: #8F1A12; border: 1px solid #F7C2BD; }
+    .form-message.info { background: #EAF0FF; color: #123B85; border: 1px solid #CAD8FF; }
+
+    .help-grid, .urgent-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .help-grid .card { justify-content: space-between; }
     .urgent-item {
+      min-height: 68px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -582,33 +699,35 @@
       padding: 14px;
       border-radius: var(--radius);
       background: #fff;
-      border-left: 4px solid var(--secondary);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--critical);
+      box-shadow: var(--shadow-soft);
     }
     .map-shell {
-      min-height: 360px;
+      min-height: 330px;
       position: relative;
       overflow: hidden;
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius);
       border: 1px solid var(--border);
       background:
-        linear-gradient(90deg, rgba(0,87,184,0.10) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(0,87,184,0.10) 1px, transparent 1px),
-        #EDF6FF;
+        linear-gradient(90deg, rgba(20,87,217,0.10) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(20,87,217,0.10) 1px, transparent 1px),
+        #EDF5FF;
       background-size: 44px 44px;
     }
     .map-placeholder {
       position: absolute;
-      inset: 18px;
+      inset: 14px;
       display: grid;
       place-items: center;
       text-align: center;
-      border: 1px solid rgba(0,87,184,0.22);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.74);
-      padding: 22px;
+      border: 1px solid rgba(20,87,217,0.22);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.78);
+      padding: 20px;
     }
     .map-layers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+    .results-grid { margin-top: 16px; }
 
     .bottom-nav {
       position: fixed;
@@ -617,7 +736,7 @@
       bottom: 0;
       z-index: 45;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 2px;
       padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
       border-top: 1px solid var(--border);
@@ -625,34 +744,36 @@
       backdrop-filter: blur(14px);
     }
     .bottom-nav button {
-      min-height: 48px;
+      min-width: 0;
+      min-height: 50px;
       border: 0;
       border-radius: var(--radius);
       background: transparent;
       color: var(--muted);
-      font-size: 0.68rem;
+      font-size: clamp(0.62rem, 2.8vw, 0.72rem);
       font-weight: 850;
+      line-height: 1.1;
     }
     .bottom-nav button span { display: block; font-size: 1.08rem; line-height: 1; margin-bottom: 3px; }
-    .bottom-nav button[aria-current="page"] { color: var(--primary); background: #EAF3FF; }
+    .bottom-nav button[aria-current="page"] { color: var(--ink); background: #EAF0FF; }
 
     dialog {
-      width: min(620px, calc(100% - 28px));
+      width: min(620px, calc(100% - 24px));
       max-height: 86dvh;
       padding: 0;
       border: 0;
-      border-radius: var(--radius-lg);
-      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(11, 18, 32, 0.30);
     }
-    dialog::backdrop { background: rgba(15, 23, 42, 0.58); }
+    dialog::backdrop { background: rgba(11, 18, 32, 0.62); }
     .modal-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
     .modal-head h3 { margin: 0; }
-    .modal-body { padding: 16px; }
-    .modal-close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #EEF2F7; color: var(--muted); font-weight: 900; }
+    .modal-body { max-height: calc(86dvh - 70px); overflow-y: auto; padding: 16px; }
+    .modal-close { width: 38px; height: 38px; flex: 0 0 auto; border: 0; border-radius: var(--radius); background: #EEF2F7; color: var(--muted); font-weight: 900; }
     .toast {
       position: fixed;
       left: 50%;
-      bottom: 86px;
+      bottom: 88px;
       z-index: 70;
       transform: translateX(-50%);
       width: min(92vw, 460px);
@@ -660,37 +781,55 @@
       border-radius: var(--radius);
       background: var(--ink);
       color: #fff;
-      font-weight: 750;
+      font-weight: 760;
       box-shadow: var(--shadow);
     }
     .loading-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-    .skeleton { min-height: 180px; border-radius: var(--radius-lg); background: linear-gradient(90deg, #EEF2F7, #FFFFFF, #EEF2F7); background-size: 220% 100%; animation: pulse 1.2s linear infinite; }
+    .skeleton {
+      min-height: 180px;
+      border-radius: var(--radius);
+      background: linear-gradient(90deg, #EEF2F7, #FFFFFF, #EEF2F7);
+      background-size: 220% 100%;
+      animation: pulse 1.2s linear infinite;
+    }
     @keyframes pulse { to { background-position: -220% 0; } }
 
-    @media (min-width: 680px) {
+    @media (min-width: 640px) {
       .brand span:last-child { display: inline; }
-      .stats-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-      .filters { grid-template-columns: 1.5fr 0.8fr 0.8fr; align-items: end; }
+      .hero-actions .btn { flex: 0 1 auto; }
+      .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters { grid-template-columns: 1.5fr 0.85fr 0.85fr; align-items: end; }
       .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .help-grid, .urgent-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .field.full { grid-column: 1 / -1; }
+      .meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-    @media (min-width: 980px) {
+    @media (min-width: 820px) {
+      .ops-panel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .registry-shell { grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr); }
+    }
+    @media (min-width: 1024px) {
+      .header-inner { grid-template-columns: auto 1fr auto; gap: 18px; }
       .top-nav { display: flex; }
       .bottom-nav { display: none; }
       main { padding-bottom: 44px; }
-      .hero { grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr); }
+      .hero { grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr); gap: 24px; padding-top: 24px; }
+      .hero-visual { min-height: 430px; }
       .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .dashboard-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .section-header { flex-direction: row; align-items: end; justify-content: space-between; }
-      .ops-panel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (min-width: 1280px) {
+      .hero { gap: 34px; }
+      .card, .form-panel, .registry-side { padding: 18px; }
     }
     @media (max-width: 420px) {
-      .header-inner { grid-template-columns: 1fr auto; }
       .status-pill { font-size: 0; gap: 0; padding: 0 12px; }
       .status-dot { margin: 0; }
-      .hero-actions .btn { width: 100%; }
-      .card-actions .btn, .inline-actions .btn { flex: 1 1 100%; }
+      .section-actions .btn, .form-actions .btn, .card-actions .btn, .inline-actions .btn { flex: 1 1 100%; }
+      h1 { font-size: clamp(2.2rem, 13vw, 3.2rem); }
     }
   </style>
 </head>
@@ -720,29 +859,39 @@
     <section id="view-inicio" class="view active" data-view="inicio" aria-labelledby="hero-title">
       <div class="hero">
         <div class="hero-copy">
-          <span class="eyebrow"><span aria-hidden="true">VE</span> Coordinación ciudadana</span>
+          <span class="eyebrow"><span aria-hidden="true">VE</span> Coordinación humanitaria activa</span>
           <h1 id="hero-title">Respuesta Humanitaria Venezuela</h1>
-          <p class="hero-subtitle">Conectando ciudadanos, voluntarios, rescatistas y centros de ayuda.</p>
+          <p class="hero-subtitle">Conecta centros de ayuda, hospitales, voluntarios, rescatistas, donaciones y reportes familiares en una sola mesa operativa móvil.</p>
           <div class="hero-actions" aria-label="Acciones principales">
-            <button type="button" class="btn btn-secondary" data-view-link="familiar">Buscar Familiar</button>
-            <button type="button" class="btn btn-primary" data-view-link="donaciones">Ver Centros de Ayuda</button>
-            <button type="button" class="btn btn-ghost" data-view-link="voluntarios">Registrarme como Voluntario</button>
+            <button type="button" class="btn btn-secondary" data-view-link="familiar">Buscar familiar</button>
+            <button type="button" class="btn btn-primary" data-view-link="donaciones">Ver centros de ayuda</button>
+            <button type="button" class="btn btn-ghost" data-view-link="voluntarios">Registro voluntario</button>
           </div>
           <div class="stats-grid" id="stats-grid" aria-live="polite"></div>
         </div>
-        <div class="hero-visual" aria-label="Red de operaciones humanitarias">
-          <div class="hero-map" aria-hidden="true"></div>
+        <div class="hero-visual" aria-label="Red visual de operaciones humanitarias">
+          <img class="hero-image" src="assets/icons/icon-192.png" alt="" width="192" height="192" decoding="async" fetchpriority="high" aria-hidden="true" />
           <div class="route-line" aria-hidden="true"></div>
           <span class="map-pin pin-a" aria-hidden="true"></span>
           <span class="map-pin pin-b" aria-hidden="true"></span>
           <span class="map-pin pin-c" aria-hidden="true"></span>
-          <div class="ops-panel">
+          <div class="ops-panel" aria-label="Prioridades operativas">
             <div class="ops-card"><span class="ops-label">Prioridad</span><span class="ops-value">Agua y medicamentos</span></div>
             <div class="ops-card"><span class="ops-label">Cobertura</span><span class="ops-value">Estados y ciudades</span></div>
             <div class="ops-card"><span class="ops-label">Respuesta</span><span class="ops-value">Centros, rutas y equipos</span></div>
           </div>
         </div>
       </div>
+
+      <section class="section" id="dashboard-operaciones" aria-labelledby="dashboard-title">
+        <div class="section-header">
+          <div>
+            <h2 id="dashboard-title" class="section-title">Dashboard de Operaciones</h2>
+            <p class="section-copy">Vista consolidada para priorizar llamadas, registros y traslado de suministros.</p>
+          </div>
+        </div>
+        <div class="dashboard-grid" id="dashboard-grid" aria-live="polite"></div>
+      </section>
 
       <section class="section" aria-labelledby="ayudar-title">
         <div class="section-header">
@@ -809,18 +958,19 @@
 
       <section class="form-panel" id="form-lugar" aria-labelledby="form-lugar-title">
         <h3 id="form-lugar-title">Reportar centro o insumo</h3>
-        <form id="lugar-form">
+        <p class="section-copy">Registra necesidades o disponibilidad sin cambiar la estructura existente de Google Sheets.</p>
+        <form id="lugar-form" novalidate>
           <div class="form-grid">
-            <div class="field"><label for="lugar-tipo">Tipo</label><select id="lugar-tipo" required><option value="Centro">Centro de acopio</option><option value="Hospital">Hospital</option><option value="Refugio">Refugio</option><option value="Punto de ayuda">Punto de ayuda</option></select></div>
-            <div class="field"><label for="lugar-nombre">Nombre</label><input id="lugar-nombre" required placeholder="Hospital, iglesia, escuela" /></div>
-            <div class="field"><label for="lugar-ubicacion">Ubicación</label><input id="lugar-ubicacion" placeholder="Estado, ciudad, sector" /></div>
-            <div class="field"><label for="lugar-telefono">Teléfono</label><input id="lugar-telefono" type="tel" placeholder="+58 412 000 0000" /></div>
+            <div class="field"><label for="lugar-tipo">Tipo</label><select id="lugar-tipo" required autocomplete="organization-title"><option value="Centro">Centro de acopio</option><option value="Hospital">Hospital</option><option value="Refugio">Refugio</option><option value="Punto de ayuda">Punto de ayuda</option></select></div>
+            <div class="field"><label for="lugar-nombre">Nombre</label><input id="lugar-nombre" required autocomplete="organization" placeholder="Hospital, iglesia, escuela" /></div>
+            <div class="field"><label for="lugar-ubicacion">Ubicación</label><input id="lugar-ubicacion" autocomplete="address-level2" placeholder="Estado, ciudad, sector" /></div>
+            <div class="field"><label for="lugar-telefono">Teléfono</label><input id="lugar-telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+58 412 000 0000" /></div>
             <div class="field"><label for="lugar-insumo">Insumo</label><input id="lugar-insumo" required placeholder="Agua potable, gasas, alimentos" /></div>
             <div class="field"><label for="lugar-categoria">Categoría</label><select id="lugar-categoria"><option>Agua potable</option><option>Medicamentos</option><option>Insumos médicos</option><option>Alimentos</option><option>Plantas eléctricas</option><option>Combustible</option><option>Higiene</option><option>Ropa</option><option>Otros</option></select></div>
             <div class="field"><label for="lugar-estado">Estado del insumo</label><select id="lugar-estado" required><option value="Necesita">Necesita</option><option value="Tiene disponible">Tiene disponible</option></select></div>
           </div>
-          <div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar en Sheets</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
-          <div id="lugar-message" class="form-message" role="status"></div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar reporte</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+          <div id="lugar-message" class="form-message" role="status" aria-live="polite"></div>
         </form>
       </section>
     </section>
@@ -828,75 +978,131 @@
     <section id="view-voluntarios" class="view" data-view="voluntarios" aria-labelledby="voluntarios-title">
       <div class="section-header">
         <div>
-          <h2 id="voluntarios-title" class="section-title">Voluntarios</h2>
-          <p class="section-copy">Registro, búsqueda y listado de personas disponibles para apoyar.</p>
+          <h2 id="voluntarios-title" class="section-title">Registro de Voluntarios</h2>
+          <p class="section-copy">Alta rápida, búsqueda y coordinación de personas disponibles para apoyo local.</p>
         </div>
       </div>
 
-      <section class="form-panel" aria-labelledby="vol-form-title">
-        <h3 id="vol-form-title">Registrarme como voluntario</h3>
-        <form id="voluntario-form">
-          <div class="form-grid">
-            <div class="field"><label for="vol-nombre">Nombre</label><input id="vol-nombre" required /></div>
-            <div class="field"><label for="vol-apellido">Apellido</label><input id="vol-apellido" /></div>
-            <div class="field"><label for="vol-telefono">Teléfono</label><input id="vol-telefono" type="tel" required placeholder="+58 412 000 0000" /></div>
-            <div class="field"><label for="vol-estado">Estado</label><input id="vol-estado" placeholder="La Guaira" /></div>
-            <div class="field"><label for="vol-ciudad">Ciudad</label><input id="vol-ciudad" placeholder="Caraballeda" /></div>
-            <div class="field"><label for="vol-profesion">Profesión o tipo</label><select id="vol-profesion"><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
-            <div class="field"><label for="vol-disponibilidad">Disponibilidad</label><input id="vol-disponibilidad" placeholder="Hoy, mañana, fines de semana" /></div>
-            <div class="field full"><label for="vol-observaciones">Observaciones</label><textarea id="vol-observaciones" placeholder="Zona, recursos, restricciones"></textarea></div>
-          </div>
-          <div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar voluntario</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
-          <div id="vol-message" class="form-message" role="status"></div>
-        </form>
-      </section>
+      <div class="registry-shell volunteer-shell">
+        <section class="form-panel" aria-labelledby="vol-form-title">
+          <h3 id="vol-form-title">Datos del voluntario</h3>
+          <p class="section-copy">La información se envía al endpoint existente de voluntarios en Google Sheets.</p>
+          <form id="voluntario-form" novalidate>
+            <div class="form-grid">
+              <div class="field"><label for="vol-nombre">Nombre</label><input id="vol-nombre" required autocomplete="given-name" /></div>
+              <div class="field"><label for="vol-apellido">Apellido</label><input id="vol-apellido" autocomplete="family-name" /></div>
+              <div class="field"><label for="vol-telefono">Teléfono</label><input id="vol-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+              <div class="field"><label for="vol-ciudad">Ciudad</label><input id="vol-ciudad" autocomplete="address-level2" placeholder="Caraballeda" /></div>
+              <div class="field"><label for="vol-estado">Estado</label><input id="vol-estado" autocomplete="address-level1" placeholder="La Guaira" /></div>
+              <div class="field"><label for="vol-profesion">Profesión</label><select id="vol-profesion"><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
+              <div class="field"><label for="vol-disponibilidad">Disponibilidad</label><input id="vol-disponibilidad" placeholder="Hoy, mañana, fines de semana" /></div>
+              <div class="field"><label for="vol-transporte">Medio de transporte</label><select id="vol-transporte"><option value="">Por confirmar</option><option>A pie</option><option>Bicicleta</option><option>Moto</option><option>Carro</option><option>Camioneta</option><option>Transporte público</option><option>Ambulancia o unidad médica</option><option>Otro</option></select></div>
+              <div class="field full"><label for="vol-observaciones">Observaciones</label><textarea id="vol-observaciones" placeholder="Zona, recursos, restricciones"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar voluntario</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+            <div id="vol-message" class="form-message" role="status" aria-live="polite"></div>
+          </form>
+        </section>
 
-      <div class="filters" role="search" aria-label="Filtros de voluntarios">
-        <div class="field"><label for="filtro-vol-q">Buscar voluntario</label><input id="filtro-vol-q" type="search" placeholder="Nombre, ciudad, teléfono" /></div>
-        <div class="field"><label for="filtro-vol-profesion">Tipo</label><select id="filtro-vol-profesion"><option value="">Todos</option><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
-        <div class="field"><label for="filtro-vol-estado">Estado</label><input id="filtro-vol-estado" placeholder="Filtrar por estado" /></div>
+        <aside class="registry-side" aria-labelledby="vol-summary-title">
+          <h3 id="vol-summary-title">Resumen de voluntarios</h3>
+          <div class="meta-grid">
+            <span><strong id="vol-resumen-total">0</strong> registrados</span>
+            <span><strong id="vol-resumen-zonas">0</strong> zonas</span>
+            <span><strong id="vol-resumen-transporte">0</strong> con transporte</span>
+            <span><strong id="vol-resumen-actualizado">sin fecha</strong></span>
+          </div>
+          <p class="meta">Prioriza perfiles con teléfono, ciudad y disponibilidad confirmada.</p>
+        </aside>
       </div>
-      <p class="meta" id="conteo-voluntarios" aria-live="polite"></p>
-      <div id="grid-voluntarios" class="grid" aria-live="polite"></div>
+
+      <section class="section" aria-labelledby="vol-list-title">
+        <div class="section-header">
+          <div>
+            <h3 id="vol-list-title" class="section-title">Voluntarios registrados</h3>
+            <p class="section-copy">Filtra por nombre, ubicación o profesión para coordinación directa.</p>
+          </div>
+        </div>
+        <div class="filters" role="search" aria-label="Filtros de voluntarios">
+          <div class="field"><label for="filtro-vol-q">Buscar voluntario</label><input id="filtro-vol-q" type="search" placeholder="Nombre, ciudad, teléfono" /></div>
+          <div class="field"><label for="filtro-vol-profesion">Profesión</label><select id="filtro-vol-profesion"><option value="">Todos</option><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
+          <div class="field"><label for="filtro-vol-estado">Estado</label><input id="filtro-vol-estado" placeholder="Filtrar por estado" /></div>
+        </div>
+        <p class="meta" id="conteo-voluntarios" aria-live="polite"></p>
+        <div id="grid-voluntarios" class="grid" aria-live="polite"></div>
+      </section>
     </section>
 
     <section id="view-rescatistas" class="view" data-view="rescatistas" aria-labelledby="rescatistas-title">
       <div class="section-header">
         <div>
-          <h2 id="rescatistas-title" class="section-title">Rescatistas y operaciones</h2>
-          <p class="section-copy">Equipos de rescate, especialidades y logística de traslados.</p>
+          <h2 id="rescatistas-title" class="section-title">Registro de Rescatistas</h2>
+          <p class="section-copy">Equipos especializados, capacidad operativa y logística de rescate diferenciada del voluntariado general.</p>
         </div>
       </div>
 
-      <section class="form-panel" aria-labelledby="res-form-title">
-        <h3 id="res-form-title">Registrar rescatista</h3>
-        <form id="rescatista-form">
-          <div class="form-grid">
-            <div class="field"><label for="res-nombre">Nombre</label><input id="res-nombre" required /></div>
-            <div class="field"><label for="res-organizacion">Organización</label><input id="res-organizacion" placeholder="Protección Civil, bomberos, ONG" /></div>
-            <div class="field"><label for="res-telefono">Teléfono</label><input id="res-telefono" type="tel" required /></div>
-            <div class="field"><label for="res-especialidad">Especialidad</label><select id="res-especialidad"><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
-            <div class="field"><label for="res-estado">Estado</label><input id="res-estado" /></div>
-            <div class="field"><label for="res-ciudad">Ciudad</label><input id="res-ciudad" /></div>
-            <div class="field"><label for="res-disponibilidad">Disponibilidad</label><input id="res-disponibilidad" /></div>
-            <div class="field full"><label for="res-observaciones">Observaciones</label><textarea id="res-observaciones"></textarea></div>
+      <div class="registry-shell rescue-shell">
+        <section class="form-panel" aria-labelledby="res-form-title">
+          <h3 id="res-form-title">Datos del equipo o rescatista</h3>
+          <p class="section-copy">El registro usa el endpoint existente de rescatistas y conserva compatibilidad con Sheets.</p>
+          <form id="rescatista-form" novalidate>
+            <div class="form-grid">
+              <div class="field"><label for="res-nombre">Nombre</label><input id="res-nombre" required autocomplete="name" /></div>
+              <div class="field"><label for="res-organizacion">Organización</label><input id="res-organizacion" autocomplete="organization" placeholder="Protección Civil, bomberos, ONG" /></div>
+              <div class="field"><label for="res-especialidad">Especialidad</label><select id="res-especialidad"><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
+              <div class="field"><label for="res-telefono">Teléfono</label><input id="res-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+              <div class="field"><label for="res-ciudad">Ciudad</label><input id="res-ciudad" autocomplete="address-level2" /></div>
+              <div class="field"><label for="res-estado">Estado</label><input id="res-estado" autocomplete="address-level1" /></div>
+              <div class="field"><label for="res-equipo">Equipo disponible</label><input id="res-equipo" placeholder="Herramientas, ambulancia, radio, cuerdas" /></div>
+              <div class="field"><label for="res-capacidad">Capacidad operativa</label><select id="res-capacidad"><option value="">Por confirmar</option><option>1-2 personas</option><option>3-5 personas</option><option>6-10 personas</option><option>Más de 10 personas</option><option>Unidad médica</option><option>Unidad de rescate pesado</option></select></div>
+              <div class="field"><label for="res-disponibilidad">Disponibilidad</label><input id="res-disponibilidad" placeholder="Activo, guardia nocturna, por llamada" /></div>
+              <div class="field full"><label for="res-observaciones">Observaciones</label><textarea id="res-observaciones" placeholder="Restricciones, zona de cobertura o requerimientos"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-secondary" type="submit">Guardar rescatista</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+            <div id="res-message" class="form-message" role="status" aria-live="polite"></div>
+          </form>
+        </section>
+
+        <aside class="registry-side" aria-labelledby="res-summary-title">
+          <h3 id="res-summary-title">Resumen de rescate</h3>
+          <div class="meta-grid">
+            <span><strong id="res-resumen-total">0</strong> registrados</span>
+            <span><strong id="res-resumen-especialidades">0</strong> especialidades</span>
+            <span><strong id="res-resumen-equipos">0</strong> con equipo</span>
+            <span><strong id="res-resumen-actualizado">sin fecha</strong></span>
           </div>
-          <div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar rescatista</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
-          <div id="res-message" class="form-message" role="status"></div>
-        </form>
+          <p class="meta">Usa esta pestaña para perfiles con capacidad técnica, equipo o afiliación operativa.</p>
+        </aside>
+      </div>
+
+      <section class="section" aria-labelledby="res-list-title">
+        <div class="section-header">
+          <div>
+            <h3 id="res-list-title" class="section-title">Rescatistas registrados</h3>
+            <p class="section-copy">Filtra por especialidad, organización o ubicación para activar equipos.</p>
+          </div>
+        </div>
+        <div class="filters" role="search" aria-label="Filtros de rescatistas">
+          <div class="field"><label for="filtro-res-q">Buscar rescatista</label><input id="filtro-res-q" type="search" placeholder="Nombre, organización, ciudad" /></div>
+          <div class="field"><label for="filtro-res-especialidad">Especialidad</label><select id="filtro-res-especialidad"><option value="">Todas</option><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
+          <div class="field"><label for="filtro-res-estado">Estado</label><input id="filtro-res-estado" placeholder="Filtrar por estado" /></div>
+        </div>
+        <p class="meta" id="conteo-rescatistas" aria-live="polite"></p>
+        <div id="grid-rescatistas" class="grid" aria-live="polite"></div>
       </section>
 
-      <div class="filters" role="search" aria-label="Filtros de rescatistas">
-        <div class="field"><label for="filtro-res-q">Buscar rescatista</label><input id="filtro-res-q" type="search" placeholder="Nombre, organización, ciudad" /></div>
-        <div class="field"><label for="filtro-res-especialidad">Especialidad</label><select id="filtro-res-especialidad"><option value="">Todas</option><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
-        <div class="field"><label for="filtro-res-estado">Estado</label><input id="filtro-res-estado" placeholder="Filtrar por estado" /></div>
-      </div>
-      <p class="meta" id="conteo-rescatistas" aria-live="polite"></p>
-      <div id="grid-rescatistas" class="grid" aria-live="polite"></div>
-
       <section class="section" aria-labelledby="mot-title">
-        <div class="section-header"><div><h2 id="mot-title" class="section-title">Transportistas solidarios</h2><p class="section-copy">Ranking operativo de rutas y apoyo logístico existente.</p></div><button class="btn btn-primary" id="btn-motorizado" type="button">Registrar transportista</button></div>
-        <div class="filters" role="search" aria-label="Filtros de transportistas"><div class="field"><label for="filtro-mot-q">Buscar</label><input id="filtro-mot-q" type="search" placeholder="Nombre, zona o vehículo" /></div><div class="field"><label for="filtro-mot-tipo">Vehículo</label><select id="filtro-mot-tipo"><option value="">Todos</option><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div></div>
+        <div class="section-header">
+          <div>
+            <h2 id="mot-title" class="section-title">Transportistas solidarios</h2>
+            <p class="section-copy">Ranking operativo de rutas y apoyo logístico existente.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-motorizado" type="button">Registrar transportista</button>
+        </div>
+        <div class="filters" role="search" aria-label="Filtros de transportistas">
+          <div class="field"><label for="filtro-mot-q">Buscar</label><input id="filtro-mot-q" type="search" placeholder="Nombre, zona o vehículo" /></div>
+          <div class="field"><label for="filtro-mot-tipo">Vehículo</label><select id="filtro-mot-tipo"><option value="">Todos</option><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div>
+        </div>
         <p class="meta" id="conteo-motorizados" aria-live="polite"></p>
         <div id="grid-motorizados" class="grid" aria-live="polite"></div>
       </section>
@@ -904,23 +1110,23 @@
 
     <section id="view-familiar" class="view" data-view="familiar" aria-labelledby="familiar-title">
       <div class="section-header"><div><h2 id="familiar-title" class="section-title">Buscar familiar</h2><p class="section-copy">Consulta por nombre o cédula en registros disponibles. La fuente real depende del webhook N8N configurado.</p></div></div>
-      <form class="form-panel" id="familiar-form">
+      <form class="form-panel" id="familiar-form" novalidate>
         <div class="form-grid">
           <div class="field full"><label for="familiar-query">Nombre completo o cédula</label><input id="familiar-query" required autocomplete="off" placeholder="V-12345678 o nombre completo" /></div>
         </div>
-        <div class="section-actions" style="margin-top:12px"><button class="btn btn-secondary" type="submit">Buscar familiar</button></div>
+        <div class="form-actions"><button class="btn btn-secondary" type="submit">Buscar familiar</button></div>
       </form>
-      <div id="familiar-message" class="notice" role="status"></div>
-      <div id="familiar-resultados" class="grid" aria-live="polite" style="margin-top:16px"></div>
+      <div id="familiar-message" class="notice" role="status" aria-live="polite"></div>
+      <div id="familiar-resultados" class="grid results-grid" aria-live="polite"></div>
     </section>
   </main>
 
   <nav class="bottom-nav" aria-label="Navegación móvil">
-    <button type="button" data-view-link="inicio" aria-current="page"><span aria-hidden="true">⌂</span>Inicio</button>
-    <button type="button" data-view-link="donaciones"><span aria-hidden="true">✚</span>Centros</button>
-    <button type="button" data-view-link="voluntarios"><span aria-hidden="true">✓</span>Volunt.</button>
-    <button type="button" data-view-link="rescatistas"><span aria-hidden="true">⚑</span>Rescate</button>
-    <button type="button" data-view-link="familiar"><span aria-hidden="true">⌕</span>Buscar</button>
+    <button type="button" data-view-link="inicio" aria-current="page" aria-label="Inicio"><span aria-hidden="true">⌂</span>Inicio</button>
+    <button type="button" data-view-link="donaciones" aria-label="Centros de ayuda"><span aria-hidden="true">✚</span>Centros</button>
+    <button type="button" data-view-link="voluntarios" aria-label="Registro de voluntarios"><span aria-hidden="true">✓</span>Volunt.</button>
+    <button type="button" data-view-link="rescatistas" aria-label="Registro de rescatistas"><span aria-hidden="true">⚑</span>Rescate</button>
+    <button type="button" data-view-link="familiar" aria-label="Buscar familiar"><span aria-hidden="true">⌕</span>Buscar</button>
   </nav>
 
   <div id="toast-root"></div>
@@ -949,12 +1155,12 @@
         { tipo: 'Hospital', nombre: 'Hospital Vargas de Caracas', ubicacion: 'San José, Caracas', telefono: '+58 212 555 6100', estadoOperativo: 'Recibiendo insumos', necesita: [{ nombre: 'Sueros fisiológicos', categoria: 'Insumos médicos', cantidadNecesaria: 160, cantidadRecibida: 37, porcentaje: 23, urgencia: 'Crítico', unidad: 'bolsas', coincidencias: [] }, { nombre: 'Plantas eléctricas', categoria: 'Plantas eléctricas', cantidadNecesaria: 3, cantidadRecibida: 0, porcentaje: 0, urgencia: 'Crítico', unidad: 'unidades', coincidencias: [] }], tiene_disponible: [], actualizado: '2026-06-28T11:45:00.000Z' }
       ],
       voluntarios: [
-        { id: 'VOL001', nombre: 'Andrea', apellido: 'Mendoza', telefono: '+58 414 201 1144', estado: 'La Guaira', ciudad: 'Maiquetía', profesion: 'Enfermero', disponibilidad: 'Turnos de tarde', observaciones: 'Primeros auxilios', fecha_registro: '2026-06-29T10:00:00.000Z' },
-        { id: 'VOL002', nombre: 'Rafael', apellido: 'Suárez', telefono: '+58 412 771 2841', estado: 'Distrito Capital', ciudad: 'Caracas', profesion: 'Logística', disponibilidad: 'Fines de semana', observaciones: 'Inventario y rutas', fecha_registro: '2026-06-29T12:20:00.000Z' }
+        { id: 'VOL001', nombre: 'Andrea', apellido: 'Mendoza', telefono: '+58 414 201 1144', estado: 'La Guaira', ciudad: 'Maiquetía', profesion: 'Enfermero', disponibilidad: 'Turnos de tarde', medioTransporte: 'Moto', medio_transporte: 'Moto', observaciones: 'Primeros auxilios', fecha_registro: '2026-06-29T10:00:00.000Z' },
+        { id: 'VOL002', nombre: 'Rafael', apellido: 'Suárez', telefono: '+58 412 771 2841', estado: 'Distrito Capital', ciudad: 'Caracas', profesion: 'Logística', disponibilidad: 'Fines de semana', medioTransporte: 'Carro', medio_transporte: 'Carro', observaciones: 'Inventario y rutas', fecha_registro: '2026-06-29T12:20:00.000Z' }
       ],
       rescatistas: [
-        { id: 'RES001', nombre: 'Unidad Bravo', organizacion: 'Protección Civil', telefono: '+58 424 811 9000', especialidad: 'Rescate Urbano', estado: 'La Guaira', ciudad: 'Caraballeda', disponibilidad: 'Activo', observaciones: 'Equipo con herramientas livianas', fecha_registro: '2026-06-29T09:40:00.000Z' },
-        { id: 'RES002', nombre: 'Marcos Tovar', organizacion: 'Bomberos', telefono: '+58 416 551 0030', especialidad: 'Paramédico', estado: 'Miranda', ciudad: 'Guarenas', disponibilidad: 'Guardia nocturna', observaciones: 'Ambulancia coordinada', fecha_registro: '2026-06-29T15:10:00.000Z' }
+        { id: 'RES001', nombre: 'Unidad Bravo', organizacion: 'Protección Civil', telefono: '+58 424 811 9000', especialidad: 'Rescate Urbano', estado: 'La Guaira', ciudad: 'Caraballeda', disponibilidad: 'Activo', equipoDisponible: 'Herramientas livianas y radio', equipo_disponible: 'Herramientas livianas y radio', capacidadOperativa: '3-5 personas', capacidad_operativa: '3-5 personas', observaciones: 'Equipo con herramientas livianas', fecha_registro: '2026-06-29T09:40:00.000Z' },
+        { id: 'RES002', nombre: 'Marcos Tovar', organizacion: 'Bomberos', telefono: '+58 416 551 0030', especialidad: 'Paramédico', estado: 'Miranda', ciudad: 'Guarenas', disponibilidad: 'Guardia nocturna', equipoDisponible: 'Ambulancia coordinada', equipo_disponible: 'Ambulancia coordinada', capacidadOperativa: 'Unidad médica', capacidad_operativa: 'Unidad médica', observaciones: 'Ambulancia coordinada', fecha_registro: '2026-06-29T15:10:00.000Z' }
       ],
       motorizados: [
         { id: 'MOTO001', nombre: 'Carlos Rodríguez', tipoVehiculo: 'Moto', placa: 'MBK-401', zonaOperacion: 'La Guaira - Caracas', telefono: '+58 412 111 2222', totalTrayectos: 22, totalKm: 487, activo: true, aporteDonado: 5000, ultimoTrayecto: '2026-06-29T22:00:00.000Z' },
@@ -989,6 +1195,15 @@
     const waHref = (tel) => `https://wa.me/${soloDigitos(tel)}?text=${encodeURIComponent(WA_MENSAJE)}`;
     const telHref = (tel) => `tel:${String(tel || '').replace(/[^0-9+]/g, '')}`;
     const numero = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const setTexto = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+    const ultimoISO = (items, campo) => {
+      const fechas = (items || [])
+        .map((item) => new Date(item && item[campo]))
+        .filter((fecha) => !Number.isNaN(fecha.getTime()))
+        .sort((a, b) => b - a);
+      return fechas[0] ? fechas[0].toISOString() : '';
+    };
+    const contarUnicos = (items, campo) => new Set((items || []).map((item) => normalizar(item[campo])).filter(Boolean)).size;
 
     window.SheetsService.configure({
       appsScriptUrl: APPS_SCRIPT_URL,
@@ -1036,21 +1251,67 @@
 
     function calcularStats() {
       const stats = Object.assign({}, estado.estadisticas);
-      if (!stats.centrosRegistrados) stats.centrosRegistrados = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') !== 0).length;
-      if (!stats.hospitalesRegistrados) stats.hospitalesRegistrados = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') === 0).length;
-      if (!stats.voluntariosActivos) stats.voluntariosActivos = estado.voluntarios.length;
-      if (!stats.rescatistasRegistrados) stats.rescatistasRegistrados = estado.rescatistas.length;
-      if (stats.personasLocalizadas == null) stats.personasLocalizadas = 0;
+      const centrosLocales = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') !== 0).length;
+      const hospitalesLocales = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') === 0).length;
+      stats.centrosRegistrados = Math.max(numero(stats.centrosRegistrados), centrosLocales);
+      stats.hospitalesRegistrados = Math.max(numero(stats.hospitalesRegistrados), hospitalesLocales);
+      stats.voluntariosActivos = Math.max(numero(stats.voluntariosActivos), estado.voluntarios.length);
+      stats.rescatistasRegistrados = Math.max(numero(stats.rescatistasRegistrados), estado.rescatistas.length);
+      stats.personasLocalizadas = stats.personasLocalizadas == null ? FAMILIARES_FALLBACK.registros.length : numero(stats.personasLocalizadas);
+      stats.motorizadosRegistrados = Math.max(numero(stats.motorizadosRegistrados), estado.motorizados.length);
+      stats.actualizado = stats.actualizado || ultimaActualizacion();
       return stats;
+    }
+
+    function ultimaActualizacion() {
+      const fechas = [
+        estado.estadisticas && estado.estadisticas.actualizado,
+        ultimoISO(estado.lugares, 'actualizado'),
+        ultimoISO(estado.voluntarios, 'fecha_registro'),
+        ultimoISO(estado.rescatistas, 'fecha_registro'),
+        ultimoISO(estado.motorizados, 'ultimoTrayecto')
+      ].map((iso) => new Date(iso)).filter((fecha) => !Number.isNaN(fecha.getTime())).sort((a, b) => b - a);
+      return fechas[0] ? fechas[0].toISOString() : '';
     }
 
     function renderStats() {
       const s = calcularStats();
       const items = [
-        ['Centros registrados', s.centrosRegistrados || 0], ['Hospitales registrados', s.hospitalesRegistrados || 0],
-        ['Personas localizadas', s.personasLocalizadas || 0], ['Voluntarios activos', s.voluntariosActivos || 0], ['Rescatistas registrados', s.rescatistasRegistrados || 0]
+        ['Centros activos', s.centrosRegistrados || 0],
+        ['Hospitales', s.hospitalesRegistrados || 0],
+        ['Voluntarios', s.voluntariosActivos || 0],
+        ['Rescatistas', s.rescatistasRegistrados || 0]
       ];
       $('#stats-grid').innerHTML = items.map(([label, value]) => `<div class="stat-card"><span class="stat-num">${e(value)}</span><span class="stat-label">${e(label)}</span></div>`).join('');
+    }
+
+    function renderDashboard() {
+      const s = calcularStats();
+      const actualizacion = ultimaActualizacion() || s.actualizado || '';
+      const voluntariosConTransporte = estado.voluntarios.filter((v) => v.medioTransporte || v.medio_transporte || v.transporte).length;
+      const rescatistasConEquipo = estado.rescatistas.filter((r) => r.equipoDisponible || r.equipo_disponible || r.equipo).length;
+      const items = [
+        ['Voluntarios registrados', s.voluntariosActivos || 0, `${voluntariosConTransporte} con transporte reportado`, 'volunteer'],
+        ['Rescatistas registrados', s.rescatistasRegistrados || 0, `${rescatistasConEquipo} con equipo disponible`, 'rescue'],
+        ['Centros de ayuda activos', s.centrosRegistrados || 0, 'Centros, refugios y puntos de ayuda', 'neutral'],
+        ['Hospitales disponibles', s.hospitalesRegistrados || 0, 'Contactos hospitalarios y necesidades', 'critical'],
+        ['Reportes familiares', s.personasLocalizadas || 0, 'Registros localizados o reportados', ''],
+        ['Última actualización', actualizacion ? fechaRelativa(actualizacion) : 'Sin fecha', actualizacion ? new Date(actualizacion).toLocaleString('es-VE') : 'Pendiente de datos en vivo', 'neutral']
+      ];
+      $('#dashboard-grid').innerHTML = items.map(([label, value, meta, cls]) => `<article class="dashboard-card ${e(cls)}"><div><span class="dashboard-value">${e(value)}</span><span class="dashboard-label">${e(label)}</span></div><p class="dashboard-meta">${e(meta)}</p></article>`).join('');
+    }
+
+    function renderRegistrySummaries() {
+      const volUltimo = ultimoISO(estado.voluntarios, 'fecha_registro');
+      const resUltimo = ultimoISO(estado.rescatistas, 'fecha_registro');
+      setTexto('#vol-resumen-total', estado.voluntarios.length);
+      setTexto('#vol-resumen-zonas', contarUnicos(estado.voluntarios, 'estado'));
+      setTexto('#vol-resumen-transporte', estado.voluntarios.filter((v) => v.medioTransporte || v.medio_transporte || v.transporte).length);
+      setTexto('#vol-resumen-actualizado', volUltimo ? fechaRelativa(volUltimo) : 'sin fecha');
+      setTexto('#res-resumen-total', estado.rescatistas.length);
+      setTexto('#res-resumen-especialidades', contarUnicos(estado.rescatistas, 'especialidad'));
+      setTexto('#res-resumen-equipos', estado.rescatistas.filter((r) => r.equipoDisponible || r.equipo_disponible || r.equipo).length);
+      setTexto('#res-resumen-actualizado', resUltimo ? fechaRelativa(resUltimo) : 'sin fecha');
     }
 
     function renderUrgentes() {
@@ -1084,17 +1345,27 @@
       return '+';
     }
 
+    function accionesContacto(telefono, nombre) {
+      if (!soloDigitos(telefono)) return '<span class="badge gray">Teléfono por confirmar</span>';
+      const label = nombre ? ` a ${nombre}` : '';
+      return `<a class="btn btn-soft btn-small" href="${telHref(telefono)}" aria-label="Llamar${e(label)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(telefono)}" aria-label="Abrir WhatsApp${e(label)}">WhatsApp</a>`;
+    }
+
     function renderLugarCard(lugar) {
+      const tipoNormal = normalizar(lugar.tipo);
+      const claseLugar = tipoNormal.indexOf('hospital') === 0 ? 'hospital' : tipoNormal.indexOf('refugio') === 0 ? 'refugio' : 'centro';
+      const estadoOperativo = lugar.estadoOperativo || (tipoNormal.indexOf('hospital') === 0 ? 'Contacto operativo' : tipoNormal.indexOf('refugio') === 0 ? (lugar.capacidad || 'Capacidad por confirmar') : 'Centro activo');
       const necesidades = (lugar.necesita || []).map((item) => {
         const c = itemCantidad(item);
         const matches = item.coincidencias || [];
-        return `<li class="supply-item"><div class="supply-line"><strong>${e(item.nombre)}</strong><span class="badge ${urgenciaClass(item.urgencia)}">${e(item.urgencia || 'Normal')}</span></div><div class="badge-row"><span class="badge gray">${e(item.categoria || 'Otros')}</span><span class="badge">faltan ${e(c.faltan)} ${e(c.unidad)}</span></div><div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${e(c.porcentaje)}"><span style="--value:${e(c.porcentaje)}%"></span></div>${matches.length ? `<details class="match"><summary>Disponible en ${matches.length} lugar${matches.length > 1 ? 'es' : ''}</summary><div class="match-body">${matches.map((m) => `<div class="match-place"><strong>${e(m.nombre_lugar)}</strong><p class="meta">${e(m.tipo)} · ${e(m.ubicacion)}</p><div class="inline-actions"><a class="btn btn-soft btn-small" href="${telHref(m.telefono)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(m.telefono)}">WhatsApp</a></div></div>`).join('')}</div></details>` : ''}</li>`;
+        const matchHtml = matches.length ? `<details class="match"><summary>Disponible en ${matches.length} lugar${matches.length > 1 ? 'es' : ''}</summary><div class="match-body">${matches.map((m) => `<div class="match-place"><strong>${e(m.nombre_lugar)}</strong><p class="meta">${e(m.tipo)} · ${e(m.ubicacion)}</p><div class="inline-actions">${accionesContacto(m.telefono, m.nombre_lugar)}</div></div>`).join('')}</div></details>` : '';
+        return `<li class="supply-item"><div class="supply-line"><strong>${e(item.nombre)}</strong><span class="badge ${urgenciaClass(item.urgencia)}">${e(item.urgencia || 'Normal')}</span></div><div class="badge-row"><span class="badge gray">${e(item.categoria || 'Otros')}</span><span class="badge">faltan ${e(c.faltan)} ${e(c.unidad)}</span></div><div class="progress" role="progressbar" aria-label="Avance de ${e(item.nombre)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${e(c.porcentaje)}"><span style="--value:${e(c.porcentaje)}%"></span></div>${matchHtml}</li>`;
       }).join('');
       const disponibles = (lugar.tiene_disponible || []).map((i) => `<span class="badge green">${e(i.nombre)}</span>`).join('');
       const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(i.nombre)} cubierto</span>`).join('');
-      const tipoNormal = normalizar(lugar.tipo);
-      const estadoOperativo = lugar.estadoOperativo || (tipoNormal.indexOf('hospital') === 0 ? 'Contacto operativo' : tipoNormal.indexOf('refugio') === 0 ? (lugar.capacidad || 'Capacidad por confirmar') : 'Centro activo');
-      return `<article class="card card-bordered"><div class="card-top"><div><span class="badge ${tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : ''}">${e(lugar.tipo || 'Centro')}</span><h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${tipoNormal.indexOf('hospital') === 0 ? 'red' : ''}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><p class="meta">${e(lugar.ubicacion || 'Ubicación por confirmar')}</p><p class="meta">${e(estadoOperativo)}</p>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : '<p class="meta">Sin necesidades activas registradas.</p>'}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>Tiene disponible</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions"><a class="btn btn-soft btn-small" href="${telHref(lugar.telefono)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(lugar.telefono)}">WhatsApp</a><button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">Historial</button></div><p class="meta">Actualizado: ${e(fechaRelativa(lugar.actualizado))}</p></article>`;
+      const tipoBadge = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
+      const iconClass = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
+      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(lugar.tipo || 'Centro')}</span><h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || 'Ubicación por confirmar')}</span><span>${e(estadoOperativo)}</span></div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : '<p class="meta">Sin necesidades activas registradas.</p>'}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>Tiene disponible</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">Historial</button></div><p class="meta">Actualizado: ${e(fechaRelativa(lugar.actualizado))}</p></article>`;
     }
 
     function renderLugares() {
@@ -1114,10 +1385,18 @@
     }
 
     function personaCard(persona, tipo) {
-      const nombre = tipo === 'voluntario' ? `${persona.nombre || ''} ${persona.apellido || ''}`.trim() : (persona.nombre || 'Rescatista');
-      const especialidad = tipo === 'voluntario' ? persona.profesion : persona.especialidad;
-      const org = tipo === 'voluntario' ? persona.disponibilidad : persona.organizacion;
-      return `<article class="card card-bordered"><div class="card-top"><div><span class="badge ${tipo === 'voluntario' ? 'green' : 'red'}">${e(especialidad || tipo)}</span><h3>${e(nombre)}</h3></div><div class="icon-box ${tipo === 'voluntario' ? 'green' : 'red'}" aria-hidden="true">${tipo === 'voluntario' ? '✓' : '⚑'}</div></div><p class="meta">${e([persona.ciudad, persona.estado].filter(Boolean).join(', ') || 'Ubicación por confirmar')}</p>${org ? `<p class="meta">${e(org)}</p>` : ''}${persona.observaciones ? `<p class="meta">${e(persona.observaciones)}</p>` : ''}<div class="card-actions"><a class="btn btn-soft btn-small" href="${telHref(persona.telefono)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(persona.telefono)}">WhatsApp</a></div><p class="meta">Registro: ${e(fechaRelativa(persona.fecha_registro))}</p></article>`;
+      const esVoluntario = tipo === 'voluntario';
+      const nombre = esVoluntario ? `${persona.nombre || ''} ${persona.apellido || ''}`.trim() : (persona.nombre || 'Rescatista');
+      const especialidad = esVoluntario ? persona.profesion : persona.especialidad;
+      const transporte = persona.medioTransporte || persona.medio_transporte || persona.transporte || '';
+      const equipo = persona.equipoDisponible || persona.equipo_disponible || persona.equipo || '';
+      const capacidad = persona.capacidadOperativa || persona.capacidad_operativa || persona.capacidad || '';
+      const ubicacion = [persona.ciudad, persona.estado].filter(Boolean).join(', ') || 'Ubicación por confirmar';
+      const meta = esVoluntario
+        ? [[ubicacion, 'Ubicación'], [persona.disponibilidad || 'Disponibilidad por confirmar', 'Disponibilidad'], [transporte || 'Transporte por confirmar', 'Transporte']]
+        : [[ubicacion, 'Ubicación'], [persona.organizacion || 'Organización por confirmar', 'Organización'], [capacidad || 'Capacidad por confirmar', 'Capacidad']];
+      const extra = !esVoluntario && equipo ? `<p class="meta"><strong>Equipo disponible:</strong> ${e(equipo)}</p>` : '';
+      return `<article class="card card-bordered person-card ${esVoluntario ? 'volunteer' : 'rescue'}"><div class="card-top"><div><span class="badge ${esVoluntario ? 'green' : 'rescue'}">${e(especialidad || tipo)}</span><h3>${e(nombre || (esVoluntario ? 'Voluntario' : 'Rescatista'))}</h3></div><div class="icon-box ${esVoluntario ? 'green' : 'rescue'}" aria-hidden="true">${esVoluntario ? '✓' : '⚑'}</div></div><div class="meta-grid">${meta.map(([value, label]) => `<span><strong>${e(label)}:</strong> ${e(value)}</span>`).join('')}</div>${extra}${persona.observaciones ? `<p class="meta">${e(persona.observaciones)}</p>` : ''}<div class="card-actions">${accionesContacto(persona.telefono, nombre)}</div><p class="meta">Registro: ${e(fechaRelativa(persona.fecha_registro))}</p></article>`;
     }
 
     function filtrarLista(lista, q, estadoFiltro, tipoFiltro, campoTipo) {
@@ -1163,7 +1442,59 @@
     function mostrarMensaje(id, tipo, textoMsg) {
       const box = $(id);
       box.className = `form-message visible ${tipo}`;
+      box.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+      box.setAttribute('aria-live', tipo === 'error' ? 'assertive' : 'polite');
       box.textContent = textoMsg;
+    }
+
+    function limpiarErrores(form) {
+      form.querySelectorAll('[aria-invalid="true"]').forEach((control) => {
+        control.removeAttribute('aria-invalid');
+        const errorId = `${control.id}-error`;
+        const describedBy = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter((id) => id && id !== errorId);
+        if (describedBy.length) control.setAttribute('aria-describedby', describedBy.join(' '));
+        else control.removeAttribute('aria-describedby');
+      });
+      form.querySelectorAll('.field-error').forEach((node) => node.remove());
+    }
+
+    function nombreCampo(control) {
+      const label = control.id ? document.querySelector(`label[for="${control.id}"]`) : null;
+      return label ? label.textContent.trim() : 'Este campo';
+    }
+
+    function marcarError(control, mensaje) {
+      const errorId = `${control.id}-error`;
+      control.setAttribute('aria-invalid', 'true');
+      const describedBy = new Set((control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+      describedBy.add(errorId);
+      control.setAttribute('aria-describedby', Array.from(describedBy).join(' '));
+      const error = document.createElement('p');
+      error.id = errorId;
+      error.className = 'field-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = mensaje;
+      control.insertAdjacentElement('afterend', error);
+    }
+
+    function validarFormulario(form, messageId) {
+      limpiarErrores(form);
+      const errores = [];
+      form.querySelectorAll('input, select, textarea').forEach((control) => {
+        const valor = String(control.value || '').trim();
+        if (control.hasAttribute('required') && !valor) {
+          errores.push([control, `${nombreCampo(control)} es obligatorio.`]);
+          return;
+        }
+        if (control.type === 'tel' && valor && soloDigitos(valor).length < 7) {
+          errores.push([control, 'Ingresa un teléfono con al menos 7 dígitos.']);
+        }
+      });
+      if (!errores.length) return true;
+      errores.forEach(([control, mensaje]) => marcarError(control, mensaje));
+      mostrarMensaje(messageId, 'error', `Revisa ${errores.length} campo${errores.length > 1 ? 's' : ''} antes de continuar.`);
+      errores[0][0].focus();
+      return false;
     }
 
     function toast(msg) {
@@ -1191,13 +1522,13 @@
       abrirModal('Trayectos registrados', '<div id="modal-list" class="empty-state">Cargando trayectos...</div>');
       const res = await window.SheetsService.getTrayectos(id);
       const items = res.data || [];
-      $('#modal-list').outerHTML = `${items.length ? `<div class="supply-list">${items.map((t) => `<div class="supply-item"><strong>${e(t.origen)} → ${e(t.destino)}</strong><p class="meta">${e(t.kmRecorridos || t.km || 0)} km · ${e(t.insumoTransportado || t.insumo || 'Varios')} · ${e(fechaRelativa(t.timestamp))}</p></div>`).join('')}</div>` : '<div class="empty-state">No hay trayectos registrados.</div>'}<div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="button" id="modal-reg-trayecto">Registrar trayecto</button></div>`;
+      $('#modal-list').outerHTML = `${items.length ? `<div class="supply-list">${items.map((t) => `<div class="supply-item"><strong>${e(t.origen)} → ${e(t.destino)}</strong><p class="meta">${e(t.kmRecorridos || t.km || 0)} km · ${e(t.insumoTransportado || t.insumo || 'Varios')} · ${e(fechaRelativa(t.timestamp))}</p></div>`).join('')}</div>` : '<div class="empty-state">No hay trayectos registrados.</div>'}<div class="form-actions"><button class="btn btn-primary" type="button" id="modal-reg-trayecto">Registrar trayecto</button></div>`;
       $('#modal-reg-trayecto').addEventListener('click', () => abrirRegistrarTrayecto(mot));
     }
 
     function abrirRegistrarTrayecto(mot) {
       if (!mot) return;
-      abrirModal('Registrar trayecto', `<form id="trayecto-form"><div class="form-grid"><div class="field"><label for="tray-origen">Origen</label><input id="tray-origen" required /></div><div class="field"><label for="tray-destino">Destino</label><input id="tray-destino" required /></div><div class="field"><label for="tray-km">Km</label><input id="tray-km" type="number" min="0.1" step="0.1" required /></div><div class="field"><label for="tray-insumo">Insumo</label><input id="tray-insumo" /></div></div><div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar trayecto</button></div></form>`);
+      abrirModal('Registrar trayecto', `<form id="trayecto-form"><div class="form-grid"><div class="field"><label for="tray-origen">Origen</label><input id="tray-origen" required /></div><div class="field"><label for="tray-destino">Destino</label><input id="tray-destino" required /></div><div class="field"><label for="tray-km">Km</label><input id="tray-km" type="number" min="0.1" step="0.1" required /></div><div class="field"><label for="tray-insumo">Insumo</label><input id="tray-insumo" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">Guardar trayecto</button></div></form>`);
       $('#trayecto-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const km = numero($('#tray-km').value);
@@ -1213,7 +1544,7 @@
     function abrirDonarMotorizado(id) {
       const mot = estado.motorizados.find((m) => String(m.id) === String(id));
       if (!mot) return;
-      abrirModal('Registrar apoyo logístico', `<form id="donar-mot-form"><div class="form-grid"><div class="field"><label for="don-monto">Monto o valor</label><input id="don-monto" type="number" min="1" required /></div><div class="field"><label for="don-tipo">Tipo</label><select id="don-tipo"><option>Pago móvil</option><option>Efectivo</option><option>Combustible</option><option>Repuesto</option><option>Otro</option></select></div><div class="field"><label for="don-nombre">Donante</label><input id="don-nombre" /></div><div class="field"><label for="don-ciudad">Ciudad</label><input id="don-ciudad" /></div></div><div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar apoyo</button></div></form>`);
+      abrirModal('Registrar apoyo logístico', `<form id="donar-mot-form"><div class="form-grid"><div class="field"><label for="don-monto">Monto o valor</label><input id="don-monto" type="number" min="1" required /></div><div class="field"><label for="don-tipo">Tipo</label><select id="don-tipo"><option>Pago móvil</option><option>Efectivo</option><option>Combustible</option><option>Repuesto</option><option>Otro</option></select></div><div class="field"><label for="don-nombre">Donante</label><input id="don-nombre" /></div><div class="field"><label for="don-ciudad">Ciudad</label><input id="don-ciudad" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">Guardar apoyo</button></div></form>`);
       $('#donar-mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const monto = numero($('#don-monto').value);
@@ -1226,7 +1557,7 @@
     }
 
     function abrirRegistrarMotorizado() {
-      abrirModal('Registrar transportista', `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">Nombre</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">Vehículo</label><select id="mot-tipo"><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div><div class="field"><label for="mot-telefono">Teléfono</label><input id="mot-telefono" type="tel" /></div><div class="field"><label for="mot-zona">Zona</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">Placa</label><input id="mot-placa" /></div></div><div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar transportista</button></div></form>`);
+      abrirModal('Registrar transportista', `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">Nombre</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">Vehículo</label><select id="mot-tipo"><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div><div class="field"><label for="mot-telefono">Teléfono</label><input id="mot-telefono" type="tel" /></div><div class="field"><label for="mot-zona">Zona</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">Placa</label><input id="mot-placa" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">Guardar transportista</button></div></form>`);
       $('#mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const nuevo = { id: 'MOTO' + String(Date.now()).slice(-4), nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), totalTrayectos: 0, totalKm: 0, aporteDonado: 0, activo: true };
@@ -1241,36 +1572,95 @@
     function bindForms() {
       $('#lugar-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#lugar-message')) return;
         const payload = { accion: 'registrar_lugar', tipo: $('#lugar-tipo').value, nombre: $('#lugar-nombre').value.trim(), ubicacion: $('#lugar-ubicacion').value.trim(), telefono: $('#lugar-telefono').value.trim(), insumo: $('#lugar-insumo').value.trim(), categoria: $('#lugar-categoria').value, estado: $('#lugar-estado').value };
-        mostrarMensaje('#lugar-message', 'info', 'Guardando...');
-        await window.SheetsService.post(payload);
-        const lugar = estado.lugares.find((l) => normalizar(l.tipo + l.nombre) === normalizar(payload.tipo + payload.nombre)) || { tipo: payload.tipo, nombre: payload.nombre, ubicacion: payload.ubicacion, telefono: payload.telefono, necesita: [], tiene_disponible: [], cubiertos: [] };
-        if (!estado.lugares.includes(lugar)) estado.lugares.unshift(lugar);
-        if (normalizar(payload.estado).indexOf('necesita') === 0) lugar.necesita.push({ nombre: payload.insumo, categoria: payload.categoria, cantidadNecesaria: 1, cantidadRecibida: 0, porcentaje: 0, urgencia: 'Normal', unidad: 'unidades', coincidencias: [] });
-        else lugar.tiene_disponible.push({ nombre: payload.insumo, categoria: payload.categoria });
-        lugar.actualizado = new Date().toISOString();
-        poblarCategorias(); renderLugares(); renderStats();
-        mostrarMensaje('#lugar-message', 'success', 'Centro guardado.');
-        ev.currentTarget.reset();
+        mostrarMensaje('#lugar-message', 'info', 'Guardando reporte...');
+        try {
+          await window.SheetsService.post(payload);
+          const lugar = estado.lugares.find((l) => normalizar(l.tipo + l.nombre) === normalizar(payload.tipo + payload.nombre)) || { tipo: payload.tipo, nombre: payload.nombre, ubicacion: payload.ubicacion, telefono: payload.telefono, necesita: [], tiene_disponible: [], cubiertos: [] };
+          if (!estado.lugares.includes(lugar)) estado.lugares.unshift(lugar);
+          if (normalizar(payload.estado).indexOf('necesita') === 0) lugar.necesita.push({ nombre: payload.insumo, categoria: payload.categoria, cantidadNecesaria: 1, cantidadRecibida: 0, porcentaje: 0, urgencia: 'Normal', unidad: 'unidades', coincidencias: [] });
+          else lugar.tiene_disponible.push({ nombre: payload.insumo, categoria: payload.categoria });
+          lugar.actualizado = new Date().toISOString();
+          poblarCategorias(); renderLugares(); renderStats(); renderDashboard();
+          mostrarMensaje('#lugar-message', 'success', 'Reporte guardado.');
+          limpiarErrores(form);
+          form.reset();
+        } catch (err) {
+          mostrarMensaje('#lugar-message', 'error', 'No pudimos guardar el reporte. Revisa la conexión e inténtalo de nuevo.');
+        }
       });
 
       $('#voluntario-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const nuevo = { id: 'VOL' + String(Date.now()).slice(-4), nombre: $('#vol-nombre').value.trim(), apellido: $('#vol-apellido').value.trim(), telefono: $('#vol-telefono').value.trim(), estado: $('#vol-estado').value.trim(), ciudad: $('#vol-ciudad').value.trim(), profesion: $('#vol-profesion').value, disponibilidad: $('#vol-disponibilidad').value.trim(), observaciones: $('#vol-observaciones').value.trim(), fecha_registro: new Date().toISOString() };
-        mostrarMensaje('#vol-message', 'info', 'Guardando...');
-        await window.SheetsService.post(Object.assign({ accion: 'registrar_voluntario' }, nuevo));
-        estado.voluntarios.unshift(nuevo); renderVoluntarios(); renderStats(); mostrarMensaje('#vol-message', 'success', 'Voluntario guardado.'); ev.currentTarget.reset();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#vol-message')) return;
+        const nuevo = {
+          id: 'VOL' + String(Date.now()).slice(-4),
+          nombre: $('#vol-nombre').value.trim(),
+          apellido: $('#vol-apellido').value.trim(),
+          telefono: $('#vol-telefono').value.trim(),
+          estado: $('#vol-estado').value.trim(),
+          ciudad: $('#vol-ciudad').value.trim(),
+          profesion: $('#vol-profesion').value,
+          disponibilidad: $('#vol-disponibilidad').value.trim(),
+          medioTransporte: $('#vol-transporte').value,
+          medio_transporte: $('#vol-transporte').value,
+          observaciones: $('#vol-observaciones').value.trim(),
+          fecha_registro: new Date().toISOString()
+        };
+        mostrarMensaje('#vol-message', 'info', 'Guardando voluntario...');
+        try {
+          await window.SheetsService.post(Object.assign({ accion: 'registrar_voluntario' }, nuevo));
+          estado.voluntarios.unshift(nuevo);
+          renderVoluntarios(); renderStats(); renderDashboard(); renderRegistrySummaries();
+          mostrarMensaje('#vol-message', 'success', 'Voluntario guardado.');
+          limpiarErrores(form);
+          form.reset();
+        } catch (err) {
+          mostrarMensaje('#vol-message', 'error', 'No pudimos guardar el voluntario. Revisa la conexión e inténtalo de nuevo.');
+        }
       });
 
       $('#rescatista-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const nuevo = { id: 'RES' + String(Date.now()).slice(-4), nombre: $('#res-nombre').value.trim(), organizacion: $('#res-organizacion').value.trim(), telefono: $('#res-telefono').value.trim(), especialidad: $('#res-especialidad').value, estado: $('#res-estado').value.trim(), ciudad: $('#res-ciudad').value.trim(), disponibilidad: $('#res-disponibilidad').value.trim(), observaciones: $('#res-observaciones').value.trim(), fecha_registro: new Date().toISOString() };
-        mostrarMensaje('#res-message', 'info', 'Guardando...');
-        await window.SheetsService.post(Object.assign({ accion: 'registrar_rescatista' }, nuevo));
-        estado.rescatistas.unshift(nuevo); renderRescatistas(); renderStats(); mostrarMensaje('#res-message', 'success', 'Rescatista guardado.'); ev.currentTarget.reset();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#res-message')) return;
+        const nuevo = {
+          id: 'RES' + String(Date.now()).slice(-4),
+          nombre: $('#res-nombre').value.trim(),
+          organizacion: $('#res-organizacion').value.trim(),
+          telefono: $('#res-telefono').value.trim(),
+          especialidad: $('#res-especialidad').value,
+          estado: $('#res-estado').value.trim(),
+          ciudad: $('#res-ciudad').value.trim(),
+          disponibilidad: $('#res-disponibilidad').value.trim(),
+          equipoDisponible: $('#res-equipo').value.trim(),
+          equipo_disponible: $('#res-equipo').value.trim(),
+          capacidadOperativa: $('#res-capacidad').value,
+          capacidad_operativa: $('#res-capacidad').value,
+          observaciones: $('#res-observaciones').value.trim(),
+          fecha_registro: new Date().toISOString()
+        };
+        mostrarMensaje('#res-message', 'info', 'Guardando rescatista...');
+        try {
+          await window.SheetsService.post(Object.assign({ accion: 'registrar_rescatista' }, nuevo));
+          estado.rescatistas.unshift(nuevo);
+          renderRescatistas(); renderStats(); renderDashboard(); renderRegistrySummaries();
+          mostrarMensaje('#res-message', 'success', 'Rescatista guardado.');
+          limpiarErrores(form);
+          form.reset();
+        } catch (err) {
+          mostrarMensaje('#res-message', 'error', 'No pudimos guardar el rescatista. Revisa la conexión e inténtalo de nuevo.');
+        }
       });
 
-      $('#familiar-form').addEventListener('submit', (ev) => { ev.preventDefault(); buscarFamiliar($('#familiar-query').value); });
+      $('#familiar-form').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        if (!validarFormulario(ev.currentTarget, '#familiar-message')) return;
+        buscarFamiliar($('#familiar-query').value);
+      });
     }
 
     async function cargarFamiliaresMock() {
@@ -1312,7 +1702,7 @@
       if (!encontrado || !resultados.length) { $('#familiar-resultados').innerHTML = '<div class="empty-state">No encontramos a esta persona en los registros disponibles.</div>'; return; }
       $('#familiar-resultados').innerHTML = resultados.map((p) => {
         const delicado = normalizar(p.estado).includes('fallec');
-        return `<article class="card card-bordered"><span class="badge ${delicado ? 'gray' : 'green'}">${e(p.estado)}</span><h3>${e(p.nombre)}</h3><p class="meta">Cédula: ${e(p.cedula)}</p>${p.ubicacion ? `<p class="meta">${e(p.ubicacion)}</p>` : ''}${p.fuente ? `<p class="meta">Fuente: ${e(p.fuente)}</p>` : ''}<p class="meta">Actualizado: ${e(fechaRelativa(p.actualizado))}</p>${delicado ? `<p class="meta">${e(LINEA_APOYO)}</p>` : ''}</article>`;
+        return `<article class="card card-bordered family-card"><span class="badge ${delicado ? 'gray' : 'green'}">${e(p.estado)}</span><h3>${e(p.nombre)}</h3><div class="meta-grid"><span><strong>Cédula:</strong> ${e(p.cedula)}</span>${p.ubicacion ? `<span><strong>Ubicación:</strong> ${e(p.ubicacion)}</span>` : ''}${p.fuente ? `<span><strong>Fuente:</strong> ${e(p.fuente)}</span>` : ''}<span><strong>Actualizado:</strong> ${e(fechaRelativa(p.actualizado))}</span></div>${delicado ? `<p class="meta">${e(LINEA_APOYO)}</p>` : ''}</article>`;
       }).join('');
     }
 
@@ -1325,7 +1715,7 @@
     }
 
     function renderAll() {
-      renderStats(); renderUrgentes(); poblarCategorias(); renderLugares(); renderVoluntarios(); renderRescatistas(); renderMotorizados();
+      renderStats(); renderDashboard(); renderRegistrySummaries(); renderUrgentes(); poblarCategorias(); renderLugares(); renderVoluntarios(); renderRescatistas(); renderMotorizados();
     }
 
     async function cargarTodo() {

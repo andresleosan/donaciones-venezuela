@@ -48,7 +48,7 @@ Se crea automáticamente si no existe.
 Columnas:
 
 ```text
-id, nombre, apellido, telefono, estado, ciudad, profesion, disponibilidad, observaciones, fecha_registro
+id, nombre, apellido, telefono, estado, ciudad, profesion, disponibilidad, medio_transporte, observaciones, fecha_registro
 ```
 
 ### rescatistas
@@ -58,7 +58,7 @@ Se crea automáticamente si no existe.
 Columnas:
 
 ```text
-id, nombre, organizacion, telefono, especialidad, estado, ciudad, disponibilidad, observaciones, fecha_registro
+id, nombre, organizacion, telefono, especialidad, estado, ciudad, disponibilidad, equipo_disponible, capacidad_operativa, observaciones, fecha_registro
 ```
 
 ### Hojas heredadas conservadas
@@ -217,6 +217,7 @@ Payload:
   "ciudad": "Maiquetia",
   "profesion": "Enfermero",
   "disponibilidad": "Tardes",
+  "medio_transporte": "Moto",
   "observaciones": "Primeros auxilios"
 }
 ```
@@ -240,6 +241,8 @@ Payload:
   "estado": "La Guaira",
   "ciudad": "Caraballeda",
   "disponibilidad": "Activo",
+  "equipo_disponible": "Herramientas livianas y radio",
+  "capacidad_operativa": "3-5 personas",
   "observaciones": "Equipo con herramientas"
 }
 ```

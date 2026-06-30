@@ -29,11 +29,11 @@ const LUGARES_HEADERS = [
 ];
 const VOLUNTARIOS_HEADERS = [
   "id", "nombre", "apellido", "telefono", "estado", "ciudad", "profesion",
-  "disponibilidad", "observaciones", "fecha_registro"
+  "disponibilidad", "medio_transporte", "observaciones", "fecha_registro"
 ];
 const RESCATISTAS_HEADERS = [
   "id", "nombre", "organizacion", "telefono", "especialidad", "estado", "ciudad",
-  "disponibilidad", "observaciones", "fecha_registro"
+  "disponibilidad", "equipo_disponible", "capacidad_operativa", "observaciones", "fecha_registro"
 ];
 const HISTORIAL_HEADERS = [
   "Timestamp", "TipoLugar", "Lugar", "Insumo", "TipoMovimiento", "Cantidad",
@@ -143,7 +143,29 @@ function asegurarHoja(nombre, headers) {
   if (lastRow === 0 || lastColumn === 0) {
     hoja.getRange(1, 1, 1, headers.length).setValues([headers]);
     hoja.setFrozenRows(1);
+    return hoja;
   }
+
+  const actuales = hoja.getRange(1, 1, 1, lastColumn).getValues()[0].map(texto);
+  let nextColumn = lastColumn + 1;
+  headers.forEach(function (header) {
+    if (actuales.indexOf(header) === -1) {
+      hoja.getRange(1, nextColumn).setValue(header);
+      actuales.push(header);
+      nextColumn++;
+    }
+  });
+  hoja.setFrozenRows(1);
+  return hoja;
+}
+
+function anexarObjeto(nombreHoja, headers, objeto) {
+  const hoja = asegurarHoja(nombreHoja, headers);
+  const currentHeaders = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0].map(texto);
+  const row = currentHeaders.map(function (header) {
+    return objeto[header] != null ? objeto[header] : "";
+  });
+  hoja.appendRow(row);
   return hoja;
 }
 
@@ -466,6 +488,7 @@ function listarVoluntarios(params) {
 function construirVoluntarios() {
   const rows = leerObjetos(VOLUNTARIOS_SHEET, VOLUNTARIOS_HEADERS);
   const voluntarios = rows.map(function (row) {
+    const medioTransporte = texto(valorPorCabecera(row, ["medio_transporte", "medioTransporte", "transporte", "Medio de transporte"]));
     return {
       id: texto(row.id),
       nombre: texto(row.nombre),
@@ -475,6 +498,8 @@ function construirVoluntarios() {
       ciudad: texto(row.ciudad),
       profesion: texto(row.profesion),
       disponibilidad: texto(row.disponibilidad),
+      medio_transporte: medioTransporte,
+      medioTransporte,
       observaciones: texto(row.observaciones),
       fecha_registro: fechaISO(row.fecha_registro)
     };
@@ -492,18 +517,21 @@ function registrarVoluntario(payload) {
   const hoja = asegurarHoja(VOLUNTARIOS_SHEET, VOLUNTARIOS_HEADERS);
   const id = generarId(hoja, "VOL");
   const fechaRegistro = new Date();
-  hoja.appendRow([
+  const medioTransporte = texto(payload.medio_transporte || payload.medioTransporte || payload.transporte);
+  const voluntario = {
     id,
     nombre,
-    texto(payload.apellido),
+    apellido: texto(payload.apellido),
     telefono,
-    texto(payload.estado),
-    texto(payload.ciudad),
-    texto(payload.profesion),
-    texto(payload.disponibilidad),
-    texto(payload.observaciones),
-    fechaRegistro
-  ]);
+    estado: texto(payload.estado),
+    ciudad: texto(payload.ciudad),
+    profesion: texto(payload.profesion),
+    disponibilidad: texto(payload.disponibilidad),
+    medio_transporte: medioTransporte,
+    observaciones: texto(payload.observaciones),
+    fecha_registro: fechaRegistro
+  };
+  anexarObjeto(VOLUNTARIOS_SHEET, VOLUNTARIOS_HEADERS, voluntario);
 
   return jsonResponse({
     success: true,
@@ -512,13 +540,15 @@ function registrarVoluntario(payload) {
     voluntario: {
       id,
       nombre,
-      apellido: texto(payload.apellido),
+      apellido: voluntario.apellido,
       telefono,
-      estado: texto(payload.estado),
-      ciudad: texto(payload.ciudad),
-      profesion: texto(payload.profesion),
-      disponibilidad: texto(payload.disponibilidad),
-      observaciones: texto(payload.observaciones),
+      estado: voluntario.estado,
+      ciudad: voluntario.ciudad,
+      profesion: voluntario.profesion,
+      disponibilidad: voluntario.disponibilidad,
+      medio_transporte: medioTransporte,
+      medioTransporte,
+      observaciones: voluntario.observaciones,
       fecha_registro: fechaRegistro.toISOString()
     }
   });
@@ -533,6 +563,8 @@ function listarRescatistas(params) {
 function construirRescatistas() {
   const rows = leerObjetos(RESCATISTAS_SHEET, RESCATISTAS_HEADERS);
   const rescatistas = rows.map(function (row) {
+    const equipoDisponible = texto(valorPorCabecera(row, ["equipo_disponible", "equipoDisponible", "equipo", "Equipo disponible"]));
+    const capacidadOperativa = texto(valorPorCabecera(row, ["capacidad_operativa", "capacidadOperativa", "capacidad", "Capacidad operativa"]));
     return {
       id: texto(row.id),
       nombre: texto(row.nombre),
@@ -542,6 +574,10 @@ function construirRescatistas() {
       estado: texto(row.estado),
       ciudad: texto(row.ciudad),
       disponibilidad: texto(row.disponibilidad),
+      equipo_disponible: equipoDisponible,
+      equipoDisponible,
+      capacidad_operativa: capacidadOperativa,
+      capacidadOperativa,
       observaciones: texto(row.observaciones),
       fecha_registro: fechaISO(row.fecha_registro)
     };
@@ -559,18 +595,23 @@ function registrarRescatista(payload) {
   const hoja = asegurarHoja(RESCATISTAS_SHEET, RESCATISTAS_HEADERS);
   const id = generarId(hoja, "RES");
   const fechaRegistro = new Date();
-  hoja.appendRow([
+  const equipoDisponible = texto(payload.equipo_disponible || payload.equipoDisponible || payload.equipo);
+  const capacidadOperativa = texto(payload.capacidad_operativa || payload.capacidadOperativa || payload.capacidad);
+  const rescatista = {
     id,
     nombre,
-    texto(payload.organizacion),
+    organizacion: texto(payload.organizacion),
     telefono,
-    texto(payload.especialidad),
-    texto(payload.estado),
-    texto(payload.ciudad),
-    texto(payload.disponibilidad),
-    texto(payload.observaciones),
-    fechaRegistro
-  ]);
+    especialidad: texto(payload.especialidad),
+    estado: texto(payload.estado),
+    ciudad: texto(payload.ciudad),
+    disponibilidad: texto(payload.disponibilidad),
+    equipo_disponible: equipoDisponible,
+    capacidad_operativa: capacidadOperativa,
+    observaciones: texto(payload.observaciones),
+    fecha_registro: fechaRegistro
+  };
+  anexarObjeto(RESCATISTAS_SHEET, RESCATISTAS_HEADERS, rescatista);
 
   return jsonResponse({
     success: true,
@@ -579,13 +620,17 @@ function registrarRescatista(payload) {
     rescatista: {
       id,
       nombre,
-      organizacion: texto(payload.organizacion),
+      organizacion: rescatista.organizacion,
       telefono,
-      especialidad: texto(payload.especialidad),
-      estado: texto(payload.estado),
-      ciudad: texto(payload.ciudad),
-      disponibilidad: texto(payload.disponibilidad),
-      observaciones: texto(payload.observaciones),
+      especialidad: rescatista.especialidad,
+      estado: rescatista.estado,
+      ciudad: rescatista.ciudad,
+      disponibilidad: rescatista.disponibilidad,
+      equipo_disponible: equipoDisponible,
+      equipoDisponible,
+      capacidad_operativa: capacidadOperativa,
+      capacidadOperativa,
+      observaciones: rescatista.observaciones,
       fecha_registro: fechaRegistro.toISOString()
     }
   });
@@ -602,7 +647,8 @@ function filtrarPersonas(lista, params) {
     if (!q) return true;
     return normalizar([
       item.nombre, item.apellido, item.organizacion, item.telefono, item.estado,
-      item.ciudad, item.profesion, item.especialidad, item.disponibilidad
+      item.ciudad, item.profesion, item.especialidad, item.disponibilidad,
+      item.medio_transporte, item.equipo_disponible, item.capacidad_operativa
     ].join(" ")).indexOf(q) !== -1;
   });
 }
