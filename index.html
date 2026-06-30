@@ -3,2235 +3,1351 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Conecta donadores con centros de acopio y hospitales tras los terremotos de Venezuela, y busca familiares en los registros disponibles." />
-  <title>🆘 Donaciones Venezuela · Ayuda terremoto 2026</title>
-  <link rel="icon" href="data:," /><!-- evita el 404 de favicon -->
+  <meta name="description" content="Plataforma nacional de respuesta humanitaria en Venezuela para conectar centros de ayuda, hospitales, voluntarios, rescatistas y familias." />
+  <title>Respuesta Humanitaria Venezuela</title>
+  <link rel="icon" href="data:," />
   <link rel="apple-touch-icon" href="data:," />
   <link rel="canonical" href="https://donacionesvenezuela.vercel.app/" />
   <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#dc2626" />
+  <meta name="theme-color" content="#0057B8" />
 
-  <!-- Open Graph / redes sociales (la app se comparte mucho por WhatsApp) -->
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Donaciones Venezuela" />
+  <meta property="og:site_name" content="Respuesta Humanitaria Venezuela" />
   <meta property="og:locale" content="es_VE" />
   <meta property="og:url" content="https://donacionesvenezuela.vercel.app/" />
-  <meta property="og:title" content="Donaciones Venezuela — Ayuda tras el terremoto de 2026" />
-  <meta property="og:description" content="Centros de acopio y hospitales con lo que necesitan y lo que pueden compartir (con coincidencias automáticas de insumos), y búsqueda de familiares tras los terremotos de Venezuela de 2026." />
+  <meta property="og:title" content="Respuesta Humanitaria Venezuela" />
+  <meta property="og:description" content="Conectando ciudadanos, voluntarios, rescatistas y centros de ayuda." />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Donaciones Venezuela — Ayuda tras el terremoto de 2026" />
-  <meta name="twitter:description" content="Centros de acopio y hospitales: qué necesitan y qué comparten, con coincidencias automáticas. Y búsqueda de familiares." />
+  <meta name="twitter:title" content="Respuesta Humanitaria Venezuela" />
+  <meta name="twitter:description" content="Centros de ayuda, suministros, voluntarios, rescatistas y búsqueda familiar." />
 
-  <!-- Datos estructurados (JSON-LD) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Donaciones Venezuela",
+    "name": "Respuesta Humanitaria Venezuela",
     "url": "https://donacionesvenezuela.vercel.app/",
     "inLanguage": "es",
-    "description": "Conecta donadores con centros de acopio y hospitales tras los terremotos de Venezuela de 2026, con coincidencias automáticas de insumos, y permite buscar familiares en los registros disponibles."
+    "description": "Plataforma nacional de respuesta humanitaria para centros de ayuda, hospitales, voluntarios, rescatistas y familias."
   }
   </script>
+
   <style>
-    /* ── Tokens de diseño ─────────────────────────────────── */
     :root {
-      --color-emergency: #dc2626;
-      --color-centro: #1d4ed8;
-      --color-necesita: #15803d;
-      --color-disponible: #0369a1;
-      --color-match: #7c3aed;
-      --color-surface: #ffffff;
-      --color-bg: #f1f5f9;
-      --color-text: #0f172a;
-      --color-muted: #475569;
-      --color-border: #e2e8f0;
-      --color-amber: #f59e0b;
-      --radius-input: 8px;
-      --radius-card: 12px;
-      --radius-header: 16px;
-      --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 14px rgba(15, 23, 42, 0.06);
-      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      --primary: #0057B8;
+      --primary-dark: #004494;
+      --secondary: #E53935;
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --surface-alt: #EEF5FF;
+      --text: #1E293B;
+      --muted: #64748B;
+      --border: #D8E0EA;
+      --success: #16A34A;
+      --warning: #F59E0B;
+      --error: #DC2626;
+      --ink: #0F172A;
+      --radius: 8px;
+      --radius-lg: 14px;
+      --shadow: 0 14px 42px rgba(15, 23, 42, 0.10);
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     }
 
     * { box-sizing: border-box; }
-    html { -webkit-text-size-adjust: 100%; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: var(--font);
-      color: var(--color-text);
-      background: linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%) no-repeat;
-      background-color: var(--color-bg);
+      color: var(--text);
+      background:
+        linear-gradient(90deg, rgba(0,87,184,0.045) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(0,87,184,0.035) 1px, transparent 1px),
+        var(--bg);
+      background-size: 34px 34px;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image: radial-gradient(rgba(15,23,42,0.12) 0.7px, transparent 0.7px);
+      background-size: 13px 13px;
+      z-index: -1;
+    }
     a { color: inherit; }
-
-    /* ── Accesibilidad ─────────────────────────────────────── */
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
     .visually-hidden {
-      position: absolute; width: 1px; height: 1px;
-      padding: 0; margin: -1px; overflow: hidden;
-      clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     .skip-link {
-      position: absolute; left: 8px; top: -48px; z-index: 30;
-      background: var(--color-text); color: #fff;
-      padding: 10px 14px; border-radius: var(--radius-input);
-      text-decoration: none; font-weight: 600; transition: top 0.15s ease;
+      position: absolute;
+      top: -52px;
+      left: 12px;
+      z-index: 100;
+      background: var(--ink);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      font-weight: 700;
     }
-    .skip-link:focus { top: 8px; }
-    /* Foco de teclado visible y consistente, sin quedar tapado por la cabecera sticky */
-    :focus-visible { outline: 3px solid var(--color-centro); outline-offset: 2px; border-radius: 4px; scroll-margin-top: 96px; }
-    [tabindex="-1"]:focus { outline: none; }
+    .skip-link:focus { top: 12px; }
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 3px solid rgba(0, 87, 184, 0.72);
+      outline-offset: 3px;
+      scroll-margin-top: 92px;
+      scroll-margin-bottom: 84px;
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
       }
     }
 
-    /* ── Header ────────────────────────────────────────────── */
-    header.app {
+    .app-header {
       position: sticky;
       top: 0;
-      z-index: 20;
-      background: var(--color-surface);
-      border-top: 3px solid var(--color-emergency);
-      border-bottom: 1px solid var(--color-border);
-      box-shadow: var(--shadow-card);
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(14px);
     }
-    .header-inner { max-width: 1200px; margin: 0 auto; padding: 12px 16px; }
-    .header-inner h1 { font-size: 1.25rem; margin: 0; }
-    .header-inner .subtitulo { color: var(--color-muted); font-size: 0.85rem; margin: 2px 0 0; }
-    .banner-emergencia {
-      margin-top: 10px;
-      background: var(--color-emergency);
-      color: #fff;
-      border-radius: var(--radius-input);
-      padding: 8px 12px;
-      font-size: 0.85rem;
-      font-weight: 600;
+    .header-inner {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      min-height: 68px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 18px;
+      align-items: center;
     }
-
-    /* ── Tabs ──────────────────────────────────────────────── */
-    .nav-tabs { display: flex; gap: 6px; margin-top: 12px; }
-    .tab-btn {
-      flex: 1;
-      padding: 10px 8px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      font-family: inherit;
-      color: var(--color-muted);
-      background: var(--color-bg);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-      cursor: pointer;
-    }
-    .tab-btn[aria-selected="true"],
-    .tab-btn.activo {
-      color: #fff;
-      background: var(--color-emergency);
-      border-color: var(--color-emergency);
-    }
-    .tab-content.activo { display: block; }
-
-    /* ── Layout principal ──────────────────────────────────── */
-    main { max-width: 1200px; margin: 0 auto; padding: 16px; }
-    .oculto { display: none !important; }
-
-    /* ── Banners de estado ─────────────────────────────────── */
-    .banner-aviso {
-      background: #fffbeb;
-      border: 1px solid var(--color-amber);
-      color: #92400e;
-      border-radius: var(--radius-input);
-      padding: 8px 12px;
-      font-size: 0.85rem;
-      margin-bottom: 12px;
-    }
-
-    /* ── Filtros ───────────────────────────────────────────── */
-    .filtros {
-      position: sticky;
-      top: 0;
-      background: var(--color-bg);
-      padding: 10px 0;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
+    .brand {
+      display: inline-flex;
+      align-items: center;
       gap: 10px;
-      z-index: 10;
-    }
-    .toggles { display: flex; gap: 6px; }
-    .toggle-btn {
-      flex: 1;
-      padding: 8px;
-      font-size: 0.85rem;
-      font-family: inherit;
-      background: var(--color-surface);
-      color: var(--color-text);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-      cursor: pointer;
-    }
-    .toggle-btn[aria-pressed="true"] {
-      background: var(--color-text);
-      color: #fff;
-      border-color: var(--color-text);
-    }
-    .filtros input[type="search"],
-    .filtros select {
-      width: 100%;
-      padding: 10px;
-      font-size: 0.95rem;
-      font-family: inherit;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-      background: var(--color-surface);
-      color: var(--color-text);
-    }
-    .conteo { color: var(--color-muted); font-size: 0.82rem; }
-
-    /* Panel de filtros colapsable en móvil (en desktop siempre visible) */
-    .filtros-summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 9px 12px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--color-text);
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-    }
-    .filtros-summary::-webkit-details-marker { display: none; }
-    .filtros-summary::after { content: '▾'; color: var(--color-muted); float: right; }
-    .filtros-acc[open] .filtros-summary::after { content: '▴'; }
-    .filtros-acc:not([open]) .filtros-summary { margin-bottom: 12px; }
-    @media (min-width: 1024px) {
-      .filtros-summary { display: none; }
-      .filtros-acc > .filtros { display: flex !important; }
-    }
-
-    /* ── Grid de tarjetas ──────────────────────────────────── */
-    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-
-    article.card {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-top: 4px solid var(--color-centro);
-      border-radius: var(--radius-card);
-      box-shadow: var(--shadow-card);
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    article.card.hospital { border-top-color: var(--color-emergency); }
-
-    .badge {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      padding: 2px 8px;
-      border-radius: var(--radius-input);
-      color: #fff;
-    }
-    .badge.tipo-centro { background: var(--color-centro); }
-    .badge.tipo-hospital { background: var(--color-emergency); }
-    .badge.cat {
-      background: var(--color-bg);
-      color: var(--color-muted);
-      font-weight: 600;
-    }
-
-    .card h3 { margin: 4px 0 0; font-size: 1.05rem; }
-    .meta { color: var(--color-muted); font-size: 0.85rem; margin: 0; }
-
-    .lista-titulo { font-size: 0.8rem; font-weight: 700; margin: 6px 0 2px; text-transform: uppercase; letter-spacing: 0.03em; }
-    .lista-titulo.necesita { color: var(--color-necesita); }
-    .lista-titulo.disponible { color: var(--color-disponible); }
-    ul.insumos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-    ul.insumos li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.9rem; }
-
-    details.match { width: 100%; }
-    details.match > summary {
-      cursor: pointer;
-      list-style: none;
-      display: inline-block;
-      background: #f5f3ff;
-      color: var(--color-match);
-      border: 1px solid var(--color-match);
-      border-radius: var(--radius-input);
-      padding: 6px 10px;
-      font-size: 0.72rem;
-      font-weight: 700;
-    }
-    details.match > summary::-webkit-details-marker { display: none; }
-    .match-body {
-      margin-top: 6px;
-      padding: 8px;
-      background: #faf5ff;
-      border: 1px solid #e9d5ff;
-      border-radius: var(--radius-input);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .match-lugar { font-size: 0.85rem; }
-    .match-lugar strong { color: var(--color-match); }
-
-    .acciones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-    .btn-accion {
-      flex: 1;
-      min-width: 120px;
-      text-align: center;
+      color: var(--ink);
       text-decoration: none;
-      padding: 9px 10px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      border-radius: var(--radius-input);
-      border: 1px solid var(--color-border);
-      background: var(--color-bg);
-      color: var(--color-text);
+      font-weight: 850;
+      letter-spacing: 0;
     }
-    .btn-accion.wa { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-    .btn-accion.call { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
-    .btn-accion.registrar { background: #fff7ed; color: #9a3412; border-color: #fed7aa; cursor: pointer; font-family: inherit; }
-    .btn-accion.mini { flex: none; min-width: 0; padding: 6px 10px; font-size: 0.8rem; }
-    .btn-accion.historial { flex: 1 1 100%; background: #f8fafc; color: #334155; cursor: pointer; font-family: inherit; }
-    button.btn-accion { cursor: pointer; font-family: inherit; }
-    .timestamp { color: var(--color-muted); font-size: 0.72rem; margin-top: 4px; }
-
-    .card-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .voluntarios-badge {
-      color: #9a3412;
-      background: #ffedd5;
-      border: 1px solid #fed7aa;
-      border-radius: var(--radius-input);
-      padding: 3px 8px;
-      font-size: 0.72rem;
-      font-weight: 700;
-    }
-    ul.insumos li.necesidad-item {
-      display: block;
-      padding: 8px 0;
-      border-bottom: 1px solid #eef2f7;
-    }
-    ul.insumos li.necesidad-item:last-child { border-bottom: 0; }
-    .insumo-linea {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 6px;
-    }
-    .insumo-main { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .insumo-faltan { color: var(--color-muted); font-size: 0.78rem; font-weight: 700; }
-    .badge.urgencia {
-      background: #f8fafc;
-      border: 1px solid currentColor;
-      font-size: 0.62rem;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-    .badge.urgencia.critico { color: #dc2626; }
-    .badge.urgencia.moderado { color: #b45309; }
-    .badge.urgencia.normal { color: #15803d; }
-    .barra-progreso {
-      width: 100%;
-      height: 10px;
-      background: #e2e8f0;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .barra-progreso span {
-      display: block;
-      width: var(--progreso, 0%);
-      max-width: 100%;
-      height: 100%;
-      background: var(--barra, var(--color-necesita));
-      border-radius: inherit;
-    }
-    .barra-meta {
-      margin-top: 3px;
-      color: var(--color-muted);
-      font-size: 0.72rem;
-    }
-    .ya-cubierto-seccion {
-      margin-top: 4px;
-      padding-top: 8px;
-      border-top: 1px solid #eef2f7;
-    }
-    .ya-cubierto-titulo {
-      color: #15803d;
-      font-size: 0.74rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .ya-cubierto-lista { display: flex; flex-wrap: wrap; gap: 6px; }
-    .cubierto-chip {
-      background: #ecfdf5;
-      color: #166534;
-      border: 1px solid #bbf7d0;
-      border-radius: var(--radius-input);
-      padding: 4px 8px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-
-    /* ── Motorizados ───────────────────────────────────────── */
-    .seccion-motorizados {
-      margin-top: 24px;
-      padding-top: 20px;
-      border-top: 1px solid var(--color-border);
-    }
-    .seccion-header {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .seccion-titulo {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: var(--color-text);
-      margin: 0;
-    }
-    .seccion-subtitulo {
-      font-size: 0.85rem;
-      color: var(--color-muted);
-      margin: 0;
-      flex: 1 1 260px;
-    }
-    .btn-registrar-mot {
-      background: var(--color-match);
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
       color: #fff;
-      border: none;
-      padding: 10px 14px;
-      border-radius: var(--radius-input);
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
+      background: var(--primary);
+      box-shadow: 0 10px 26px rgba(0, 87, 184, 0.24);
+    }
+    .brand span:last-child { display: none; }
+    .top-nav {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .nav-link {
+      min-height: 42px;
+      border: 0;
+      border-radius: var(--radius);
+      padding: 0 12px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.91rem;
+      font-weight: 750;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.08s ease;
+    }
+    .nav-link:hover { color: var(--ink); background: #EEF5FF; }
+    .nav-link[aria-current="page"] { color: var(--primary); background: #E6F0FF; }
+    .nav-link:active { transform: translateY(1px); }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: #fff;
+      font-size: 0.78rem;
+      font-weight: 750;
       white-space: nowrap;
     }
-    .btn-registrar-mot:hover,
-    .btn-registrar-motorizado:hover { background: #6d28d9; }
-    .filtros-motorizados {
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .status-dot.demo { background: var(--warning); }
+    .status-dot.cache { background: var(--primary); }
+
+    main {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 88px;
+    }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .hero {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 20px;
+      align-items: stretch;
+      min-height: 460px;
+      padding: 20px 0 26px;
     }
-    .tipo-botones {
+    .hero-copy {
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      justify-content: center;
+      gap: 18px;
+      padding: 24px 0;
     }
-    .btn-tipo {
-      padding: 9px 11px;
-      font-size: 0.84rem;
-      font-weight: 700;
-      font-family: inherit;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-      background: var(--color-surface);
-      color: var(--color-text);
-      cursor: pointer;
-    }
-    .btn-tipo.activo,
-    .btn-tipo[aria-pressed="true"] {
-      background: var(--color-text);
-      color: #fff;
-      border-color: var(--color-text);
-    }
-    .btn-registrar-motorizado {
-      background: var(--color-match);
-      color: #fff;
-      border: none;
-      padding: 10px 14px;
-      border-radius: var(--radius-input);
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      white-space: nowrap;
-      justify-self: start;
-    }
-    .ranking-motorizados { min-height: 80px; }
-    .grid-motorizados {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
-      margin-bottom: 12px;
-    }
-    .tarjeta-mot {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-left: 4px solid var(--color-match);
-      border-radius: var(--radius-card);
-      box-shadow: var(--shadow-card);
-      padding: 14px;
-    }
-    .mot-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-    .mot-nombre { font-size: 1rem; font-weight: 800; color: var(--color-text); margin-right: 6px; }
-    .badge-tipo-mot {
-      background: #f1f5f9;
-      color: #475569;
-      font-size: 0.62rem;
-      font-weight: 800;
-      padding: 2px 7px;
-      border-radius: 4px;
-      letter-spacing: 0.04em;
-      margin-right: 4px;
-    }
-    .badge-activo { color: #16a34a; font-size: 0.74rem; font-weight: 800; }
-    .badge-inactivo { color: #9ca3af; font-size: 0.74rem; font-weight: 800; }
-    .mot-info { font-size: 0.8rem; color: var(--color-muted); margin-bottom: 12px; }
-    .mot-stats {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .eyebrow {
+      width: fit-content;
+      display: inline-flex;
       gap: 8px;
-      margin-bottom: 12px;
-      padding: 10px;
-      background: #f8fafc;
-      border: 1px solid #eef2f7;
-      border-radius: var(--radius-input);
-    }
-    .mot-stat { min-width: 0; }
-    .mot-stat-num { display: block; font-size: 1.2rem; font-weight: 800; color: var(--color-match); line-height: 1.1; }
-    .mot-stat-label { display: block; font-size: 0.68rem; color: var(--color-muted); margin-top: 2px; overflow-wrap: anywhere; }
-    .mot-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-ver-trayectos,
-    .btn-donar-mot,
-    .btn-wa-mot {
-      border-radius: 6px;
-      padding: 8px 10px;
+      align-items: center;
+      padding: 7px 10px;
+      border: 1px solid #BCD6F8;
+      border-radius: var(--radius);
+      background: #EAF3FF;
+      color: var(--primary-dark);
       font-size: 0.78rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      text-decoration: none;
+      font-weight: 850;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 {
+      margin-bottom: 0;
+      max-width: 760px;
+      color: var(--ink);
+      font-size: clamp(2.45rem, 10vw, 5.8rem);
+      line-height: 0.94;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .hero-subtitle {
+      max-width: 680px;
+      margin: 0;
+      color: #334155;
+      font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+      line-height: 1.55;
+      text-wrap: pretty;
+    }
+    .hero-actions, .section-actions, .card-actions, .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 36px;
+      gap: 8px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 0 15px;
+      text-decoration: none;
+      font-size: 0.94rem;
+      font-weight: 800;
+      transition: transform 0.08s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
     }
-    .btn-ver-trayectos { background: #fff; border: 1px solid var(--color-border); color: #374151; }
-    .btn-donar-mot { background: #fef9c3; border: 1px solid #fde047; color: #713f12; }
-    .btn-wa-mot { background: #dcfce7; border: 1px solid #86efac; color: #14532d; }
-    .btn-ver-trayectos:hover { background: #f8fafc; }
-    .btn-donar-mot:hover { background: #fef08a; }
-    .btn-wa-mot:hover { background: #bbf7d0; }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { color: #fff; background: var(--primary); box-shadow: 0 14px 30px rgba(0, 87, 184, 0.23); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { color: #fff; background: var(--secondary); box-shadow: 0 14px 30px rgba(229, 57, 53, 0.18); }
+    .btn-secondary:hover { background: #C92F2B; }
+    .btn-ghost { color: var(--ink); border-color: var(--border); background: #fff; }
+    .btn-ghost:hover { border-color: #A9BAD0; background: #F3F7FC; }
+    .btn-soft { color: var(--primary-dark); background: #EAF3FF; border-color: #C6DBF6; }
+    .btn-soft:hover { background: #DDEBFE; }
+    .btn-danger { color: #fff; background: var(--secondary); }
+    .btn-small { min-height: 36px; padding: 0 11px; font-size: 0.82rem; }
 
-    /* ── Modales y toast ───────────────────────────────────── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      background: rgba(15, 23, 42, 0.58);
+    .hero-visual {
+      position: relative;
+      min-height: 340px;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(135deg, rgba(0,87,184,0.94), rgba(0,67,148,0.92)),
+        #0057B8;
+      box-shadow: var(--shadow);
+      color: #fff;
+    }
+    .hero-map {
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 12px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,0.12) 1px, transparent 1px);
+      background-size: 42px 42px;
+    }
+    .route-line {
+      position: absolute;
+      left: 14%;
+      right: 12%;
+      top: 48%;
+      height: 3px;
+      background: repeating-linear-gradient(90deg, #fff 0 12px, transparent 12px 20px);
+      transform: rotate(-10deg);
+      opacity: 0.76;
+    }
+    .map-pin {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: var(--secondary);
+      box-shadow: 0 0 0 10px rgba(255,255,255,0.12);
+    }
+    .pin-a { left: 18%; top: 34%; }
+    .pin-b { left: 56%; top: 45%; background: var(--success); }
+    .pin-c { right: 17%; bottom: 24%; background: var(--warning); }
+    .ops-panel {
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: 22px;
+      display: grid;
+      gap: 10px;
+    }
+    .ops-card {
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.26);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+    }
+    .ops-label { display: block; font-size: 0.76rem; opacity: 0.84; }
+    .ops-value { display: block; font-size: 1rem; font-weight: 850; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .stat-card {
+      min-height: 104px;
+      padding: 15px;
+      border-radius: var(--radius);
+      background: #fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+    .stat-num {
+      display: block;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      color: var(--primary);
+      font-size: clamp(1.55rem, 6vw, 2.2rem);
+      line-height: 1;
+      font-weight: 850;
+    }
+    .stat-label { display: block; margin-top: 8px; color: var(--muted); font-size: 0.82rem; font-weight: 750; }
+
+    .section {
+      margin-top: 32px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      margin-bottom: 0;
+      color: var(--ink);
+      font-size: clamp(1.45rem, 4vw, 2.25rem);
+      line-height: 1.08;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .section-copy { max-width: 68ch; margin: 0; color: var(--muted); }
+
+    .notice {
+      display: none;
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      border: 1px solid #F7D48C;
+      background: #FFFBEB;
+      color: #8A5200;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .notice.visible { display: block; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.82);
+    }
+    .field { display: grid; gap: 6px; }
+    .field label, .field-label {
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 850;
+    }
+    input, select, textarea {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--text);
+      padding: 10px 11px;
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--primary); }
+    .segmented {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip-btn {
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0 11px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+    .chip-btn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 15px;
+      border-radius: var(--radius-lg);
+      background: #fff;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+    }
+    .card-bordered { border: 1px solid var(--border); }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .icon-box {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      color: var(--primary);
+      background: #EAF3FF;
+      font-size: 1.2rem;
+    }
+    .icon-box.red { color: var(--secondary); background: #FEECEC; }
+    .icon-box.green { color: var(--success); background: #EAF8EF; }
+    .card h3 { margin: 0; color: var(--ink); font-size: 1.05rem; line-height: 1.24; }
+    .meta { margin: 0; color: var(--muted); font-size: 0.88rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #EFF6FF;
+      color: var(--primary-dark);
+      font-size: 0.72rem;
+      font-weight: 850;
+    }
+    .badge.red { background: #FEECEC; color: #B42318; }
+    .badge.green { background: #EAF8EF; color: #0F7A35; }
+    .badge.yellow { background: #FFF7E6; color: #935A00; }
+    .badge.gray { background: #F1F5F9; color: #475569; }
+    .supply-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .supply-item {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      border-radius: var(--radius);
+      background: #F8FAFC;
+      border: 1px solid #E6EDF5;
+    }
+    .supply-line { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .progress {
+      width: 100%;
+      height: 9px;
+      border-radius: 999px;
+      background: #DEE8F2;
+      overflow: hidden;
+    }
+    .progress span {
+      display: block;
+      width: var(--value, 0%);
+      height: 100%;
+      max-width: 100%;
+      background: var(--bar, var(--primary));
+    }
+    details.match summary {
+      width: fit-content;
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: var(--radius);
+      padding: 0 9px;
+      color: var(--primary-dark);
+      background: #EAF3FF;
+      border: 1px solid #C6DBF6;
+      cursor: pointer;
+      font-weight: 850;
+      font-size: 0.78rem;
+    }
+    details.match summary::-webkit-details-marker { display: none; }
+    .match-body { display: grid; gap: 8px; margin-top: 8px; }
+    .match-place { padding: 9px; border-radius: var(--radius); background: #fff; border: 1px solid var(--border); }
+    .empty-state {
+      padding: 26px;
+      border: 1px dashed #B7C5D8;
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.78);
+      color: var(--muted);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .form-panel {
+      margin-top: 16px;
+      padding: 15px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .form-message { display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius); font-weight: 750; }
+    .form-message.visible { display: block; }
+    .form-message.success { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
+    .form-message.error { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
+    .form-message.info { background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; }
+
+    .help-grid, .urgent-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .urgent-item {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-    .modal-panel {
-      width: min(560px, 100%);
-      max-height: min(86vh, 760px);
-      overflow: auto;
-      background: var(--color-surface);
-      border-radius: var(--radius-card);
-      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
-      border: 1px solid var(--color-border);
-    }
-    .modal-header {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      display: flex;
-      align-items: flex-start;
       justify-content: space-between;
       gap: 12px;
-      padding: 16px 18px;
-      background: var(--color-surface);
-      border-bottom: 1px solid var(--color-border);
-    }
-    .modal-title { margin: 0; font-size: 1.05rem; line-height: 1.25; }
-    .modal-subtitle { color: var(--color-muted); font-size: 0.82rem; margin: 4px 0 0; }
-    .modal-close {
-      border: 0;
-      background: #f1f5f9;
-      color: var(--color-muted);
-      border-radius: 999px;
-      width: 32px;
-      height: 32px;
-      cursor: pointer;
-      font-size: 1.1rem;
-      line-height: 1;
-    }
-    .modal-body { padding: 18px; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
-    .modal-actions .btn-submit,
-    .modal-actions .btn-reset { flex: 0 1 auto; min-width: 128px; }
-    .modal-error {
-      display: none;
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: var(--radius-input);
-      background: #fee2e2;
-      color: #991b1b;
-      border: 1px solid #fecaca;
-      font-size: 0.86rem;
-    }
-    .modal-error.visible { display: block; }
-    .segmented {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      margin-bottom: 14px;
-      padding: 4px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-      background: #f8fafc;
-    }
-    .segmented label {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 8px;
-      border-radius: 6px;
-      font-weight: 800;
-      font-size: 0.86rem;
-      cursor: pointer;
-    }
-    .segmented input { accent-color: var(--color-emergency); }
-    .trayecto-lista { display: flex; flex-direction: column; gap: 12px; }
-    .trayecto-item {
-      padding-bottom: 12px;
-      border-bottom: 1px solid #eef2f7;
-    }
-    .trayecto-item:last-child { border-bottom: 0; padding-bottom: 0; }
-    .trayecto-fecha { color: var(--color-muted); font-size: 0.78rem; font-weight: 700; }
-    .trayecto-ruta { font-weight: 800; margin-top: 2px; }
-    .trayecto-meta { color: var(--color-muted); font-size: 0.84rem; margin-top: 3px; }
-    .modal-donacion-header-stat { font-size: 0.95rem; color: #374151; margin-bottom: 12px; line-height: 1.5; }
-    .modal-donacion-header-stat strong { color: var(--color-match); font-size: 1.25rem; }
-    .modal-donacion-info {
-      background: #fefce8;
-      border: 1px solid #fde047;
-      border-radius: var(--radius-input);
       padding: 14px;
-      font-size: 0.92rem;
-      line-height: 1.7;
-      color: #1c1917;
-      font-weight: 600;
-      margin: 12px 0;
-      white-space: pre-line;
+      border-radius: var(--radius);
+      background: #fff;
+      border-left: 4px solid var(--secondary);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     }
-    .btn-link-pago {
-      display: block;
-      background: var(--color-match);
-      color: #fff;
+    .map-shell {
+      min-height: 360px;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background:
+        linear-gradient(90deg, rgba(0,87,184,0.10) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(0,87,184,0.10) 1px, transparent 1px),
+        #EDF6FF;
+      background-size: 44px 44px;
+    }
+    .map-placeholder {
+      position: absolute;
+      inset: 18px;
+      display: grid;
+      place-items: center;
       text-align: center;
-      padding: 12px;
-      border-radius: var(--radius-input);
-      text-decoration: none;
-      font-weight: 800;
-      font-size: 0.9rem;
-      margin-bottom: 10px;
+      border: 1px solid rgba(0,87,184,0.22);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.74);
+      padding: 22px;
     }
-    .btn-link-pago:hover { background: #6d28d9; }
-    .modal-disclaimer { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 10px; }
+    .map-layers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 45;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(14px);
+    }
+    .bottom-nav button {
+      min-height: 48px;
+      border: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 850;
+    }
+    .bottom-nav button span { display: block; font-size: 1.08rem; line-height: 1; margin-bottom: 3px; }
+    .bottom-nav button[aria-current="page"] { color: var(--primary); background: #EAF3FF; }
+
+    dialog {
+      width: min(620px, calc(100% - 28px));
+      max-height: 86dvh;
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+    }
+    dialog::backdrop { background: rgba(15, 23, 42, 0.58); }
+    .modal-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
+    .modal-head h3 { margin: 0; }
+    .modal-body { padding: 16px; }
+    .modal-close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #EEF2F7; color: var(--muted); font-weight: 900; }
     .toast {
       position: fixed;
       left: 50%;
-      bottom: 18px;
+      bottom: 86px;
+      z-index: 70;
       transform: translateX(-50%);
-      z-index: 60;
-      max-width: min(92vw, 460px);
+      width: min(92vw, 460px);
       padding: 12px 14px;
-      border-radius: var(--radius-input);
-      box-shadow: var(--shadow-card);
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-    .toast.exito { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-    .toast.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-    .toast.info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
-
-    /* ── Estados (carga / vacío) ───────────────────────────── */
-    .estado-msg { text-align: center; color: var(--color-muted); padding: 32px 16px; }
-    .spinner {
-      width: 32px; height: 32px;
-      border: 3px solid var(--color-border);
-      border-top-color: var(--color-emergency);
-      border-radius: 50%;
-      margin: 0 auto 12px;
-      animation: girar 0.8s linear infinite;
-    }
-    @keyframes girar { to { transform: rotate(360deg); } }
-
-    /* ── Buscar familiar ───────────────────────────────────── */
-    .intro { color: var(--color-muted); font-size: 0.9rem; }
-    .form-familiar { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
-    .form-familiar input {
-      flex: 1; min-width: 200px;
-      padding: 11px;
-      font-size: 1rem;
-      font-family: inherit;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-    }
-    .form-familiar button {
-      padding: 11px 18px;
-      font-size: 1rem;
-      font-weight: 600;
-      font-family: inherit;
+      border-radius: var(--radius);
+      background: var(--ink);
       color: #fff;
-      background: var(--color-emergency);
-      border: none;
-      border-radius: var(--radius-input);
-      cursor: pointer;
+      font-weight: 750;
+      box-shadow: var(--shadow);
     }
-    .card-persona {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-left: 4px solid var(--color-necesita);
-      border-radius: var(--radius-card);
-      box-shadow: var(--shadow-card);
-      padding: 14px;
-      margin-bottom: 12px;
-    }
-    .card-persona.delicado { border-left-color: var(--color-muted); background: #f8fafc; }
-    .estado-persona { display: inline-block; font-weight: 700; font-size: 0.85rem; padding: 2px 8px; border-radius: var(--radius-input); background: #ecfdf5; color: var(--color-necesita); }
-    .estado-persona.delicado { background: #f1f5f9; color: #334155; }
-    .apoyo {
-      margin-top: 10px; padding: 8px 12px;
-      background: #f8fafc; border: 1px solid var(--color-border);
-      border-radius: var(--radius-input); font-size: 0.83rem; color: #334155;
-    }
-    .disclaimer { margin-top: 16px; color: var(--color-muted); font-size: 0.78rem; border-top: 1px solid var(--color-border); padding-top: 10px; }
+    .loading-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .skeleton { min-height: 180px; border-radius: var(--radius-lg); background: linear-gradient(90deg, #EEF2F7, #FFFFFF, #EEF2F7); background-size: 220% 100%; animation: pulse 1.2s linear infinite; }
+    @keyframes pulse { to { background-position: -220% 0; } }
 
-    /* ── Responsive ────────────────────────────────────────── */
-    @media (min-width: 640px) {
-      .grid { grid-template-columns: 1fr 1fr; }
-      .header-inner h1 { font-size: 1.5rem; }
+    @media (min-width: 680px) {
+      .brand span:last-child { display: inline; }
+      .stats-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .filters { grid-template-columns: 1.5fr 0.8fr 0.8fr; align-items: end; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .help-grid, .urgent-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.full { grid-column: 1 / -1; }
+    }
+    @media (min-width: 980px) {
+      .top-nav { display: flex; }
+      .bottom-nav { display: none; }
+      main { padding-bottom: 44px; }
+      .hero { grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr); }
+      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .section-header { flex-direction: row; align-items: end; justify-content: space-between; }
+      .ops-panel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 420px) {
-      .mot-stats { grid-template-columns: 1fr; }
-      .modal-actions .btn-submit,
-      .modal-actions .btn-reset { width: 100%; }
-    }
-    @media (min-width: 1024px) {
-      .grid { grid-template-columns: 1fr 1fr 1fr; }
-      .filtros { flex-direction: row; align-items: center; flex-wrap: wrap; }
-      .filtros .toggles { flex: 0 0 auto; }
-      .filtros input[type="search"] { flex: 1 1 220px; width: auto; }
-      .filtros select { flex: 0 0 220px; width: auto; }
-      .conteo { flex-basis: 100%; }
-      .filtros-motorizados { grid-template-columns: 1fr auto; align-items: end; }
-      .tipo-botones { grid-column: 1 / -1; }
-    }
-
-    /* ── Agregar (formulario) ──────────────────────────────── */
-    .agregar-container { max-width: 600px; margin: 0 auto; }
-    .agregar-container h2 { font-size: 1.3rem; margin: 0 0 6px; }
-    .agregar-help { color: var(--color-muted); font-size: 0.9rem; margin: 0 0 20px; }
-    .form-group { display: flex; flex-direction: column; margin-bottom: 14px; }
-    .form-group label { font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 11px;
-      font-size: 1rem;
-      font-family: inherit;
-      color: var(--color-text);
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-input);
-    }
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: var(--color-emergency);
-      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.35);
-    }
-    .form-actions { display: flex; gap: 10px; margin-top: 20px; }
-    .btn-submit, .btn-reset {
-      flex: 1;
-      padding: 12px 16px;
-      font-size: 1rem;
-      font-weight: 600;
-      font-family: inherit;
-      border-radius: var(--radius-input);
-      border: 1px solid var(--color-border);
-      cursor: pointer;
-    }
-    .btn-submit { background: var(--color-emergency); color: #fff; border-color: var(--color-emergency); }
-    .btn-reset { background: var(--color-bg); color: var(--color-text); }
-    .form-mensaje { margin-top: 16px; padding: 11px; border-radius: var(--radius-input); font-size: 0.92rem; text-align: center; }
-    .form-mensaje.exito { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-    .form-mensaje.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-
-    /* ── Microinteracciones (las neutraliza prefers-reduced-motion) ─ */
-    .header-inner h1 { letter-spacing: -0.015em; }
-    .tab-btn, .toggle-btn, .btn-accion, .btn-submit, .btn-reset,
-    .form-familiar button, .filtros-summary, details.match > summary {
-      transition: background-color 0.15s ease, color 0.15s ease,
-                  border-color 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
-    }
-    .tab-btn:hover:not([aria-selected="true"]) { color: var(--color-text); border-color: var(--color-muted); }
-    .toggle-btn:hover:not([aria-pressed="true"]) { border-color: var(--color-muted); }
-    .filtros-summary:hover { border-color: var(--color-muted); }
-    .btn-accion:hover { filter: brightness(0.97); }
-    .btn-submit:hover, .form-familiar button:hover { background: #b91c1c; border-color: #b91c1c; }
-    .btn-reset:hover { background: #e7ecf2; }
-    details.match > summary:hover { background: #ede9fe; }
-    .tab-btn:active, .toggle-btn:active, .btn-accion:active,
-    .btn-submit:active, .btn-reset:active, .form-familiar button:active { transform: translateY(1px); }
-    article.card { transition: box-shadow 0.18s ease; }
-    @media (hover: hover) and (min-width: 1024px) {
-      article.card:hover { box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06), 0 10px 24px rgba(15, 23, 42, 0.10); }
+      .header-inner { grid-template-columns: 1fr auto; }
+      .status-pill { font-size: 0; gap: 0; padding: 0 12px; }
+      .status-dot { margin: 0; }
+      .hero-actions .btn { width: 100%; }
+      .card-actions .btn, .inline-actions .btn { flex: 1 1 100%; }
     }
   </style>
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
-  <header class="app">
+
+  <header class="app-header">
     <div class="header-inner">
-      <h1>🆘 Donaciones Venezuela</h1>
-      <p class="subtitulo">Conectamos donadores con centros de acopio y hospitales</p>
-      <div class="banner-emergencia" role="alert">
-        Emergencia — Terremotos del 24 de junio de 2026 (magnitud 7.2 y 7.5). La ayuda urge.
-      </div>
-      <nav class="nav-tabs" role="tablist" aria-label="Secciones">
-        <button class="tab-btn activo" id="tab-btn-donaciones" role="tab" aria-selected="true" aria-controls="tab-donaciones" data-tab="donaciones">🎁 Donaciones</button>
-        <button class="tab-btn" id="tab-btn-motorizados" role="tab" aria-selected="false" aria-controls="tab-motorizados" data-tab="motorizados">🏍️ Motorizados</button>
-        <button class="tab-btn" id="tab-btn-familiar" role="tab" aria-selected="false" aria-controls="tab-familiar" data-tab="familiar">🔍 Buscar familiar</button>
+      <a class="brand" href="#inicio" data-view-link="inicio" aria-label="Ir al inicio">
+        <span class="brand-mark" aria-hidden="true">✚</span>
+        <span>Respuesta Humanitaria Venezuela</span>
+      </a>
+      <nav class="top-nav" aria-label="Navegación principal">
+        <button class="nav-link" type="button" data-view-link="inicio" aria-current="page">Inicio</button>
+        <button class="nav-link" type="button" data-view-link="donaciones">Centros</button>
+        <button class="nav-link" type="button" data-view-link="voluntarios">Voluntarios</button>
+        <button class="nav-link" type="button" data-view-link="rescatistas">Rescatistas</button>
+        <button class="nav-link" type="button" data-view-link="familiar">Buscar familiar</button>
       </nav>
+      <div class="status-pill" aria-live="polite"><span id="status-dot" class="status-dot demo" aria-hidden="true"></span><span id="status-text">Modo demo</span></div>
     </div>
   </header>
 
   <main id="contenido" tabindex="-1">
-    <!-- ═══ PESTAÑA DONACIONES ═══ -->
-    <section id="tab-donaciones" class="tab-content activo" role="tabpanel" aria-labelledby="tab-btn-donaciones">
-      <h2 class="visually-hidden">Centros de acopio y hospitales</h2>
-      <div id="banner" class="banner-aviso oculto" role="status"></div>
+    <div id="banner" class="notice" role="status"></div>
 
-      <details class="filtros-acc" open>
-        <summary class="filtros-summary">⚙️ Filtros</summary>
-      <div class="filtros" role="search">
-        <div class="toggles" role="group" aria-label="Filtrar por tipo">
-          <button class="toggle-btn" data-tipo="todos" aria-pressed="true">Ver todos</button>
-          <button class="toggle-btn" data-tipo="Centro" aria-pressed="false">📍 Centros</button>
-          <button class="toggle-btn" data-tipo="Hospital" aria-pressed="false">🏥 Hospitales</button>
+    <section id="view-inicio" class="view active" data-view="inicio" aria-labelledby="hero-title">
+      <div class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow"><span aria-hidden="true">VE</span> Coordinación ciudadana</span>
+          <h1 id="hero-title">Respuesta Humanitaria Venezuela</h1>
+          <p class="hero-subtitle">Conectando ciudadanos, voluntarios, rescatistas y centros de ayuda.</p>
+          <div class="hero-actions" aria-label="Acciones principales">
+            <button type="button" class="btn btn-secondary" data-view-link="familiar">Buscar Familiar</button>
+            <button type="button" class="btn btn-primary" data-view-link="donaciones">Ver Centros de Ayuda</button>
+            <button type="button" class="btn btn-ghost" data-view-link="voluntarios">Registrarme como Voluntario</button>
+          </div>
+          <div class="stats-grid" id="stats-grid" aria-live="polite"></div>
         </div>
-        <input type="search" id="busqueda" placeholder="Buscar por nombre o ubicación..." aria-label="Buscar por nombre o ubicación" />
-        <select id="categoria" aria-label="Filtrar por categoría de insumo">
-          <option value="">Cualquier insumo</option>
-        </select>
-        <p class="conteo" id="conteo" aria-live="polite"></p>
-      </div>
-      </details>
-
-      <div id="carga" class="estado-msg">
-        <div class="spinner" aria-hidden="true"></div>
-        Cargando datos...
-      </div>
-
-      <div id="grid" class="grid" aria-live="polite"></div>
-
-      <div id="sin-resultados" class="estado-msg oculto">
-        <p>😕 No encontramos lugares con esos criterios.</p>
-        <button class="btn-accion mini" id="btn-ver-todos">Ver todos</button>
+        <div class="hero-visual" aria-label="Red de operaciones humanitarias">
+          <div class="hero-map" aria-hidden="true"></div>
+          <div class="route-line" aria-hidden="true"></div>
+          <span class="map-pin pin-a" aria-hidden="true"></span>
+          <span class="map-pin pin-b" aria-hidden="true"></span>
+          <span class="map-pin pin-c" aria-hidden="true"></span>
+          <div class="ops-panel">
+            <div class="ops-card"><span class="ops-label">Prioridad</span><span class="ops-value">Agua y medicamentos</span></div>
+            <div class="ops-card"><span class="ops-label">Cobertura</span><span class="ops-value">Estados y ciudades</span></div>
+            <div class="ops-card"><span class="ops-label">Respuesta</span><span class="ops-value">Centros, rutas y equipos</span></div>
+          </div>
+        </div>
       </div>
 
-    </section>
-
-    <!-- ═══ PESTAÑA MOTORIZADOS ═══ -->
-    <section id="tab-motorizados" class="tab-content oculto" role="tabpanel" aria-labelledby="tab-btn-motorizados">
-      <div id="seccion-motorizados" class="seccion-motorizados" aria-labelledby="motorizados-titulo">
-        <div class="filtros-motorizados">
+      <section class="section" aria-labelledby="ayudar-title">
+        <div class="section-header">
           <div>
-            <h2 id="motorizados-titulo" class="seccion-titulo">🏍️ Transportistas y Rescatistas</h2>
-            <p class="seccion-subtitulo">Ranking por kilómetros recorridos y trayectos registrados.</p>
-          </div>
-          <button id="btn-registrar-motorizado" class="btn-registrar-mot btn-registrar-motorizado" type="button">+ Registrarme</button>
-          <div class="tipo-botones" role="group" aria-label="Filtrar por tipo de vehículo">
-            <button class="btn-tipo activo" data-tipo="todos" aria-pressed="true">Ver todos</button>
-            <button class="btn-tipo" data-tipo="Moto" aria-pressed="false">🏍️ Motos</button>
-            <button class="btn-tipo" data-tipo="Carro" aria-pressed="false">🚙 Carros</button>
-            <button class="btn-tipo" data-tipo="Bicicleta" aria-pressed="false">🚴 Bicicletas</button>
+            <h2 id="ayudar-title" class="section-title">Cómo ayudar</h2>
+            <p class="section-copy">Tres formas directas de apoyar operaciones verificadas.</p>
           </div>
         </div>
-        <p class="conteo" id="conteo-motorizados" aria-live="polite"></p>
-        <div id="grid-motorizados" class="ranking-motorizados grid-motorizados" aria-live="polite"></div>
-      </div>
+        <div class="help-grid">
+          <article class="card card-bordered"><div class="icon-box" aria-hidden="true">▣</div><h3>Donar suministros</h3><p class="meta">Entrega agua, medicamentos, alimentos o equipos en centros registrados.</p><button class="btn btn-soft" type="button" data-view-link="donaciones">Ver necesidades</button></article>
+          <article class="card card-bordered"><div class="icon-box green" aria-hidden="true">✓</div><h3>Registrarse como voluntario</h3><p class="meta">Indica tu ciudad, profesión y disponibilidad para coordinar apoyo local.</p><button class="btn btn-soft" type="button" data-view-link="voluntarios">Ir al registro</button></article>
+          <article class="card card-bordered"><div class="icon-box red" aria-hidden="true">!</div><h3>Reportar información verificada</h3><p class="meta">Actualiza centros, teléfonos y necesidades con datos confirmados.</p><button class="btn btn-soft" type="button" data-view-link="donaciones">Reportar centro</button></article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="urgentes-title">
+        <div class="section-header">
+          <div>
+            <h2 id="urgentes-title" class="section-title">Necesidades urgentes</h2>
+            <p class="section-copy">Preparado para conectarse a una hoja de prioridades operativas.</p>
+          </div>
+        </div>
+        <div class="urgent-grid" id="urgent-grid"></div>
+      </section>
+
+      <section class="section" aria-labelledby="mapa-title">
+        <div class="section-header">
+          <div>
+            <h2 id="mapa-title" class="section-title">Centros de ayuda y operaciones</h2>
+            <p class="section-copy">Hospitales, refugios, centros de acopio y puntos de ayuda en una estructura lista para mapa.</p>
+          </div>
+        </div>
+        <div class="map-shell" id="mapa-operaciones" data-map-provider="leaflet-ready">
+          <div class="map-placeholder">
+            <div>
+              <h3>Sin coordenadas verificadas por ahora</h3>
+              <p class="meta">La lista de centros funciona con ubicación textual. El mapa aceptará latitud y longitud cuando estén disponibles.</p>
+              <div class="map-layers" aria-label="Capas preparadas">
+                <span class="badge">Hospitales</span><span class="badge green">Refugios</span><span class="badge yellow">Centros de acopio</span><span class="badge red">Puntos de ayuda</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
 
-    <!-- ═══ PESTAÑA BUSCAR FAMILIAR ═══ -->
-    <section id="tab-familiar" class="tab-content oculto" role="tabpanel" aria-labelledby="tab-btn-familiar">
-      <h2 class="visually-hidden">Buscar un familiar</h2>
-      <p class="intro">
-        Busca el nombre o cédula de tu familiar en los registros disponibles.
-        Esta herramienta consulta fuentes públicas y no garantiza información completa.
-      </p>
-
-      <div id="familiar-banner" class="banner-aviso oculto" role="status"></div>
-
-      <form class="form-familiar" id="form-familiar">
-        <input type="text" id="familiar-query" placeholder="Nombre completo o cédula (ej: V-12345678)" aria-label="Nombre completo o cédula" autocomplete="off" />
-        <button type="submit">🔍 Buscar</button>
-      </form>
-
-      <div id="familiar-carga" class="estado-msg oculto">
-        <div class="spinner" aria-hidden="true"></div>
-        Buscando...
+    <section id="view-donaciones" class="view" data-view="donaciones" aria-labelledby="donaciones-title">
+      <div class="section-header">
+        <div>
+          <h2 id="donaciones-title" class="section-title">Centros de ayuda</h2>
+          <p class="section-copy">Centros, hospitales y refugios con necesidades, disponibilidad y contactos.</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-scroll-target="form-lugar">Reportar centro</button>
       </div>
 
-      <div id="familiar-resultados" aria-live="polite"></div>
+      <div class="filters" role="search" aria-label="Filtros de centros de ayuda">
+        <div class="field"><label for="filtro-lugar-q">Buscar</label><input id="filtro-lugar-q" type="search" placeholder="Nombre, ubicación o insumo" autocomplete="off" /></div>
+        <div class="field"><label for="filtro-lugar-tipo">Tipo</label><select id="filtro-lugar-tipo"><option value="todos">Todos</option><option value="Centro">Centros</option><option value="Hospital">Hospitales</option><option value="Refugio">Refugios</option></select></div>
+        <div class="field"><label for="filtro-lugar-categoria">Categoría</label><select id="filtro-lugar-categoria"><option value="">Todas</option></select></div>
+      </div>
 
-      <p class="disclaimer">
-        La información proviene de fuentes de terceros y puede no estar actualizada al 100 %.
-        Ante una emergencia médica, contacta a los servicios de emergencia locales.
-      </p>
-    </section>
+      <p class="meta" id="conteo-lugares" aria-live="polite"></p>
+      <div id="grid-lugares" class="grid" aria-live="polite"><div class="loading-grid"><div class="skeleton"></div><div class="skeleton"></div></div></div>
 
-    <!-- ═══ PESTAÑA AGREGAR ═══ -->
-    <section id="tab-agregar" role="tabpanel" aria-labelledby="tab-btn-agregar" class="oculto">
-      <div class="agregar-container">
-        <h2>Agregar un lugar o insumo</h2>
-        <p class="agregar-help">Reporta un nuevo centro, hospital o insumo. Se guarda directo en la base y aparece en Donaciones al recargar.</p>
-
-        <form id="form-agregar" autocomplete="off">
-          <div class="form-group">
-            <label for="ag-tipo">* Tipo de lugar</label>
-            <select id="ag-tipo" required>
-              <option value="">— Selecciona —</option>
-              <option value="Centro">Centro de acopio</option>
-              <option value="Hospital">Hospital</option>
-            </select>
+      <section class="form-panel" id="form-lugar" aria-labelledby="form-lugar-title">
+        <h3 id="form-lugar-title">Reportar centro o insumo</h3>
+        <form id="lugar-form">
+          <div class="form-grid">
+            <div class="field"><label for="lugar-tipo">Tipo</label><select id="lugar-tipo" required><option value="Centro">Centro de acopio</option><option value="Hospital">Hospital</option><option value="Refugio">Refugio</option><option value="Punto de ayuda">Punto de ayuda</option></select></div>
+            <div class="field"><label for="lugar-nombre">Nombre</label><input id="lugar-nombre" required placeholder="Hospital, iglesia, escuela" /></div>
+            <div class="field"><label for="lugar-ubicacion">Ubicación</label><input id="lugar-ubicacion" placeholder="Estado, ciudad, sector" /></div>
+            <div class="field"><label for="lugar-telefono">Teléfono</label><input id="lugar-telefono" type="tel" placeholder="+58 412 000 0000" /></div>
+            <div class="field"><label for="lugar-insumo">Insumo</label><input id="lugar-insumo" required placeholder="Agua potable, gasas, alimentos" /></div>
+            <div class="field"><label for="lugar-categoria">Categoría</label><select id="lugar-categoria"><option>Agua potable</option><option>Medicamentos</option><option>Insumos médicos</option><option>Alimentos</option><option>Plantas eléctricas</option><option>Combustible</option><option>Higiene</option><option>Ropa</option><option>Otros</option></select></div>
+            <div class="field"><label for="lugar-estado">Estado del insumo</label><select id="lugar-estado" required><option value="Necesita">Necesita</option><option value="Tiene disponible">Tiene disponible</option></select></div>
           </div>
-
-          <div class="form-group">
-            <label for="ag-nombre">* Nombre del lugar</label>
-            <input type="text" id="ag-nombre" placeholder="Ej: Iglesia San José" required />
-          </div>
-
-          <div class="form-group">
-            <label for="ag-ubicacion">Ubicación / sector</label>
-            <input type="text" id="ag-ubicacion" placeholder="Ej: Los Corales, La Guaira" />
-          </div>
-
-          <div class="form-group">
-            <label for="ag-telefono">Teléfono de contacto</label>
-            <input type="tel" id="ag-telefono" placeholder="Ej: +58 412 555 1234" />
-          </div>
-
-          <div class="form-group">
-            <label for="ag-insumo">* Insumo (qué necesita o tiene)</label>
-            <input type="text" id="ag-insumo" placeholder="Ej: Gasas estériles, Agua embotellada…" required />
-          </div>
-
-          <div class="form-group">
-            <label for="ag-categoria">Categoría</label>
-            <select id="ag-categoria">
-              <option value="Otros">Otros</option>
-              <option value="Alimentos">Alimentos</option>
-              <option value="Bebidas">Bebidas</option>
-              <option value="Medicinas">Medicinas</option>
-              <option value="Higiene">Higiene</option>
-              <option value="Ropa">Ropa</option>
-              <option value="Equipos médicos">Equipos médicos</option>
-              <option value="Suministros quirúrgicos">Suministros quirúrgicos</option>
-              <option value="Fluidos IV">Fluidos IV</option>
-              <option value="Herramientas">Herramientas</option>
-              <option value="Mascotas">Mascotas</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="ag-estado">* ¿Lo necesita o lo tiene disponible?</label>
-            <select id="ag-estado" required>
-              <option value="">— Selecciona —</option>
-              <option value="Necesita">Necesita</option>
-              <option value="Tiene disponible">Tiene disponible</option>
-            </select>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn-submit">Agregar</button>
-            <button type="reset" class="btn-reset">Limpiar</button>
-          </div>
-
-          <div id="agregar-mensaje" class="form-mensaje oculto" role="status"></div>
+          <div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar en Sheets</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+          <div id="lugar-message" class="form-message" role="status"></div>
         </form>
+      </section>
+    </section>
+
+    <section id="view-voluntarios" class="view" data-view="voluntarios" aria-labelledby="voluntarios-title">
+      <div class="section-header">
+        <div>
+          <h2 id="voluntarios-title" class="section-title">Voluntarios</h2>
+          <p class="section-copy">Registro, búsqueda y listado de personas disponibles para apoyar.</p>
+        </div>
       </div>
+
+      <section class="form-panel" aria-labelledby="vol-form-title">
+        <h3 id="vol-form-title">Registrarme como voluntario</h3>
+        <form id="voluntario-form">
+          <div class="form-grid">
+            <div class="field"><label for="vol-nombre">Nombre</label><input id="vol-nombre" required /></div>
+            <div class="field"><label for="vol-apellido">Apellido</label><input id="vol-apellido" /></div>
+            <div class="field"><label for="vol-telefono">Teléfono</label><input id="vol-telefono" type="tel" required placeholder="+58 412 000 0000" /></div>
+            <div class="field"><label for="vol-estado">Estado</label><input id="vol-estado" placeholder="La Guaira" /></div>
+            <div class="field"><label for="vol-ciudad">Ciudad</label><input id="vol-ciudad" placeholder="Caraballeda" /></div>
+            <div class="field"><label for="vol-profesion">Profesión o tipo</label><select id="vol-profesion"><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
+            <div class="field"><label for="vol-disponibilidad">Disponibilidad</label><input id="vol-disponibilidad" placeholder="Hoy, mañana, fines de semana" /></div>
+            <div class="field full"><label for="vol-observaciones">Observaciones</label><textarea id="vol-observaciones" placeholder="Zona, recursos, restricciones"></textarea></div>
+          </div>
+          <div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar voluntario</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+          <div id="vol-message" class="form-message" role="status"></div>
+        </form>
+      </section>
+
+      <div class="filters" role="search" aria-label="Filtros de voluntarios">
+        <div class="field"><label for="filtro-vol-q">Buscar voluntario</label><input id="filtro-vol-q" type="search" placeholder="Nombre, ciudad, teléfono" /></div>
+        <div class="field"><label for="filtro-vol-profesion">Tipo</label><select id="filtro-vol-profesion"><option value="">Todos</option><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
+        <div class="field"><label for="filtro-vol-estado">Estado</label><input id="filtro-vol-estado" placeholder="Filtrar por estado" /></div>
+      </div>
+      <p class="meta" id="conteo-voluntarios" aria-live="polite"></p>
+      <div id="grid-voluntarios" class="grid" aria-live="polite"></div>
+    </section>
+
+    <section id="view-rescatistas" class="view" data-view="rescatistas" aria-labelledby="rescatistas-title">
+      <div class="section-header">
+        <div>
+          <h2 id="rescatistas-title" class="section-title">Rescatistas y operaciones</h2>
+          <p class="section-copy">Equipos de rescate, especialidades y logística de traslados.</p>
+        </div>
+      </div>
+
+      <section class="form-panel" aria-labelledby="res-form-title">
+        <h3 id="res-form-title">Registrar rescatista</h3>
+        <form id="rescatista-form">
+          <div class="form-grid">
+            <div class="field"><label for="res-nombre">Nombre</label><input id="res-nombre" required /></div>
+            <div class="field"><label for="res-organizacion">Organización</label><input id="res-organizacion" placeholder="Protección Civil, bomberos, ONG" /></div>
+            <div class="field"><label for="res-telefono">Teléfono</label><input id="res-telefono" type="tel" required /></div>
+            <div class="field"><label for="res-especialidad">Especialidad</label><select id="res-especialidad"><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
+            <div class="field"><label for="res-estado">Estado</label><input id="res-estado" /></div>
+            <div class="field"><label for="res-ciudad">Ciudad</label><input id="res-ciudad" /></div>
+            <div class="field"><label for="res-disponibilidad">Disponibilidad</label><input id="res-disponibilidad" /></div>
+            <div class="field full"><label for="res-observaciones">Observaciones</label><textarea id="res-observaciones"></textarea></div>
+          </div>
+          <div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar rescatista</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+          <div id="res-message" class="form-message" role="status"></div>
+        </form>
+      </section>
+
+      <div class="filters" role="search" aria-label="Filtros de rescatistas">
+        <div class="field"><label for="filtro-res-q">Buscar rescatista</label><input id="filtro-res-q" type="search" placeholder="Nombre, organización, ciudad" /></div>
+        <div class="field"><label for="filtro-res-especialidad">Especialidad</label><select id="filtro-res-especialidad"><option value="">Todas</option><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
+        <div class="field"><label for="filtro-res-estado">Estado</label><input id="filtro-res-estado" placeholder="Filtrar por estado" /></div>
+      </div>
+      <p class="meta" id="conteo-rescatistas" aria-live="polite"></p>
+      <div id="grid-rescatistas" class="grid" aria-live="polite"></div>
+
+      <section class="section" aria-labelledby="mot-title">
+        <div class="section-header"><div><h2 id="mot-title" class="section-title">Transportistas solidarios</h2><p class="section-copy">Ranking operativo de rutas y apoyo logístico existente.</p></div><button class="btn btn-primary" id="btn-motorizado" type="button">Registrar transportista</button></div>
+        <div class="filters" role="search" aria-label="Filtros de transportistas"><div class="field"><label for="filtro-mot-q">Buscar</label><input id="filtro-mot-q" type="search" placeholder="Nombre, zona o vehículo" /></div><div class="field"><label for="filtro-mot-tipo">Vehículo</label><select id="filtro-mot-tipo"><option value="">Todos</option><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div></div>
+        <p class="meta" id="conteo-motorizados" aria-live="polite"></p>
+        <div id="grid-motorizados" class="grid" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section id="view-familiar" class="view" data-view="familiar" aria-labelledby="familiar-title">
+      <div class="section-header"><div><h2 id="familiar-title" class="section-title">Buscar familiar</h2><p class="section-copy">Consulta por nombre o cédula en registros disponibles. La fuente real depende del webhook N8N configurado.</p></div></div>
+      <form class="form-panel" id="familiar-form">
+        <div class="form-grid">
+          <div class="field full"><label for="familiar-query">Nombre completo o cédula</label><input id="familiar-query" required autocomplete="off" placeholder="V-12345678 o nombre completo" /></div>
+        </div>
+        <div class="section-actions" style="margin-top:12px"><button class="btn btn-secondary" type="submit">Buscar familiar</button></div>
+      </form>
+      <div id="familiar-message" class="notice" role="status"></div>
+      <div id="familiar-resultados" class="grid" aria-live="polite" style="margin-top:16px"></div>
     </section>
   </main>
 
+  <nav class="bottom-nav" aria-label="Navegación móvil">
+    <button type="button" data-view-link="inicio" aria-current="page"><span aria-hidden="true">⌂</span>Inicio</button>
+    <button type="button" data-view-link="donaciones"><span aria-hidden="true">✚</span>Centros</button>
+    <button type="button" data-view-link="voluntarios"><span aria-hidden="true">✓</span>Volunt.</button>
+    <button type="button" data-view-link="rescatistas"><span aria-hidden="true">⚑</span>Rescate</button>
+    <button type="button" data-view-link="familiar"><span aria-hidden="true">⌕</span>Buscar</button>
+  </nav>
+
+  <div id="toast-root"></div>
   <div id="modal-root"></div>
 
+  <script src="services/sheets.js"></script>
   <script>
     'use strict';
 
     // ── CONFIGURACIÓN ─────────────────────────────────────────
-    // Pega aquí la URL .../exec de tu Google Apps Script. Mientras contenga
-    // "YOUR_SCRIPT_ID" o "YOUR_NEW_DEPLOYMENT_ID" la app corre en MODO DEMO.
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/d/YOUR_NEW_DEPLOYMENT_ID/useFunctionality=AIzaSy...';
-
-    // TODO: el compañero comparte la URL del webhook de N8N mañana; reemplazar aquí.
-    // Mientras esté vacía, "Buscar familiar" usa datos mock (modo demo).
-    const BUSCAR_WEBHOOK_URL = "";
-    // TODO: confirmar con compañero si el webhook requiere auth y cómo proteger la key.
-    const BUSCAR_WEBHOOK_TOKEN = ''; // NO hardcodear secretos: index.html es código público.
-
+    const BUSCAR_WEBHOOK_URL = '';
+    const BUSCAR_WEBHOOK_TOKEN = '';
     const SANDBOX_MODE = /YOUR_SCRIPT_ID|YOUR_NEW_DEPLOYMENT_ID|useFunctionality=AIzaSy/.test(APPS_SCRIPT_URL);
-    const CACHE_KEY = 'vz_donaciones_cache';
-    const CACHE_MOTORIZADOS_KEY = 'vz_motorizados_cache';
-    const WA_MENSAJE = 'Hola, vi en la app de Donaciones Venezuela que necesitan ayuda. ¿Cómo puedo contribuir?';
-    const LINEA_APOYO = 'Línea de apoyo psicológico: 0800-AYUDA (ejemplo — sustituir por la línea oficial vigente).';
+    const WA_MENSAJE = 'Hola, vi en Respuesta Humanitaria Venezuela que necesitan ayuda. ¿Cómo puedo contribuir?';
+    const LINEA_APOYO = 'Línea de apoyo psicológico: 0800-AYUDA (ejemplo; sustituir por la línea oficial vigente).';
 
-    // Datos de respaldo (3 centros + 2 hospitales) con matching ya calculado:
-    // permiten que la app funcione incluso abierta directamente con file:// (sin servidor).
     const DATOS_FALLBACK = {
       lugares: [
-        { tipo: 'Centro', nombre: 'Iglesia San José', ubicacion: 'Los Corales, La Guaira', telefono: '+58 412 555 1234',
-          necesita: [
-            { nombre: 'Gasas estériles', categoria: 'Medicinas', cantidadNecesaria: 80, cantidadRecibida: 18, porcentaje: 23, urgencia: 'Crítico', unidad: 'paquetes', yaCubierto: false, coincidencias: [ { nombre_lugar: 'Hospital El Algodonal', tipo: 'Hospital', telefono: '+58 212 555 5000', ubicacion: 'El Algodonal, Caracas' } ] },
-            { nombre: 'Agua embotellada', categoria: 'Bebidas', cantidadNecesaria: 100, cantidadRecibida: 12, porcentaje: 12, urgencia: 'Crítico', unidad: 'cajas', yaCubierto: false, coincidencias: [ { nombre_lugar: 'Refugio Naiguatá', tipo: 'Centro', telefono: '+58 414 555 2200', ubicacion: 'Naiguatá, Vargas' } ] },
-            { nombre: 'Leche en polvo', categoria: 'Alimentos', cantidadNecesaria: 50, cantidadRecibida: 22, porcentaje: 44, urgencia: 'Moderado', unidad: 'latas', yaCubierto: false, coincidencias: [] }
-          ],
-          cubiertos: [ { nombre: 'Mantas', categoria: 'Otros', cantidadNecesaria: 60, cantidadRecibida: 60, unidad: 'unidades', yaCubierto: true } ],
-          tiene_disponible: [ { nombre: 'Ropa de adulto', categoria: 'Ropa' }, { nombre: 'Mantas', categoria: 'Otros' } ],
-          actualizado: '2026-06-28T12:00:00.000Z' },
-        { tipo: 'Centro', nombre: 'Refugio Naiguatá', ubicacion: 'Naiguatá, Vargas', telefono: '+58 414 555 2200',
-          necesita: [
-            { nombre: 'Colchonetas', categoria: 'Otros', cantidadNecesaria: 70, cantidadRecibida: 31, porcentaje: 44, urgencia: 'Moderado', unidad: 'unidades', yaCubierto: false, coincidencias: [] },
-            { nombre: 'Pañales', categoria: 'Higiene', cantidadNecesaria: 120, cantidadRecibida: 74, porcentaje: 62, urgencia: 'Normal', unidad: 'paquetes', yaCubierto: false, coincidencias: [ { nombre_lugar: 'Comunidad El Hatillo', tipo: 'Centro', telefono: '+58 416 555 7788', ubicacion: 'El Hatillo, Caracas' } ] }
-          ],
-          cubiertos: [ { nombre: 'Agua embotellada', categoria: 'Bebidas', cantidadNecesaria: 45, cantidadRecibida: 45, unidad: 'cajas', yaCubierto: true } ],
-          tiene_disponible: [ { nombre: 'Agua embotellada', categoria: 'Bebidas' } ],
-          actualizado: '2026-06-28T13:30:00.000Z' },
-        { tipo: 'Centro', nombre: 'Comunidad El Hatillo', ubicacion: 'El Hatillo, Caracas', telefono: '+58 416 555 7788',
-          necesita: [
-            { nombre: 'Arroz', categoria: 'Alimentos', cantidadNecesaria: 90, cantidadRecibida: 48, porcentaje: 53, urgencia: 'Moderado', unidad: 'kg', yaCubierto: false, coincidencias: [] },
-            { nombre: 'Jabón', categoria: 'Higiene', cantidadNecesaria: 75, cantidadRecibida: 18, porcentaje: 24, urgencia: 'Crítico', unidad: 'unidades', yaCubierto: false, coincidencias: [] }
-          ],
-          tiene_disponible: [ { nombre: 'Pañales', categoria: 'Higiene' }, { nombre: 'Calzado', categoria: 'Ropa' } ],
-          actualizado: '2026-06-28T09:15:00.000Z' },
-        { tipo: 'Hospital', nombre: 'Hospital El Algodonal', ubicacion: 'El Algodonal, Caracas', telefono: '+58 212 555 5000',
-          necesita: [
-            { nombre: 'Analgésicos', categoria: 'Medicinas', cantidadNecesaria: 200, cantidadRecibida: 86, porcentaje: 43, urgencia: 'Moderado', unidad: 'unidades', yaCubierto: false, coincidencias: [] },
-            { nombre: 'Oxímetros', categoria: 'Equipos médicos', cantidadNecesaria: 25, cantidadRecibida: 5, porcentaje: 20, urgencia: 'Crítico', unidad: 'unidades', yaCubierto: false, coincidencias: [] }
-          ],
-          cubiertos: [ { nombre: 'Gasas estériles', categoria: 'Suministros quirúrgicos', cantidadNecesaria: 100, cantidadRecibida: 100, unidad: 'paquetes', yaCubierto: true } ],
-          tiene_disponible: [ { nombre: 'Gasas estériles', categoria: 'Suministros quirúrgicos' } ],
-          actualizado: '2026-06-28T14:00:00.000Z' },
-        { tipo: 'Hospital', nombre: 'Hospital Vargas de Caracas', ubicacion: 'San José, Caracas', telefono: '+58 212 555 6100 (Donaciones)',
-          necesita: [
-            { nombre: 'Sueros fisiológicos', categoria: 'Fluidos IV', cantidadNecesaria: 160, cantidadRecibida: 37, porcentaje: 23, urgencia: 'Crítico', unidad: 'bolsas', yaCubierto: false, coincidencias: [] },
-            { nombre: 'Guantes', categoria: 'Suministros quirúrgicos', cantidadNecesaria: 300, cantidadRecibida: 185, porcentaje: 62, urgencia: 'Normal', unidad: 'pares', yaCubierto: false, coincidencias: [] }
-          ],
-          tiene_disponible: [],
-          actualizado: '2026-06-28T11:45:00.000Z' }
+        { tipo: 'Centro', nombre: 'Iglesia San José', ubicacion: 'Los Corales, La Guaira', telefono: '+58 412 555 1234', necesita: [
+          { nombre: 'Gasas estériles', categoria: 'Insumos médicos', cantidadNecesaria: 80, cantidadRecibida: 18, porcentaje: 23, urgencia: 'Crítico', unidad: 'paquetes', coincidencias: [{ nombre_lugar: 'Hospital El Algodonal', tipo: 'Hospital', telefono: '+58 212 555 5000', ubicacion: 'El Algodonal, Caracas' }] },
+          { nombre: 'Agua potable', categoria: 'Agua potable', cantidadNecesaria: 100, cantidadRecibida: 12, porcentaje: 12, urgencia: 'Crítico', unidad: 'cajas', coincidencias: [{ nombre_lugar: 'Refugio Naiguatá', tipo: 'Refugio', telefono: '+58 414 555 2200', ubicacion: 'Naiguatá, Vargas' }] }
+        ], cubiertos: [{ nombre: 'Mantas', categoria: 'Otros', cantidadNecesaria: 60, cantidadRecibida: 60, unidad: 'unidades', yaCubierto: true }], tiene_disponible: [{ nombre: 'Ropa de adulto', categoria: 'Ropa' }, { nombre: 'Mantas', categoria: 'Otros' }], actualizado: '2026-06-28T12:00:00.000Z' },
+        { tipo: 'Refugio', nombre: 'Refugio Naiguatá', ubicacion: 'Naiguatá, Vargas', telefono: '+58 414 555 2200', capacidad: '84 personas', necesita: [{ nombre: 'Pañales', categoria: 'Higiene', cantidadNecesaria: 120, cantidadRecibida: 74, porcentaje: 62, urgencia: 'Normal', unidad: 'paquetes', coincidencias: [] }], tiene_disponible: [{ nombre: 'Agua potable', categoria: 'Agua potable' }], actualizado: '2026-06-28T13:30:00.000Z' },
+        { tipo: 'Hospital', nombre: 'Hospital El Algodonal', ubicacion: 'El Algodonal, Caracas', telefono: '+58 212 555 5000', estadoOperativo: 'Operativo parcial', necesita: [{ nombre: 'Analgésicos', categoria: 'Medicamentos', cantidadNecesaria: 200, cantidadRecibida: 86, porcentaje: 43, urgencia: 'Moderado', unidad: 'unidades', coincidencias: [] }], cubiertos: [{ nombre: 'Gasas estériles', categoria: 'Insumos médicos', cantidadNecesaria: 100, cantidadRecibida: 100, unidad: 'paquetes', yaCubierto: true }], tiene_disponible: [{ nombre: 'Gasas estériles', categoria: 'Insumos médicos' }], actualizado: '2026-06-28T14:00:00.000Z' },
+        { tipo: 'Hospital', nombre: 'Hospital Vargas de Caracas', ubicacion: 'San José, Caracas', telefono: '+58 212 555 6100', estadoOperativo: 'Recibiendo insumos', necesita: [{ nombre: 'Sueros fisiológicos', categoria: 'Insumos médicos', cantidadNecesaria: 160, cantidadRecibida: 37, porcentaje: 23, urgencia: 'Crítico', unidad: 'bolsas', coincidencias: [] }, { nombre: 'Plantas eléctricas', categoria: 'Plantas eléctricas', cantidadNecesaria: 3, cantidadRecibida: 0, porcentaje: 0, urgencia: 'Crítico', unidad: 'unidades', coincidencias: [] }], tiene_disponible: [], actualizado: '2026-06-28T11:45:00.000Z' }
+      ],
+      voluntarios: [
+        { id: 'VOL001', nombre: 'Andrea', apellido: 'Mendoza', telefono: '+58 414 201 1144', estado: 'La Guaira', ciudad: 'Maiquetía', profesion: 'Enfermero', disponibilidad: 'Turnos de tarde', observaciones: 'Primeros auxilios', fecha_registro: '2026-06-29T10:00:00.000Z' },
+        { id: 'VOL002', nombre: 'Rafael', apellido: 'Suárez', telefono: '+58 412 771 2841', estado: 'Distrito Capital', ciudad: 'Caracas', profesion: 'Logística', disponibilidad: 'Fines de semana', observaciones: 'Inventario y rutas', fecha_registro: '2026-06-29T12:20:00.000Z' }
+      ],
+      rescatistas: [
+        { id: 'RES001', nombre: 'Unidad Bravo', organizacion: 'Protección Civil', telefono: '+58 424 811 9000', especialidad: 'Rescate Urbano', estado: 'La Guaira', ciudad: 'Caraballeda', disponibilidad: 'Activo', observaciones: 'Equipo con herramientas livianas', fecha_registro: '2026-06-29T09:40:00.000Z' },
+        { id: 'RES002', nombre: 'Marcos Tovar', organizacion: 'Bomberos', telefono: '+58 416 551 0030', especialidad: 'Paramédico', estado: 'Miranda', ciudad: 'Guarenas', disponibilidad: 'Guardia nocturna', observaciones: 'Ambulancia coordinada', fecha_registro: '2026-06-29T15:10:00.000Z' }
       ],
       motorizados: [
-        { id: 'MOTO001', nombre: 'Carlos Rodríguez', tipoVehiculo: 'Moto', placa: 'MBK-401', zonaOperacion: 'La Guaira - Caracas', telefono: '+58 412 111 2222', totalTrayectos: 22, totalKm: 487, activo: true, fechaRegistro: '2026-06-23T10:00:00.000Z', ultimoTrayecto: '2026-06-29T22:00:00.000Z', linkDonacion: '', infoDonacion: 'Banco Mercantil · 0412-111-2222 · CI: 8123456' },
-        { id: 'MOTO002', nombre: 'María González', tipoVehiculo: 'Carro', placa: 'GAB-852', zonaOperacion: 'Caracas Este', telefono: '+58 414 333 4444', totalTrayectos: 9, totalKm: 201, activo: true, fechaRegistro: '2026-06-26T14:30:00.000Z', ultimoTrayecto: '2026-06-28T18:20:00.000Z', linkDonacion: 'https://link.mercadopago.com/demo', infoDonacion: 'Zelle: mariagonzalez@email.com' },
-        { id: 'MOTO003', nombre: 'Luis Herrera', tipoVehiculo: 'Motocarro', placa: 'LAR-219', zonaOperacion: 'Catia - La Pastora', telefono: '+58 424 777 1188', totalTrayectos: 15, totalKm: 264, activo: true, fechaRegistro: '2026-06-25T09:15:00.000Z', ultimoTrayecto: '2026-06-29T16:10:00.000Z', linkDonacion: '', infoDonacion: 'Pago móvil · Banco Provincial · 0424-777-1188 · CI: 10999888' }
-      ]
+        { id: 'MOTO001', nombre: 'Carlos Rodríguez', tipoVehiculo: 'Moto', placa: 'MBK-401', zonaOperacion: 'La Guaira - Caracas', telefono: '+58 412 111 2222', totalTrayectos: 22, totalKm: 487, activo: true, aporteDonado: 5000, ultimoTrayecto: '2026-06-29T22:00:00.000Z' },
+        { id: 'MOTO002', nombre: 'María González', tipoVehiculo: 'Carro', placa: 'GAB-852', zonaOperacion: 'Caracas Este', telefono: '+58 414 333 4444', totalTrayectos: 9, totalKm: 201, activo: true, aporteDonado: 2400, ultimoTrayecto: '2026-06-28T18:20:00.000Z' }
+      ],
+      trayectos: [
+        { timestamp: new Date(Date.now() - 2 * 3600000).toISOString(), motorizadoId: 'MOTO001', motorizadoNombre: 'Carlos Rodríguez', origen: 'Centro San José', destino: 'Hospital Vargas', kmRecorridos: 18, insumoTransportado: 'Agua potable · 20 cajas' }
+      ],
+      historial: [],
+      estadisticas: { centrosRegistrados: 2, hospitalesRegistrados: 2, personasLocalizadas: 6, voluntariosActivos: 2, rescatistasRegistrados: 2 }
     };
-    const MOTORIZADOS_FALLBACK = DATOS_FALLBACK.motorizados;
-    const TRAYECTOS_FALLBACK = [
-      { timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOTO001', motorizadoNombre: 'Carlos Rodríguez', origen: 'Centro San José', destino: 'Hospital Vargas', kmRecorridos: 18, insumoTransportado: 'Agua embotellada · 20 cajas', observaciones: '' },
-      { timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOTO001', motorizadoNombre: 'Carlos Rodríguez', origen: 'Punto de acopio El Junquito', destino: 'Iglesia Lourdes', kmRecorridos: 9, insumoTransportado: 'Alimentos enlatados', observaciones: '' },
-      { timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOTO002', motorizadoNombre: 'María González', origen: 'Chacao', destino: 'Hospital El Algodonal', kmRecorridos: 22, insumoTransportado: 'Sueros fisiológicos', observaciones: '' },
-      { timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), motorizadoId: 'MOTO003', motorizadoNombre: 'Luis Herrera', origen: 'Catia', destino: 'La Pastora', kmRecorridos: 11, insumoTransportado: 'Pañales y agua', observaciones: '' }
-    ];
 
-    // Respaldo para "Buscar familiar" (cuando file:// impide leer el JSON mock).
     const FAMILIARES_FALLBACK = { registros: [
       { nombre: 'María Pérez González', cedula: 'V-12.345.678', estado: 'Localizado con vida', ubicacion: 'Refugio Naiguatá, Vargas', fuente: 'Lista Cruz Roja', actualizado: '2026-06-28T10:00:00.000Z' },
       { nombre: 'José Rafael Mendoza', cedula: 'V-9.876.543', estado: 'En refugio', ubicacion: 'Refugio Maiquetía, La Guaira', fuente: 'Protección Civil', actualizado: '2026-06-28T11:30:00.000Z' },
       { nombre: 'Ana Lucía Rodríguez', cedula: 'V-18.222.111', estado: 'Hospitalizado', ubicacion: 'Hospital Vargas de Caracas', fuente: 'Registro hospitalario', actualizado: '2026-06-28T08:45:00.000Z' },
-      { nombre: 'Carlos Eduardo Blanco', cedula: 'V-14.555.099', estado: 'Localizado con vida', ubicacion: 'Caraballeda, Vargas', fuente: 'Reporte familiar', actualizado: '2026-06-27T19:20:00.000Z' },
-      { nombre: 'Rosa Elena Marcano', cedula: 'V-7.111.234', estado: 'Sin información reciente', ubicacion: 'Última vez: Los Corales, La Guaira', fuente: 'Lista comunitaria', actualizado: '2026-06-26T22:00:00.000Z' },
-      { nombre: 'Pedro Antonio Silva', cedula: 'V-20.333.876', estado: 'En refugio', ubicacion: 'Refugio El Hatillo, Caracas', fuente: 'Cruz Roja', actualizado: '2026-06-28T12:10:00.000Z' },
       { nombre: 'Gustavo Adolfo Rincón', cedula: 'V-5.123.456', estado: 'Fallecido', ubicacion: 'La Guaira', fuente: 'Registro oficial', actualizado: '2026-06-27T15:00:00.000Z' }
     ] };
 
-    // Previene XSS: escapa todo dato externo/de usuario antes de insertarlo en el DOM.
-    function escaparHTML(str) {
-      return String(str == null ? '' : str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-    const e = escaparHTML; // alias corto para las plantillas
+    const URGENTES = ['Agua potable', 'Medicamentos', 'Insumos médicos', 'Alimentos', 'Plantas eléctricas', 'Combustible'];
 
-    // minúsculas + sin acentos + trim (igual criterio que el Apps Script).
-    function normalizar(t) {
-      return String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-    }
-
-    function esNecesita(estadoTxt) {
-      return normalizar(estadoTxt).indexOf('necesita') === 0;
-    }
-
-    // ── ESTADO ────────────────────────────────────────────────
     const estado = {
-      lugares: [],
-      motorizados: [],
-      filtroTipo: 'todos',
-      filtroCategoria: '',
-      filtroMotorizadoTipo: 'todos',
-      busqueda: ''
+      lugares: [], voluntarios: [], rescatistas: [], motorizados: [], estadisticas: {},
+      filtros: { lugarQ: '', lugarTipo: 'todos', lugarCategoria: '', volQ: '', volProfesion: '', volEstado: '', resQ: '', resEspecialidad: '', resEstado: '', motQ: '', motTipo: '' }
     };
 
     const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const e = (str) => String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const normalizar = (txt) => String(txt == null ? '' : txt).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const soloDigitos = (tel) => String(tel || '').replace(/[^0-9]/g, '');
+    const waHref = (tel) => `https://wa.me/${soloDigitos(tel)}?text=${encodeURIComponent(WA_MENSAJE)}`;
+    const telHref = (tel) => `tel:${String(tel || '').replace(/[^0-9+]/g, '')}`;
+    const numero = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 
-    // ── TABS ──────────────────────────────────────────────────
-    const TABS = ['donaciones', 'motorizados', 'familiar'];
-    function cambiarTab(destino) {
-      TABS.forEach((t) => {
-        const panel = $('#tab-' + t);
-        const btn = $('#tab-btn-' + t);
-        if (panel) {
-          panel.classList.toggle('oculto', t !== destino);
-          panel.classList.toggle('activo', t === destino);
-        }
-        if (btn) {
-          btn.setAttribute('aria-selected', String(t === destino));
-          btn.classList.toggle('activo', t === destino);
-        }
-      });
-    }
-
-    // ── FETCH Y CACHE (donaciones) ────────────────────────────
-    function guardarCache(lugares) {
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify(lugares)); } catch (err) { /* sin localStorage: ignorar */ }
-    }
-    function guardarCacheMotorizados(motorizados) {
-      try { localStorage.setItem(CACHE_MOTORIZADOS_KEY, JSON.stringify(motorizados)); } catch (err) { /* sin localStorage: ignorar */ }
-    }
-    function leerCache() {
-      try {
-        const raw = localStorage.getItem(CACHE_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch (err) { return null; }
-    }
-    function leerCacheMotorizados() {
-      try {
-        const raw = localStorage.getItem(CACHE_MOTORIZADOS_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch (err) { return null; }
-    }
-
-    async function cargarDatos() {
-      // En file:// el navegador bloquea leer JSON local (CORS): usamos el respaldo embebido directo.
-      const esFile = location.protocol === 'file:';
-      try {
-        if (SANDBOX_MODE && esFile) { estado.lugares = DATOS_FALLBACK.lugares; guardarCache(estado.lugares); mostrarBanner('demo'); return; }
-        const url = SANDBOX_MODE ? 'data/ejemplo.json' : APPS_SCRIPT_URL;
-        const resp = await fetch(url, { cache: 'no-store' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const data = await resp.json();
-        if (data && data.error) throw new Error(data.error);
-        estado.lugares = (data && (data.centros || data.lugares)) || [];
-        guardarCache(estado.lugares);
-        mostrarBanner(SANDBOX_MODE ? 'demo' : null);
-      } catch (err) {
-        const cache = leerCache();
-        if (cache && cache.length) {
-          estado.lugares = cache;
-          mostrarBanner('offline');
-        } else {
-          estado.lugares = DATOS_FALLBACK.lugares;
-          mostrarBanner('demo');
-        }
-      } finally {
-        $('#carga').classList.add('oculto');
-        poblarCategorias();
-        aplicarFiltros();
+    window.SheetsService.configure({
+      appsScriptUrl: APPS_SCRIPT_URL,
+      sandboxMode: SANDBOX_MODE,
+      fallback: DATOS_FALLBACK,
+      cacheKeys: {
+        all: 'vz_rhv_all_cache', lugares: 'vz_rhv_lugares_cache', voluntarios: 'vz_rhv_voluntarios_cache',
+        rescatistas: 'vz_rhv_rescatistas_cache', motorizados: 'vz_rhv_motorizados_cache', trayectos: 'vz_rhv_trayectos_cache', historial: 'vz_rhv_historial_cache'
       }
-    }
+    });
 
-    function mostrarBanner(tipo) {
-      const b = $('#banner');
-      if (!tipo) { b.classList.add('oculto'); return; }
-      b.textContent = tipo === 'offline'
-        ? 'Sin conexión. Mostrando los últimos datos guardados.'
-        : 'Modo demo — datos de ejemplo, no reales. Configura el Apps Script para ver datos en vivo.';
-      b.classList.remove('oculto');
-    }
-
-    // ── RENDER (donaciones) ───────────────────────────────────
-    function numeroSeguro(valor, fallback = 0) {
-      const n = Number(valor);
-      return Number.isFinite(n) ? n : fallback;
-    }
-
-    function datosCantidad(insumo) {
-      const necesaria = Math.max(0, numeroSeguro(insumo.cantidadNecesaria, 0));
-      const recibida = Math.max(0, numeroSeguro(insumo.cantidadRecibida, 0));
-      const unidad = insumo.unidad || 'unidades';
-      const recibidaCap = necesaria > 0 ? Math.min(recibida, necesaria) : recibida;
-      const porcentaje = necesaria > 0 ? Math.min(100, Math.round((recibidaCap / necesaria) * 100)) : numeroSeguro(insumo.porcentaje, 0);
-      return { necesaria, recibida: recibidaCap, faltan: Math.max(0, necesaria - recibidaCap), unidad, porcentaje };
-    }
-
-    function colorUrgencia(urgencia) {
-      const u = normalizar(urgencia);
-      if (u.indexOf('critico') === 0) return '#dc2626';
-      if (u.indexOf('moderado') === 0) return '#f59e0b';
-      return '#16a34a';
-    }
-
-    function claseUrgencia(urgencia) {
-      const u = normalizar(urgencia);
-      if (u.indexOf('critico') === 0) return 'critico';
-      if (u.indexOf('moderado') === 0) return 'moderado';
-      return 'normal';
-    }
-
-    function textoCubierto(item) {
-      const c = datosCantidad(item);
-      if (c.necesaria > 0) return `${e(item.nombre)} · ${c.recibida}/${c.necesaria} ${e(c.unidad)}`;
-      return `${e(item.nombre)} · cubierto`;
-    }
-
-    function tarjetaLugar(lugar) {
-      const esHosp = normalizar(lugar.tipo).indexOf('hospital') === 0;
-      const necesita = (lugar.necesita || []).map(itemNecesita).join('');
-      const disponible = (lugar.tiene_disponible || []).map(itemDisponible).join('');
-      const cubiertos = (lugar.cubiertos || []).concat((lugar.necesita || []).filter((i) => i.yaCubierto));
-      const cubiertosHtml = cubiertos.map((i) => `<span class="cubierto-chip">${textoCubierto(i)}</span>`).join('');
-      const voluntarios = lugar.voluntarios || 'abierto';
-
-      return `
-        <article class="card ${esHosp ? 'hospital' : ''}">
-          <div class="card-head">
-            <span class="badge ${esHosp ? 'tipo-hospital' : 'tipo-centro'}">${esHosp ? 'HOSPITAL' : 'CENTRO'}</span>
-            <span class="voluntarios-badge">🧡 Voluntarios: ${e(voluntarios)}</span>
-          </div>
-          <h3>${e(lugar.nombre)}</h3>
-          <p class="meta">📍 ${e(lugar.ubicacion)}</p>
-          <p class="meta">📞 ${e(lugar.telefono)}</p>
-          ${necesita ? `<p class="lista-titulo necesita">Necesita</p><ul class="insumos">${necesita}</ul>` : ''}
-          ${cubiertosHtml ? `<div class="ya-cubierto-seccion"><div class="ya-cubierto-titulo">YA CUBIERTO</div><div class="ya-cubierto-lista">${cubiertosHtml}</div></div>` : ''}
-          ${disponible ? `<p class="lista-titulo disponible">Tiene disponible</p><ul class="insumos">${disponible}</ul>` : ''}
-          <div class="acciones">
-            <a class="btn-accion call" href="${telHref(lugar.telefono)}" aria-label="Llamar a ${e(lugar.nombre)}">📞 Llamar</a>
-            <a class="btn-accion wa" href="${waHref(lugar.telefono)}" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp a ${e(lugar.nombre)}">💬 WhatsApp</a>
-            <button class="btn-accion registrar btn-registrar-mov" type="button" data-lugar="${e(lugar.nombre)}">+ Registrar</button>
-            <button class="btn-accion historial btn-historial" type="button" data-lugar="${e(lugar.nombre)}">📋 Ver historial de movimientos</button>
-          </div>
-          <p class="timestamp">Actualizado: ${e(fecha(lugar.actualizado))}</p>
-        </article>`;
-    }
-
-    function itemNecesita(n) {
-      const coincidencias = (n.coincidencias || []);
-      const c = datosCantidad(n);
-      const urgencia = n.urgencia || 'Normal';
-      let badge = '';
-      if (coincidencias.length) {
-        const cuerpo = coincidencias.map(bloqueCoincidencia).join('');
-        badge = `<details class="match"><summary>🔗 Disponible en ${coincidencias.length} lugar${coincidencias.length > 1 ? 'es' : ''}</summary><div class="match-body">${cuerpo}</div></details>`;
-      }
-      return `
-        <li class="necesidad-item">
-          <div class="insumo-linea">
-            <span class="insumo-main">
-              <strong>${e(n.nombre)}</strong>
-              <span class="badge cat">${e(n.categoria)}</span>
-              <span class="badge urgencia ${claseUrgencia(urgencia)}">${e(urgencia)}</span>
-            </span>
-            <span class="insumo-faltan">faltan ${c.faltan} ${e(c.unidad)}</span>
-          </div>
-          <div class="barra-progreso" aria-label="${e(c.porcentaje + '% cubierto')}">
-            <span style="--progreso:${c.porcentaje}%;--barra:${colorUrgencia(urgencia)}"></span>
-          </div>
-          <div class="barra-meta">${c.recibida}/${c.necesaria || '—'} ${e(c.unidad)}</div>
-          ${badge}
-        </li>`;
-    }
-
-    function itemDisponible(d) {
-      return `<li><span>🔵 ${e(d.nombre)}</span> <span class="badge cat">${e(d.categoria)}</span></li>`;
-    }
-
-    // Contacto dirigido al lugar que TIENE el insumo (no al que lo necesita).
-    function bloqueCoincidencia(c) {
-      return `
-        <div class="match-lugar">
-          <strong>${e(c.nombre_lugar)}</strong> (${e(c.tipo)}) — ${e(c.ubicacion)}
-          <div class="meta">📞 ${e(c.telefono)}</div>
-          <div class="acciones">
-            <a class="btn-accion call mini" href="${telHref(c.telefono)}" aria-label="Llamar a ${e(c.nombre_lugar)}">📞 Llamar</a>
-            <a class="btn-accion wa mini" href="${waHref(c.telefono)}" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp a ${e(c.nombre_lugar)}">💬 WhatsApp</a>
-          </div>
-        </div>`;
-    }
-
-    function render(lugares) {
-      const grid = $('#grid');
-      const vacio = $('#sin-resultados');
-      if (!lugares.length) {
-        grid.innerHTML = '';
-        vacio.classList.remove('oculto');
-        return;
-      }
-      vacio.classList.add('oculto');
-      grid.innerHTML = lugares.map(tarjetaLugar).join('');
-      bindLugarEvents();
-    }
-
-    // ── FILTROS ───────────────────────────────────────────────
-    function lugarTieneCategoria(lugar, cat) {
-      if (!cat) return true;
-      const todos = (lugar.necesita || []).concat(lugar.tiene_disponible || [], lugar.cubiertos || []);
-      return todos.some((i) => i.categoria === cat);
-    }
-
-    function aplicarFiltros() {
-      const q = normalizar(estado.busqueda);
-      const filtrados = estado.lugares.filter((l) => {
-        if (estado.filtroTipo !== 'todos' && normalizar(l.tipo).indexOf(normalizar(estado.filtroTipo)) !== 0) return false;
-        if (!lugarTieneCategoria(l, estado.filtroCategoria)) return false;
-        if (q && !(normalizar(l.nombre).includes(q) || normalizar(l.ubicacion).includes(q))) return false;
-        return true;
-      });
-      render(filtrados);
-      $('#conteo').textContent = `Mostrando ${filtrados.length} de ${estado.lugares.length} lugares`;
-    }
-
-    function poblarCategorias() {
-      const set = new Set();
-      estado.lugares.forEach((l) => {
-        (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []).forEach((i) => { if (i.categoria) set.add(i.categoria); });
-      });
-      const sel = $('#categoria');
-      sel.innerHTML = '<option value="">Cualquier insumo</option>';
-      Array.from(set).sort().forEach((cat) => {
-        const opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
-        sel.appendChild(opt);
-      });
-    }
-
-    let debounceTimer = null;
-    function onBusqueda(valor) {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => { estado.busqueda = valor; aplicarFiltros(); }, 300);
-    }
-
-    // ── CONTACTO ──────────────────────────────────────────────
-    function soloDigitos(tel) { return String(tel || '').replace(/[^0-9]/g, ''); }
-    function telHref(tel) { return 'tel:' + String(tel || '').replace(/[^0-9+]/g, ''); }
-    function waHref(tel) { return 'https://wa.me/' + soloDigitos(tel) + '?text=' + encodeURIComponent(WA_MENSAJE); }
-    function fecha(iso) {
+    function fechaRelativa(iso) {
       if (!iso) return 'sin fecha';
       const d = new Date(iso);
-      return isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
-    }
-
-    function formatearFechaRelativa(iso) {
-      if (!iso) return 'sin fecha';
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return String(iso);
-      const diff = Date.now() - d.getTime();
-      const min = Math.round(diff / 60000);
+      if (Number.isNaN(d.getTime())) return String(iso);
+      const min = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
       if (min < 1) return 'Ahora';
       if (min < 60) return `Hace ${min} min`;
       const horas = Math.round(min / 60);
       if (horas < 24) return `Hace ${horas} h`;
-      const ayer = new Date();
-      ayer.setDate(ayer.getDate() - 1);
-      const hora = d.toLocaleTimeString('es-VE', { hour: 'numeric', minute: '2-digit' });
-      if (d.toDateString() === ayer.toDateString()) return `Ayer, ${hora}`;
-      if (d.toDateString() === new Date().toDateString()) return `Hoy, ${hora}`;
-      return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
+      return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
-    function pausa(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+    function setStatus(source) {
+      const dot = $('#status-dot');
+      const text = $('#status-text');
+      dot.className = 'status-dot';
+      if (source === 'live') text.textContent = 'Datos en vivo';
+      else if (source === 'cache') { dot.classList.add('cache'); text.textContent = 'Datos guardados'; }
+      else { dot.classList.add('demo'); text.textContent = 'Modo demo'; }
+      const banner = $('#banner');
+      banner.classList.toggle('visible', source !== 'live');
+      banner.textContent = source === 'cache' ? 'Sin conexión. Mostrando los últimos datos guardados.' : 'Modo demo: conecta la URL del Apps Script para ver datos reales.';
     }
 
-    async function postAccion(payload, respuestaOptimista = {}) {
-      if (SANDBOX_MODE) {
-        await pausa(250);
-        return { success: true, ...respuestaOptimista };
-      }
-      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-      return { success: true, opaque: true, ...respuestaOptimista };
-    }
-
-    function abrirModal({ titulo, subtitulo = '', contenido }) {
-      const root = $('#modal-root');
-      root.innerHTML = `
-        <div class="modal-overlay" role="presentation">
-          <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div class="modal-header">
-              <div>
-                <h3 id="modal-title" class="modal-title">${titulo}</h3>
-                ${subtitulo ? `<p class="modal-subtitle">${subtitulo}</p>` : ''}
-              </div>
-              <button class="modal-close" type="button" aria-label="Cerrar modal">×</button>
-            </div>
-            <div class="modal-body">${contenido}</div>
-          </section>
-        </div>`;
-
-      const overlay = root.querySelector('.modal-overlay');
-      overlay.addEventListener('click', (ev) => { if (ev.target === overlay) cerrarModal(); });
-      root.querySelector('.modal-close').addEventListener('click', cerrarModal);
-      root.querySelectorAll('[data-modal-cancel]').forEach((btn) => btn.addEventListener('click', cerrarModal));
-      const foco = root.querySelector('input, select, textarea, button, a');
-      if (foco) setTimeout(() => foco.focus(), 0);
-    }
-
-    function cerrarModal() {
-      $('#modal-root').innerHTML = '';
-    }
-
-    function mostrarErrorModal(mensaje) {
-      const box = $('#modal-error');
-      if (!box) return;
-      box.textContent = mensaje;
-      box.classList.add('visible');
-    }
-
-    let toastTimer = null;
-    function mostrarToast(mensaje, tipo = 'info') {
-      const anterior = document.querySelector('.toast');
-      if (anterior) anterior.remove();
-      clearTimeout(toastTimer);
-      const toast = document.createElement('div');
-      toast.className = `toast ${tipo}`;
-      toast.setAttribute('role', 'status');
-      toast.textContent = mensaje;
-      document.body.appendChild(toast);
-      toastTimer = setTimeout(() => toast.remove(), 3600);
-    }
-
-    function bindLugarEvents() {
-      document.querySelectorAll('.btn-registrar-mov').forEach((btn) => {
-        btn.addEventListener('click', () => abrirModalMovimiento(btn.dataset.lugar));
+    function cambiarVista(view) {
+      $$('.view').forEach((panel) => panel.classList.toggle('active', panel.dataset.view === view));
+      $$('[data-view-link]').forEach((btn) => {
+        const active = btn.dataset.viewLink === view;
+        if (btn.tagName === 'BUTTON') btn.setAttribute('aria-current', active ? 'page' : 'false');
       });
-      document.querySelectorAll('.btn-historial').forEach((btn) => {
-        btn.addEventListener('click', () => abrirModalHistorial(btn.dataset.lugar));
-      });
+      $('#contenido').focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function buscarLugar(nombre) {
-      return estado.lugares.find((l) => normalizar(l.nombre) === normalizar(nombre));
+    function calcularStats() {
+      const stats = Object.assign({}, estado.estadisticas);
+      if (!stats.centrosRegistrados) stats.centrosRegistrados = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') !== 0).length;
+      if (!stats.hospitalesRegistrados) stats.hospitalesRegistrados = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') === 0).length;
+      if (!stats.voluntariosActivos) stats.voluntariosActivos = estado.voluntarios.length;
+      if (!stats.rescatistasRegistrados) stats.rescatistasRegistrados = estado.rescatistas.length;
+      if (stats.personasLocalizadas == null) stats.personasLocalizadas = 0;
+      return stats;
     }
 
-    function insumosRegistrables(lugar) {
-      return (lugar.necesita || []).concat(lugar.cubiertos || []);
-    }
-
-    function abrirModalMovimiento(nombreLugar) {
-      const lugar = buscarLugar(nombreLugar);
-      if (!lugar) return mostrarToast('No se encontró el lugar seleccionado.', 'error');
-      const insumos = insumosRegistrables(lugar);
-      if (!insumos.length) return mostrarToast('Este lugar no tiene insumos registrables.', 'error');
-
-      const opciones = insumos.map((item, idx) => {
-        const c = datosCantidad(item);
-        return `<option value="${idx}">${e(item.nombre)} · ${c.recibida}/${c.necesaria || '—'} ${e(c.unidad)}</option>`;
-      }).join('');
-
-      abrirModal({
-        titulo: `+ Registrar movimiento`,
-        subtitulo: e(lugar.nombre),
-        contenido: `
-          <form id="form-movimiento" autocomplete="off">
-            <div class="segmented" role="group" aria-label="Tipo de movimiento">
-              <label><input type="radio" name="tipoMovimiento" value="Entrada" checked /> Entrada</label>
-              <label><input type="radio" name="tipoMovimiento" value="Salida" /> Salida</label>
-            </div>
-            <div class="form-group">
-              <label for="mov-insumo">Insumo</label>
-              <select id="mov-insumo" required>${opciones}</select>
-            </div>
-            <div class="form-group">
-              <label for="mov-cantidad">Cantidad</label>
-              <input id="mov-cantidad" type="number" min="1" step="1" placeholder="Ej: 12" required />
-            </div>
-            <div class="form-group">
-              <label for="mov-voluntario">Nombre del voluntario</label>
-              <input id="mov-voluntario" type="text" placeholder="Anónimo" />
-            </div>
-            <div class="form-group">
-              <label for="mov-observaciones">Observaciones</label>
-              <input id="mov-observaciones" type="text" placeholder="Opcional" />
-            </div>
-            <div id="modal-error" class="modal-error"></div>
-            <div class="modal-actions">
-              <button type="button" class="btn-reset" data-modal-cancel>Cancelar</button>
-              <button type="submit" class="btn-submit">✓ Registrar</button>
-            </div>
-          </form>`
-      });
-
-      $('#form-movimiento').addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const idx = numeroSeguro($('#mov-insumo').value, 0);
-        const item = insumos[idx];
-        const cantidad = numeroSeguro($('#mov-cantidad').value, 0);
-        if (!item || cantidad <= 0) return mostrarErrorModal('Selecciona un insumo y una cantidad mayor a 0.');
-
-        const tipoMovimiento = new FormData(ev.currentTarget).get('tipoMovimiento');
-        const payload = {
-          accion: 'registrar_movimiento',
-          tipoMovimiento,
-          nombreLugar: lugar.nombre,
-          tipoLugar: lugar.tipo,
-          insumo: item.nombre,
-          categoria: item.categoria,
-          cantidad,
-          nombreVoluntario: $('#mov-voluntario').value.trim() || 'Anónimo',
-          observaciones: $('#mov-observaciones').value.trim()
-        };
-
-        try {
-          await postAccion(payload);
-          const nuevaCantidad = actualizarMovimientoLocal(payload);
-          cerrarModal();
-          mostrarToast(`Movimiento registrado. Total actual: ${nuevaCantidad}.`, 'exito');
-          if (!SANDBOX_MODE) setTimeout(cargarDatos, 1200);
-        } catch (err) {
-          mostrarErrorModal('No se pudo registrar el movimiento: ' + err.message);
-        }
-      });
-    }
-
-    function actualizarMovimientoLocal(payload) {
-      const lugar = buscarLugar(payload.nombreLugar);
-      if (!lugar) return 0;
-      const listas = [
-        { nombre: 'necesita', items: lugar.necesita || [] },
-        { nombre: 'cubiertos', items: lugar.cubiertos || [] }
+    function renderStats() {
+      const s = calcularStats();
+      const items = [
+        ['Centros registrados', s.centrosRegistrados || 0], ['Hospitales registrados', s.hospitalesRegistrados || 0],
+        ['Personas localizadas', s.personasLocalizadas || 0], ['Voluntarios activos', s.voluntariosActivos || 0], ['Rescatistas registrados', s.rescatistasRegistrados || 0]
       ];
-      let encontrado = null;
-      let listaOrigen = null;
-      listas.some((lista) => {
-        const item = lista.items.find((i) => normalizar(i.nombre) === normalizar(payload.insumo));
-        if (item) { encontrado = item; listaOrigen = lista; return true; }
-        return false;
+      $('#stats-grid').innerHTML = items.map(([label, value]) => `<div class="stat-card"><span class="stat-num">${e(value)}</span><span class="stat-label">${e(label)}</span></div>`).join('');
+    }
+
+    function renderUrgentes() {
+      $('#urgent-grid').innerHTML = URGENTES.map((item, idx) => `<div class="urgent-item"><strong>${e(item)}</strong><span class="badge ${idx < 3 ? 'red' : 'yellow'}">prioridad</span></div>`).join('');
+    }
+
+    function poblarCategorias() {
+      const cats = new Set();
+      estado.lugares.forEach((l) => (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []).forEach((i) => i.categoria && cats.add(i.categoria)));
+      $('#filtro-lugar-categoria').innerHTML = '<option value="">Todas</option>' + Array.from(cats).sort().map((cat) => `<option>${e(cat)}</option>`).join('');
+    }
+
+    function itemCantidad(item) {
+      const necesaria = Math.max(0, numero(item.cantidadNecesaria || 1));
+      const recibida = Math.max(0, Math.min(numero(item.cantidadRecibida), necesaria));
+      const porcentaje = necesaria > 0 ? Math.round((recibida / necesaria) * 100) : numero(item.porcentaje);
+      return { necesaria, recibida, porcentaje, faltan: Math.max(0, necesaria - recibida), unidad: item.unidad || 'unidades' };
+    }
+
+    function urgenciaClass(u) {
+      const n = normalizar(u);
+      if (n.indexOf('critico') === 0) return 'red';
+      if (n.indexOf('moderado') === 0) return 'yellow';
+      return 'green';
+    }
+
+    function tipoIcono(tipo) {
+      const n = normalizar(tipo);
+      if (n.indexOf('hospital') === 0) return 'H';
+      if (n.indexOf('refugio') === 0) return 'R';
+      return '+';
+    }
+
+    function renderLugarCard(lugar) {
+      const necesidades = (lugar.necesita || []).map((item) => {
+        const c = itemCantidad(item);
+        const matches = item.coincidencias || [];
+        return `<li class="supply-item"><div class="supply-line"><strong>${e(item.nombre)}</strong><span class="badge ${urgenciaClass(item.urgencia)}">${e(item.urgencia || 'Normal')}</span></div><div class="badge-row"><span class="badge gray">${e(item.categoria || 'Otros')}</span><span class="badge">faltan ${e(c.faltan)} ${e(c.unidad)}</span></div><div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${e(c.porcentaje)}"><span style="--value:${e(c.porcentaje)}%"></span></div>${matches.length ? `<details class="match"><summary>Disponible en ${matches.length} lugar${matches.length > 1 ? 'es' : ''}</summary><div class="match-body">${matches.map((m) => `<div class="match-place"><strong>${e(m.nombre_lugar)}</strong><p class="meta">${e(m.tipo)} · ${e(m.ubicacion)}</p><div class="inline-actions"><a class="btn btn-soft btn-small" href="${telHref(m.telefono)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(m.telefono)}">WhatsApp</a></div></div>`).join('')}</div></details>` : ''}</li>`;
+      }).join('');
+      const disponibles = (lugar.tiene_disponible || []).map((i) => `<span class="badge green">${e(i.nombre)}</span>`).join('');
+      const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(i.nombre)} cubierto</span>`).join('');
+      const tipoNormal = normalizar(lugar.tipo);
+      const estadoOperativo = lugar.estadoOperativo || (tipoNormal.indexOf('hospital') === 0 ? 'Contacto operativo' : tipoNormal.indexOf('refugio') === 0 ? (lugar.capacidad || 'Capacidad por confirmar') : 'Centro activo');
+      return `<article class="card card-bordered"><div class="card-top"><div><span class="badge ${tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : ''}">${e(lugar.tipo || 'Centro')}</span><h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${tipoNormal.indexOf('hospital') === 0 ? 'red' : ''}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><p class="meta">${e(lugar.ubicacion || 'Ubicación por confirmar')}</p><p class="meta">${e(estadoOperativo)}</p>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : '<p class="meta">Sin necesidades activas registradas.</p>'}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>Tiene disponible</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions"><a class="btn btn-soft btn-small" href="${telHref(lugar.telefono)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(lugar.telefono)}">WhatsApp</a><button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">Historial</button></div><p class="meta">Actualizado: ${e(fechaRelativa(lugar.actualizado))}</p></article>`;
+    }
+
+    function renderLugares() {
+      const f = estado.filtros;
+      const q = normalizar(f.lugarQ);
+      const filtered = estado.lugares.filter((l) => {
+        const items = (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []);
+        const text = normalizar([l.nombre, l.ubicacion, l.tipo, items.map((i) => i.nombre).join(' ')].join(' '));
+        if (q && !text.includes(q)) return false;
+        if (f.lugarTipo !== 'todos' && normalizar(l.tipo).indexOf(normalizar(f.lugarTipo)) !== 0) return false;
+        if (f.lugarCategoria && !items.some((i) => normalizar(i.categoria) === normalizar(f.lugarCategoria))) return false;
+        return true;
       });
-      if (!encontrado) return 0;
-
-      const c = datosCantidad(encontrado);
-      const delta = numeroSeguro(payload.cantidad, 0);
-      const nueva = payload.tipoMovimiento === 'Salida'
-        ? Math.max(0, c.recibida - delta)
-        : Math.min(c.necesaria || c.recibida + delta, c.recibida + delta);
-
-      encontrado.cantidadRecibida = nueva;
-      encontrado.porcentaje = c.necesaria > 0 ? Math.min(100, Math.round((nueva / c.necesaria) * 100)) : 0;
-      encontrado.yaCubierto = c.necesaria > 0 && nueva >= c.necesaria;
-      lugar.actualizado = new Date().toISOString();
-
-      if (encontrado.yaCubierto && listaOrigen.nombre === 'necesita') {
-        lugar.necesita = (lugar.necesita || []).filter((i) => i !== encontrado);
-        lugar.cubiertos = (lugar.cubiertos || []).concat(encontrado);
-      } else if (!encontrado.yaCubierto && listaOrigen.nombre === 'cubiertos') {
-        lugar.cubiertos = (lugar.cubiertos || []).filter((i) => i !== encontrado);
-        lugar.necesita = (lugar.necesita || []).concat(encontrado);
-      }
-
-      guardarCache(estado.lugares);
-      poblarCategorias();
-      aplicarFiltros();
-      return nueva;
+      $('#conteo-lugares').textContent = `Mostrando ${filtered.length} de ${estado.lugares.length} centros`;
+      $('#grid-lugares').innerHTML = filtered.length ? filtered.map(renderLugarCard).join('') : '<div class="empty-state">No hay centros con esos filtros.</div>';
+      $$('[data-historial]').forEach((btn) => btn.addEventListener('click', () => abrirHistorial(btn.dataset.historial)));
     }
 
-    function abrirModalHistorial(nombreLugar) {
-      abrirModal({
-        titulo: `📋 Historial de movimientos`,
-        subtitulo: e(nombreLugar),
-        contenido: `<div id="historial-contenido" class="estado-msg"><div class="spinner" aria-hidden="true"></div>Cargando historial...</div>`
-      });
-      cargarHistorialLugar(nombreLugar);
+    function personaCard(persona, tipo) {
+      const nombre = tipo === 'voluntario' ? `${persona.nombre || ''} ${persona.apellido || ''}`.trim() : (persona.nombre || 'Rescatista');
+      const especialidad = tipo === 'voluntario' ? persona.profesion : persona.especialidad;
+      const org = tipo === 'voluntario' ? persona.disponibilidad : persona.organizacion;
+      return `<article class="card card-bordered"><div class="card-top"><div><span class="badge ${tipo === 'voluntario' ? 'green' : 'red'}">${e(especialidad || tipo)}</span><h3>${e(nombre)}</h3></div><div class="icon-box ${tipo === 'voluntario' ? 'green' : 'red'}" aria-hidden="true">${tipo === 'voluntario' ? '✓' : '⚑'}</div></div><p class="meta">${e([persona.ciudad, persona.estado].filter(Boolean).join(', ') || 'Ubicación por confirmar')}</p>${org ? `<p class="meta">${e(org)}</p>` : ''}${persona.observaciones ? `<p class="meta">${e(persona.observaciones)}</p>` : ''}<div class="card-actions"><a class="btn btn-soft btn-small" href="${telHref(persona.telefono)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(persona.telefono)}">WhatsApp</a></div><p class="meta">Registro: ${e(fechaRelativa(persona.fecha_registro))}</p></article>`;
     }
 
-    async function cargarHistorialLugar(nombreLugar) {
-      const cont = $('#historial-contenido');
-      if (!cont) return;
-      try {
-        const historial = SANDBOX_MODE
-          ? historialDemo(nombreLugar)
-          : await fetch(`${APPS_SCRIPT_URL}?accion=historial&centro=${encodeURIComponent(nombreLugar)}`, { cache: 'no-store' })
-              .then((r) => r.json())
-              .then((data) => data.movimientos || data.historial || []);
-        cont.className = '';
-        cont.innerHTML = renderHistorial(historial);
-      } catch (err) {
-        cont.className = '';
-        cont.innerHTML = renderHistorial(historialDemo(nombreLugar));
-      }
-    }
-
-    function historialDemo(nombreLugar) {
-      const lugar = buscarLugar(nombreLugar);
-      const base = insumosRegistrables(lugar || {}).slice(0, 3);
-      return base.map((item, idx) => ({
-        timestamp: new Date(Date.now() - (idx + 1) * 45 * 60000).toISOString(),
-        tipoLugar: lugar ? lugar.tipo : 'Centro',
-        lugar: nombreLugar,
-        insumo: item.nombre,
-        categoria: item.categoria,
-        tipoMovimiento: idx === 1 ? 'Salida' : 'Entrada',
-        cantidad: idx === 1 ? 3 : 8 + idx,
-        voluntario: idx === 0 ? 'Anónimo' : 'Equipo local',
-        cantidadAcumulada: datosCantidad(item).recibida,
-        observaciones: idx === 0 ? 'Registro demo' : ''
-      }));
-    }
-
-    function renderHistorial(historial) {
-      if (!historial.length) return '<p class="estado-msg">No hay movimientos registrados todavía.</p>';
-      return `<div class="trayecto-lista">${historial.map((h) => {
-        const tipoMov = h.tipoMovimiento || h.tipo || 'Movimiento';
-        const unidad = h.unidad || h.categoria || '';
-        return `
-        <div class="trayecto-item">
-          <div class="trayecto-fecha">${e(formatearFechaRelativa(h.timestamp))}</div>
-          <div class="trayecto-ruta">${e(tipoMov)} · ${e(h.insumo)}</div>
-          <div class="trayecto-meta">${e(h.cantidad)} ${e(unidad)} · acumulado: ${e(h.cantidadAcumulada)} · ${e(h.voluntario || 'Anónimo')}</div>
-          ${h.observaciones ? `<div class="trayecto-meta">${e(h.observaciones)}</div>` : ''}
-        </div>`;
-      }).join('')}</div>`;
-    }
-
-    // ── MOTORIZADOS ───────────────────────────────────────────
-    async function cargarMotorizados() {
-      try {
-        if (SANDBOX_MODE && location.protocol === 'file:') {
-          renderMotorizados(MOTORIZADOS_FALLBACK);
-          return;
-        }
-        const url = SANDBOX_MODE ? 'data/ejemplo.json' : `${APPS_SCRIPT_URL}?accion=motorizados`;
-        const resp = await fetch(url, { cache: 'no-store' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const data = await resp.json();
-        if (data && data.error) throw new Error(data.error);
-        if (!data || !Array.isArray(data.motorizados)) throw new Error('Sin motorizados');
-        renderMotorizados(data.motorizados);
-      } catch (err) {
-        const cache = leerCacheMotorizados();
-        renderMotorizados(cache && cache.length ? cache : MOTORIZADOS_FALLBACK);
-      }
-    }
-
-    function renderMotorizados(lista) {
-      estado.motorizados = (lista || [])
-        .map(normalizarMotorizado)
-        .sort((a, b) => numeroSeguro(b.totalKm) - numeroSeguro(a.totalKm));
-      guardarCacheMotorizados(estado.motorizados);
-      aplicarFiltroMotorizados();
-    }
-
-    function normalizarMotorizado(m) {
-      const estadoTexto = m.estado || (m.activo === false ? 'Inactivo' : 'Activo');
-      return {
-        ...m,
-        zonaOperacion: m.zonaOperacion || m.operaEn || '',
-        operaEn: m.operaEn || m.zonaOperacion || '',
-        estado: estadoTexto,
-        activo: m.activo !== undefined ? m.activo : normalizar(estadoTexto) !== 'inactivo',
-        totalTrayectos: numeroSeguro(m.totalTrayectos, 0),
-        totalKm: numeroSeguro(m.totalKm, 0),
-        aporteDonado: numeroSeguro(m.aporteDonado, 0)
-      };
-    }
-
-    function aplicarFiltroMotorizados() {
-      const grid = $('#grid-motorizados');
-      if (!grid) return;
-      const tipo = estado.filtroMotorizadoTipo;
-      const filtrados = estado.motorizados.filter((m) => {
-        if (tipo === 'todos') return true;
-        return normalizar(m.tipoVehiculo).indexOf(normalizar(tipo)) === 0;
-      });
-      const conteo = $('#conteo-motorizados');
-      if (conteo) conteo.textContent = `Mostrando ${filtrados.length} de ${estado.motorizados.length} motorizados`;
-      if (!filtrados.length) {
-        grid.innerHTML = '<p class="estado-msg">No hay motorizados registrados para este filtro.</p>';
-        return;
-      }
-      grid.innerHTML = filtrados.map(renderTarjetaMotorizado).join('');
-      bindMotorizadosEvents();
-    }
-
-    function motorizadoActivo(m) {
-      if (m.activo === true || String(m.activo).toUpperCase() === 'TRUE') return true;
-      return normalizar(m.estado || '') !== 'inactivo';
-    }
-
-    function renderTarjetaMotorizado(m) {
-      const ultimoStr = m.ultimoTrayecto ? formatearFechaRelativa(m.ultimoTrayecto) : 'Sin trayectos aún';
-      const badgeActivo = motorizadoActivo(m)
-        ? '<span class="badge-activo">● Activo</span>'
-        : '<span class="badge-inactivo">○ Inactivo</span>';
-      const telefono = soloDigitos(m.telefono);
-      const verificado = m.verificado ? '<span class="badge-activo">✓ Verificado</span>' : '';
-
-      return `
-        <article class="tarjeta-mot" data-mot-id="${e(m.id)}">
-          <div class="mot-header">
-            <div>
-              <span class="mot-nombre">🏍️ ${e(m.nombre)}</span>
-              <span class="badge-tipo-mot">${e(m.tipoVehiculo || 'Vehículo')}</span>
-              ${badgeActivo}
-              ${verificado}
-            </div>
-          </div>
-          <div class="mot-info">📍 Opera en: ${e(m.zonaOperacion || 'Sin zona')}${m.placa ? ' · Placa ' + e(m.placa) : ''}</div>
-          <div class="mot-stats">
-            <div class="mot-stat"><span class="mot-stat-num">${e(m.totalTrayectos || 0)}</span><span class="mot-stat-label">trayectos</span></div>
-            <div class="mot-stat"><span class="mot-stat-num">${e(m.totalKm || 0)} km</span><span class="mot-stat-label">recorridos</span></div>
-            <div class="mot-stat"><span class="mot-stat-num">${e(m.aporteDonado || 0)}</span><span class="mot-stat-label">aporte donado</span></div>
-          </div>
-          <div class="mot-info">Último trayecto: ${e(ultimoStr)}</div>
-          <div class="mot-acciones">
-            <button class="btn-ver-trayectos" type="button" data-mot-id="${e(m.id)}">📋 Ver trayectos</button>
-            <button class="btn-donar-mot" type="button" data-mot-id="${e(m.id)}">💛 Donar</button>
-            ${telefono ? `<a class="btn-wa-mot" href="https://wa.me/${telefono}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-          </div>
-        </article>`;
-    }
-
-    function bindMotorizadosEvents() {
-      document.querySelectorAll('.btn-ver-trayectos').forEach((btn) => {
-        btn.addEventListener('click', () => abrirModalTrayectos(btn.dataset.motId));
-      });
-      document.querySelectorAll('.btn-donar-mot').forEach((btn) => {
-        btn.addEventListener('click', () => abrirModalDonacion(btn.dataset.motId));
+    function filtrarLista(lista, q, estadoFiltro, tipoFiltro, campoTipo) {
+      const qn = normalizar(q);
+      return lista.filter((item) => {
+        const text = normalizar(Object.values(item).join(' '));
+        if (qn && !text.includes(qn)) return false;
+        if (estadoFiltro && normalizar(item.estado) !== normalizar(estadoFiltro)) return false;
+        if (tipoFiltro && normalizar(item[campoTipo]) !== normalizar(tipoFiltro)) return false;
+        return true;
       });
     }
 
-    function buscarMotorizado(id) {
-      return estado.motorizados.find((m) => String(m.id) === String(id));
+    function renderVoluntarios() {
+      const f = estado.filtros;
+      const lista = filtrarLista(estado.voluntarios, f.volQ, f.volEstado, f.volProfesion, 'profesion');
+      $('#conteo-voluntarios').textContent = `Mostrando ${lista.length} de ${estado.voluntarios.length} voluntarios`;
+      $('#grid-voluntarios').innerHTML = lista.length ? lista.map((v) => personaCard(v, 'voluntario')).join('') : '<div class="empty-state">No hay voluntarios con esos filtros.</div>';
     }
 
-    function abrirModalRegistroMotorizado() {
-      abrirModal({
-        titulo: '🏍️ Registrarme como motorizado',
-        contenido: `
-          <form id="form-motorizado" autocomplete="off">
-            <div class="form-group"><label for="mot-nombre">Tu nombre</label><input id="mot-nombre" type="text" placeholder="Juan Pérez" required /></div>
-            <div class="form-group">
-              <label for="mot-vehiculo">Tipo de vehículo</label>
-              <select id="mot-vehiculo" required>
-                <option value="Moto">Moto</option>
-                <option value="Carro">Carro</option>
-                <option value="Bicicleta">Bicicleta</option>
-                <option value="Camión">Camión</option>
-                <option value="Motocarro">Motocarro</option>
-              </select>
-            </div>
-            <div class="form-group"><label for="mot-telefono">WhatsApp</label><input id="mot-telefono" type="tel" placeholder="+58 412 000 1234" /></div>
-            <div class="form-group"><label for="mot-zona">Zona donde operas</label><input id="mot-zona" type="text" placeholder="La Guaira - Caracas" required /></div>
-            <div class="form-group"><label for="mot-placa">Placa</label><input id="mot-placa" type="text" placeholder="ABC-123" /></div>
-            <div id="modal-error" class="modal-error"></div>
-            <div class="modal-actions">
-              <button type="button" class="btn-reset" data-modal-cancel>Cancelar</button>
-              <button type="submit" class="btn-submit">✓ Registrarme</button>
-            </div>
-          </form>`
-      });
+    function renderRescatistas() {
+      const f = estado.filtros;
+      const lista = filtrarLista(estado.rescatistas, f.resQ, f.resEstado, f.resEspecialidad, 'especialidad');
+      $('#conteo-rescatistas').textContent = `Mostrando ${lista.length} de ${estado.rescatistas.length} rescatistas`;
+      $('#grid-rescatistas').innerHTML = lista.length ? lista.map((r) => personaCard(r, 'rescatista')).join('') : '<div class="empty-state">No hay rescatistas con esos filtros.</div>';
+    }
 
-      $('#form-motorizado').addEventListener('submit', async (ev) => {
+    function renderMotorizados() {
+      const f = estado.filtros;
+      const q = normalizar(f.motQ);
+      const lista = estado.motorizados.filter((m) => {
+        const text = normalizar([m.nombre, m.zonaOperacion, m.operaEn, m.tipoVehiculo, m.placa].join(' '));
+        if (q && !text.includes(q)) return false;
+        if (f.motTipo && normalizar(m.tipoVehiculo).indexOf(normalizar(f.motTipo)) !== 0) return false;
+        return true;
+      });
+      $('#conteo-motorizados').textContent = `Mostrando ${lista.length} de ${estado.motorizados.length} transportistas`;
+      $('#grid-motorizados').innerHTML = lista.length ? lista.map((m) => `<article class="card card-bordered"><div class="card-top"><div><span class="badge">${e(m.tipoVehiculo || 'Vehículo')}</span><h3>${e(m.nombre)}</h3></div><div class="icon-box" aria-hidden="true">↗</div></div><p class="meta">${e(m.zonaOperacion || m.operaEn || 'Zona por confirmar')}${m.placa ? ' · Placa ' + e(m.placa) : ''}</p><div class="badge-row"><span class="badge green">${e(m.totalTrayectos || 0)} trayectos</span><span class="badge">${e(m.totalKm || 0)} km</span><span class="badge yellow">${e(m.aporteDonado || 0)} aporte</span></div><div class="card-actions"><button class="btn btn-soft btn-small" data-trayectos="${e(m.id)}" type="button">Trayectos</button><button class="btn btn-ghost btn-small" data-donar-mot="${e(m.id)}" type="button">Registrar apoyo</button>${m.telefono ? `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(m.telefono)}">WhatsApp</a>` : ''}</div></article>`).join('') : '<div class="empty-state">No hay transportistas con esos filtros.</div>';
+      $$('[data-trayectos]').forEach((btn) => btn.addEventListener('click', () => abrirTrayectos(btn.dataset.trayectos)));
+      $$('[data-donar-mot]').forEach((btn) => btn.addEventListener('click', () => abrirDonarMotorizado(btn.dataset.donarMot)));
+    }
+
+    function mostrarMensaje(id, tipo, textoMsg) {
+      const box = $(id);
+      box.className = `form-message visible ${tipo}`;
+      box.textContent = textoMsg;
+    }
+
+    function toast(msg) {
+      $('#toast-root').innerHTML = `<div class="toast" role="status">${e(msg)}</div>`;
+      setTimeout(() => { $('#toast-root').innerHTML = ''; }, 3400);
+    }
+
+    function abrirModal(titulo, contenido) {
+      $('#modal-root').innerHTML = `<dialog><div class="modal-head"><h3>${e(titulo)}</h3><button class="modal-close" type="button" aria-label="Cerrar">×</button></div><div class="modal-body">${contenido}</div></dialog>`;
+      const dialog = $('#modal-root dialog');
+      dialog.querySelector('.modal-close').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('close', () => { $('#modal-root').innerHTML = ''; });
+      dialog.showModal();
+    }
+
+    async function abrirHistorial(nombre) {
+      abrirModal('Historial de movimientos', '<div id="modal-list" class="empty-state">Cargando historial...</div>');
+      const res = await window.SheetsService.getHistorial(nombre);
+      const items = res.data || [];
+      $('#modal-list').outerHTML = items.length ? `<div class="supply-list">${items.map((h) => `<div class="supply-item"><strong>${e(h.tipoMovimiento || h.tipo)} · ${e(h.insumo)}</strong><p class="meta">${e(h.cantidad)} ${e(h.unidad || '')} · ${e(fechaRelativa(h.timestamp))}</p></div>`).join('')}</div>` : '<div class="empty-state">No hay movimientos registrados.</div>';
+    }
+
+    async function abrirTrayectos(id) {
+      const mot = estado.motorizados.find((m) => String(m.id) === String(id));
+      abrirModal('Trayectos registrados', '<div id="modal-list" class="empty-state">Cargando trayectos...</div>');
+      const res = await window.SheetsService.getTrayectos(id);
+      const items = res.data || [];
+      $('#modal-list').outerHTML = `${items.length ? `<div class="supply-list">${items.map((t) => `<div class="supply-item"><strong>${e(t.origen)} → ${e(t.destino)}</strong><p class="meta">${e(t.kmRecorridos || t.km || 0)} km · ${e(t.insumoTransportado || t.insumo || 'Varios')} · ${e(fechaRelativa(t.timestamp))}</p></div>`).join('')}</div>` : '<div class="empty-state">No hay trayectos registrados.</div>'}<div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="button" id="modal-reg-trayecto">Registrar trayecto</button></div>`;
+      $('#modal-reg-trayecto').addEventListener('click', () => abrirRegistrarTrayecto(mot));
+    }
+
+    function abrirRegistrarTrayecto(mot) {
+      if (!mot) return;
+      abrirModal('Registrar trayecto', `<form id="trayecto-form"><div class="form-grid"><div class="field"><label for="tray-origen">Origen</label><input id="tray-origen" required /></div><div class="field"><label for="tray-destino">Destino</label><input id="tray-destino" required /></div><div class="field"><label for="tray-km">Km</label><input id="tray-km" type="number" min="0.1" step="0.1" required /></div><div class="field"><label for="tray-insumo">Insumo</label><input id="tray-insumo" /></div></div><div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar trayecto</button></div></form>`);
+      $('#trayecto-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const payload = {
-          accion: 'registrar_motorizado',
-          nombre: $('#mot-nombre').value.trim(),
-          tipoVehiculo: $('#mot-vehiculo').value,
-          telefono: $('#mot-telefono').value.trim(),
-          operaEn: $('#mot-zona').value.trim(),
-          zonaOperacion: $('#mot-zona').value.trim(),
-          placa: $('#mot-placa').value.trim()
-        };
-        if (!payload.nombre || !payload.tipoVehiculo || !payload.operaEn) {
-          return mostrarErrorModal('Completa nombre, tipo de vehículo y zona de operación.');
-        }
-
-        const idOptimista = 'MOTO' + String(Date.now()).slice(-4);
-        try {
-          const res = await postAccion(payload, { id: idOptimista, nombre: payload.nombre });
-          estado.motorizados.unshift(normalizarMotorizado({
-            id: res.id || idOptimista,
-            nombre: payload.nombre,
-            tipoVehiculo: payload.tipoVehiculo,
-            telefono: payload.telefono,
-            operaEn: payload.operaEn,
-            zonaOperacion: payload.zonaOperacion,
-            placa: payload.placa,
-            estado: 'Activo',
-            activo: true,
-            fechaRegistro: new Date().toISOString(),
-            totalTrayectos: 0,
-            totalKm: 0,
-            aporteDonado: 0,
-            verificado: false,
-            ultimoTrayecto: ''
-          }));
-          renderMotorizados(estado.motorizados);
-          cerrarModal();
-          mostrarToast('Motorizado registrado.', 'exito');
-          if (!SANDBOX_MODE) setTimeout(cargarMotorizados, 1200);
-        } catch (err) {
-          mostrarErrorModal('No se pudo registrar: ' + err.message);
-        }
+        const km = numero($('#tray-km').value);
+        await window.SheetsService.post({ accion: 'registrar_trayecto', idMotorizado: mot.id, nombreMotorizado: mot.nombre, origen: $('#tray-origen').value.trim(), destino: $('#tray-destino').value.trim(), km, insumo: $('#tray-insumo').value.trim() || 'Varios' });
+        mot.totalTrayectos = numero(mot.totalTrayectos) + 1;
+        mot.totalKm = Math.round((numero(mot.totalKm) + km) * 10) / 10;
+        renderMotorizados();
+        $('#modal-root dialog').close();
+        toast('Trayecto registrado.');
       });
     }
 
-    async function abrirModalTrayectos(motorizadoId) {
-      const m = buscarMotorizado(motorizadoId);
-      if (!m) return mostrarToast('No se encontró el motorizado.', 'error');
-      abrirModal({
-        titulo: `📋 Trayectos — ${e(m.nombre)}`,
-        subtitulo: `${e(m.totalTrayectos || 0)} trayectos · ${e(m.totalKm || 0)} km totales`,
-        contenido: `<div id="trayectos-contenido" class="estado-msg"><div class="spinner" aria-hidden="true"></div>Cargando trayectos...</div>`
-      });
-      try {
-        const trayectos = await obtenerTrayectosMotorizado(motorizadoId);
-        const cont = $('#trayectos-contenido');
-        if (!cont) return;
-        cont.className = '';
-        cont.innerHTML = `${renderTrayectos(trayectos)}
-          <div class="modal-actions"><button id="btn-nuevo-trayecto" class="btn-submit" type="button">+ Registrar nuevo trayecto</button></div>`;
-        $('#btn-nuevo-trayecto').addEventListener('click', () => abrirModalNuevoTrayecto(motorizadoId));
-      } catch (err) {
-        const cont = $('#trayectos-contenido');
-        if (cont) cont.innerHTML = '<p class="estado-msg">No se pudieron cargar los trayectos.</p>';
-      }
-    }
-
-    async function obtenerTrayectosMotorizado(motorizadoId) {
-      if (SANDBOX_MODE) return TRAYECTOS_FALLBACK.filter((t) => t.motorizadoId === motorizadoId);
-      try {
-        const resp = await fetch(`${APPS_SCRIPT_URL}?accion=trayectos&motorizado=${encodeURIComponent(motorizadoId)}`, { cache: 'no-store' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const data = await resp.json();
-        return data.trayectos || [];
-      } catch (err) {
-        return TRAYECTOS_FALLBACK.filter((t) => t.motorizadoId === motorizadoId);
-      }
-    }
-
-    function renderTrayectos(trayectos) {
-      if (!trayectos.length) return '<p class="estado-msg">No hay trayectos registrados todavía.</p>';
-      return `<div class="trayecto-lista">${trayectos.map((t) => {
-        const km = t.kmRecorridos || t.km || 0;
-        const insumo = t.insumoTransportado || t.insumo || 'Varios';
-        const notas = t.observaciones || t.notas || '';
-        const tiempo = t.tiempoMinutos || t.minutos;
-        return `
-        <div class="trayecto-item">
-          <div class="trayecto-fecha">${e(formatearFechaRelativa(t.timestamp))}</div>
-          <div class="trayecto-ruta">↗ ${e(t.origen)} → ${e(t.destino)}</div>
-          <div class="trayecto-meta">📏 ${e(km)} km${tiempo ? ` · ⏱ ${e(tiempo)} min` : ''} · 📦 ${e(insumo)}</div>
-          ${notas ? `<div class="trayecto-meta">${e(notas)}</div>` : ''}
-        </div>`;
-      }).join('')}</div>`;
-    }
-
-    function abrirModalNuevoTrayecto(motorizadoId) {
-      const m = buscarMotorizado(motorizadoId);
-      if (!m) return;
-      abrirModal({
-        titulo: `↗ Nuevo trayecto — ${e(m.nombre)}`,
-        contenido: `
-          <form id="form-trayecto" autocomplete="off">
-            <div class="form-group"><label for="tray-origen">Origen</label><input id="tray-origen" type="text" placeholder="Centro de acopio El Junquito" required /></div>
-            <div class="form-group"><label for="tray-destino">Destino</label><input id="tray-destino" type="text" placeholder="Hospital Vargas" required /></div>
-            <div class="form-group"><label for="tray-km">Km recorridos</label><input id="tray-km" type="number" min="0.1" step="0.1" placeholder="18" required /></div>
-            <div class="form-group"><label for="tray-tiempo">Tiempo en minutos</label><input id="tray-tiempo" type="number" min="1" step="1" placeholder="45" /></div>
-            <div class="form-group"><label for="tray-insumo">Insumo transportado</label><input id="tray-insumo" type="text" placeholder="Agua embotellada" /></div>
-            <div class="form-group"><label for="tray-cantidad">Cantidad</label><input id="tray-cantidad" type="number" min="0" step="1" placeholder="20" /></div>
-            <div class="form-group"><label for="tray-unidad">Unidad</label><input id="tray-unidad" type="text" placeholder="cajas" /></div>
-            <div class="form-group"><label for="tray-obs">Notas</label><input id="tray-obs" type="text" placeholder="Entregado al coordinador" /></div>
-            <div id="modal-error" class="modal-error"></div>
-            <div class="modal-actions">
-              <button type="button" class="btn-reset" data-modal-cancel>Cancelar</button>
-              <button type="submit" class="btn-submit">✓ Registrar</button>
-            </div>
-          </form>`
-      });
-
-      $('#form-trayecto').addEventListener('submit', async (ev) => {
+    function abrirDonarMotorizado(id) {
+      const mot = estado.motorizados.find((m) => String(m.id) === String(id));
+      if (!mot) return;
+      abrirModal('Registrar apoyo logístico', `<form id="donar-mot-form"><div class="form-grid"><div class="field"><label for="don-monto">Monto o valor</label><input id="don-monto" type="number" min="1" required /></div><div class="field"><label for="don-tipo">Tipo</label><select id="don-tipo"><option>Pago móvil</option><option>Efectivo</option><option>Combustible</option><option>Repuesto</option><option>Otro</option></select></div><div class="field"><label for="don-nombre">Donante</label><input id="don-nombre" /></div><div class="field"><label for="don-ciudad">Ciudad</label><input id="don-ciudad" /></div></div><div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar apoyo</button></div></form>`);
+      $('#donar-mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const km = numeroSeguro($('#tray-km').value, 0);
-        const cantidad = numeroSeguro($('#tray-cantidad').value, 0);
-        const insumo = $('#tray-insumo').value.trim() || 'Varios';
-        const unidad = $('#tray-unidad').value.trim();
-        const payload = {
-          accion: 'registrar_trayecto',
-          idMotorizado: motorizadoId,
-          motorizadoId,
-          nombreMotorizado: m.nombre,
-          origen: $('#tray-origen').value.trim(),
-          destino: $('#tray-destino').value.trim(),
-          km,
-          kmRecorridos: km,
-          tiempoMinutos: numeroSeguro($('#tray-tiempo').value, 0),
-          insumo,
-          insumoTransportado: insumo,
-          cantidad: cantidad || '',
-          unidad,
-          notas: $('#tray-obs').value.trim(),
-          observaciones: $('#tray-obs').value.trim()
-        };
-        if (!payload.origen || !payload.destino || km <= 0) {
-          return mostrarErrorModal('Completa origen, destino y kilómetros recorridos.');
-        }
-        try {
-          const nuevosTotales = {
-            totalTrayectos: numeroSeguro(m.totalTrayectos) + 1,
-            totalKm: numeroSeguro(m.totalKm) + km
-          };
-          const res = await postAccion(payload, nuevosTotales);
-          actualizarMotorizadoLocal(motorizadoId, res.totalTrayectos || nuevosTotales.totalTrayectos, res.totalKm || nuevosTotales.totalKm);
-          if (SANDBOX_MODE) {
-            TRAYECTOS_FALLBACK.unshift({
-              timestamp: new Date().toISOString(),
-              motorizadoId,
-              motorizadoNombre: m.nombre,
-              origen: payload.origen,
-              destino: payload.destino,
-              kmRecorridos: km,
-              tiempoMinutos: payload.tiempoMinutos,
-              insumoTransportado: [insumo, cantidad && unidad ? `${cantidad} ${unidad}` : ''].filter(Boolean).join(' · '),
-              observaciones: payload.observaciones
-            });
-          }
-          cerrarModal();
-          mostrarToast('Trayecto registrado.', 'exito');
-          if (!SANDBOX_MODE) setTimeout(cargarMotorizados, 1200);
-        } catch (err) {
-          mostrarErrorModal('No se pudo registrar el trayecto: ' + err.message);
-        }
+        const monto = numero($('#don-monto').value);
+        await window.SheetsService.post({ accion: 'donar_motorizado', idMotorizado: mot.id, nombreMotorizado: mot.nombre, monto, tipo: $('#don-tipo').value, donanteName: $('#don-nombre').value.trim() || 'Anónimo', ciudad: $('#don-ciudad').value.trim() });
+        mot.aporteDonado = numero(mot.aporteDonado) + monto;
+        renderMotorizados();
+        $('#modal-root dialog').close();
+        toast('Apoyo registrado.');
       });
     }
 
-    function actualizarMotorizadoLocal(id, totalTrayectos, totalKm) {
-      const m = buscarMotorizado(id);
-      if (!m) return;
-      m.totalTrayectos = totalTrayectos;
-      m.totalKm = totalKm;
-      m.ultimoTrayecto = new Date().toISOString();
-      renderMotorizados(estado.motorizados);
-    }
-
-    function abrirModalDonacion(motorizadoId) {
-      const m = buscarMotorizado(motorizadoId);
-      if (!m) return;
-      abrirModal({
-        titulo: `💛 Donar a ${e(m.nombre)}`,
-        subtitulo: `${e(m.totalKm || 0)} km recorridos · ${e(m.totalTrayectos || 0)} trayectos`,
-        contenido: `
-          <form id="form-donar-mot" autocomplete="off">
-            <div class="form-group"><label for="don-monto">Monto o valor estimado</label><input id="don-monto" type="number" min="1" step="1" placeholder="500" required /></div>
-            <div class="form-group">
-              <label for="don-tipo">Tipo de aporte</label>
-              <select id="don-tipo" required>
-                <option value="Pago móvil">Pago móvil</option>
-                <option value="Efectivo">Efectivo</option>
-                <option value="Combustible">Combustible</option>
-                <option value="Repuesto">Repuesto</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div class="form-group"><label for="don-nombre">Nombre del donante</label><input id="don-nombre" type="text" placeholder="Anónimo" /></div>
-            <div class="form-group"><label for="don-ciudad">Ciudad</label><input id="don-ciudad" type="text" placeholder="Caracas" /></div>
-            <div class="form-group"><label for="don-mensaje">Mensaje</label><input id="don-mensaje" type="text" placeholder="Gracias por apoyar los traslados" /></div>
-            <div id="modal-error" class="modal-error"></div>
-            <div class="modal-actions">
-              <button type="button" class="btn-reset" data-modal-cancel>Cancelar</button>
-              <button type="submit" class="btn-submit">✓ Registrar donación</button>
-            </div>
-          </form>`
-      });
-
-      $('#form-donar-mot').addEventListener('submit', async (ev) => {
+    function abrirRegistrarMotorizado() {
+      abrirModal('Registrar transportista', `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">Nombre</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">Vehículo</label><select id="mot-tipo"><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div><div class="field"><label for="mot-telefono">Teléfono</label><input id="mot-telefono" type="tel" /></div><div class="field"><label for="mot-zona">Zona</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">Placa</label><input id="mot-placa" /></div></div><div class="section-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit">Guardar transportista</button></div></form>`);
+      $('#mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const monto = numeroSeguro($('#don-monto').value, 0);
-        if (monto <= 0) return mostrarErrorModal('Indica un monto mayor a 0.');
-        const payload = {
-          accion: 'donar_motorizado',
-          idMotorizado: m.id,
-          nombreMotorizado: m.nombre,
-          monto,
-          tipo: $('#don-tipo').value,
-          donanteName: $('#don-nombre').value.trim() || 'Anónimo',
-          mensaje: $('#don-mensaje').value.trim(),
-          ciudad: $('#don-ciudad').value.trim()
-        };
-        try {
-          const res = await postAccion(payload, { aporteDonado: numeroSeguro(m.aporteDonado) + monto });
-          m.aporteDonado = res.aporteDonado || numeroSeguro(m.aporteDonado) + monto;
-          renderMotorizados(estado.motorizados);
-          cerrarModal();
-          mostrarToast('Donación registrada.', 'exito');
-          if (!SANDBOX_MODE) setTimeout(cargarMotorizados, 1200);
-        } catch (err) {
-          mostrarErrorModal('No se pudo registrar la donación: ' + err.message);
-        }
+        const nuevo = { id: 'MOTO' + String(Date.now()).slice(-4), nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), totalTrayectos: 0, totalKm: 0, aporteDonado: 0, activo: true };
+        await window.SheetsService.post(Object.assign({ accion: 'registrar_motorizado' }, nuevo));
+        estado.motorizados.unshift(nuevo);
+        renderMotorizados();
+        $('#modal-root dialog').close();
+        toast('Transportista registrado.');
       });
     }
 
-    async function copiarTexto(texto) {
-      try {
-        await navigator.clipboard.writeText(texto);
-        mostrarToast('Datos copiados.', 'exito');
-      } catch (err) {
-        mostrarToast('No se pudo copiar automáticamente.', 'error');
-      }
+    function bindForms() {
+      $('#lugar-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const payload = { accion: 'registrar_lugar', tipo: $('#lugar-tipo').value, nombre: $('#lugar-nombre').value.trim(), ubicacion: $('#lugar-ubicacion').value.trim(), telefono: $('#lugar-telefono').value.trim(), insumo: $('#lugar-insumo').value.trim(), categoria: $('#lugar-categoria').value, estado: $('#lugar-estado').value };
+        mostrarMensaje('#lugar-message', 'info', 'Guardando...');
+        await window.SheetsService.post(payload);
+        const lugar = estado.lugares.find((l) => normalizar(l.tipo + l.nombre) === normalizar(payload.tipo + payload.nombre)) || { tipo: payload.tipo, nombre: payload.nombre, ubicacion: payload.ubicacion, telefono: payload.telefono, necesita: [], tiene_disponible: [], cubiertos: [] };
+        if (!estado.lugares.includes(lugar)) estado.lugares.unshift(lugar);
+        if (normalizar(payload.estado).indexOf('necesita') === 0) lugar.necesita.push({ nombre: payload.insumo, categoria: payload.categoria, cantidadNecesaria: 1, cantidadRecibida: 0, porcentaje: 0, urgencia: 'Normal', unidad: 'unidades', coincidencias: [] });
+        else lugar.tiene_disponible.push({ nombre: payload.insumo, categoria: payload.categoria });
+        lugar.actualizado = new Date().toISOString();
+        poblarCategorias(); renderLugares(); renderStats();
+        mostrarMensaje('#lugar-message', 'success', 'Centro guardado.');
+        ev.currentTarget.reset();
+      });
+
+      $('#voluntario-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const nuevo = { id: 'VOL' + String(Date.now()).slice(-4), nombre: $('#vol-nombre').value.trim(), apellido: $('#vol-apellido').value.trim(), telefono: $('#vol-telefono').value.trim(), estado: $('#vol-estado').value.trim(), ciudad: $('#vol-ciudad').value.trim(), profesion: $('#vol-profesion').value, disponibilidad: $('#vol-disponibilidad').value.trim(), observaciones: $('#vol-observaciones').value.trim(), fecha_registro: new Date().toISOString() };
+        mostrarMensaje('#vol-message', 'info', 'Guardando...');
+        await window.SheetsService.post(Object.assign({ accion: 'registrar_voluntario' }, nuevo));
+        estado.voluntarios.unshift(nuevo); renderVoluntarios(); renderStats(); mostrarMensaje('#vol-message', 'success', 'Voluntario guardado.'); ev.currentTarget.reset();
+      });
+
+      $('#rescatista-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const nuevo = { id: 'RES' + String(Date.now()).slice(-4), nombre: $('#res-nombre').value.trim(), organizacion: $('#res-organizacion').value.trim(), telefono: $('#res-telefono').value.trim(), especialidad: $('#res-especialidad').value, estado: $('#res-estado').value.trim(), ciudad: $('#res-ciudad').value.trim(), disponibilidad: $('#res-disponibilidad').value.trim(), observaciones: $('#res-observaciones').value.trim(), fecha_registro: new Date().toISOString() };
+        mostrarMensaje('#res-message', 'info', 'Guardando...');
+        await window.SheetsService.post(Object.assign({ accion: 'registrar_rescatista' }, nuevo));
+        estado.rescatistas.unshift(nuevo); renderRescatistas(); renderStats(); mostrarMensaje('#res-message', 'success', 'Rescatista guardado.'); ev.currentTarget.reset();
+      });
+
+      $('#familiar-form').addEventListener('submit', (ev) => { ev.preventDefault(); buscarFamiliar($('#familiar-query').value); });
     }
 
-    function agregarLugarLocal(datos) {
-      let lugar = buscarLugar(datos.nombre);
-      if (!lugar) {
-        lugar = {
-          tipo: datos.tipo,
-          nombre: datos.nombre,
-          ubicacion: datos.ubicacion,
-          telefono: datos.telefono,
-          necesita: [],
-          cubiertos: [],
-          tiene_disponible: [],
-          actualizado: new Date().toISOString()
-        };
-        estado.lugares.unshift(lugar);
-      }
-
-      if (esNecesita(datos.estado)) {
-        lugar.necesita.push({
-          nombre: datos.insumo,
-          categoria: datos.categoria || 'Otros',
-          cantidadNecesaria: 1,
-          cantidadRecibida: 0,
-          porcentaje: 0,
-          urgencia: 'Normal',
-          unidad: 'unidades',
-          yaCubierto: false,
-          coincidencias: []
-        });
-      } else {
-        lugar.tiene_disponible.push({ nombre: datos.insumo, categoria: datos.categoria || 'Otros' });
-      }
-
-      lugar.actualizado = new Date().toISOString();
-      guardarCache(estado.lugares);
-      poblarCategorias();
-      aplicarFiltros();
-      mostrarToast('Agregado en modo demo.', 'exito');
-    }
-
-    // ── BUSCAR FAMILIAR ───────────────────────────────────────
     async function cargarFamiliaresMock() {
-      // En file:// el fetch local falla por CORS; devolvemos el respaldo embebido sin intentarlo.
       if (location.protocol === 'file:') return FAMILIARES_FALLBACK.registros;
       try {
         const resp = await fetch('data/familiares-ejemplo.json', { cache: 'no-store' });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
-        return data.registros || (Array.isArray(data) ? data : (data.resultados || []));
-      } catch (err) {
-        return FAMILIARES_FALLBACK.registros;
-      }
+        return data.registros || data.resultados || [];
+      } catch (err) { return FAMILIARES_FALLBACK.registros; }
     }
 
     async function buscarFamiliar(query) {
       query = (query || '').trim();
       if (!query) return;
-      $('#familiar-carga').classList.remove('oculto');
-      $('#familiar-resultados').innerHTML = '';
-      const demo = !BUSCAR_WEBHOOK_URL;
+      $('#familiar-resultados').innerHTML = '<div class="empty-state">Buscando...</div>';
       try {
-        if (demo) throw new Error('demo');
-        const resp = await fetch(BUSCAR_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: query })
-        });
+        if (!BUSCAR_WEBHOOK_URL) throw new Error('demo');
+        const headers = { 'Content-Type': 'application/json' };
+        if (BUSCAR_WEBHOOK_TOKEN) headers.Authorization = `Bearer ${BUSCAR_WEBHOOK_TOKEN}`;
+        const resp = await fetch(BUSCAR_WEBHOOK_URL, { method: 'POST', headers, body: JSON.stringify({ query }) });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
-        mostrarFamiliarBanner(false);
-        renderFamiliar(data.resultados || [], !!(data.encontrado) || (data.resultados || []).length > 0);
+        renderFamiliares(data.resultados || [], !!data.encontrado);
+        $('#familiar-message').classList.remove('visible');
       } catch (err) {
-        // Modo demo / sin conexión: buscar en el mock local.
         const regs = await cargarFamiliaresMock();
         const qn = normalizar(query);
-        const qd = query.replace(/[^0-9]/g, '');
-        const matches = regs.filter((r) =>
-          normalizar(r.nombre).includes(qn) || (qd && soloDigitos(r.cedula).includes(qd)));
-        mostrarFamiliarBanner(true);
-        renderFamiliar(matches, matches.length > 0);
-      } finally {
-        $('#familiar-carga').classList.add('oculto');
+        const qd = soloDigitos(query);
+        const matches = regs.filter((r) => normalizar(r.nombre).includes(qn) || (qd && soloDigitos(r.cedula).includes(qd)));
+        const msg = $('#familiar-message');
+        msg.textContent = 'Modo demo: resultados de ejemplo, no reales.';
+        msg.classList.add('visible');
+        renderFamiliares(matches, matches.length > 0);
       }
     }
 
-    function mostrarFamiliarBanner(demo) {
-      const b = $('#familiar-banner');
-      if (!demo) { b.classList.add('oculto'); return; }
-      b.textContent = 'Modo demo — resultados de ejemplo, no reales.';
-      b.classList.remove('oculto');
+    function renderFamiliares(resultados, encontrado) {
+      if (!encontrado || !resultados.length) { $('#familiar-resultados').innerHTML = '<div class="empty-state">No encontramos a esta persona en los registros disponibles.</div>'; return; }
+      $('#familiar-resultados').innerHTML = resultados.map((p) => {
+        const delicado = normalizar(p.estado).includes('fallec');
+        return `<article class="card card-bordered"><span class="badge ${delicado ? 'gray' : 'green'}">${e(p.estado)}</span><h3>${e(p.nombre)}</h3><p class="meta">Cédula: ${e(p.cedula)}</p>${p.ubicacion ? `<p class="meta">${e(p.ubicacion)}</p>` : ''}${p.fuente ? `<p class="meta">Fuente: ${e(p.fuente)}</p>` : ''}<p class="meta">Actualizado: ${e(fechaRelativa(p.actualizado))}</p>${delicado ? `<p class="meta">${e(LINEA_APOYO)}</p>` : ''}</article>`;
+      }).join('');
     }
 
-    function esDelicado(estadoTxt) {
-      const n = normalizar(estadoTxt);
-      return n.indexOf('fallec') !== -1;
+    function bindFiltros() {
+      [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-vol-q', 'volQ', renderVoluntarios], ['#filtro-vol-estado', 'volEstado', renderVoluntarios], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      [['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares], ['#filtro-vol-profesion', 'volProfesion', renderVoluntarios], ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados]].forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); cambiarVista(el.dataset.viewLink); }));
+      $$('[data-scroll-target]').forEach((el) => el.addEventListener('click', () => document.getElementById(el.dataset.scrollTarget).scrollIntoView({ behavior: 'smooth', block: 'start' })));
+      $('#btn-motorizado').addEventListener('click', abrirRegistrarMotorizado);
     }
 
-    function renderFamiliar(resultados, encontrado) {
-      const cont = $('#familiar-resultados');
-      if (!encontrado || !resultados.length) {
-        cont.innerHTML = `<div class="estado-msg"><p>No encontramos a esta persona en los registros disponibles.</p>
-          <p>Esto no significa que no esté bien — muchas listas se actualizan constantemente.
-          Intenta de nuevo más tarde o revisa la ortografía del nombre.</p></div>`;
-        return;
-      }
-      cont.innerHTML = resultados.map(tarjetaPersona).join('');
+    function renderAll() {
+      renderStats(); renderUrgentes(); poblarCategorias(); renderLugares(); renderVoluntarios(); renderRescatistas(); renderMotorizados();
     }
 
-    function tarjetaPersona(p) {
-      const delicado = esDelicado(p.estado);
-      const apoyo = delicado ? `<div class="apoyo">Sentimos profundamente esta noticia. ${e(LINEA_APOYO)}</div>` : '';
-      return `
-        <article class="card-persona ${delicado ? 'delicado' : ''}">
-          <h3>${e(p.nombre)}</h3>
-          <p class="meta">Cédula: ${e(p.cedula)}</p>
-          <p><span class="estado-persona ${delicado ? 'delicado' : ''}">${e(p.estado)}</span></p>
-          ${p.ubicacion ? `<p class="meta">📍 ${e(p.ubicacion)}</p>` : ''}
-          ${p.fuente ? `<p class="meta">Fuente: ${e(p.fuente)}</p>` : ''}
-          <p class="timestamp">Actualizado: ${e(fecha(p.actualizado))}</p>
-          ${apoyo}
-        </article>`;
+    async function cargarTodo() {
+      const result = await window.SheetsService.getAll();
+      const data = result.data || {};
+      estado.lugares = data.lugares || data.centros || [];
+      estado.voluntarios = data.voluntarios || DATOS_FALLBACK.voluntarios;
+      estado.rescatistas = data.rescatistas || DATOS_FALLBACK.rescatistas;
+      estado.motorizados = data.motorizados || DATOS_FALLBACK.motorizados;
+      estado.estadisticas = data.estadisticas || data.stats || DATOS_FALLBACK.estadisticas;
+      setStatus(result.source);
+      renderAll();
     }
 
-    // ── AGREGAR (alta de lugar/insumo) ────────────────────────
-    async function enviarAgregar(ev) {
-      ev.preventDefault();
-      const datos = {
-        tipo: $('#ag-tipo').value,
-        nombre: $('#ag-nombre').value.trim(),
-        ubicacion: $('#ag-ubicacion').value.trim(),
-        telefono: $('#ag-telefono').value.trim(),
-        insumo: $('#ag-insumo').value.trim(),
-        categoria: $('#ag-categoria').value,
-        estado: $('#ag-estado').value
-      };
-      const msg = $('#agregar-mensaje');
-      msg.className = 'form-mensaje';        // visible, neutro
-      msg.textContent = 'Enviando…';
-
-      if (SANDBOX_MODE) {
-        agregarLugarLocal(datos);
-        msg.className = 'form-mensaje exito';
-        msg.textContent = '✅ Modo demo: agregado localmente para esta sesión.';
-        $('#form-agregar').reset();
-        cambiarTab('donaciones');
-        return;
-      }
-      try {
-        // Apps Script NO expone CORS en el POST: su 302 inicial (script.google.com)
-        // no lleva Access-Control-Allow-Origin, así que un fetch normal lo bloquea.
-        // mode:'no-cors' → la petición llega y doPost escribe, pero la respuesta es
-        // OPACA (no se puede leer {exito}). El body como string va text/plain
-        // (petición simple) → sin preflight. Confirmamos recargando Donaciones,
-        // cuyo GET sí trae CORS y mostrará la fila nueva.
-        await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(datos) });
-        msg.className = 'form-mensaje exito';
-        msg.textContent = '✅ Enviado. Mira la pestaña 🎁 Donaciones (recárgala si hace falta).';
-        $('#form-agregar').reset();
-        setTimeout(cargarDatos, 1500);       // refresca Donaciones con el dato nuevo
-      } catch (err) {
-        // Con no-cors el fetch solo falla por error de red real (no por status HTTP).
-        msg.className = 'form-mensaje error';
-        msg.textContent = '❌ No se pudo enviar (sin conexión): ' + err.message;
-      }
-    }
-
-    // ── INIT ──────────────────────────────────────────────────
     function init() {
-      // Tabs
-      document.querySelectorAll('.tab-btn[data-tab]').forEach((btn) => {
-        btn.addEventListener('click', () => cambiarTab(btn.dataset.tab));
-      });
-
-      // Filtros: tipo
-      document.querySelectorAll('.toggle-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          estado.filtroTipo = btn.dataset.tipo;
-          document.querySelectorAll('.toggle-btn').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
-          aplicarFiltros();
-        });
-      });
-      // Filtros: categoría + búsqueda
-      $('#categoria').addEventListener('change', (ev) => { estado.filtroCategoria = ev.target.value; aplicarFiltros(); });
-      $('#busqueda').addEventListener('input', (ev) => onBusqueda(ev.target.value));
-      $('#btn-ver-todos').addEventListener('click', () => {
-        estado.filtroTipo = 'todos'; estado.filtroCategoria = ''; estado.busqueda = '';
-        $('#busqueda').value = ''; $('#categoria').value = '';
-        document.querySelectorAll('.toggle-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === 'todos')));
-        aplicarFiltros();
-      });
-
-      // Buscar familiar (submit = botón o Enter)
-      $('#form-familiar').addEventListener('submit', (ev) => { ev.preventDefault(); buscarFamiliar($('#familiar-query').value); });
-
-      // Agregar lugar/insumo (submit)
-      $('#form-agregar').addEventListener('submit', enviarAgregar);
-
-      // Motorizados
-      document.querySelectorAll('.btn-tipo').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          estado.filtroMotorizadoTipo = btn.dataset.tipo;
-          document.querySelectorAll('.btn-tipo').forEach((b) => {
-            const activo = b === btn;
-            b.classList.toggle('activo', activo);
-            b.setAttribute('aria-pressed', String(activo));
-          });
-          aplicarFiltroMotorizados();
-        });
-      });
-      $('#btn-registrar-motorizado').addEventListener('click', abrirModalRegistroMotorizado);
-
-      // Cierre de modales con ESC
+      bindFiltros();
+      bindForms();
+      cargarTodo();
       document.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape' && $('#modal-root').innerHTML) cerrarModal();
+        if (ev.key === 'Escape') {
+          const dialog = $('#modal-root dialog');
+          if (dialog) dialog.close();
+        }
       });
-
-      cargarDatos();
-      cargarMotorizados();
     }
 
     document.addEventListener('DOMContentLoaded', init);
