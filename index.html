@@ -355,6 +355,7 @@
       right: 10%;
       top: 43%;
       height: 3px;
+      z-index: 1;
       background: repeating-linear-gradient(90deg, rgba(255,255,255,0.88) 0 12px, transparent 12px 20px);
       transform: rotate(-9deg);
       opacity: 0.78;
@@ -363,6 +364,7 @@
       position: absolute;
       width: 14px;
       height: 14px;
+      z-index: 1;
       border: 3px solid #fff;
       border-radius: 50%;
       background: var(--critical);
@@ -376,6 +378,7 @@
       left: 14px;
       right: 14px;
       bottom: 14px;
+      z-index: 2;
       display: grid;
       gap: 8px;
     }
@@ -794,6 +797,35 @@
     }
     @keyframes pulse { to { background-position: -220% 0; } }
 
+    @media (max-width: 639px) {
+      .hero-visual {
+        min-height: 0;
+        padding: 168px 14px 14px;
+      }
+      .hero-image {
+        top: 20px;
+        right: 18px;
+        width: 116px;
+      }
+      .route-line {
+        left: 12%;
+        right: 12%;
+        top: 82px;
+        transform: rotate(-8deg);
+      }
+      .pin-a { left: 18%; top: 52px; }
+      .pin-b { left: 55%; top: 78px; }
+      .pin-c { right: 18%; top: 118px; bottom: auto; }
+      .ops-panel {
+        position: relative;
+        left: auto;
+        right: auto;
+        bottom: auto;
+      }
+      .ops-card {
+        background: rgba(255,255,255,0.17);
+      }
+    }
     @media (min-width: 640px) {
       .brand span:last-child { display: inline; }
       .hero-actions .btn { flex: 0 1 auto; }
