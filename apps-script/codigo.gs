@@ -1,69 +1,73 @@
 /**
- * Donaciones Venezuela — Backend (Google Apps Script)
+ * Donaciones Venezuela - Backend (Google Apps Script)
  * --------------------------------------------------------------------------
- * Lee la hoja `lugares`, agrupa las filas por lugar, calcula el matching
- * automático de insumos entre lugares y expone acciones de registro para
- * movimientos de donaciones, motorizados y trayectos.
+ * Un solo Google Sheet con cinco pestanas:
+ * centros_necesidades, motorizados, trayectos, historial_movimientos y
+ * donaciones_motorizados.
  *
- * Deploy: Extensiones > Apps Script  →  Implementar > Nueva implementación >
- *         Aplicación web  →  Ejecutar como: Yo  /  Acceso: Cualquier usuario.
+ * Deploy: Extensiones > Apps Script -> Implementar > Nueva implementacion >
+ *         Aplicacion web -> Ejecutar como: Yo / Acceso: Cualquier usuario.
  * Copia la URL .../exec resultante en index.html (constante APPS_SCRIPT_URL).
  */
 
-// ── CONFIGURACIÓN (editar estas dos líneas) ───────────────────────────────
-var SHEET_ID = 'YOUR_SHEET_ID';      // <-- ID del Google Sheet (va entre /d/ y /edit en la URL)
-var SHEET_NAME = 'lugares';          // <-- nombre de la pestaña/hoja
+const SHEET_ID = "1fnXiSy1TbPqwlLKDSfPoBfKs8pH0WptoECGq_zu_Lco";
+const CENTROS_SHEET = "centros_necesidades";
+const MOTORIZADOS_SHEET = "motorizados";
+const TRAYECTOS_SHEET = "trayectos";
+const HISTORIAL_SHEET = "historial_movimientos";
+const DONACIONES_SHEET = "donaciones_motorizados";
 
-const HISTORIAL_SHEET_NAME = 'historial';
-const MOTORIZADOS_SHEET_NAME = 'motorizados';
-const TRAYECTOS_SHEET_NAME = 'trayectos';
-
-// ── PUNTOS DE ENTRADA ────────────────────────────────────────────────────
+// -- PUNTOS DE ENTRADA ------------------------------------------------------
 function doGet(e) {
   try {
-    var accion = e && e.parameter && e.parameter.accion;
-    if (accion === 'historial') return obtenerHistorial(e.parameter.lugar || null);
-    if (accion === 'motorizados') return obtenerMotorizados();
-    if (accion === 'trayectos') return obtenerTrayectos(e.parameter.motorizadoId || null);
+    const params = (e && e.parameter) || {};
+    const accion = params.accion;
 
-    return responder({ lugares: leerLugares() });
+    if (accion === "centros") return listarCentros();
+    if (accion === "motorizados") return listarMotorizados();
+    if (accion === "perfil_motorizado") return obtenerPerfilMotorizado(params.id);
+    if (accion === "trayectos") return obtenerTrayectos(params.motorizado || params.motorizadoId || null);
+    if (accion === "historial") return obtenerHistorialMovimientos(params.centro || params.lugar || null);
+
+    const centros = construirCentros();
+    const motorizados = construirMotorizados();
+    return jsonResponse({ centros, lugares: centros, motorizados });
   } catch (err) {
-    return responder({ error: String(err && err.message ? err.message : err) });
+    return jsonResponse({ error: errorMessage(err) }, 500);
   }
 }
 
 function doPost(e) {
   try {
-    var datos = JSON.parse(e.postData.contents);
+    const payload = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    const accion = payload.accion;
 
-    if (datos.accion === 'registrar_movimiento') return registrarMovimiento(datos);
-    if (datos.accion === 'registrar_motorizado') return registrarMotorizado(datos);
-    if (datos.accion === 'registrar_trayecto') return registrarTrayecto(datos);
+    if (accion === "registrar_movimiento") return registrarMovimiento(payload);
+    if (accion === "registrar_trayecto") return registrarTrayecto(payload);
+    if (accion === "donar_motorizado") return donarMotorizado(payload);
+    if (accion === "registrar_motorizado") return registrarMotorizado(payload);
 
-    return agregarLugarInsumo(datos);
+    return jsonResponse({ error: "Accion no reconocida" }, 400);
   } catch (err) {
-    return responder({ success: false, exito: false, error: String(err && err.message ? err.message : err) });
+    return jsonResponse({ error: errorMessage(err) }, 500);
   }
 }
 
-// Google Apps Script habilita CORS automáticamente para las web apps /exec.
-function responder(obj) {
+function jsonResponse(obj, statusCode) {
+  const out = obj || {};
+  if (statusCode && out.status == null) out.status = statusCode;
   return ContentService
-    .createTextOutput(JSON.stringify(obj))
+    .createTextOutput(JSON.stringify(out))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function jsonResponse(obj) {
-  return responder(obj);
-}
-
-// ── UTILIDADES ────────────────────────────────────────────────────────────
+// -- UTILIDADES -------------------------------------------------------------
 function abrirSpreadsheet() {
   return SpreadsheetApp.openById(SHEET_ID);
 }
 
 function obtenerHoja(nombre) {
-  var hoja = abrirSpreadsheet().getSheetByName(nombre);
+  const hoja = abrirSpreadsheet().getSheetByName(nombre);
   if (!hoja) throw new Error('No existe la hoja "' + nombre + '" en el Sheet indicado');
   return hoja;
 }
@@ -73,395 +77,508 @@ function obtenerHojaOpcional(nombre) {
 }
 
 function numero(valor, fallback) {
-  var n = Number(valor);
+  const n = Number(valor);
   return isNaN(n) ? (fallback || 0) : n;
 }
 
 function texto(valor) {
-  return String(valor == null ? '' : valor).trim();
+  return String(valor == null ? "" : valor).trim();
 }
 
-// minúsculas + sin tildes/acentos + sin espacios sobrantes (para comparar insumos).
 function normalizar(textoEntrada) {
-  return String(textoEntrada == null ? '' : textoEntrada)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return String(textoEntrada == null ? "" : textoEntrada)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
 }
 
-// "Necesita" / "Tiene disponible" tolerantes a mayúsculas y acentos.
-function esNecesita(estado) {
-  return normalizar(estado).indexOf('necesita') === 0;
+function fechaISO(valor) {
+  if (!valor) return "";
+  const fecha = new Date(valor);
+  return isNaN(fecha.getTime()) ? String(valor) : fecha.toISOString();
 }
 
-function esTiene(estado) {
-  var n = normalizar(estado);
-  return n.indexOf('tiene') === 0 || n.indexOf('disponible') !== -1;
+function esSi(valor) {
+  const n = normalizar(valor);
+  return valor === true || n === "si" || n === "sí" || n === "true";
 }
 
-function crearInsumoDesdeFila(f) {
-  var cantidadNecesaria = numero(f[8], 0);
-  var cantidadRecibida = Math.max(0, numero(f[9], 0));
-  if (cantidadNecesaria > 0) cantidadRecibida = Math.min(cantidadRecibida, cantidadNecesaria);
-
-  var porcentaje = cantidadNecesaria > 0
-    ? Math.min(100, Math.round((cantidadRecibida / cantidadNecesaria) * 100))
-    : 0;
-
-  return {
-    nombre: texto(f[4]),
-    categoria: texto(f[5]) || 'Otros',
-    cantidadNecesaria: cantidadNecesaria,
-    cantidadRecibida: cantidadRecibida,
-    porcentaje: porcentaje,
-    urgencia: texto(f[10]) || 'Normal',
-    unidad: texto(f[11]) || 'unidades',
-    yaCubierto: cantidadNecesaria > 0 && cantidadRecibida >= cantidadNecesaria,
-    coincidencias: []
-  };
+function errorMessage(err) {
+  return String(err && err.message ? err.message : err);
 }
 
-// ── LECTURA + AGRUPADO + MATCHING ─────────────────────────────────────────
-function leerLugares() {
-  var hoja = obtenerHoja(SHEET_NAME);
-  var filas = hoja.getDataRange().getValues();
-  if (filas.length < 2) return [];   // solo cabecera o vacía
+function leerFilas(nombreHoja) {
+  const hoja = obtenerHoja(nombreHoja);
+  const data = hoja.getDataRange().getValues();
+  return data.length > 1 ? data : [data[0] || []];
+}
 
-  // Columnas A..L:
-  // Tipo, Nombre, Ubicacion, Telefono, Insumo, Categoria, Estado, Actualizado,
-  // CantidadNecesaria, CantidadRecibida, Urgencia, Unidad
-  var lugares = {};       // clave (nombre normalizado) -> objeto lugar
-  var disponibles = [];   // { insumo: normalizado, lugarClave }
+// -- CENTROS / DONACIONES ---------------------------------------------------
+function listarCentros() {
+  const centros = construirCentros();
+  return jsonResponse({ centros, lugares: centros });
+}
 
-  for (var i = 1; i < filas.length; i++) {
-    var f = filas[i];
-    var nombre = texto(f[1]);
-    if (!nombre) continue;
+function construirCentros() {
+  const data = leerFilas(CENTROS_SHEET);
+  const centroMap = {};
 
-    var clave = normalizar(nombre);
-    if (!lugares[clave]) {
-      lugares[clave] = {
-        tipo: texto(f[0]),
-        nombre: nombre,
-        ubicacion: texto(f[2]),
-        telefono: texto(f[3]),
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[1]) continue;
+
+    const tipo = texto(row[0]);
+    const nombre = texto(row[1]);
+    const key = normalizar(tipo + "|" + nombre);
+
+    if (!centroMap[key]) {
+      centroMap[key] = {
+        tipo,
+        nombre,
+        ubicacion: texto(row[2]),
+        telefono: texto(row[3]),
         necesita: [],
+        no_acepta: [],
         cubiertos: [],
         tiene_disponible: [],
-        actualizado: f[7] ? new Date(f[7]).toISOString() : ''
+        actualizado: fechaISO(row[10])
       };
     }
 
-    var insumo = texto(f[4]);
-    if (!insumo) continue;
+    const cantidadNecesaria = numero(row[6], 0);
+    const cantidadRecibida = Math.max(0, numero(row[7], 0));
+    const recibidaCap = cantidadNecesaria > 0
+      ? Math.min(cantidadRecibida, cantidadNecesaria)
+      : cantidadRecibida;
 
-    if (esTiene(f[6])) {
-      lugares[clave].tiene_disponible.push({ nombre: insumo, categoria: texto(f[5]) || 'Otros' });
-      disponibles.push({ insumo: normalizar(insumo), lugarClave: clave });
-    } else if (esNecesita(f[6])) {
-      var item = crearInsumoDesdeFila(f);
-      if (item.yaCubierto) {
-        lugares[clave].cubiertos.push(item);
+    const insumo = {
+      nombre: texto(row[4]),
+      categoria: texto(row[5]) || "Otros",
+      cantidadNecesaria,
+      cantidadRecibida: recibidaCap,
+      urgencia: texto(row[8]) || "Normal",
+      unidad: texto(row[9]) || "unidades",
+      coincidencias: []
+    };
+
+    if (!insumo.nombre) continue;
+
+    insumo.porcentaje = insumo.cantidadNecesaria > 0
+      ? Math.round((insumo.cantidadRecibida / insumo.cantidadNecesaria) * 100)
+      : 0;
+    insumo.yaCubierto = insumo.cantidadRecibida >= insumo.cantidadNecesaria && insumo.cantidadNecesaria > 0;
+
+    if (insumo.yaCubierto) {
+      centroMap[key].cubiertos.push(insumo);
+    } else {
+      centroMap[key].necesita.push(insumo);
+    }
+
+    if (row[10]) centroMap[key].actualizado = fechaISO(row[10]);
+  }
+
+  return Object.keys(centroMap).map(function (key) { return centroMap[key]; });
+}
+
+function registrarMovimiento(payload) {
+  if (!payload.nombreLugar || !payload.insumo || !payload.tipoMovimiento) {
+    throw new Error("Faltan campos obligatorios: nombreLugar, insumo, tipoMovimiento");
+  }
+
+  const cantidad = numero(payload.cantidad, 0);
+  if (cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0");
+
+  const ss = abrirSpreadsheet();
+  const centroSheet = ss.getSheetByName(CENTROS_SHEET);
+  const histSheet = ss.getSheetByName(HISTORIAL_SHEET);
+  const centroData = centroSheet.getDataRange().getValues();
+
+  for (let i = 1; i < centroData.length; i++) {
+    if (normalizar(centroData[i][1]) === normalizar(payload.nombreLugar) &&
+        normalizar(centroData[i][4]) === normalizar(payload.insumo)) {
+      const cantidadActual = parseFloat(centroData[i][7]) || 0;
+      let nuevaCantidad = cantidadActual;
+
+      if (normalizar(payload.tipoMovimiento) === "entrada") {
+        nuevaCantidad += cantidad;
       } else {
-        lugares[clave].necesita.push(item);
+        nuevaCantidad = Math.max(0, cantidadActual - cantidad);
       }
+
+      const cantidadNecesaria = parseFloat(centroData[i][6]) || 0;
+      if (cantidadNecesaria > 0) {
+        nuevaCantidad = Math.min(nuevaCantidad, cantidadNecesaria);
+      }
+
+      centroSheet.getRange(i + 1, 8).setValue(nuevaCantidad); // H: CantidadRecibida
+      centroSheet.getRange(i + 1, 11).setValue(new Date());   // K: Actualizado
+
+      histSheet.appendRow([
+        new Date(),
+        texto(payload.tipoLugar) || texto(centroData[i][0]),
+        texto(payload.nombreLugar),
+        texto(payload.insumo),
+        texto(payload.tipoMovimiento),
+        cantidad,
+        texto(payload.unidad) || texto(centroData[i][9]) || "unidades",
+        texto(payload.nombreVoluntario) || "Anonimo",
+        nuevaCantidad,
+        texto(payload.observaciones)
+      ]);
+
+      return jsonResponse({ success: true, exito: true, nuevaCantidad });
     }
   }
 
-  // Por cada necesidad, buscar el mismo insumo disponible en OTRO lugar.
-  var lista = Object.keys(lugares).map(function (k) { return lugares[k]; });
-  lista.forEach(function (lugar) {
-    var claveLugar = normalizar(lugar.nombre);
-    lugar.necesita.forEach(function (n) {
-      var objetivo = normalizar(n.nombre);
-      disponibles.forEach(function (d) {
-        if (d.insumo === objetivo && d.lugarClave !== claveLugar) {
-          var otro = lugares[d.lugarClave];
-          n.coincidencias.push({
-            nombre_lugar: otro.nombre,
-            tipo: otro.tipo,
-            telefono: otro.telefono,
-            ubicacion: otro.ubicacion
-          });
-        }
-      });
+  return jsonResponse({ error: "Insumo no encontrado" }, 404);
+}
+
+function obtenerHistorialMovimientos(centro) {
+  const sheet = obtenerHoja(HISTORIAL_SHEET);
+  const data = sheet.getDataRange().getValues();
+
+  let movimientos = [];
+  for (let i = 1; i < data.length; i++) {
+    if (!centro || normalizar(data[i][2]) === normalizar(centro)) {
+      const item = {
+        timestamp: fechaISO(data[i][0]),
+        tipoCentro: data[i][1],
+        tipoLugar: data[i][1],
+        centro: data[i][2],
+        lugar: data[i][2],
+        insumo: data[i][3],
+        tipo: data[i][4],
+        tipoMovimiento: data[i][4],
+        cantidad: data[i][5],
+        unidad: data[i][6],
+        voluntario: data[i][7],
+        cantidadAcumulada: data[i][8],
+        observaciones: data[i][9] || ""
+      };
+      movimientos.push(item);
+    }
+  }
+
+  movimientos.sort(function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+  movimientos = movimientos.slice(0, centro ? 50 : 100);
+
+  return jsonResponse({ movimientos, historial: movimientos, total: movimientos.length });
+}
+
+// -- MOTORIZADOS ------------------------------------------------------------
+function listarMotorizados() {
+  const motorizados = construirMotorizados();
+  return jsonResponse({ motorizados, total: motorizados.length });
+}
+
+function construirMotorizados() {
+  const motorSheet = obtenerHoja(MOTORIZADOS_SHEET);
+  const trajSheet = obtenerHoja(TRAYECTOS_SHEET);
+  const motorData = motorSheet.getDataRange().getValues();
+  const trajData = trajSheet.getDataRange().getValues();
+
+  const totalesPorMotor = {};
+  for (let i = 1; i < trajData.length; i++) {
+    const row = trajData[i];
+    const id = texto(row[1]);
+    if (!id) continue;
+
+    const km = parseFloat(row[5]) || 0;
+    if (!totalesPorMotor[id]) {
+      totalesPorMotor[id] = { trayectos: 0, km: 0 };
+    }
+    totalesPorMotor[id].trayectos++;
+    totalesPorMotor[id].km += km;
+  }
+
+  const motorizados = [];
+  for (let i = 1; i < motorData.length; i++) {
+    const row = motorData[i];
+    const id = texto(row[0]);
+    if (!id) continue;
+
+    const totales = totalesPorMotor[id] || {
+      trayectos: numero(row[8], 0),
+      km: numero(row[9], 0)
+    };
+    const estado = texto(row[6]) || "Activo";
+
+    motorizados.push({
+      id,
+      nombre: row[1],
+      tipoVehiculo: row[2],
+      telefono: row[3],
+      operaEn: row[4],
+      zonaOperacion: row[4],
+      placa: row[5],
+      estado,
+      activo: normalizar(estado) !== "inactivo",
+      fechaRegistro: fechaISO(row[7]),
+      totalTrayectos: totales.trayectos,
+      totalKm: Math.round(totales.km * 10) / 10,
+      aporteDonado: parseFloat(row[10]) || 0,
+      verificado: esSi(row[11]),
+      ultimoTrayecto: fechaISO(row[12])
     });
-  });
-
-  return lista;
-}
-
-// ── ESCRITURA LEGACY: alta de lugar/insumo desde la app ───────────────────
-function agregarLugarInsumo(datos) {
-  if (!datos.tipo || !datos.nombre || !datos.insumo || !datos.estado) {
-    throw new Error('Faltan campos obligatorios: tipo, nombre, insumo, estado');
   }
 
-  var hoja = obtenerHoja(SHEET_NAME);
-
-  // Columnas A..L: se preserva A-H y se inicializan I-L para necesidades.
-  var esNecesidad = esNecesita(datos.estado);
-  hoja.appendRow([
-    texto(datos.tipo),
-    texto(datos.nombre),
-    texto(datos.ubicacion),
-    texto(datos.telefono),
-    texto(datos.insumo),
-    texto(datos.categoria) || 'Otros',
-    texto(datos.estado),
-    new Date(),
-    esNecesidad ? numero(datos.cantidadNecesaria, 0) : '',
-    esNecesidad ? numero(datos.cantidadRecibida, 0) : '',
-    esNecesidad ? (texto(datos.urgencia) || 'Normal') : '',
-    esNecesidad ? (texto(datos.unidad) || 'unidades') : ''
-  ]);
-
-  return responder({ success: true, exito: true, mensaje: 'Lugar/insumo agregado exitosamente' });
+  motorizados.sort(function (a, b) { return b.totalKm - a.totalKm; });
+  return motorizados;
 }
 
-// ── MOVIMIENTOS DE DONACIONES ─────────────────────────────────────────────
-function registrarMovimiento(payload) {
-  if (!payload.nombreLugar || !payload.insumo || !payload.tipoMovimiento) {
-    throw new Error('Faltan campos obligatorios: nombreLugar, insumo, tipoMovimiento');
-  }
+function obtenerPerfilMotorizado(id) {
+  if (!id) return jsonResponse({ error: "Falta id de motorizado" }, 400);
 
-  var cantidad = numero(payload.cantidad, 0);
-  if (cantidad <= 0) throw new Error('La cantidad debe ser mayor a 0');
+  const motorSheet = obtenerHoja(MOTORIZADOS_SHEET);
+  const motorData = motorSheet.getDataRange().getValues();
 
-  var hoja = obtenerHoja(SHEET_NAME);
-  var filas = hoja.getDataRange().getValues();
-  var filaEncontrada = -1;
-
-  for (var i = 1; i < filas.length; i++) {
-    if (normalizar(filas[i][1]) === normalizar(payload.nombreLugar) &&
-        normalizar(filas[i][4]) === normalizar(payload.insumo)) {
-      filaEncontrada = i + 1; // índice 1-based de Sheets
+  let motorizado = null;
+  for (let i = 1; i < motorData.length; i++) {
+    if (String(motorData[i][0]) === String(id)) {
+      motorizado = {
+        id: motorData[i][0],
+        nombre: motorData[i][1],
+        tipoVehiculo: motorData[i][2],
+        telefono: motorData[i][3],
+        operaEn: motorData[i][4],
+        zonaOperacion: motorData[i][4],
+        placa: motorData[i][5],
+        estado: motorData[i][6],
+        aporteDonado: parseFloat(motorData[i][10]) || 0,
+        verificado: esSi(motorData[i][11])
+      };
       break;
     }
   }
 
-  if (filaEncontrada === -1) {
-    throw new Error('No se encontró el insumo "' + payload.insumo + '" en "' + payload.nombreLugar + '"');
+  if (!motorizado) {
+    return jsonResponse({ error: "Motorizado no encontrado" }, 404);
   }
 
-  var fila = filas[filaEncontrada - 1];
-  var cantidadNecesaria = numero(fila[8], 0);
-  var cantidadActual = Math.max(0, numero(fila[9], 0));
-  var tipoMov = texto(payload.tipoMovimiento);
-  var nuevaCantidad = tipoMov === 'Salida'
-    ? Math.max(0, cantidadActual - cantidad)
-    : cantidadActual + cantidad;
+  const trayectos = construirTrayectos(id);
+  const donaciones = construirDonacionesMotorizado(id);
 
-  if (cantidadNecesaria > 0) nuevaCantidad = Math.min(nuevaCantidad, cantidadNecesaria);
+  return jsonResponse({ motorizado, trayectos, donaciones });
+}
 
-  hoja.getRange(filaEncontrada, 10).setValue(nuevaCantidad); // J: CantidadRecibida
-  hoja.getRange(filaEncontrada, 8).setValue(new Date());     // H: Actualizado
+function registrarMotorizado(payload) {
+  if (!payload.nombre || !payload.tipoVehiculo) {
+    throw new Error("Faltan campos obligatorios: nombre, tipoVehiculo");
+  }
 
-  var hojaHistorial = obtenerHoja(HISTORIAL_SHEET_NAME);
-  hojaHistorial.appendRow([
+  const operaEn = texto(payload.operaEn || payload.zonaOperacion);
+  if (!operaEn) throw new Error("Falta el campo operaEn");
+
+  const motorSheet = obtenerHoja(MOTORIZADOS_SHEET);
+  const id = generarIdMotorizado(motorSheet);
+
+  motorSheet.appendRow([
+    id,
+    texto(payload.nombre),
+    texto(payload.tipoVehiculo),
+    texto(payload.telefono),
+    operaEn,
+    texto(payload.placa),
+    "Activo",
     new Date(),
-    texto(payload.tipoLugar) || texto(fila[0]),
-    texto(payload.nombreLugar),
-    texto(payload.insumo),
-    texto(payload.categoria) || texto(fila[5]),
-    tipoMov,
-    cantidad,
-    texto(payload.nombreVoluntario) || 'Anónimo',
-    nuevaCantidad,
-    texto(payload.observaciones)
+    0,
+    0,
+    0,
+    "No",
+    null
   ]);
 
-  return jsonResponse({
-    success: true,
-    nuevaCantidad: nuevaCantidad,
-    tipoMovimiento: tipoMov,
-    mensaje: 'Movimiento registrado'
-  });
+  return jsonResponse({ success: true, exito: true, id });
 }
 
-function obtenerHistorial(lugar) {
-  var hoja = obtenerHojaOpcional(HISTORIAL_SHEET_NAME);
-  if (!hoja) return jsonResponse({ historial: [], total: 0 });
-
-  var data = hoja.getDataRange().getValues();
-  var filas = data.slice(1);
-
-  if (lugar) {
-    filas = filas.filter(function (row) { return normalizar(row[2]) === normalizar(lugar); });
+function generarIdMotorizado(motorSheet) {
+  const existentes = {};
+  const data = motorSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) existentes[String(data[i][0])] = true;
   }
 
-  filas.sort(function (a, b) { return new Date(b[0]) - new Date(a[0]); });
-  filas = filas.slice(0, 50);
+  let id = "";
+  do {
+    id = "MOTO" + (Math.floor(Math.random() * 10000)).toString().padStart(4, "0");
+  } while (existentes[id]);
 
-  var historial = filas.map(function (row) {
-    return {
-      timestamp: row[0] ? new Date(row[0]).toISOString() : '',
-      tipoLugar: row[1],
-      lugar: row[2],
-      insumo: row[3],
-      categoria: row[4],
-      tipoMovimiento: row[5],
-      cantidad: row[6],
-      voluntario: row[7],
-      cantidadAcumulada: row[8],
-      observaciones: row[9] || ''
-    };
-  });
-
-  return jsonResponse({ historial: historial, total: historial.length });
+  return id;
 }
 
-// ── MOTORIZADOS ───────────────────────────────────────────────────────────
-function registrarMotorizado(payload) {
-  if (!payload.nombre || !payload.tipoVehiculo || !payload.zonaOperacion) {
-    throw new Error('Faltan campos obligatorios: nombre, tipoVehiculo, zonaOperacion');
-  }
+// -- TRAYECTOS --------------------------------------------------------------
+function obtenerTrayectos(motorizado) {
+  const trayectos = construirTrayectos(motorizado);
+  return jsonResponse({ trayectos, total: trayectos.length });
+}
 
-  var hoja = obtenerHoja(MOTORIZADOS_SHEET_NAME);
-  var data = hoja.getDataRange().getValues();
-  var nombreNuevo = normalizar(payload.nombre);
-  var placaNueva = normalizar(payload.placa || '');
+function construirTrayectos(motorizado) {
+  const sheet = obtenerHoja(TRAYECTOS_SHEET);
+  const data = sheet.getDataRange().getValues();
 
-  for (var i = 1; i < data.length; i++) {
-    if (normalizar(data[i][1]) === nombreNuevo && normalizar(data[i][3] || '') === placaNueva) {
-      throw new Error('Ya existe un motorizado registrado con ese nombre y placa');
+  const trayectos = [];
+  for (let i = 1; i < data.length; i++) {
+    if (!motorizado || String(data[i][1]) === String(motorizado)) {
+      const insumo = texto(data[i][7]);
+      const cantidad = texto(data[i][8]);
+      const unidad = texto(data[i][9]);
+      const insumoTransportado = [insumo, cantidad && unidad ? cantidad + " " + unidad : cantidad || unidad]
+        .filter(Boolean)
+        .join(" · ");
+
+      trayectos.push({
+        timestamp: fechaISO(data[i][0]),
+        idMotorizado: data[i][1],
+        motorizadoId: data[i][1],
+        nombreMotorizado: data[i][2],
+        motorizadoNombre: data[i][2],
+        origen: data[i][3],
+        destino: data[i][4],
+        km: data[i][5],
+        kmRecorridos: data[i][5],
+        minutos: data[i][6],
+        tiempoMinutos: data[i][6],
+        insumo,
+        insumoTransportado: insumoTransportado || "Varios",
+        cantidad: data[i][8],
+        unidad: data[i][9],
+        foto: data[i][10],
+        notas: data[i][11] || "",
+        observaciones: data[i][11] || "",
+        verificado: esSi(data[i][12])
+      });
     }
   }
 
-  var nuevoId = 'MOT-' + Date.now().toString(36).toUpperCase();
-  hoja.appendRow([
-    nuevoId,
-    texto(payload.nombre),
-    texto(payload.tipoVehiculo),
-    texto(payload.placa),
-    texto(payload.zonaOperacion),
-    texto(payload.telefono),
-    0,
-    0,
-    true,
-    new Date(),
-    '',
-    texto(payload.linkDonacion),
-    texto(payload.infoDonacion)
-  ]);
-
-  return jsonResponse({
-    success: true,
-    id: nuevoId,
-    nombre: texto(payload.nombre),
-    mensaje: 'Motorizado registrado'
-  });
-}
-
-function obtenerMotorizados() {
-  var hoja = obtenerHojaOpcional(MOTORIZADOS_SHEET_NAME);
-  if (!hoja) return jsonResponse({ motorizados: [], total: 0 });
-
-  var data = hoja.getDataRange().getValues();
-  var filas = data.slice(1);
-
-  var motorizados = filas
-    .filter(function (row) { return row[0] || row[1]; })
-    .map(function (row) {
-      return {
-        id: row[0],
-        nombre: row[1],
-        tipoVehiculo: row[2],
-        placa: row[3],
-        zonaOperacion: row[4],
-        telefono: row[5],
-        totalTrayectos: numero(row[6], 0),
-        totalKm: numero(row[7], 0),
-        activo: row[8] === true || String(row[8]).toUpperCase() === 'TRUE',
-        fechaRegistro: row[9] ? new Date(row[9]).toISOString() : '',
-        ultimoTrayecto: row[10] ? new Date(row[10]).toISOString() : '',
-        linkDonacion: row[11] || '',
-        infoDonacion: row[12] || ''
-      };
-    });
-
-  motorizados.sort(function (a, b) { return b.totalKm - a.totalKm; });
-
-  return jsonResponse({ motorizados: motorizados, total: motorizados.length });
+  trayectos.sort(function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+  return trayectos;
 }
 
 function registrarTrayecto(payload) {
-  if (!payload.motorizadoId || !payload.origen || !payload.destino) {
-    throw new Error('Faltan campos obligatorios: motorizadoId, origen, destino');
+  const idMotorizado = texto(payload.idMotorizado || payload.motorizadoId);
+  if (!idMotorizado || !payload.origen || !payload.destino) {
+    throw new Error("Faltan campos obligatorios: idMotorizado, origen, destino");
   }
 
-  var km = numero(payload.kmRecorridos, 0);
-  if (km <= 0) throw new Error('Los km recorridos deben ser mayores a 0');
+  const km = numero(payload.km != null ? payload.km : payload.kmRecorridos, 0);
+  if (km <= 0) throw new Error("Los km recorridos deben ser mayores a 0");
 
-  var hojaMotorizados = obtenerHoja(MOTORIZADOS_SHEET_NAME);
-  var data = hojaMotorizados.getDataRange().getValues();
-  var filaEncontrada = -1;
+  const ss = abrirSpreadsheet();
+  const trajSheet = ss.getSheetByName(TRAYECTOS_SHEET);
+  const motorSheet = ss.getSheetByName(MOTORIZADOS_SHEET);
+  const ahora = new Date();
+  let nombreMotorizado = texto(payload.nombreMotorizado);
 
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(payload.motorizadoId)) {
-      filaEncontrada = i + 1;
+  const motorData = motorSheet.getDataRange().getValues();
+  let filaMotorizado = -1;
+  let totalTrayectos = 0;
+  let totalKm = 0;
+
+  for (let i = 1; i < motorData.length; i++) {
+    if (String(motorData[i][0]) === String(idMotorizado)) {
+      filaMotorizado = i + 1;
+      nombreMotorizado = nombreMotorizado || texto(motorData[i][1]);
+      totalTrayectos = numero(motorData[i][8], 0) + 1;
+      totalKm = numero(motorData[i][9], 0) + km;
       break;
     }
   }
 
-  if (filaEncontrada === -1) throw new Error('No se encontró el motorizado indicado');
+  if (filaMotorizado === -1) throw new Error("No se encontro el motorizado indicado");
 
-  var fila = data[filaEncontrada - 1];
-  var nombreMotorizado = texto(fila[1]);
-  var totalTrayectos = numero(fila[6], 0) + 1;
-  var totalKm = numero(fila[7], 0) + km;
-  var ahora = new Date();
-
-  hojaMotorizados.getRange(filaEncontrada, 7).setValue(totalTrayectos); // G
-  hojaMotorizados.getRange(filaEncontrada, 8).setValue(totalKm);        // H
-  hojaMotorizados.getRange(filaEncontrada, 11).setValue(ahora);         // K
-
-  var hojaTrayectos = obtenerHoja(TRAYECTOS_SHEET_NAME);
-  hojaTrayectos.appendRow([
+  trajSheet.appendRow([
     ahora,
-    texto(payload.motorizadoId),
+    idMotorizado,
     nombreMotorizado,
     texto(payload.origen),
     texto(payload.destino),
     km,
-    texto(payload.insumoTransportado) || 'Varios',
-    texto(payload.observaciones)
+    numero(payload.tiempoMinutos || payload.minutos, 0) || "",
+    texto(payload.insumo || payload.insumoTransportado) || "Varios",
+    payload.cantidad || "",
+    texto(payload.unidad),
+    texto(payload.foto),
+    texto(payload.notas || payload.observaciones),
+    "No"
   ]);
+
+  motorSheet.getRange(filaMotorizado, 9).setValue(totalTrayectos); // I: TotalTrayectos
+  motorSheet.getRange(filaMotorizado, 10).setValue(totalKm);       // J: TotalKm
+  motorSheet.getRange(filaMotorizado, 13).setValue(ahora);         // M: UltimoTrayecto
 
   return jsonResponse({
     success: true,
-    totalTrayectos: totalTrayectos,
-    totalKm: totalKm,
-    mensaje: 'Trayecto registrado'
+    exito: true,
+    totalTrayectos,
+    totalKm: Math.round(totalKm * 10) / 10
   });
 }
 
-function obtenerTrayectos(motorizadoId) {
-  var hoja = obtenerHojaOpcional(TRAYECTOS_SHEET_NAME);
-  if (!hoja) return jsonResponse({ trayectos: [], total: 0 });
+// -- DONACIONES A MOTORIZADOS ---------------------------------------------
+function donarMotorizado(payload) {
+  const idMotorizado = texto(payload.idMotorizado || payload.motorizadoId);
+  if (!idMotorizado) throw new Error("Falta idMotorizado");
 
-  var data = hoja.getDataRange().getValues();
-  var filas = data.slice(1);
+  const monto = numero(payload.monto, 0);
+  if (monto <= 0) throw new Error("El monto debe ser mayor a 0");
 
-  if (motorizadoId) {
-    filas = filas.filter(function (row) { return String(row[1]) === String(motorizadoId); });
+  const ss = abrirSpreadsheet();
+  const donSheet = ss.getSheetByName(DONACIONES_SHEET);
+  const motorSheet = ss.getSheetByName(MOTORIZADOS_SHEET);
+  const motorData = motorSheet.getDataRange().getValues();
+
+  let filaMotorizado = -1;
+  let nuevoAporte = monto;
+  let nombreMotorizado = texto(payload.nombreMotorizado);
+
+  for (let i = 1; i < motorData.length; i++) {
+    if (String(motorData[i][0]) === String(idMotorizado)) {
+      filaMotorizado = i + 1;
+      nombreMotorizado = nombreMotorizado || texto(motorData[i][1]);
+      const aporteActual = parseFloat(motorData[i][10]) || 0;
+      nuevoAporte = aporteActual + monto;
+      break;
+    }
   }
 
-  filas.sort(function (a, b) { return new Date(b[0]) - new Date(a[0]); });
-  filas = filas.slice(0, motorizadoId ? 50 : 100);
+  if (filaMotorizado === -1) return jsonResponse({ error: "Motorizado no encontrado" }, 404);
 
-  var trayectos = filas.map(function (row) {
-    return {
-      timestamp: row[0] ? new Date(row[0]).toISOString() : '',
-      motorizadoId: row[1],
-      motorizadoNombre: row[2],
-      origen: row[3],
-      destino: row[4],
-      kmRecorridos: row[5],
-      insumoTransportado: row[6],
-      observaciones: row[7] || ''
-    };
-  });
+  donSheet.appendRow([
+    new Date(),
+    idMotorizado,
+    nombreMotorizado,
+    monto,
+    texto(payload.tipo) || "Aporte",
+    texto(payload.donanteName) || "Anonimo",
+    texto(payload.mensaje),
+    texto(payload.ciudad)
+  ]);
 
-  return jsonResponse({ trayectos: trayectos, total: trayectos.length });
+  motorSheet.getRange(filaMotorizado, 11).setValue(nuevoAporte); // K: AporteDonado
+
+  return jsonResponse({ success: true, exito: true, aporteDonado: nuevoAporte });
+}
+
+function construirDonacionesMotorizado(id) {
+  const sheet = obtenerHoja(DONACIONES_SHEET);
+  const data = sheet.getDataRange().getValues();
+  const donaciones = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]) === String(id)) {
+      donaciones.push({
+        timestamp: fechaISO(data[i][0]),
+        idMotorizado: data[i][1],
+        nombreMotorizado: data[i][2],
+        monto: data[i][3],
+        tipo: data[i][4],
+        donante: data[i][5],
+        mensaje: data[i][6],
+        ciudad: data[i][7]
+      });
+    }
+  }
+
+  donaciones.sort(function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+  return donaciones;
 }

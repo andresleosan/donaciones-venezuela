@@ -1,5 +1,5 @@
 {
-  "lugares": [
+  "centros": [
     {
       "tipo": "Centro",
       "nombre": "Iglesia San José",
@@ -16,7 +16,12 @@
           "unidad": "paquetes",
           "yaCubierto": false,
           "coincidencias": [
-            { "nombre_lugar": "Hospital El Algodonal", "tipo": "Hospital", "telefono": "+58 212 555 5000", "ubicacion": "El Algodonal, Caracas" }
+            {
+              "nombre_lugar": "Hospital El Algodonal",
+              "tipo": "Hospital",
+              "telefono": "+58 212 555 5000",
+              "ubicacion": "El Algodonal, Caracas"
+            }
           ]
         },
         {
@@ -29,7 +34,12 @@
           "unidad": "cajas",
           "yaCubierto": false,
           "coincidencias": [
-            { "nombre_lugar": "Refugio Naiguatá", "tipo": "Centro", "telefono": "+58 414 555 2200", "ubicacion": "Naiguatá, Vargas" }
+            {
+              "nombre_lugar": "Refugio Naiguatá",
+              "tipo": "Centro",
+              "telefono": "+58 414 555 2200",
+              "ubicacion": "Naiguatá, Vargas"
+            }
           ]
         },
         {
@@ -45,11 +55,24 @@
         }
       ],
       "cubiertos": [
-        { "nombre": "Mantas", "categoria": "Otros", "cantidadNecesaria": 60, "cantidadRecibida": 60, "unidad": "unidades", "yaCubierto": true }
+        {
+          "nombre": "Mantas",
+          "categoria": "Otros",
+          "cantidadNecesaria": 60,
+          "cantidadRecibida": 60,
+          "unidad": "unidades",
+          "yaCubierto": true
+        }
       ],
       "tiene_disponible": [
-        { "nombre": "Ropa de adulto", "categoria": "Ropa" },
-        { "nombre": "Mantas", "categoria": "Otros" }
+        {
+          "nombre": "Ropa de adulto",
+          "categoria": "Ropa"
+        },
+        {
+          "nombre": "Mantas",
+          "categoria": "Otros"
+        }
       ],
       "actualizado": "2026-06-28T12:00:00.000Z"
     },
@@ -80,15 +103,30 @@
           "unidad": "paquetes",
           "yaCubierto": false,
           "coincidencias": [
-            { "nombre_lugar": "Comunidad El Hatillo", "tipo": "Centro", "telefono": "+58 416 555 7788", "ubicacion": "El Hatillo, Caracas" }
+            {
+              "nombre_lugar": "Comunidad El Hatillo",
+              "tipo": "Centro",
+              "telefono": "+58 416 555 7788",
+              "ubicacion": "El Hatillo, Caracas"
+            }
           ]
         }
       ],
       "cubiertos": [
-        { "nombre": "Agua embotellada", "categoria": "Bebidas", "cantidadNecesaria": 45, "cantidadRecibida": 45, "unidad": "cajas", "yaCubierto": true }
+        {
+          "nombre": "Agua embotellada",
+          "categoria": "Bebidas",
+          "cantidadNecesaria": 45,
+          "cantidadRecibida": 45,
+          "unidad": "cajas",
+          "yaCubierto": true
+        }
       ],
       "tiene_disponible": [
-        { "nombre": "Agua embotellada", "categoria": "Bebidas" }
+        {
+          "nombre": "Agua embotellada",
+          "categoria": "Bebidas"
+        }
       ],
       "actualizado": "2026-06-28T13:30:00.000Z"
     },
@@ -122,8 +160,14 @@
         }
       ],
       "tiene_disponible": [
-        { "nombre": "Pañales", "categoria": "Higiene" },
-        { "nombre": "Calzado", "categoria": "Ropa" }
+        {
+          "nombre": "Pañales",
+          "categoria": "Higiene"
+        },
+        {
+          "nombre": "Calzado",
+          "categoria": "Ropa"
+        }
       ],
       "actualizado": "2026-06-28T09:15:00.000Z"
     },
@@ -157,10 +201,20 @@
         }
       ],
       "cubiertos": [
-        { "nombre": "Gasas estériles", "categoria": "Suministros quirúrgicos", "cantidadNecesaria": 100, "cantidadRecibida": 100, "unidad": "paquetes", "yaCubierto": true }
+        {
+          "nombre": "Gasas estériles",
+          "categoria": "Suministros quirúrgicos",
+          "cantidadNecesaria": 100,
+          "cantidadRecibida": 100,
+          "unidad": "paquetes",
+          "yaCubierto": true
+        }
       ],
       "tiene_disponible": [
-        { "nombre": "Gasas estériles", "categoria": "Suministros quirúrgicos" }
+        {
+          "nombre": "Gasas estériles",
+          "categoria": "Suministros quirúrgicos"
+        }
       ],
       "actualizado": "2026-06-28T14:00:00.000Z"
     },
@@ -199,49 +253,52 @@
   ],
   "motorizados": [
     {
-      "id": "MOT-DEMO1",
+      "id": "MOTO001",
       "nombre": "Carlos Rodríguez",
       "tipoVehiculo": "Moto",
-      "placa": "MBK-401",
-      "zonaOperacion": "La Guaira - Caracas",
       "telefono": "+58 412 111 2222",
+      "operaEn": "La Guaira - Caracas",
+      "zonaOperacion": "La Guaira - Caracas",
+      "placa": "MBK-401",
+      "estado": "Activo",
+      "fechaRegistro": "2026-06-23T10:00:00.000Z",
       "totalTrayectos": 22,
       "totalKm": 487,
-      "activo": true,
-      "fechaRegistro": "2026-06-23T10:00:00.000Z",
-      "ultimoTrayecto": "2026-06-29T22:00:00.000Z",
-      "linkDonacion": "",
-      "infoDonacion": "Banco Mercantil · 0412-111-2222 · CI: 8123456"
+      "aporteDonado": 5000,
+      "verificado": true,
+      "ultimoTrayecto": "2026-06-29T22:00:00.000Z"
     },
     {
-      "id": "MOT-DEMO2",
+      "id": "MOTO002",
       "nombre": "María González",
       "tipoVehiculo": "Carro",
-      "placa": "GAB-852",
-      "zonaOperacion": "Caracas Este",
       "telefono": "+58 414 333 4444",
+      "operaEn": "Caracas Este",
+      "zonaOperacion": "Caracas Este",
+      "placa": "GAB-852",
+      "estado": "Activo",
+      "fechaRegistro": "2026-06-26T14:30:00.000Z",
       "totalTrayectos": 9,
       "totalKm": 201,
-      "activo": true,
-      "fechaRegistro": "2026-06-26T14:30:00.000Z",
-      "ultimoTrayecto": "2026-06-28T18:20:00.000Z",
-      "linkDonacion": "https://link.mercadopago.com/demo",
-      "infoDonacion": "Zelle: mariagonzalez@email.com"
+      "aporteDonado": 2400,
+      "verificado": true,
+      "ultimoTrayecto": "2026-06-28T18:20:00.000Z"
     },
     {
-      "id": "MOT-DEMO3",
+      "id": "MOTO003",
       "nombre": "Luis Herrera",
       "tipoVehiculo": "Motocarro",
-      "placa": "LAR-219",
-      "zonaOperacion": "Catia - La Pastora",
       "telefono": "+58 424 777 1188",
+      "operaEn": "Catia - La Pastora",
+      "zonaOperacion": "Catia - La Pastora",
+      "placa": "LAR-219",
+      "estado": "Activo",
+      "fechaRegistro": "2026-06-25T09:15:00.000Z",
       "totalTrayectos": 15,
       "totalKm": 264,
-      "activo": true,
-      "fechaRegistro": "2026-06-25T09:15:00.000Z",
-      "ultimoTrayecto": "2026-06-29T16:10:00.000Z",
-      "linkDonacion": "",
-      "infoDonacion": "Pago móvil · Banco Provincial · 0424-777-1188 · CI: 10999888"
+      "aporteDonado": 3200,
+      "verificado": true,
+      "ultimoTrayecto": "2026-06-29T16:10:00.000Z"
     }
   ]
 }
