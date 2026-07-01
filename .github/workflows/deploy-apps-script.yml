@@ -1,0 +1,84 @@
+name: Deploy Apps Script
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      description:
+        description: "Descripcion opcional para la version Apps Script"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-production
+  cancel-in-progress: false
+
+env:
+  SCRIPT_ID: 1lmeh3SBoa0Jv8NF4DcrQPy6R__VuSig1BgKV0XV9FIjB6fbelFHOuenX
+  DEPLOYMENT_ID: AKfycbzIzkckhq_hur34K0JJZqyMG20QXnFXSHqa_CWhYITCMdCY6-e1GbhW99n0POsmtf0Q9g
+  CLASP_ROOT_DIR: apps-script
+  APPS_SCRIPT_EXEC_URL: https://script.google.com/macros/s/AKfycbzIzkckhq_hur34K0JJZqyMG20QXnFXSHqa_CWhYITCMdCY6-e1GbhW99n0POsmtf0Q9g/exec
+
+jobs:
+  deploy:
+    name: Push, version and redeploy Apps Script
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install CLASP
+        run: |
+          set -Eeuo pipefail
+          npm install --global @google/clasp
+          clasp --version
+
+      - name: Prepare scripts
+        run: |
+          set -Eeuo pipefail
+          chmod +x scripts/apps-script-*.sh
+
+      - name: Authenticate CLASP
+        env:
+          CLASP_CLIENT_ID: ${{ secrets.CLASP_CLIENT_ID }}
+          CLASP_CLIENT_SECRET: ${{ secrets.CLASP_CLIENT_SECRET }}
+          CLASP_REFRESH_TOKEN: ${{ secrets.CLASP_REFRESH_TOKEN }}
+        run: ./scripts/apps-script-auth.sh
+
+      - name: Verify local and remote Apps Script configuration
+        run: ./scripts/apps-script-verify.sh --remote
+
+      - name: Deploy to existing Apps Script deployment
+        env:
+          WORKFLOW_DESCRIPTION: ${{ github.event.inputs.description || '' }}
+        run: |
+          set -Eeuo pipefail
+          description="$WORKFLOW_DESCRIPTION"
+          if [[ -z "$description" ]]; then
+            description="GitHub Actions ${GITHUB_REPOSITORY}@${GITHUB_SHA} run ${GITHUB_RUN_NUMBER}"
+          fi
+          ./scripts/apps-script-deploy.sh --skip-auth --description "$description"
+
+      - name: Confirm endpoint remains unchanged
+        run: |
+          set -Eeuo pipefail
+          expected="https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec"
+          if [[ "$APPS_SCRIPT_EXEC_URL" != "$expected" ]]; then
+            echo "Configured endpoint does not match deployment ID" >&2
+            echo "APPS_SCRIPT_EXEC_URL=$APPS_SCRIPT_EXEC_URL" >&2
+            echo "expected=$expected" >&2
+            exit 1
+          fi
+          echo "Public /exec endpoint kept: $APPS_SCRIPT_EXEC_URL"
+          curl --location --silent --show-error --output /dev/null --write-out "Endpoint HTTP status: %{http_code}\n" "$APPS_SCRIPT_EXEC_URL" || true

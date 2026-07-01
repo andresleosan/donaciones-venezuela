@@ -17,3 +17,13 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# CLASP y credenciales de Google Apps Script
+.clasprc.json
+credentials.json
+token.json
+oauth.json
+service-account.json
+*.pem
+*.key
+*.p12
