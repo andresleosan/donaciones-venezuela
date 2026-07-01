@@ -78,6 +78,19 @@
       --font: Geist, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
       --header-height: 68px;
+
+      /* === SISTEMA DE FONDO INSTITUCIONAL === */
+      --bg-base: #F4F8FC;
+      --bg-mid: #EAF2FB;
+      --bg-deep: #DCEAF8;
+      --bg-deepest: #CFE3F7;
+      --light-primary: rgba(59, 130, 246, 0.07);
+      --light-secondary: rgba(14, 165, 233, 0.05);
+      --pattern-size: 24px;
+      --pattern-opacity: 0.018;
+      --pattern-color: rgba(11, 18, 32, var(--pattern-opacity));
+      --vignette-opacity: 0.04;
+      --vignette-color: rgba(255, 255, 255, var(--vignette-opacity));
     }
 
     * { box-sizing: border-box; }
@@ -88,10 +101,13 @@
       font-family: var(--font);
       color: var(--text);
       background:
-        linear-gradient(90deg, rgba(11,18,32,0.035) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(11,18,32,0.03) 1px, transparent 1px),
-        linear-gradient(180deg, var(--bg-warm), var(--bg));
-      background-size: 32px 32px, 32px 32px, auto;
+        radial-gradient(circle at top right, var(--light-primary), transparent 32%),
+        radial-gradient(circle at bottom left, var(--light-secondary), transparent 38%),
+        linear-gradient(180deg, var(--bg-base), var(--bg-mid) 42%, var(--bg-deep) 78%, var(--bg-deepest)),
+        radial-gradient(var(--pattern-color) 0.6px, transparent 0.6px);
+      background-size: auto, auto, auto, var(--pattern-size) var(--pattern-size);
+      background-attachment: fixed, fixed, fixed, fixed;
+      background-repeat: no-repeat, no-repeat, no-repeat, repeat;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
@@ -102,9 +118,7 @@
       inset: 0;
       pointer-events: none;
       z-index: -1;
-      opacity: 0.18;
-      background-image: radial-gradient(rgba(11, 18, 32, 0.16) 0.7px, transparent 0.7px);
-      background-size: 14px 14px;
+      background: radial-gradient(ellipse at center, var(--vignette-color), transparent 62%);
     }
     a { color: inherit; }
     button, input, select, textarea { font: inherit; }
