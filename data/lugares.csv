@@ -1,0 +1,18 @@
+Tipo,Nombre,Ubicacion,Telefono,Insumo,Categoria,Estado,Actualizado
+Centro,Iglesia San José,"Los Corales, La Guaira",+58 412 555 1234,Gasas estériles,Medicinas,Necesita,2026-06-28
+Centro,Iglesia San José,"Los Corales, La Guaira",+58 412 555 1234,Agua embotellada,Bebidas,Necesita,2026-06-28
+Centro,Iglesia San José,"Los Corales, La Guaira",+58 412 555 1234,Leche en polvo,Alimentos,Necesita,2026-06-28
+Centro,Iglesia San José,"Los Corales, La Guaira",+58 412 555 1234,Ropa de adulto,Ropa,Tiene disponible,2026-06-28
+Centro,Iglesia San José,"Los Corales, La Guaira",+58 412 555 1234,Mantas,Otros,Tiene disponible,2026-06-28
+Centro,Refugio Naiguatá,"Naiguatá, Vargas",+58 414 555 2200,Colchonetas,Otros,Necesita,2026-06-28
+Centro,Refugio Naiguatá,"Naiguatá, Vargas",+58 414 555 2200,Pañales,Higiene,Necesita,2026-06-28
+Centro,Refugio Naiguatá,"Naiguatá, Vargas",+58 414 555 2200,Agua embotellada,Bebidas,Tiene disponible,2026-06-28
+Centro,Comunidad El Hatillo,"El Hatillo, Caracas",+58 416 555 7788,Arroz,Alimentos,Necesita,2026-06-28
+Centro,Comunidad El Hatillo,"El Hatillo, Caracas",+58 416 555 7788,Jabón,Higiene,Necesita,2026-06-28
+Centro,Comunidad El Hatillo,"El Hatillo, Caracas",+58 416 555 7788,Pañales,Higiene,Tiene disponible,2026-06-28
+Centro,Comunidad El Hatillo,"El Hatillo, Caracas",+58 416 555 7788,Calzado,Ropa,Tiene disponible,2026-06-28
+Hospital,Hospital El Algodonal,"El Algodonal, Caracas",+58 212 555 5000,Analgésicos,Medicinas,Necesita,2026-06-28
+Hospital,Hospital El Algodonal,"El Algodonal, Caracas",+58 212 555 5000,Oxímetros,Equipos médicos,Necesita,2026-06-28
+Hospital,Hospital El Algodonal,"El Algodonal, Caracas",+58 212 555 5000,Gasas estériles,Suministros quirúrgicos,Tiene disponible,2026-06-28
+Hospital,Hospital Vargas de Caracas,"San José, Caracas",+58 212 555 6100 (Donaciones),Sueros fisiológicos,Fluidos IV,Necesita,2026-06-28
+Hospital,Hospital Vargas de Caracas,"San José, Caracas",+58 212 555 6100 (Donaciones),Guantes,Suministros quirúrgicos,Necesita,2026-06-28

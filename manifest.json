@@ -1,0 +1,16 @@
+{
+  "name": "Respuesta Humanitaria Venezuela",
+  "short_name": "Ayuda VE",
+  "description": "Plataforma de coordinación de centros de ayuda, donaciones y voluntarios en Venezuela.",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#0B1220",
+  "theme_color": "#0B1220",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

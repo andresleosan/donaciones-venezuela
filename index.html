@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plataforma nacional de respuesta humanitaria en Venezuela para conectar centros de ayuda, hospitales, voluntarios, rescatistas y familias." />
+  <title>Respuesta Humanitaria Venezuela</title>
+  <link rel="icon" href="assets/icons/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <link rel="canonical" href="https://donacionesvenezuela.vercel.app/" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0B1220" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="services/leaflet/leaflet.css" />
+  <script src="services/leaflet/leaflet.js"></script>
+  <!-- Leaflet MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Respuesta Humanitaria Venezuela" />
+  <meta property="og:locale" content="es_VE" />
+  <meta property="og:url" content="https://donacionesvenezuela.vercel.app/" />
+  <meta property="og:title" content="Respuesta Humanitaria Venezuela" />
+  <meta property="og:description" content="Coordinación de centros de ayuda, hospitales, voluntarios, rescatistas, donaciones y reportes familiares en Venezuela." />
+  <meta property="og:image" content="https://donacionesvenezuela.vercel.app/assets/icons/icon-192.png" />
+  <meta property="og:image:alt" content="Panel visual de coordinación humanitaria para Venezuela" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Respuesta Humanitaria Venezuela" />
+  <meta name="twitter:description" content="Centros de ayuda, suministros, voluntarios, rescatistas y búsqueda familiar." />
+  <meta name="twitter:image" content="https://donacionesvenezuela.vercel.app/assets/icons/icon-192.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["WebSite", "WebApplication"],
+    "name": "Respuesta Humanitaria Venezuela",
+    "url": "https://donacionesvenezuela.vercel.app/",
+    "applicationCategory": "EmergencyApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "es-VE",
+    "description": "Plataforma nacional de respuesta humanitaria para centros de ayuda, hospitales, voluntarios, rescatistas, donaciones y familias.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://donacionesvenezuela.vercel.app/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <style>
+    :root {
+      --primary: #1457D9;
+      --primary-dark: #0B3F9F;
+      --rescue: #C2410C;
+      --rescue-soft: #FFF1E8;
+      --volunteer: #047857;
+      --volunteer-soft: #E7F7F0;
+      --critical: #B42318;
+      --warning: #A16207;
+      --success: #15803D;
+      --error: #B42318;
+      --bg: #F6F7F9;
+      --bg-warm: #FBFAF7;
+      --surface: #FFFFFF;
+      --surface-muted: #F1F5F9;
+      --surface-strong: #FDFEFF;
+      --ink: #0B1220;
+      --text: #263244;
+      --muted: #667085;
+      --border: #D9E1EC;
+      --border-strong: #B8C4D4;
+      --radius: 14px;
+      --shadow: 0 20px 48px rgba(11, 18, 32, 0.08), 0 6px 16px rgba(11, 18, 32, 0.04);
+      --shadow-soft: 0 10px 28px rgba(11, 18, 32, 0.06);
+      --shadow-hover: 0 24px 56px rgba(11, 18, 32, 0.12), 0 8px 24px rgba(11, 18, 32, 0.08);
+      --font: Geist, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --header-height: 68px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0B1220;
+        --bg-warm: #0F172A;
+        --surface: #1E293B;
+        --surface-muted: #0F172A;
+        --surface-strong: #334155;
+        --ink: #F8FAFC;
+        --text: #CBD5E1;
+        --muted: #94A3B8;
+        --border: #334155;
+        --border-strong: #475569;
+        --shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+        --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.4);
+        --shadow-hover: 0 24px 56px rgba(0, 0, 0, 0.8);
+        --rescue-soft: #431407;
+        --volunteer-soft: #064E3B;
+      }
+      body::before { opacity: 0.04; }
+      .card::before { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important; }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        linear-gradient(90deg, rgba(11,18,32,0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(11,18,32,0.03) 1px, transparent 1px),
+        linear-gradient(180deg, var(--bg-warm), var(--bg));
+      background-size: 32px 32px, 32px 32px, auto;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.18;
+      background-image: radial-gradient(rgba(11, 18, 32, 0.16) 0.7px, transparent 0.7px);
+      background-size: 14px 14px;
+    }
+    a { color: inherit; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    img { max-width: 100%; display: block; }
+    h1, h2, h3, p { margin-top: 0; }
+    p, h1, h2, h3, span, strong, a, button, label { overflow-wrap: anywhere; }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .skip-link {
+      position: absolute;
+      top: -52px;
+      left: 12px;
+      z-index: 100;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      background: var(--ink);
+      color: #fff;
+      padding: 0 14px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      font-weight: 800;
+    }
+    .skip-link:focus { top: 12px; }
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 3px solid rgba(20, 87, 217, 0.78);
+      outline-offset: 3px;
+      scroll-margin-top: calc(var(--header-height) + 22px);
+      scroll-margin-bottom: 92px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.72);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px) saturate(180%);
+    }
+    @media (prefers-color-scheme: dark) {
+      .app-header { background: rgba(15, 23, 42, 0.75); }
+    }
+    .header-inner {
+      width: min(1220px, calc(100% - 24px));
+      margin: 0 auto;
+      min-height: var(--header-height);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .brand {
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius);
+      color: #fff;
+      background: var(--ink);
+      box-shadow: 0 12px 28px rgba(11, 18, 32, 0.18);
+    }
+    .brand span:last-child { display: none; }
+    .top-nav {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .nav-link {
+      min-height: 42px;
+      border: 0;
+      border-radius: var(--radius);
+      padding: 0 11px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.91rem;
+      font-weight: 760;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.08s ease;
+    }
+    .nav-link:hover { color: var(--ink); background: #EFF4FA; }
+    .nav-link[aria-current="page"] { color: var(--ink); background: #EAF0FF; }
+    .nav-link:active { transform: translateY(1px); }
+    .status-pill {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: #fff;
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .status-dot.demo { background: var(--warning); }
+    .status-dot.cache { background: var(--primary); }
+
+    main {
+      width: min(1220px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 18px 0 92px;
+    }
+    .view { display: none; }
+    .view.active { display: block; animation: viewIn 0.22s ease both; }
+    @keyframes viewIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: stretch;
+      padding: 12px 0 18px;
+    }
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+      min-width: 0;
+    }
+    .eyebrow {
+      width: fit-content;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 10px;
+      border: 1px solid #C7D2E2;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--ink);
+      font-size: 0.76rem;
+      font-weight: 860;
+    }
+    h1 {
+      max-width: 780px;
+      margin-bottom: 0;
+      color: var(--ink);
+      font-size: clamp(2.35rem, 11vw, 5.9rem);
+      line-height: 0.94;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .hero-subtitle {
+      max-width: 690px;
+      margin: 0;
+      color: #344054;
+      font-size: clamp(1.03rem, 2.4vw, 1.34rem);
+      line-height: 1.55;
+      text-wrap: pretty;
+    }
+    .hero-actions, .section-actions, .card-actions, .inline-actions, .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .hero-actions .btn { flex: 1 1 100%; }
+    .btn {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 0 15px;
+      text-decoration: none;
+      font-size: 0.94rem;
+      font-weight: 820;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.25s ease;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(1px) scale(0.98); }
+    .btn-primary { color: #fff; background: var(--ink); box-shadow: 0 14px 30px rgba(11, 18, 32, 0.18); }
+    .btn-primary:hover { background: #1A2435; }
+    .btn-secondary { color: #fff; background: var(--critical); box-shadow: 0 14px 30px rgba(180, 35, 24, 0.18); }
+    .btn-secondary:hover { background: #971C13; }
+    .btn-ghost { color: var(--ink); border-color: var(--border); background: #fff; }
+    .btn-ghost:hover { border-color: var(--border-strong); background: #F6F8FB; }
+    .btn-soft { color: var(--primary-dark); background: #EAF0FF; border-color: #CAD8FF; }
+    .btn-soft:hover { background: #DEE8FF; }
+    .btn-danger { color: #fff; background: var(--critical); }
+    .btn-small { min-height: 38px; padding: 0 11px; font-size: 0.82rem; }
+
+    .hero-visual {
+      position: relative;
+      min-height: 286px;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: #0B1220;
+      box-shadow: var(--shadow);
+      color: #fff;
+      isolation: isolate;
+    }
+    .hero-image {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: min(42%, 164px);
+      height: auto;
+      opacity: 0.16;
+      filter: saturate(0.85) drop-shadow(0 18px 34px rgba(0,0,0,0.34));
+      z-index: 0;
+    }
+    .hero-visual::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(180deg, rgba(11,18,32,0.28), rgba(11,18,32,0.82)),
+        linear-gradient(90deg, rgba(255,255,255,0.11) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,0.11) 1px, transparent 1px);
+      background-size: auto, 42px 42px, 42px 42px;
+    }
+    .route-line {
+      position: absolute;
+      left: 12%;
+      right: 10%;
+      top: 43%;
+      height: 3px;
+      z-index: 1;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,0.88) 0 12px, transparent 12px 20px);
+      transform: rotate(-9deg);
+      opacity: 0.78;
+    }
+    .map-pin {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      z-index: 1;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: var(--critical);
+      box-shadow: 0 0 0 10px rgba(255,255,255,0.14);
+    }
+    .pin-a { left: 18%; top: 32%; }
+    .pin-b { left: 56%; top: 43%; background: var(--success); }
+    .pin-c { right: 16%; bottom: 25%; background: #D97706; }
+    .ops-panel {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      z-index: 2;
+      display: grid;
+      gap: 8px;
+    }
+    .ops-card {
+      padding: 11px;
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.14);
+      backdrop-filter: blur(12px);
+    }
+    .ops-label { display: block; font-size: 0.74rem; opacity: 0.84; }
+    .ops-value { display: block; font-size: 0.98rem; font-weight: 860; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 2px;
+    }
+    .stat-card, .dashboard-card {
+      min-width: 0;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+    .stat-card {
+      min-height: 96px;
+      padding: 14px;
+    }
+    .stat-num, .dashboard-value {
+      display: block;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      line-height: 1;
+      font-weight: 860;
+    }
+    .stat-num { font-size: clamp(1.48rem, 6vw, 2.15rem); }
+    .stat-label, .dashboard-label {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 780;
+    }
+
+    .section {
+      margin-top: 30px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      margin-bottom: 0;
+      color: var(--ink);
+      font-size: clamp(1.45rem, 4vw, 2.35rem);
+      line-height: 1.08;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .section-copy { max-width: 68ch; margin: 0; color: var(--muted); }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .dashboard-card {
+      min-height: 126px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+      padding: 15px;
+      border-left: 4px solid var(--primary);
+    }
+    .dashboard-card.volunteer { border-left-color: var(--volunteer); }
+    .dashboard-card.rescue { border-left-color: var(--rescue); }
+    .dashboard-card.critical { border-left-color: var(--critical); }
+    .dashboard-card.neutral { border-left-color: var(--ink); }
+    .dashboard-value { font-size: clamp(1.75rem, 7vw, 2.65rem); }
+    .dashboard-meta { margin: 0; color: var(--muted); font-size: 0.84rem; }
+
+    .notice {
+      display: none;
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      border: 1px solid #F4CA64;
+      background: #FFFAE8;
+      color: #734B00;
+      font-size: 0.88rem;
+      font-weight: 760;
+    }
+    .notice.visible { display: block; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.86);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+    }
+    .field { display: grid; gap: 6px; min-width: 0; }
+    .field label, .field-label {
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 840;
+    }
+    input, select, textarea {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--text);
+      padding: 10px 11px;
+      box-shadow: 0 1px 0 rgba(11, 18, 32, 0.02);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    textarea { min-height: 104px; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: #98A2B3; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(20, 87, 217, 0.12);
+    }
+    input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] {
+      border-color: var(--error);
+      background: #FFFBFA;
+    }
+    .field-error {
+      margin: 0;
+      color: var(--error);
+      font-size: 0.8rem;
+      font-weight: 760;
+    }
+
+    .segmented { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip-btn {
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0 11px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+    .chip-btn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; min-width: 0; }
+    .card {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 18px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+      position: relative;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--border-strong);
+    }
+    .card-bordered { border: 1px solid var(--border); }
+    .place-card { border-top: 4px solid var(--primary); }
+    .place-card.hospital { border-top-color: var(--critical); }
+    .place-card.refugio { border-top-color: var(--volunteer); }
+    .person-card.volunteer { border-top: 4px solid var(--volunteer); }
+    .person-card.rescue { border-top: 4px solid var(--rescue); }
+    .family-card { border-top: 4px solid var(--ink); }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      min-width: 0;
+    }
+    .card-top > div { min-width: 0; }
+    .icon-box {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius);
+      color: var(--primary-dark);
+      background: #EAF0FF;
+      font-size: 1.04rem;
+      font-weight: 900;
+    }
+    .icon-box.red { color: var(--critical); background: #FFF0F0; }
+    .icon-box.green { color: var(--volunteer); background: var(--volunteer-soft); }
+    .icon-box.rescue { color: var(--rescue); background: var(--rescue-soft); }
+    .card h3 { margin: 0; color: var(--ink); font-size: 1.05rem; line-height: 1.24; text-wrap: balance; }
+    .meta { margin: 0; color: var(--muted); font-size: 0.88rem; }
+    .meta strong { color: var(--text); }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 10px;
+      border-radius: var(--radius);
+      background: var(--surface-muted);
+    }
+    .meta-grid span { color: var(--muted); font-size: 0.82rem; font-weight: 730; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      max-width: 100%;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #EFF4FF;
+      color: var(--primary-dark);
+      font-size: 0.72rem;
+      font-weight: 850;
+      line-height: 1.2;
+    }
+    .badge.red { background: #FFF0F0; color: var(--critical); }
+    .badge.green { background: var(--volunteer-soft); color: var(--volunteer); }
+    .badge.yellow { background: #FFF7E6; color: var(--warning); }
+    .badge.gray { background: #EEF2F7; color: #475467; }
+    .badge.rescue { background: var(--rescue-soft); color: var(--rescue); }
+    .supply-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .supply-item {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      border-radius: var(--radius);
+      background: #F8FAFC;
+      border: 1px solid #E6EDF5;
+    }
+    .supply-line { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .progress {
+      width: 100%;
+      height: 9px;
+      border-radius: 999px;
+      background: #DEE8F2;
+      overflow: hidden;
+    }
+    .progress span {
+      display: block;
+      width: var(--value, 0%);
+      height: 100%;
+      max-width: 100%;
+      background: var(--bar, var(--primary));
+    }
+    details.match summary {
+      width: fit-content;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: var(--radius);
+      padding: 0 10px;
+      color: var(--primary-dark);
+      background: #EAF0FF;
+      border: 1px solid #CAD8FF;
+      cursor: pointer;
+      font-weight: 850;
+      font-size: 0.78rem;
+    }
+    details.match summary::-webkit-details-marker { display: none; }
+    .match-body { display: grid; gap: 8px; margin-top: 8px; }
+    .match-place { padding: 9px; border-radius: var(--radius); background: #fff; border: 1px solid var(--border); }
+    .empty-state {
+      padding: 24px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.82);
+      color: var(--muted);
+      text-align: center;
+      font-weight: 760;
+    }
+
+    .form-panel {
+      margin-top: 16px;
+      padding: 15px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+    .form-panel h3 { margin-bottom: 6px; color: var(--ink); }
+    .form-panel .section-copy { margin-bottom: 14px; }
+    .registry-shell { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+    .registry-side {
+      display: grid;
+      gap: 10px;
+      padding: 15px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+    .volunteer-shell .form-panel, .volunteer-shell .registry-side { border-top: 4px solid var(--volunteer); }
+    .rescue-shell .form-panel, .rescue-shell .registry-side { border-top: 4px solid var(--rescue); }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .form-actions { margin-top: 12px; }
+    .form-message { display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius); font-weight: 760; }
+    .form-message.visible { display: block; }
+    .form-message.success { background: #E9F8EF; color: #0F6B34; border: 1px solid #BDEACD; }
+    .form-message.error { background: #FFF0F0; color: #8F1A12; border: 1px solid #F7C2BD; }
+    .form-message.info { background: #EAF0FF; color: #123B85; border: 1px solid #CAD8FF; }
+
+    .help-grid, .urgent-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .help-grid .card { justify-content: space-between; }
+    .urgent-item {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--critical);
+      box-shadow: var(--shadow-soft);
+    }
+    .map-shell {
+      min-height: 330px;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background:
+        linear-gradient(90deg, rgba(20,87,217,0.10) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(20,87,217,0.10) 1px, transparent 1px),
+        #EDF5FF;
+      background-size: 44px 44px;
+    }
+    .map-placeholder {
+      position: absolute;
+      inset: 14px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      border: 1px solid rgba(20,87,217,0.22);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.78);
+      padding: 20px;
+    }
+    .map-layers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+    
+    /* Logistica Matchmaking */
+    details.match {
+      margin-top: 12px;
+      border: 1px solid #cce5ff;
+      border-radius: var(--radius);
+      background: #f8fbff;
+      box-shadow: 0 2px 4px rgba(0, 102, 255, 0.05);
+      transition: all 0.2s ease;
+    }
+    details.match:not([open]):hover {
+      background: #f0f7ff;
+      border-color: #99caff;
+    }
+    details.match > summary {
+      padding: 10px 14px;
+      font-weight: 600;
+      color: #0055cc;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    details.match > summary::before {
+      content: '✨';
+      font-size: 1.1em;
+    }
+    details.match > summary::-webkit-details-marker { display: none; }
+    .match-body {
+      padding: 12px;
+      border-top: 1px dashed #cce5ff;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .match-place {
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #e1efff;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .btn-route {
+      background: #0055cc;
+      color: white;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-route:hover {
+      background: #0044aa;
+      color: white;
+    }
+
+    .results-grid { margin-top: 16px; }
+
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 45;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 2px;
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(20px) saturate(180%);
+    }
+    @media (prefers-color-scheme: dark) {
+      .bottom-nav { background: rgba(15, 23, 42, 0.85); }
+    }
+    .bottom-nav button {
+      min-width: 0;
+      min-height: 50px;
+      border: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--muted);
+      font-size: clamp(0.62rem, 2.8vw, 0.72rem);
+      font-weight: 850;
+      line-height: 1.1;
+    }
+    .bottom-nav button span { display: block; font-size: 1.08rem; line-height: 1; margin-bottom: 3px; }
+    .bottom-nav button[aria-current="page"] { color: var(--ink); background: #EAF0FF; }
+
+    dialog {
+      width: min(620px, calc(100% - 24px));
+      max-height: 86dvh;
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(11, 18, 32, 0.30);
+    }
+    dialog::backdrop { background: rgba(11, 18, 32, 0.62); }
+    .modal-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
+    .modal-head h3 { margin: 0; }
+    .modal-body { max-height: calc(86dvh - 70px); overflow-y: auto; padding: 16px; }
+    .modal-close { width: 38px; height: 38px; flex: 0 0 auto; border: 0; border-radius: var(--radius); background: #EEF2F7; color: var(--muted); font-weight: 900; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 88px;
+      z-index: 70;
+      transform: translateX(-50%);
+      width: min(92vw, 460px);
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: #fff;
+      font-weight: 760;
+      box-shadow: var(--shadow);
+    }
+    .loading-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .skeleton {
+      min-height: 180px;
+      border-radius: var(--radius);
+      background: linear-gradient(90deg, #EEF2F7, #FFFFFF, #EEF2F7);
+      background-size: 220% 100%;
+      animation: pulse 1.2s linear infinite;
+    }
+    @keyframes pulse { to { background-position: -220% 0; } }
+
+    @media (max-width: 639px) {
+      .hero-visual {
+        min-height: 0;
+        padding: 168px 14px 14px;
+      }
+      .hero-image {
+        top: 20px;
+        right: 18px;
+        width: 116px;
+      }
+      .route-line {
+        left: 12%;
+        right: 12%;
+        top: 82px;
+        transform: rotate(-8deg);
+      }
+      .pin-a { left: 18%; top: 52px; }
+      .pin-b { left: 55%; top: 78px; }
+      .pin-c { right: 18%; top: 118px; bottom: auto; }
+      .ops-panel {
+        position: relative;
+        left: auto;
+        right: auto;
+        bottom: auto;
+      }
+      .ops-card {
+        background: rgba(255,255,255,0.17);
+      }
+    }
+    @media (min-width: 640px) {
+      .brand span:last-child { display: inline; }
+      .hero-actions .btn { flex: 0 1 auto; }
+      .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters { grid-template-columns: 1.5fr 0.85fr 0.85fr; align-items: end; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .help-grid, .urgent-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.full { grid-column: 1 / -1; }
+      .meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 820px) {
+      .ops-panel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .registry-shell { grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr); }
+    }
+    @media (min-width: 1024px) {
+      .header-inner { grid-template-columns: auto 1fr auto; gap: 18px; }
+      .top-nav { display: flex; }
+      .bottom-nav { display: none; }
+      main { padding-bottom: 44px; }
+      .hero { grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr); gap: 24px; padding-top: 24px; }
+      .hero-visual { min-height: 430px; }
+      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .dashboard-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .section-header { flex-direction: row; align-items: end; justify-content: space-between; }
+    }
+    @media (min-width: 1280px) {
+      .hero { gap: 34px; }
+      .card, .form-panel, .registry-side { padding: 18px; }
+    }
+    @media (max-width: 420px) {
+      .status-pill { font-size: 0; gap: 0; padding: 0 12px; }
+      .status-dot { margin: 0; }
+      .section-actions .btn, .form-actions .btn, .card-actions .btn, .inline-actions .btn { flex: 1 1 100%; }
+      h1 { font-size: clamp(2.2rem, 13vw, 3.2rem); }
+    }
+  </style>
+</head>
+<body>
+  <a href="#contenido" class="skip-link">Saltar al contenido</a>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="#inicio" data-view-link="inicio" aria-label="Ir al inicio">
+        <span class="brand-mark" aria-hidden="true">✚</span>
+        <span>Respuesta Humanitaria Venezuela</span>
+      </a>
+      <nav class="top-nav" aria-label="Navegación principal">
+        <button class="nav-link" type="button" data-view-link="inicio" aria-current="page">Inicio</button>
+        <button class="nav-link" type="button" data-view-link="donaciones">Centros</button>
+        <button class="nav-link" type="button" data-view-link="voluntarios">Voluntarios</button>
+        <button class="nav-link" type="button" data-view-link="rescatistas">Rescatistas</button>
+        <button class="nav-link" type="button" data-view-link="familiar">Buscar familiar</button>
+      </nav>
+      <div class="status-pill" aria-live="polite"><span id="status-dot" class="status-dot demo" aria-hidden="true"></span><span id="status-text">Modo demo</span></div>
+    </div>
+  </header>
+
+  <main id="contenido" tabindex="-1">
+    <div id="banner" class="notice" role="status"></div>
+
+    <section id="view-inicio" class="view active" data-view="inicio" aria-labelledby="hero-title">
+      <div class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow"><span aria-hidden="true">VE</span> Coordinación humanitaria activa</span>
+          <h1 id="hero-title">Respuesta Humanitaria Venezuela</h1>
+          <p class="hero-subtitle">Conecta centros de ayuda, hospitales, voluntarios, rescatistas, donaciones y reportes familiares en una sola mesa operativa móvil.</p>
+          <div class="hero-actions" aria-label="Acciones principales">
+            <button type="button" class="btn btn-secondary" data-view-link="familiar">Buscar familiar</button>
+            <button type="button" class="btn btn-primary" data-view-link="donaciones">Ver centros de ayuda</button>
+            <button type="button" class="btn btn-ghost" data-view-link="voluntarios">Registro voluntario</button>
+          </div>
+          <div class="stats-grid" id="stats-grid" aria-live="polite"></div>
+        </div>
+        <div class="hero-visual" aria-label="Red visual de operaciones humanitarias">
+          <img class="hero-image" src="assets/icons/icon-192.png" alt="" width="192" height="192" decoding="async" fetchpriority="high" aria-hidden="true" />
+          <div class="route-line" aria-hidden="true"></div>
+          <span class="map-pin pin-a" aria-hidden="true"></span>
+          <span class="map-pin pin-b" aria-hidden="true"></span>
+          <span class="map-pin pin-c" aria-hidden="true"></span>
+          <div class="ops-panel" aria-label="Prioridades operativas">
+            <div class="ops-card"><span class="ops-label">Prioridad</span><span class="ops-value">Agua y medicamentos</span></div>
+            <div class="ops-card"><span class="ops-label">Cobertura</span><span class="ops-value">Estados y ciudades</span></div>
+            <div class="ops-card"><span class="ops-label">Respuesta</span><span class="ops-value">Centros, rutas y equipos</span></div>
+          </div>
+        </div>
+      </div>
+
+      <section class="section" id="dashboard-operaciones" aria-labelledby="dashboard-title">
+        <div class="section-header">
+          <div>
+            <h2 id="dashboard-title" class="section-title">Dashboard de Operaciones</h2>
+            <p class="section-copy">Vista consolidada para priorizar llamadas, registros y traslado de suministros.</p>
+          </div>
+        </div>
+        <div class="dashboard-grid" id="dashboard-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="section" aria-labelledby="ayudar-title">
+        <div class="section-header">
+          <div>
+            <h2 id="ayudar-title" class="section-title">Cómo ayudar</h2>
+            <p class="section-copy">Tres formas directas de apoyar operaciones verificadas.</p>
+          </div>
+        </div>
+        <div class="help-grid">
+          <article class="card card-bordered"><div class="icon-box" aria-hidden="true">▣</div><h3>Donar suministros</h3><p class="meta">Entrega agua, medicamentos, alimentos o equipos en centros registrados.</p><button class="btn btn-soft" type="button" data-view-link="donaciones">Ver necesidades</button></article>
+          <article class="card card-bordered"><div class="icon-box green" aria-hidden="true">✓</div><h3>Registrarse como voluntario</h3><p class="meta">Indica tu ciudad, profesión y disponibilidad para coordinar apoyo local.</p><button class="btn btn-soft" type="button" data-view-link="voluntarios">Ir al registro</button></article>
+          <article class="card card-bordered"><div class="icon-box red" aria-hidden="true">!</div><h3>Reportar información verificada</h3><p class="meta">Actualiza centros, teléfonos y necesidades con datos confirmados.</p><button class="btn btn-soft" type="button" onclick="document.getElementById('modal-form-lugar').showModal()">Reportar centro</button></article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="urgentes-title">
+        <div class="section-header">
+          <div>
+            <h2 id="urgentes-title" class="section-title">Necesidades urgentes</h2>
+            <p class="section-copy">Preparado para conectarse a una hoja de prioridades operativas.</p>
+          </div>
+        </div>
+        <div class="urgent-grid" id="urgent-grid"></div>
+      </section>
+
+      <section class="section" aria-labelledby="mapa-title">
+        <div class="section-header">
+          <div>
+            <h2 id="mapa-title" class="section-title">Centros de ayuda y operaciones</h2>
+            <p class="section-copy">Hospitales, refugios, centros de acopio y puntos de ayuda en una estructura lista para mapa.</p>
+          </div>
+        </div>
+        <div class="map-shell" id="mapa-operaciones" data-map-provider="leaflet-ready">
+          <div class="map-placeholder">
+            <div>
+              <h3>Sin coordenadas verificadas por ahora</h3>
+              <p class="meta">La lista de centros funciona con ubicación textual. El mapa aceptará latitud y longitud cuando estén disponibles.</p>
+              <div class="map-layers" aria-label="Capas preparadas">
+                <span class="badge">Hospitales</span><span class="badge green">Refugios</span><span class="badge yellow">Centros de acopio</span><span class="badge red">Puntos de ayuda</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="view-donaciones" class="view" data-view="donaciones" aria-labelledby="donaciones-title">
+      <div class="section-header">
+        <div>
+          <h2 id="donaciones-title" class="section-title">Centros de ayuda</h2>
+          <p class="section-copy">Centros, hospitales y refugios con necesidades, disponibilidad y contactos.</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('modal-form-lugar').showModal()">Reportar centro</button>
+      </div>
+
+      <div class="filters" role="search" aria-label="Filtros de centros de ayuda">
+        <div class="field"><label for="filtro-lugar-q">Buscar</label><input id="filtro-lugar-q" type="search" placeholder="Nombre, ubicación o insumo" autocomplete="off" /></div>
+        <div class="field"><label for="filtro-lugar-tipo">Tipo</label><select id="filtro-lugar-tipo"><option value="todos">Todos</option><option value="Centro">Centros</option><option value="Hospital">Hospitales</option><option value="Refugio">Refugios</option></select></div>
+        <div class="field"><label for="filtro-lugar-categoria">Categoría</label><select id="filtro-lugar-categoria"><option value="">Todas</option></select></div>
+      </div>
+
+      <p class="meta" id="conteo-lugares" aria-live="polite"></p>
+      <div id="grid-lugares" class="grid" aria-live="polite"><div class="loading-grid"><div class="skeleton"></div><div class="skeleton"></div></div></div>
+
+      <dialog id="modal-form-lugar" aria-labelledby="form-lugar-title" style="padding:0; border:none; border-radius:var(--radius); background:transparent; max-width:600px; width:90%; margin:auto;">
+        <div class="form-panel" style="margin-top:0; box-shadow:var(--shadow-hover);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <h3 id="form-lugar-title">Reportar centro o insumo</h3>
+              <p class="section-copy">Registra necesidades sin salir del mapa.</p>
+            </div>
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-form-lugar').close()" aria-label="Cerrar modal">✕</button>
+          </div>
+          <form id="lugar-form" novalidate>
+          <div class="form-grid">
+            <div class="field"><label for="lugar-tipo">Tipo</label><select id="lugar-tipo" required autocomplete="organization-title"><option value="Centro">Centro de acopio</option><option value="Hospital">Hospital</option><option value="Refugio">Refugio</option><option value="Punto de ayuda">Punto de ayuda</option></select></div>
+            <div class="field"><label for="lugar-nombre">Nombre</label><input id="lugar-nombre" required autocomplete="organization" placeholder="Hospital, iglesia, escuela" /></div>
+            
+            <div class="field full">
+              <label for="lugar-ubicacion">Ubicación (Busca o arrastra el pin en el mapa)</label>
+              <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <input id="lugar-ubicacion" autocomplete="address-level2" placeholder="Ej. El Hatillo, Caracas" style="flex: 1;" />
+                <button type="button" class="btn btn-secondary" id="btn-buscar-ubicacion" style="margin: 0; padding: 0 16px;">Buscar</button>
+              </div>
+              <input type="hidden" id="lugar-lat" />
+              <input type="hidden" id="lugar-lon" />
+              <div id="form-map" style="height: 200px; width: 100%; border-radius: 8px; border: 1px solid var(--border); z-index: 1;"></div>
+            </div>
+            <div class="field"><label for="lugar-telefono">Teléfono</label><input id="lugar-telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+            <div class="field"><label for="lugar-insumo">Insumo</label><input id="lugar-insumo" required placeholder="Agua potable, gasas, alimentos" /></div>
+            <div class="field"><label for="lugar-categoria">Categoría</label><select id="lugar-categoria"><option>Agua potable</option><option>Medicamentos</option><option>Insumos médicos</option><option>Alimentos</option><option>Plantas eléctricas</option><option>Combustible</option><option>Higiene</option><option>Ropa</option><option>Otros</option></select></div>
+            <div class="field"><label for="lugar-estado">Estado del insumo</label><select id="lugar-estado" required><option value="Necesita">Necesita</option><option value="Tiene disponible">Tiene disponible</option></select></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar reporte</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+          <div id="lugar-message" class="form-message" role="status" aria-live="polite"></div>
+        </form>
+        </div>
+      </dialog>
+    </section>
+
+    <section id="view-voluntarios" class="view" data-view="voluntarios" aria-labelledby="voluntarios-title">
+      <div class="section-header">
+        <div>
+          <h2 id="voluntarios-title" class="section-title">Registro de Voluntarios</h2>
+          <p class="section-copy">Alta rápida, búsqueda y coordinación de personas disponibles para apoyo local.</p>
+        </div>
+      </div>
+
+      <div class="registry-shell volunteer-shell">
+        <section class="form-panel" aria-labelledby="vol-form-title">
+          <h3 id="vol-form-title">Datos del voluntario</h3>
+          <p class="section-copy">La información se envía al endpoint existente de voluntarios en Google Sheets.</p>
+          <form id="voluntario-form" novalidate>
+            <div class="form-grid">
+              <div class="field"><label for="vol-nombre">Nombre</label><input id="vol-nombre" required autocomplete="given-name" /></div>
+              <div class="field"><label for="vol-apellido">Apellido</label><input id="vol-apellido" autocomplete="family-name" /></div>
+              <div class="field"><label for="vol-telefono">Teléfono</label><input id="vol-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+              <div class="field"><label for="vol-ciudad">Ciudad</label><input id="vol-ciudad" autocomplete="address-level2" placeholder="Caraballeda" /></div>
+              <div class="field"><label for="vol-estado">Estado</label><input id="vol-estado" autocomplete="address-level1" placeholder="La Guaira" /></div>
+              <div class="field"><label for="vol-profesion">Profesión</label><select id="vol-profesion"><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
+              <div class="field"><label for="vol-disponibilidad">Disponibilidad</label><input id="vol-disponibilidad" placeholder="Hoy, mañana, fines de semana" /></div>
+              <div class="field"><label for="vol-transporte">Medio de transporte</label><select id="vol-transporte"><option value="">Por confirmar</option><option>A pie</option><option>Bicicleta</option><option>Moto</option><option>Carro</option><option>Camioneta</option><option>Transporte público</option><option>Ambulancia o unidad médica</option><option>Otro</option></select></div>
+              <div class="field full"><label for="vol-observaciones">Observaciones</label><textarea id="vol-observaciones" placeholder="Zona, recursos, restricciones"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar voluntario</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+            <div id="vol-message" class="form-message" role="status" aria-live="polite"></div>
+          </form>
+        </section>
+
+        <aside class="registry-side" aria-labelledby="vol-summary-title">
+          <h3 id="vol-summary-title">Resumen de voluntarios</h3>
+          <div class="meta-grid">
+            <span><strong id="vol-resumen-total">0</strong> registrados</span>
+            <span><strong id="vol-resumen-zonas">0</strong> zonas</span>
+            <span><strong id="vol-resumen-transporte">0</strong> con transporte</span>
+            <span><strong id="vol-resumen-actualizado">sin fecha</strong></span>
+          </div>
+          <p class="meta">Prioriza perfiles con teléfono, ciudad y disponibilidad confirmada.</p>
+        </aside>
+      </div>
+
+      <section class="section" aria-labelledby="vol-list-title">
+        <div class="section-header">
+          <div>
+            <h3 id="vol-list-title" class="section-title">Voluntarios registrados</h3>
+            <p class="section-copy">Filtra por nombre, ubicación o profesión para coordinación directa.</p>
+          </div>
+        </div>
+        <div class="filters" role="search" aria-label="Filtros de voluntarios">
+          <div class="field"><label for="filtro-vol-q">Buscar voluntario</label><input id="filtro-vol-q" type="search" placeholder="Nombre, ciudad, teléfono" /></div>
+          <div class="field"><label for="filtro-vol-profesion">Profesión</label><select id="filtro-vol-profesion"><option value="">Todos</option><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
+          <div class="field"><label for="filtro-vol-estado">Estado</label><input id="filtro-vol-estado" placeholder="Filtrar por estado" /></div>
+        </div>
+        <p class="meta" id="conteo-voluntarios" aria-live="polite"></p>
+        <div id="grid-voluntarios" class="grid" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section id="view-rescatistas" class="view" data-view="rescatistas" aria-labelledby="rescatistas-title">
+      <div class="section-header">
+        <div>
+          <h2 id="rescatistas-title" class="section-title">Registro de Rescatistas</h2>
+          <p class="section-copy">Equipos especializados, capacidad operativa y logística de rescate diferenciada del voluntariado general.</p>
+        </div>
+      </div>
+
+      <div class="registry-shell rescue-shell">
+        <section class="form-panel" aria-labelledby="res-form-title">
+          <h3 id="res-form-title">Datos del equipo o rescatista</h3>
+          <p class="section-copy">El registro usa el endpoint existente de rescatistas y conserva compatibilidad con Sheets.</p>
+          <form id="rescatista-form" novalidate>
+            <div class="form-grid">
+              <div class="field"><label for="res-nombre">Nombre</label><input id="res-nombre" required autocomplete="name" /></div>
+              <div class="field"><label for="res-organizacion">Organización</label><input id="res-organizacion" autocomplete="organization" placeholder="Protección Civil, bomberos, ONG" /></div>
+              <div class="field"><label for="res-especialidad">Especialidad</label><select id="res-especialidad"><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
+              <div class="field"><label for="res-telefono">Teléfono</label><input id="res-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+              <div class="field"><label for="res-ciudad">Ciudad</label><input id="res-ciudad" autocomplete="address-level2" /></div>
+              <div class="field"><label for="res-estado">Estado</label><input id="res-estado" autocomplete="address-level1" /></div>
+              <div class="field"><label for="res-equipo">Equipo disponible</label><input id="res-equipo" placeholder="Herramientas, ambulancia, radio, cuerdas" /></div>
+              <div class="field"><label for="res-capacidad">Capacidad operativa</label><select id="res-capacidad"><option value="">Por confirmar</option><option>1-2 personas</option><option>3-5 personas</option><option>6-10 personas</option><option>Más de 10 personas</option><option>Unidad médica</option><option>Unidad de rescate pesado</option></select></div>
+              <div class="field"><label for="res-disponibilidad">Disponibilidad</label><input id="res-disponibilidad" placeholder="Activo, guardia nocturna, por llamada" /></div>
+              <div class="field full"><label for="res-observaciones">Observaciones</label><textarea id="res-observaciones" placeholder="Restricciones, zona de cobertura o requerimientos"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-secondary" type="submit">Guardar rescatista</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+            <div id="res-message" class="form-message" role="status" aria-live="polite"></div>
+          </form>
+        </section>
+
+        <aside class="registry-side" aria-labelledby="res-summary-title">
+          <h3 id="res-summary-title">Resumen de rescate</h3>
+          <div class="meta-grid">
+            <span><strong id="res-resumen-total">0</strong> registrados</span>
+            <span><strong id="res-resumen-especialidades">0</strong> especialidades</span>
+            <span><strong id="res-resumen-equipos">0</strong> con equipo</span>
+            <span><strong id="res-resumen-actualizado">sin fecha</strong></span>
+          </div>
+          <p class="meta">Usa esta pestaña para perfiles con capacidad técnica, equipo o afiliación operativa.</p>
+        </aside>
+      </div>
+
+      <section class="section" aria-labelledby="res-list-title">
+        <div class="section-header">
+          <div>
+            <h3 id="res-list-title" class="section-title">Rescatistas registrados</h3>
+            <p class="section-copy">Filtra por especialidad, organización o ubicación para activar equipos.</p>
+          </div>
+        </div>
+        <div class="filters" role="search" aria-label="Filtros de rescatistas">
+          <div class="field"><label for="filtro-res-q">Buscar rescatista</label><input id="filtro-res-q" type="search" placeholder="Nombre, organización, ciudad" /></div>
+          <div class="field"><label for="filtro-res-especialidad">Especialidad</label><select id="filtro-res-especialidad"><option value="">Todas</option><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
+          <div class="field"><label for="filtro-res-estado">Estado</label><input id="filtro-res-estado" placeholder="Filtrar por estado" /></div>
+        </div>
+        <p class="meta" id="conteo-rescatistas" aria-live="polite"></p>
+        <div id="grid-rescatistas" class="grid" aria-live="polite"></div>
+      </section>
+
+      <section class="section" aria-labelledby="mot-title">
+        <div class="section-header">
+          <div>
+            <h2 id="mot-title" class="section-title">Transportistas solidarios</h2>
+            <p class="section-copy">Ranking operativo de rutas y apoyo logístico existente.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-motorizado" type="button">Registrar transportista</button>
+        </div>
+        <div class="filters" role="search" aria-label="Filtros de transportistas">
+          <div class="field"><label for="filtro-mot-q">Buscar</label><input id="filtro-mot-q" type="search" placeholder="Nombre, zona o vehículo" /></div>
+          <div class="field"><label for="filtro-mot-tipo">Vehículo</label><select id="filtro-mot-tipo"><option value="">Todos</option><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div>
+        </div>
+        <p class="meta" id="conteo-motorizados" aria-live="polite"></p>
+        <div id="grid-motorizados" class="grid" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section id="view-familiar" class="view" data-view="familiar" aria-labelledby="familiar-title">
+      <div class="section-header"><div><h2 id="familiar-title" class="section-title">Buscar familiar</h2><p class="section-copy">Consulta por nombre o cédula en registros disponibles. La fuente real depende del webhook N8N configurado.</p></div></div>
+      <form class="form-panel" id="familiar-form" novalidate>
+        <div class="form-grid">
+          <div class="field full"><label for="familiar-query">Nombre completo o cédula</label><input id="familiar-query" required autocomplete="off" placeholder="V-12345678 o nombre completo" /></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-secondary" type="submit">Buscar familiar</button></div>
+      </form>
+      <div id="familiar-message" class="notice" role="status" aria-live="polite"></div>
+      <div id="familiar-resultados" class="grid results-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegación móvil">
+    <button type="button" data-view-link="inicio" aria-current="page" aria-label="Inicio"><span aria-hidden="true">⌂</span>Inicio</button>
+    <button type="button" data-view-link="donaciones" aria-label="Centros de ayuda"><span aria-hidden="true">✚</span>Centros</button>
+    <button type="button" data-view-link="voluntarios" aria-label="Registro de voluntarios"><span aria-hidden="true">✓</span>Volunt.</button>
+    <button type="button" data-view-link="rescatistas" aria-label="Registro de rescatistas"><span aria-hidden="true">⚑</span>Rescate</button>
+    <button type="button" data-view-link="familiar" aria-label="Buscar familiar"><span aria-hidden="true">⌕</span>Buscar</button>
+  </nav>
+
+  <div id="toast-root"></div>
+  <div id="modal-root"></div>
+
+  <script src="services/sheets.js"></script>
+  <script>
+    'use strict';
+
+    // ── CONFIGURACIÓN ─────────────────────────────────────────
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL5G0hD7IAr0yEQi6hQitASvuHTSb32O7bzK5Nd13uGvrAtu-tJGrsFzEmvilSNY75KQ/exec';
+    const BUSCAR_WEBHOOK_URL = '';
+    const BUSCAR_WEBHOOK_TOKEN = '';
+    const SANDBOX_MODE = /YOUR_SCRIPT_ID|YOUR_NEW_DEPLOYMENT_ID|useFunctionality=AIzaSy/.test(APPS_SCRIPT_URL);
+    const WA_MENSAJE = 'Hola, vi en Respuesta Humanitaria Venezuela que necesitan ayuda. ¿Cómo puedo contribuir?';
+    const LINEA_APOYO = 'Línea de apoyo psicológico: 0800-AYUDA (ejemplo; sustituir por la línea oficial vigente).';
+
+    const DATOS_FALLBACK = {
+      lugares: [
+        { tipo: 'Centro', nombre: 'Iglesia San José', ubicacion: 'Los Corales, La Guaira', telefono: '+58 412 555 1234', latitud: '10.6033', longitud: '-66.8661', necesita: [
+          { nombre: 'Gasas estériles', categoria: 'Insumos médicos', cantidadNecesaria: 80, cantidadRecibida: 18, porcentaje: 23, urgencia: 'Crítico', unidad: 'paquetes', coincidencias: [{ nombre_lugar: 'Hospital El Algodonal', tipo: 'Hospital', telefono: '+58 212 555 5000', ubicacion: 'El Algodonal, Caracas' }] },
+          { nombre: 'Agua potable', categoria: 'Agua potable', cantidadNecesaria: 100, cantidadRecibida: 12, porcentaje: 12, urgencia: 'Crítico', unidad: 'cajas', coincidencias: [{ nombre_lugar: 'Refugio Naiguatá', tipo: 'Refugio', telefono: '+58 414 555 2200', ubicacion: 'Naiguatá, Vargas' }] }
+        ], cubiertos: [{ nombre: 'Mantas', categoria: 'Otros', cantidadNecesaria: 60, cantidadRecibida: 60, unidad: 'unidades', yaCubierto: true }], tiene_disponible: [{ nombre: 'Ropa de adulto', categoria: 'Ropa' }, { nombre: 'Mantas', categoria: 'Otros' }], actualizado: '2026-06-28T12:00:00.000Z' },
+        { tipo: 'Refugio', nombre: 'Refugio Naiguatá', ubicacion: 'Naiguatá, Vargas', telefono: '+58 414 555 2200', latitud: '10.6122', longitud: '-66.7411', capacidad: '84 personas', necesita: [{ nombre: 'Pañales', categoria: 'Higiene', cantidadNecesaria: 120, cantidadRecibida: 74, porcentaje: 62, urgencia: 'Normal', unidad: 'paquetes', coincidencias: [] }], tiene_disponible: [{ nombre: 'Agua potable', categoria: 'Agua potable' }], actualizado: '2026-06-28T13:30:00.000Z' },
+        { tipo: 'Hospital', nombre: 'Hospital El Algodonal', ubicacion: 'El Algodonal, Caracas', telefono: '+58 212 555 5000', latitud: '10.4908', longitud: '-66.9739', estadoOperativo: 'Operativo parcial', necesita: [{ nombre: 'Analgésicos', categoria: 'Medicamentos', cantidadNecesaria: 200, cantidadRecibida: 86, porcentaje: 43, urgencia: 'Moderado', unidad: 'unidades', coincidencias: [] }], cubiertos: [{ nombre: 'Gasas estériles', categoria: 'Insumos médicos', cantidadNecesaria: 100, cantidadRecibida: 100, unidad: 'paquetes', yaCubierto: true }], tiene_disponible: [{ nombre: 'Gasas estériles', categoria: 'Insumos médicos' }], actualizado: '2026-06-28T14:00:00.000Z' },
+        { tipo: 'Hospital', nombre: 'Hospital Vargas de Caracas', ubicacion: 'San José, Caracas', telefono: '+58 212 555 6100', latitud: '10.5150', longitud: '-66.9150', estadoOperativo: 'Recibiendo insumos', necesita: [{ nombre: 'Sueros fisiológicos', categoria: 'Insumos médicos', cantidadNecesaria: 160, cantidadRecibida: 37, porcentaje: 23, urgencia: 'Crítico', unidad: 'bolsas', coincidencias: [] }, { nombre: 'Plantas eléctricas', categoria: 'Plantas eléctricas', cantidadNecesaria: 3, cantidadRecibida: 0, porcentaje: 0, urgencia: 'Crítico', unidad: 'unidades', coincidencias: [] }], tiene_disponible: [], actualizado: '2026-06-28T11:45:00.000Z' }
+      ],
+      voluntarios: [
+        { id: 'VOL001', nombre: 'Andrea', apellido: 'Mendoza', telefono: '+58 414 201 1144', estado: 'La Guaira', ciudad: 'Maiquetía', profesion: 'Enfermero', disponibilidad: 'Turnos de tarde', medioTransporte: 'Moto', medio_transporte: 'Moto', observaciones: 'Primeros auxilios', fecha_registro: '2026-06-29T10:00:00.000Z' },
+        { id: 'VOL002', nombre: 'Rafael', apellido: 'Suárez', telefono: '+58 412 771 2841', estado: 'Distrito Capital', ciudad: 'Caracas', profesion: 'Logística', disponibilidad: 'Fines de semana', medioTransporte: 'Carro', medio_transporte: 'Carro', observaciones: 'Inventario y rutas', fecha_registro: '2026-06-29T12:20:00.000Z' }
+      ],
+      rescatistas: [
+        { id: 'RES001', nombre: 'Unidad Bravo', organizacion: 'Protección Civil', telefono: '+58 424 811 9000', especialidad: 'Rescate Urbano', estado: 'La Guaira', ciudad: 'Caraballeda', disponibilidad: 'Activo', equipoDisponible: 'Herramientas livianas y radio', equipo_disponible: 'Herramientas livianas y radio', capacidadOperativa: '3-5 personas', capacidad_operativa: '3-5 personas', observaciones: 'Equipo con herramientas livianas', fecha_registro: '2026-06-29T09:40:00.000Z' },
+        { id: 'RES002', nombre: 'Marcos Tovar', organizacion: 'Bomberos', telefono: '+58 416 551 0030', especialidad: 'Paramédico', estado: 'Miranda', ciudad: 'Guarenas', disponibilidad: 'Guardia nocturna', equipoDisponible: 'Ambulancia coordinada', equipo_disponible: 'Ambulancia coordinada', capacidadOperativa: 'Unidad médica', capacidad_operativa: 'Unidad médica', observaciones: 'Ambulancia coordinada', fecha_registro: '2026-06-29T15:10:00.000Z' }
+      ],
+      motorizados: [
+        { id: 'MOTO001', nombre: 'Carlos Rodríguez', tipoVehiculo: 'Moto', placa: 'MBK-401', zonaOperacion: 'La Guaira - Caracas', telefono: '+58 412 111 2222', totalTrayectos: 22, totalKm: 487, activo: true, aporteDonado: 5000, ultimoTrayecto: '2026-06-29T22:00:00.000Z' },
+        { id: 'MOTO002', nombre: 'María González', tipoVehiculo: 'Carro', placa: 'GAB-852', zonaOperacion: 'Caracas Este', telefono: '+58 414 333 4444', totalTrayectos: 9, totalKm: 201, activo: true, aporteDonado: 2400, ultimoTrayecto: '2026-06-28T18:20:00.000Z' }
+      ],
+      trayectos: [
+        { timestamp: new Date(Date.now() - 2 * 3600000).toISOString(), motorizadoId: 'MOTO001', motorizadoNombre: 'Carlos Rodríguez', origen: 'Centro San José', destino: 'Hospital Vargas', kmRecorridos: 18, insumoTransportado: 'Agua potable · 20 cajas' }
+      ],
+      historial: [],
+      estadisticas: { centrosRegistrados: 2, hospitalesRegistrados: 2, personasLocalizadas: 6, voluntariosActivos: 2, rescatistasRegistrados: 2 }
+    };
+
+    const FAMILIARES_FALLBACK = { registros: [
+      { nombre: 'María Pérez González', cedula: 'V-12.345.678', estado: 'Localizado con vida', ubicacion: 'Refugio Naiguatá, Vargas', fuente: 'Lista Cruz Roja', actualizado: '2026-06-28T10:00:00.000Z' },
+      { nombre: 'José Rafael Mendoza', cedula: 'V-9.876.543', estado: 'En refugio', ubicacion: 'Refugio Maiquetía, La Guaira', fuente: 'Protección Civil', actualizado: '2026-06-28T11:30:00.000Z' },
+      { nombre: 'Ana Lucía Rodríguez', cedula: 'V-18.222.111', estado: 'Hospitalizado', ubicacion: 'Hospital Vargas de Caracas', fuente: 'Registro hospitalario', actualizado: '2026-06-28T08:45:00.000Z' },
+      { nombre: 'Gustavo Adolfo Rincón', cedula: 'V-5.123.456', estado: 'Fallecido', ubicacion: 'La Guaira', fuente: 'Registro oficial', actualizado: '2026-06-27T15:00:00.000Z' }
+    ] };
+
+    const URGENTES = ['Agua potable', 'Medicamentos', 'Insumos médicos', 'Alimentos', 'Plantas eléctricas', 'Combustible'];
+
+    const estado = {
+      lugares: [], voluntarios: [], rescatistas: [], motorizados: [], estadisticas: {},
+      filtros: { lugarQ: '', lugarTipo: 'todos', lugarCategoria: '', volQ: '', volProfesion: '', volEstado: '', resQ: '', resEspecialidad: '', resEstado: '', motQ: '', motTipo: '' }
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const e = (str) => String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const normalizar = (txt) => String(txt == null ? '' : txt).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const soloDigitos = (tel) => String(tel || '').replace(/[^0-9]/g, '');
+    const waHref = (tel) => `https://wa.me/${soloDigitos(tel)}?text=${encodeURIComponent(WA_MENSAJE)}`;
+    const telHref = (tel) => `tel:${String(tel || '').replace(/[^0-9+]/g, '')}`;
+    const numero = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const setTexto = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+    const ultimoISO = (items, campo) => {
+      const fechas = (items || [])
+        .map((item) => new Date(item && item[campo]))
+        .filter((fecha) => !Number.isNaN(fecha.getTime()))
+        .sort((a, b) => b - a);
+      return fechas[0] ? fechas[0].toISOString() : '';
+    };
+    const contarUnicos = (items, campo) => new Set((items || []).map((item) => normalizar(item[campo])).filter(Boolean)).size;
+
+    window.SheetsService.configure({
+      appsScriptUrl: APPS_SCRIPT_URL,
+      sandboxMode: SANDBOX_MODE,
+      fallback: DATOS_FALLBACK,
+      cacheKeys: {
+        all: 'vz_rhv_all_cache', lugares: 'vz_rhv_lugares_cache', voluntarios: 'vz_rhv_voluntarios_cache',
+        rescatistas: 'vz_rhv_rescatistas_cache', motorizados: 'vz_rhv_motorizados_cache', trayectos: 'vz_rhv_trayectos_cache',
+        historial: 'vz_rhv_historial_cache', familiar: 'vz_rhv_familiar_cache'
+      }
+    });
+
+    function fechaRelativa(iso) {
+      if (!iso) return 'sin fecha';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return String(iso);
+      const min = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+      if (min < 1) return 'Ahora';
+      if (min < 60) return `Hace ${min} min`;
+      const horas = Math.round(min / 60);
+      if (horas < 24) return `Hace ${horas} h`;
+      return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function setStatus(source) {
+      const dot = $('#status-dot');
+      const text = $('#status-text');
+      dot.className = 'status-dot';
+      if (source === 'live') text.textContent = 'Datos en vivo';
+      else if (source === 'cache') { dot.classList.add('cache'); text.textContent = 'Datos guardados'; }
+      else { dot.classList.add('demo'); text.textContent = 'Modo demo'; }
+      const banner = $('#banner');
+      banner.classList.toggle('visible', source !== 'live');
+      banner.textContent = source === 'cache' ? 'Sin conexión. Mostrando los últimos datos guardados.' : 'Modo demo: conecta la URL del Apps Script para ver datos reales.';
+    }
+
+    function cambiarVista(view) {
+      $$('.view').forEach((panel) => panel.classList.toggle('active', panel.dataset.view === view));
+      $$('[data-view-link]').forEach((btn) => {
+        const active = btn.dataset.viewLink === view;
+        if (btn.tagName === 'BUTTON') btn.setAttribute('aria-current', active ? 'page' : 'false');
+      });
+      $('#contenido').focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function calcularStats() {
+      const stats = Object.assign({}, estado.estadisticas);
+      const centrosLocales = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') !== 0).length;
+      const hospitalesLocales = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') === 0).length;
+      stats.centrosRegistrados = Math.max(numero(stats.centrosRegistrados), centrosLocales);
+      stats.hospitalesRegistrados = Math.max(numero(stats.hospitalesRegistrados), hospitalesLocales);
+      stats.voluntariosActivos = Math.max(numero(stats.voluntariosActivos), estado.voluntarios.length);
+      stats.rescatistasRegistrados = Math.max(numero(stats.rescatistasRegistrados), estado.rescatistas.length);
+      stats.personasLocalizadas = stats.personasLocalizadas == null ? FAMILIARES_FALLBACK.registros.length : numero(stats.personasLocalizadas);
+      stats.motorizadosRegistrados = Math.max(numero(stats.motorizadosRegistrados), estado.motorizados.length);
+      stats.actualizado = stats.actualizado || ultimaActualizacion();
+      return stats;
+    }
+
+    function ultimaActualizacion() {
+      const fechas = [
+        estado.estadisticas && estado.estadisticas.actualizado,
+        ultimoISO(estado.lugares, 'actualizado'),
+        ultimoISO(estado.voluntarios, 'fecha_registro'),
+        ultimoISO(estado.rescatistas, 'fecha_registro'),
+        ultimoISO(estado.motorizados, 'ultimoTrayecto')
+      ].map((iso) => new Date(iso)).filter((fecha) => !Number.isNaN(fecha.getTime())).sort((a, b) => b - a);
+      return fechas[0] ? fechas[0].toISOString() : '';
+    }
+
+    function renderStats() {
+      const s = calcularStats();
+      const items = [
+        ['Centros activos', s.centrosRegistrados || 0],
+        ['Hospitales', s.hospitalesRegistrados || 0],
+        ['Voluntarios', s.voluntariosActivos || 0],
+        ['Rescatistas', s.rescatistasRegistrados || 0]
+      ];
+      $('#stats-grid').innerHTML = items.map(([label, value]) => `<div class="stat-card"><span class="stat-num">${e(value)}</span><span class="stat-label">${e(label)}</span></div>`).join('');
+    }
+
+    function renderDashboard() {
+      const s = calcularStats();
+      const actualizacion = ultimaActualizacion() || s.actualizado || '';
+      const voluntariosConTransporte = estado.voluntarios.filter((v) => v.medioTransporte || v.medio_transporte || v.transporte).length;
+      const rescatistasConEquipo = estado.rescatistas.filter((r) => r.equipoDisponible || r.equipo_disponible || r.equipo).length;
+      const items = [
+        ['Voluntarios registrados', s.voluntariosActivos || 0, `${voluntariosConTransporte} con transporte reportado`, 'volunteer'],
+        ['Rescatistas registrados', s.rescatistasRegistrados || 0, `${rescatistasConEquipo} con equipo disponible`, 'rescue'],
+        ['Centros de ayuda activos', s.centrosRegistrados || 0, 'Centros, refugios y puntos de ayuda', 'neutral'],
+        ['Hospitales disponibles', s.hospitalesRegistrados || 0, 'Contactos hospitalarios y necesidades', 'critical'],
+        ['Reportes familiares', s.personasLocalizadas || 0, 'Registros localizados o reportados', ''],
+        ['Última actualización', actualizacion ? fechaRelativa(actualizacion) : 'Sin fecha', actualizacion ? new Date(actualizacion).toLocaleString('es-VE') : 'Pendiente de datos en vivo', 'neutral']
+      ];
+      $('#dashboard-grid').innerHTML = items.map(([label, value, meta, cls]) => `<article class="dashboard-card ${e(cls)}"><div><span class="dashboard-value">${e(value)}</span><span class="dashboard-label">${e(label)}</span></div><p class="dashboard-meta">${e(meta)}</p></article>`).join('');
+    }
+
+    function renderRegistrySummaries() {
+      const volUltimo = ultimoISO(estado.voluntarios, 'fecha_registro');
+      const resUltimo = ultimoISO(estado.rescatistas, 'fecha_registro');
+      console.log('renderMapa start, total places:', estado.lugares.length);
+      setTexto('#vol-resumen-total', estado.voluntarios.length);
+      setTexto('#vol-resumen-zonas', contarUnicos(estado.voluntarios, 'estado'));
+      setTexto('#vol-resumen-transporte', estado.voluntarios.filter((v) => v.medioTransporte || v.medio_transporte || v.transporte).length);
+      setTexto('#vol-resumen-actualizado', volUltimo ? fechaRelativa(volUltimo) : 'sin fecha');
+      setTexto('#res-resumen-total', estado.rescatistas.length);
+      setTexto('#res-resumen-especialidades', contarUnicos(estado.rescatistas, 'especialidad'));
+      setTexto('#res-resumen-equipos', estado.rescatistas.filter((r) => r.equipoDisponible || r.equipo_disponible || r.equipo).length);
+      setTexto('#res-resumen-actualizado', resUltimo ? fechaRelativa(resUltimo) : 'sin fecha');
+    }
+
+    function renderUrgentes() {
+      $('#urgent-grid').innerHTML = URGENTES.map((item, idx) => `<div class="urgent-item"><strong>${e(item)}</strong><span class="badge ${idx < 3 ? 'red' : 'yellow'}">prioridad</span></div>`).join('');
+    }
+
+    function poblarCategorias() {
+      const cats = new Set();
+      estado.lugares.forEach((l) => (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []).forEach((i) => i.categoria && cats.add(i.categoria)));
+      $('#filtro-lugar-categoria').innerHTML = '<option value="">Todas</option>' + Array.from(cats).sort().map((cat) => `<option>${e(cat)}</option>`).join('');
+    }
+
+    function itemCantidad(item) {
+      const necesaria = Math.max(0, numero(item.cantidadNecesaria || 1));
+      const recibida = Math.max(0, Math.min(numero(item.cantidadRecibida), necesaria));
+      const porcentaje = necesaria > 0 ? Math.round((recibida / necesaria) * 100) : numero(item.porcentaje);
+      return { necesaria, recibida, porcentaje, faltan: Math.max(0, necesaria - recibida), unidad: item.unidad || 'unidades' };
+    }
+
+    function urgenciaClass(u) {
+      const n = normalizar(u);
+      if (n.indexOf('critico') === 0) return 'red';
+      if (n.indexOf('moderado') === 0) return 'yellow';
+      return 'green';
+    }
+
+    function tipoIcono(tipo) {
+      const n = normalizar(tipo);
+      if (n.indexOf('hospital') === 0) return 'H';
+      if (n.indexOf('refugio') === 0) return 'R';
+      return '+';
+    }
+
+    function accionesContacto(telefono, nombre) {
+      if (!soloDigitos(telefono)) return '<span class="badge gray">Teléfono por confirmar</span>';
+      const label = nombre ? ` a ${nombre}` : '';
+      return `<a class="btn btn-soft btn-small" href="${telHref(telefono)}" aria-label="Llamar${e(label)}">Llamar</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(telefono)}" aria-label="Abrir WhatsApp${e(label)}">WhatsApp</a>`;
+    }
+
+    function renderLugarCard(lugar) {
+      const tipoNormal = normalizar(lugar.tipo);
+      const claseLugar = tipoNormal.indexOf('hospital') === 0 ? 'hospital' : tipoNormal.indexOf('refugio') === 0 ? 'refugio' : 'centro';
+      const estadoOperativo = lugar.estadoOperativo || (tipoNormal.indexOf('hospital') === 0 ? 'Contacto operativo' : tipoNormal.indexOf('refugio') === 0 ? (lugar.capacidad || 'Capacidad por confirmar') : 'Centro activo');
+      const necesidades = (lugar.necesita || []).map((item) => {
+        const c = itemCantidad(item);
+        const matches = item.coincidencias || [];
+        let matchHtml = '';
+        if (matches.length > 0) {
+          matchHtml = `<details class="match">
+            <summary>¡Match Logístico! Disponible en ${matches.length} lugar${matches.length > 1 ? 'es' : ''}</summary>
+            <div class="match-body">
+              ${matches.map((m) => {
+                const donador = estado.lugares.find(l => l.nombre === m.nombre_lugar);
+                let btnRuta = '';
+                if (lugar.latitud && lugar.longitud && donador && donador.latitud && donador.longitud && !isNaN(lugar.latitud) && !isNaN(donador.latitud)) {
+                  btnRuta = `<a class="btn btn-route btn-small" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&origin=${donador.latitud},${donador.longitud}&destination=${lugar.latitud},${lugar.longitud}">📍 Trazar Ruta</a>`;
+                }
+                return `<div class="match-place">
+                  <strong>${e(m.nombre_lugar)}</strong>
+                  <p class="meta" style="margin:2px 0;">${e(m.tipo)} · ${e(m.ubicacion)}</p>
+                  <div class="inline-actions" style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                    ${accionesContacto(m.telefono, m.nombre_lugar)}
+                    ${btnRuta}
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          </details>`;
+        }
+        return `<li class="supply-item"><div class="supply-line"><strong>${e(item.nombre)}</strong><span class="badge ${urgenciaClass(item.urgencia)}">${e(item.urgencia || 'Normal')}</span></div><div class="badge-row"><span class="badge gray">${e(item.categoria || 'Otros')}</span><span class="badge">faltan ${e(c.faltan)} ${e(c.unidad)}</span></div><div class="progress" role="progressbar" aria-label="Avance de ${e(item.nombre)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${e(c.porcentaje)}"><span style="--value:${e(c.porcentaje)}%"></span></div>${matchHtml}</li>`;
+      }).join('');
+      const disponibles = (lugar.tiene_disponible || []).map((i) => `<span class="badge green">${e(i.nombre)}</span>`).join('');
+      const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(i.nombre)} cubierto</span>`).join('');
+      const tipoBadge = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
+      const iconClass = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
+      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(lugar.tipo || 'Centro')}</span><h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || 'Ubicación por confirmar')}</span><span>${e(estadoOperativo)}</span></div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : '<p class="meta">Sin necesidades activas registradas.</p>'}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>Tiene disponible</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">Historial</button></div><p class="meta">Actualizado: ${e(fechaRelativa(lugar.actualizado))}</p></article>`;
+    }
+
+    function renderLugares() {
+      const f = estado.filtros;
+      const q = normalizar(f.lugarQ);
+      const filtered = estado.lugares.filter((l) => {
+        const items = (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []);
+        const text = normalizar([l.nombre, l.ubicacion, l.tipo, items.map((i) => i.nombre).join(' ')].join(' '));
+        if (q && !text.includes(q)) return false;
+        if (f.lugarTipo !== 'todos' && normalizar(l.tipo).indexOf(normalizar(f.lugarTipo)) !== 0) return false;
+        if (f.lugarCategoria && !items.some((i) => normalizar(i.categoria) === normalizar(f.lugarCategoria))) return false;
+        return true;
+      });
+      $('#conteo-lugares').textContent = `Mostrando ${filtered.length} de ${estado.lugares.length} centros`;
+      $('#grid-lugares').innerHTML = filtered.length ? filtered.map(renderLugarCard).join('') : '<div class="empty-state">No hay centros con esos filtros.</div>';
+      $$('[data-historial]').forEach((btn) => btn.addEventListener('click', () => abrirHistorial(btn.dataset.historial)));
+    }
+
+    function personaCard(persona, tipo) {
+      const esVoluntario = tipo === 'voluntario';
+      const nombre = esVoluntario ? `${persona.nombre || ''} ${persona.apellido || ''}`.trim() : (persona.nombre || 'Rescatista');
+      const especialidad = esVoluntario ? persona.profesion : persona.especialidad;
+      const transporte = persona.medioTransporte || persona.medio_transporte || persona.transporte || '';
+      const equipo = persona.equipoDisponible || persona.equipo_disponible || persona.equipo || '';
+      const capacidad = persona.capacidadOperativa || persona.capacidad_operativa || persona.capacidad || '';
+      const ubicacion = [persona.ciudad, persona.estado].filter(Boolean).join(', ') || 'Ubicación por confirmar';
+      const meta = esVoluntario
+        ? [[ubicacion, 'Ubicación'], [persona.disponibilidad || 'Disponibilidad por confirmar', 'Disponibilidad'], [transporte || 'Transporte por confirmar', 'Transporte']]
+        : [[ubicacion, 'Ubicación'], [persona.organizacion || 'Organización por confirmar', 'Organización'], [capacidad || 'Capacidad por confirmar', 'Capacidad']];
+      const extra = !esVoluntario && equipo ? `<p class="meta"><strong>Equipo disponible:</strong> ${e(equipo)}</p>` : '';
+      return `<article class="card card-bordered person-card ${esVoluntario ? 'volunteer' : 'rescue'}"><div class="card-top"><div><span class="badge ${esVoluntario ? 'green' : 'rescue'}">${e(especialidad || tipo)}</span><h3>${e(nombre || (esVoluntario ? 'Voluntario' : 'Rescatista'))}</h3></div><div class="icon-box ${esVoluntario ? 'green' : 'rescue'}" aria-hidden="true">${esVoluntario ? '✓' : '⚑'}</div></div><div class="meta-grid">${meta.map(([value, label]) => `<span><strong>${e(label)}:</strong> ${e(value)}</span>`).join('')}</div>${extra}${persona.observaciones ? `<p class="meta">${e(persona.observaciones)}</p>` : ''}<div class="card-actions">${accionesContacto(persona.telefono, nombre)}</div><p class="meta">Registro: ${e(fechaRelativa(persona.fecha_registro))}</p></article>`;
+    }
+
+    function filtrarLista(lista, q, estadoFiltro, tipoFiltro, campoTipo) {
+      const qn = normalizar(q);
+      return lista.filter((item) => {
+        const text = normalizar(Object.values(item).join(' '));
+        if (qn && !text.includes(qn)) return false;
+        if (estadoFiltro && normalizar(item.estado) !== normalizar(estadoFiltro)) return false;
+        if (tipoFiltro && normalizar(item[campoTipo]) !== normalizar(tipoFiltro)) return false;
+        return true;
+      });
+    }
+
+    function renderVoluntarios() {
+      const f = estado.filtros;
+      const lista = filtrarLista(estado.voluntarios, f.volQ, f.volEstado, f.volProfesion, 'profesion');
+      $('#conteo-voluntarios').textContent = `Mostrando ${lista.length} de ${estado.voluntarios.length} voluntarios`;
+      $('#grid-voluntarios').innerHTML = lista.length ? lista.map((v) => personaCard(v, 'voluntario')).join('') : '<div class="empty-state">No hay voluntarios con esos filtros.</div>';
+    }
+
+    function renderRescatistas() {
+      const f = estado.filtros;
+      const lista = filtrarLista(estado.rescatistas, f.resQ, f.resEstado, f.resEspecialidad, 'especialidad');
+      $('#conteo-rescatistas').textContent = `Mostrando ${lista.length} de ${estado.rescatistas.length} rescatistas`;
+      $('#grid-rescatistas').innerHTML = lista.length ? lista.map((r) => personaCard(r, 'rescatista')).join('') : '<div class="empty-state">No hay rescatistas con esos filtros.</div>';
+    }
+
+    function renderMotorizados() {
+      const f = estado.filtros;
+      const q = normalizar(f.motQ);
+      const lista = estado.motorizados.filter((m) => {
+        const text = normalizar([m.nombre, m.zonaOperacion, m.operaEn, m.tipoVehiculo, m.placa].join(' '));
+        if (q && !text.includes(q)) return false;
+        if (f.motTipo && normalizar(m.tipoVehiculo).indexOf(normalizar(f.motTipo)) !== 0) return false;
+        return true;
+      });
+      $('#conteo-motorizados').textContent = `Mostrando ${lista.length} de ${estado.motorizados.length} transportistas`;
+      $('#grid-motorizados').innerHTML = lista.length ? lista.map((m) => `<article class="card card-bordered"><div class="card-top"><div><span class="badge">${e(m.tipoVehiculo || 'Vehículo')}</span><h3>${e(m.nombre)}</h3></div><div class="icon-box" aria-hidden="true">↗</div></div><p class="meta">${e(m.zonaOperacion || m.operaEn || 'Zona por confirmar')}${m.placa ? ' · Placa ' + e(m.placa) : ''}</p><div class="badge-row"><span class="badge green">${e(m.totalTrayectos || 0)} trayectos</span><span class="badge">${e(m.totalKm || 0)} km</span><span class="badge yellow">${e(m.aporteDonado || 0)} aporte</span></div><div class="card-actions"><button class="btn btn-soft btn-small" data-trayectos="${e(m.id)}" type="button">Trayectos</button><button class="btn btn-ghost btn-small" data-donar-mot="${e(m.id)}" type="button">Registrar apoyo</button>${m.telefono ? `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(m.telefono)}">WhatsApp</a>` : ''}</div></article>`).join('') : '<div class="empty-state">No hay transportistas con esos filtros.</div>';
+      $$('[data-trayectos]').forEach((btn) => btn.addEventListener('click', () => abrirTrayectos(btn.dataset.trayectos)));
+      $$('[data-donar-mot]').forEach((btn) => btn.addEventListener('click', () => abrirDonarMotorizado(btn.dataset.donarMot)));
+    }
+
+    function mostrarMensaje(id, tipo, textoMsg) {
+      const box = $(id);
+      box.className = `form-message visible ${tipo}`;
+      box.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+      box.setAttribute('aria-live', tipo === 'error' ? 'assertive' : 'polite');
+      box.textContent = textoMsg;
+    }
+
+    function limpiarErrores(form) {
+      form.querySelectorAll('[aria-invalid="true"]').forEach((control) => {
+        control.removeAttribute('aria-invalid');
+        const errorId = `${control.id}-error`;
+        const describedBy = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter((id) => id && id !== errorId);
+        if (describedBy.length) control.setAttribute('aria-describedby', describedBy.join(' '));
+        else control.removeAttribute('aria-describedby');
+      });
+      form.querySelectorAll('.field-error').forEach((node) => node.remove());
+    }
+
+    function nombreCampo(control) {
+      const label = control.id ? document.querySelector(`label[for="${control.id}"]`) : null;
+      return label ? label.textContent.trim() : 'Este campo';
+    }
+
+    function marcarError(control, mensaje) {
+      const errorId = `${control.id}-error`;
+      control.setAttribute('aria-invalid', 'true');
+      const describedBy = new Set((control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+      describedBy.add(errorId);
+      control.setAttribute('aria-describedby', Array.from(describedBy).join(' '));
+      const error = document.createElement('p');
+      error.id = errorId;
+      error.className = 'field-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = mensaje;
+      control.insertAdjacentElement('afterend', error);
+    }
+
+    function validarFormulario(form, messageId) {
+      limpiarErrores(form);
+      const errores = [];
+      form.querySelectorAll('input, select, textarea').forEach((control) => {
+        const valor = String(control.value || '').trim();
+        if (control.hasAttribute('required') && !valor) {
+          errores.push([control, `${nombreCampo(control)} es obligatorio.`]);
+          return;
+        }
+        if (control.type === 'tel' && valor && soloDigitos(valor).length < 7) {
+          errores.push([control, 'Ingresa un teléfono con al menos 7 dígitos.']);
+        }
+      });
+      if (!errores.length) return true;
+      errores.forEach(([control, mensaje]) => marcarError(control, mensaje));
+      mostrarMensaje(messageId, 'error', `Revisa ${errores.length} campo${errores.length > 1 ? 's' : ''} antes de continuar.`);
+      errores[0][0].focus();
+      return false;
+    }
+
+    function toast(msg) {
+      $('#toast-root').innerHTML = `<div class="toast" role="status">${e(msg)}</div>`;
+      setTimeout(() => { $('#toast-root').innerHTML = ''; }, 3400);
+    }
+
+    function abrirModal(titulo, contenido) {
+      $('#modal-root').innerHTML = `<dialog><div class="modal-head"><h3>${e(titulo)}</h3><button class="modal-close" type="button" aria-label="Cerrar">×</button></div><div class="modal-body">${contenido}</div></dialog>`;
+      const dialog = $('#modal-root dialog');
+      dialog.querySelector('.modal-close').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('close', () => { $('#modal-root').innerHTML = ''; });
+      dialog.showModal();
+    }
+
+    async function abrirHistorial(nombre) {
+      abrirModal('Historial de movimientos', '<div id="modal-list" class="empty-state">Cargando historial...</div>');
+      const res = await window.SheetsService.getHistorial(nombre);
+      const items = res.data || [];
+      $('#modal-list').outerHTML = items.length ? `<div class="supply-list">${items.map((h) => `<div class="supply-item"><strong>${e(h.tipoMovimiento || h.tipo)} · ${e(h.insumo)}</strong><p class="meta">${e(h.cantidad)} ${e(h.unidad || '')} · ${e(fechaRelativa(h.timestamp))}</p></div>`).join('')}</div>` : '<div class="empty-state">No hay movimientos registrados.</div>';
+    }
+
+    async function abrirTrayectos(id) {
+      const mot = estado.motorizados.find((m) => String(m.id) === String(id));
+      abrirModal('Trayectos registrados', '<div id="modal-list" class="empty-state">Cargando trayectos...</div>');
+      const res = await window.SheetsService.getTrayectos(id);
+      const items = res.data || [];
+      $('#modal-list').outerHTML = `${items.length ? `<div class="supply-list">${items.map((t) => `<div class="supply-item"><strong>${e(t.origen)} → ${e(t.destino)}</strong><p class="meta">${e(t.kmRecorridos || t.km || 0)} km · ${e(t.insumoTransportado || t.insumo || 'Varios')} · ${e(fechaRelativa(t.timestamp))}</p></div>`).join('')}</div>` : '<div class="empty-state">No hay trayectos registrados.</div>'}<div class="form-actions"><button class="btn btn-primary" type="button" id="modal-reg-trayecto">Registrar trayecto</button></div>`;
+      $('#modal-reg-trayecto').addEventListener('click', () => abrirRegistrarTrayecto(mot));
+    }
+
+    function abrirRegistrarTrayecto(mot) {
+      if (!mot) return;
+      abrirModal('Registrar trayecto', `<form id="trayecto-form"><div class="form-grid"><div class="field"><label for="tray-origen">Origen</label><input id="tray-origen" required /></div><div class="field"><label for="tray-destino">Destino</label><input id="tray-destino" required /></div><div class="field"><label for="tray-km">Km</label><input id="tray-km" type="number" min="0.1" step="0.1" required /></div><div class="field"><label for="tray-insumo">Insumo</label><input id="tray-insumo" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">Guardar trayecto</button></div></form>`);
+      $('#trayecto-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const km = numero($('#tray-km').value);
+        await window.SheetsService.post({ accion: 'registrar_trayecto', idMotorizado: mot.id, nombreMotorizado: mot.nombre, origen: $('#tray-origen').value.trim(), destino: $('#tray-destino').value.trim(), km, insumo: $('#tray-insumo').value.trim() || 'Varios' });
+        mot.totalTrayectos = numero(mot.totalTrayectos) + 1;
+        mot.totalKm = Math.round((numero(mot.totalKm) + km) * 10) / 10;
+        renderMotorizados();
+        $('#modal-root dialog').close();
+        toast('Trayecto registrado.');
+      });
+    }
+
+    function abrirDonarMotorizado(id) {
+      const mot = estado.motorizados.find((m) => String(m.id) === String(id));
+      if (!mot) return;
+      abrirModal('Registrar apoyo logístico', `<form id="donar-mot-form"><div class="form-grid"><div class="field"><label for="don-monto">Monto o valor</label><input id="don-monto" type="number" min="1" required /></div><div class="field"><label for="don-tipo">Tipo</label><select id="don-tipo"><option>Pago móvil</option><option>Efectivo</option><option>Combustible</option><option>Repuesto</option><option>Otro</option></select></div><div class="field"><label for="don-nombre">Donante</label><input id="don-nombre" /></div><div class="field"><label for="don-ciudad">Ciudad</label><input id="don-ciudad" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">Guardar apoyo</button></div></form>`);
+      $('#donar-mot-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const monto = numero($('#don-monto').value);
+        await window.SheetsService.post({ accion: 'donar_motorizado', idMotorizado: mot.id, nombreMotorizado: mot.nombre, monto, tipo: $('#don-tipo').value, donanteName: $('#don-nombre').value.trim() || 'Anónimo', ciudad: $('#don-ciudad').value.trim() });
+        mot.aporteDonado = numero(mot.aporteDonado) + monto;
+        renderMotorizados();
+        $('#modal-root dialog').close();
+        toast('Apoyo registrado.');
+      });
+    }
+
+    function abrirRegistrarMotorizado() {
+      abrirModal('Registrar transportista', `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">Nombre</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">Vehículo</label><select id="mot-tipo"><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div><div class="field"><label for="mot-telefono">Teléfono</label><input id="mot-telefono" type="tel" /></div><div class="field"><label for="mot-zona">Zona</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">Placa</label><input id="mot-placa" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">Guardar transportista</button></div></form>`);
+      $('#mot-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const nuevo = { id: 'MOTO' + String(Date.now()).slice(-4), nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), totalTrayectos: 0, totalKm: 0, aporteDonado: 0, activo: true };
+        await window.SheetsService.post(Object.assign({ accion: 'registrar_motorizado' }, nuevo));
+        estado.motorizados.unshift(nuevo);
+        renderMotorizados();
+        $('#modal-root dialog').close();
+        toast('Transportista registrado.');
+      });
+    }
+
+    function bindForms() {
+      $('#lugar-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#lugar-message')) return;
+        const payload = { 
+          accion: 'registrar_lugar', 
+          tipo: $('#lugar-tipo').value, 
+          nombre: $('#lugar-nombre').value.trim(), 
+          ubicacion: $('#lugar-ubicacion').value.trim(), 
+          telefono: $('#lugar-telefono').value.trim(), 
+          insumo: $('#lugar-insumo').value.trim(), 
+          categoria: $('#lugar-categoria').value, 
+          estado: $('#lugar-estado').value,
+          lat: $('#lugar-lat').value,
+          lon: $('#lugar-lon').value
+        };
+        mostrarMensaje('#lugar-message', 'info', 'Guardando reporte...');
+        try {
+          await window.SheetsService.post(payload);
+          const lugar = estado.lugares.find((l) => normalizar(l.tipo + l.nombre) === normalizar(payload.tipo + payload.nombre)) || { tipo: payload.tipo, nombre: payload.nombre, ubicacion: payload.ubicacion, telefono: payload.telefono, necesita: [], tiene_disponible: [], cubiertos: [] };
+          if (!estado.lugares.includes(lugar)) estado.lugares.unshift(lugar);
+          if (normalizar(payload.estado).indexOf('necesita') === 0) lugar.necesita.push({ nombre: payload.insumo, categoria: payload.categoria, cantidadNecesaria: 1, cantidadRecibida: 0, porcentaje: 0, urgencia: 'Normal', unidad: 'unidades', coincidencias: [] });
+          else lugar.tiene_disponible.push({ nombre: payload.insumo, categoria: payload.categoria });
+          lugar.actualizado = new Date().toISOString();
+          poblarCategorias(); renderLugares(); renderStats(); renderDashboard();
+          mostrarMensaje('#lugar-message', 'success', 'Reporte guardado.');
+          limpiarErrores(form);
+          form.reset();
+        } catch (err) {
+          mostrarMensaje('#lugar-message', 'error', 'No pudimos guardar el reporte. Revisa la conexión e inténtalo de nuevo.');
+        }
+      });
+
+      $('#voluntario-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#vol-message')) return;
+        const nuevo = {
+          id: 'VOL' + String(Date.now()).slice(-4),
+          nombre: $('#vol-nombre').value.trim(),
+          apellido: $('#vol-apellido').value.trim(),
+          telefono: $('#vol-telefono').value.trim(),
+          estado: $('#vol-estado').value.trim(),
+          ciudad: $('#vol-ciudad').value.trim(),
+          profesion: $('#vol-profesion').value,
+          disponibilidad: $('#vol-disponibilidad').value.trim(),
+          medioTransporte: $('#vol-transporte').value,
+          medio_transporte: $('#vol-transporte').value,
+          observaciones: $('#vol-observaciones').value.trim(),
+          fecha_registro: new Date().toISOString()
+        };
+        mostrarMensaje('#vol-message', 'info', 'Guardando voluntario...');
+        try {
+          await window.SheetsService.post(Object.assign({ accion: 'registrar_voluntario' }, nuevo));
+          estado.voluntarios.unshift(nuevo);
+          renderVoluntarios(); renderStats(); renderDashboard(); renderRegistrySummaries();
+          mostrarMensaje('#vol-message', 'success', 'Voluntario guardado.');
+          limpiarErrores(form);
+          form.reset();
+        } catch (err) {
+          mostrarMensaje('#vol-message', 'error', 'No pudimos guardar el voluntario. Revisa la conexión e inténtalo de nuevo.');
+        }
+      });
+
+      $('#rescatista-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#res-message')) return;
+        const nuevo = {
+          id: 'RES' + String(Date.now()).slice(-4),
+          nombre: $('#res-nombre').value.trim(),
+          organizacion: $('#res-organizacion').value.trim(),
+          telefono: $('#res-telefono').value.trim(),
+          especialidad: $('#res-especialidad').value,
+          estado: $('#res-estado').value.trim(),
+          ciudad: $('#res-ciudad').value.trim(),
+          disponibilidad: $('#res-disponibilidad').value.trim(),
+          equipoDisponible: $('#res-equipo').value.trim(),
+          equipo_disponible: $('#res-equipo').value.trim(),
+          capacidadOperativa: $('#res-capacidad').value,
+          capacidad_operativa: $('#res-capacidad').value,
+          observaciones: $('#res-observaciones').value.trim(),
+          fecha_registro: new Date().toISOString()
+        };
+        mostrarMensaje('#res-message', 'info', 'Guardando rescatista...');
+        try {
+          await window.SheetsService.post(Object.assign({ accion: 'registrar_rescatista' }, nuevo));
+          estado.rescatistas.unshift(nuevo);
+          renderRescatistas(); renderStats(); renderDashboard(); renderRegistrySummaries();
+          mostrarMensaje('#res-message', 'success', 'Rescatista guardado.');
+          limpiarErrores(form);
+          form.reset();
+        } catch (err) {
+          mostrarMensaje('#res-message', 'error', 'No pudimos guardar el rescatista. Revisa la conexión e inténtalo de nuevo.');
+        }
+      });
+
+      $('#familiar-form').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        if (!validarFormulario(ev.currentTarget, '#familiar-message')) return;
+        buscarFamiliar($('#familiar-query').value);
+      });
+    }
+
+    async function cargarFamiliaresMock() {
+      if (location.protocol === 'file:') return FAMILIARES_FALLBACK.registros;
+      try {
+        const resp = await fetch('data/familiares-ejemplo.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        return data.registros || data.resultados || [];
+      } catch (err) { return FAMILIARES_FALLBACK.registros; }
+    }
+
+    async function buscarFamiliar(query) {
+      query = (query || '').trim();
+      if (!query) return;
+      $('#familiar-resultados').innerHTML = '<div class="empty-state">Buscando...</div>';
+      try {
+        const result = await window.SheetsService.buscarFamiliar(query);
+        if (result.error) {
+          throw new Error(result.error.message || result.error);
+        }
+        
+        if (result.source === 'demo' || (result.source === 'cache' && (!result.data || !result.data.length))) {
+          throw new Error('fallback_demo');
+        }
+
+        renderFamiliares(result.data || [], result.data && result.data.length > 0);
+        $('#familiar-message').classList.remove('visible');
+      } catch (err) {
+        const regs = await cargarFamiliaresMock();
+        const qn = normalizar(query);
+        const qd = soloDigitos(query);
+        const matches = regs.filter((r) => normalizar(r.nombre).includes(qn) || (qd && soloDigitos(r.cedula).includes(qd)));
+        const msg = $('#familiar-message');
+        
+        if (err.message === 'fallback_demo') {
+          msg.textContent = 'Modo demo: resultados de ejemplo, no reales.';
+        } else {
+          msg.textContent = 'Error de búsqueda: ' + err.message + '. Mostrando datos de ejemplo.';
+        }
+        
+        msg.classList.add('visible');
+        renderFamiliares(matches, matches.length > 0);
+      }
+    }
+
+    function renderFamiliares(resultados, encontrado) {
+      if (!encontrado || !resultados.length) { $('#familiar-resultados').innerHTML = '<div class="empty-state">No encontramos a esta persona en los registros disponibles.</div>'; return; }
+      $('#familiar-resultados').innerHTML = resultados.map((p) => {
+        const delicado = normalizar(p.estado).includes('fallec');
+        return `<article class="card card-bordered family-card"><span class="badge ${delicado ? 'gray' : 'green'}">${e(p.estado)}</span><h3>${e(p.nombre)}</h3><div class="meta-grid"><span><strong>Cédula:</strong> ${e(p.cedula)}</span>${p.ubicacion ? `<span><strong>Ubicación:</strong> ${e(p.ubicacion)}</span>` : ''}${p.fuente ? `<span><strong>Fuente:</strong> ${e(p.fuente)}</span>` : ''}<span><strong>Actualizado:</strong> ${e(fechaRelativa(p.actualizado))}</span></div>${delicado ? `<p class="meta">${e(LINEA_APOYO)}</p>` : ''}</article>`;
+      }).join('');
+    }
+
+    function bindFiltros() {
+      [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-vol-q', 'volQ', renderVoluntarios], ['#filtro-vol-estado', 'volEstado', renderVoluntarios], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      [['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares], ['#filtro-vol-profesion', 'volProfesion', renderVoluntarios], ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados]].forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); cambiarVista(el.dataset.viewLink); }));
+      $$('[data-scroll-target]').forEach((el) => el.addEventListener('click', () => document.getElementById(el.dataset.scrollTarget).scrollIntoView({ behavior: 'smooth', block: 'start' })));
+      $('#btn-motorizado').addEventListener('click', abrirRegistrarMotorizado);
+    }
+
+    let mapa = null;
+    let marcadores = [];
+
+    let clusterGroup = null;
+
+    async function renderMapa() {
+      if (!window.L) return;
+      const container = $('#mapa-operaciones');
+      if (!container) return;
+
+      try {
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        async function resolveCoords(lugar) {
+          const lat = parseFloat(lugar.latitud);
+          const lon = parseFloat(lugar.longitud);
+          
+          function isValidVE(lt, ln) {
+            return !isNaN(lt) && !isNaN(ln) && lt > 0 && lt < 14 && ln > -75 && ln < -58;
+          }
+
+          if (isValidVE(lat, lon)) return { lat, lon };
+
+          const cacheKey = `geo_${lugar.nombre || ''}_${lugar.ubicacion || ''}`;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            try { 
+              const obj = JSON.parse(cached); 
+              if (isValidVE(parseFloat(obj.lat), parseFloat(obj.lon))) {
+                return { lat: parseFloat(obj.lat), lon: parseFloat(obj.lon) };
+              }
+            } catch (_) {}
+          }
+          const query = encodeURIComponent(lugar.ubicacion || lugar.nombre || '');
+          if (!query) return null;
+          try {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=ve`, { headers: { 'Accept-Language': 'es' } });
+            if (!resp.ok) throw new Error('Geocode request failed');
+            const data = await resp.json();
+            if (data && data[0]) {
+              const result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+              if (isValidVE(result.lat, result.lon)) {
+                localStorage.setItem(cacheKey, JSON.stringify(result));
+                await sleep(1100);
+                return result;
+              }
+            }
+          } catch (e) {
+            console.warn('Geocode error for', lugar.nombre, e);
+          }
+          return null;
+        }
+
+        const lugaresConCoordenadas = [];
+        for (const l of estado.lugares) {
+          const coords = await resolveCoords(l);
+          if (coords && !isNaN(coords.lat) && !isNaN(coords.lon)) {
+            lugaresConCoordenadas.push({ ...l, latitud: coords.lat, longitud: coords.lon });
+          }
+        }
+
+        if (!mapa) {
+          delete L.Icon.Default.prototype._getIconUrl;
+          L.Icon.Default.mergeOptions({
+            iconUrl: 'services/leaflet/images/marker-icon.png',
+            iconRetinaUrl: 'services/leaflet/images/marker-icon-2x.png',
+            shadowUrl: 'services/leaflet/images/marker-shadow.png'
+          });
+
+          mapa = L.map('mapa-operaciones').setView([10.55, -66.85], 10);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          }).addTo(mapa);
+          
+          if (window.ResizeObserver) {
+            new ResizeObserver(() => mapa.invalidateSize()).observe(container);
+          }
+        }
+
+        if (clusterGroup) {
+          mapa.removeLayer(clusterGroup);
+        }
+        clusterGroup = L.markerClusterGroup({
+          maxClusterRadius: 40,
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false,
+          zoomToBoundsOnClick: true
+        });
+
+        marcadores = [];
+
+        lugaresConCoordenadas.forEach(lugar => {
+          const marker = L.marker([lugar.latitud, lugar.longitud]);
+          const popupHtml = `
+            <div style="font-family: var(--font); color: var(--text); font-size: 0.88rem; width: 180px;">
+              <strong style="display: block; font-size: 0.95rem; color: var(--ink); margin-bottom: 2px;">${e(lugar.nombre)}</strong>
+              <span class="badge ${normalizar(lugar.tipo).indexOf('hospital') === 0 ? 'red' : normalizar(lugar.tipo).indexOf('refugio') === 0 ? 'green' : ''}" style="margin-bottom: 6px; display: inline-block;">${e(lugar.tipo)}</span>
+              <p style="margin: 0 0 6px; font-size: 0.78rem; color: var(--muted);">${e(lugar.ubicacion)}</p>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <a href="#" style="color: var(--primary); font-weight: 800; text-decoration: none; font-size: 0.8rem;" onclick="cambiarVista('donaciones'); document.getElementById('filtro-lugar-q').value='${e(lugar.nombre)}'; estado.filtros.lugarQ='${e(lugar.nombre)}'; renderLugares(); return false;">Ver necesidades</a>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${lugar.latitud},${lugar.longitud}" target="_blank" rel="noopener noreferrer" style="color: var(--ink); font-weight: 600; text-decoration: underline; font-size: 0.8rem;">Cómo llegar 📍</a>
+              </div>
+            </div>`;
+          marker.bindPopup(popupHtml);
+          marcadores.push(marker);
+          clusterGroup.addLayer(marker);
+        });
+
+        mapa.addLayer(clusterGroup);
+
+        if (marcadores.length > 1) {
+          mapa.fitBounds(clusterGroup.getBounds(), { padding: [40, 40], maxZoom: 14 });
+        } else if (marcadores.length === 1) {
+          mapa.setView(marcadores[0].getLatLng(), 14);
+        }
+      } catch (err) {
+        console.error('Error in renderMapa:', err);
+      }
+    }
+
+    async function renderAll() {
+      renderStats();
+      renderDashboard();
+      renderRegistrySummaries();
+      renderUrgentes();
+      poblarCategorias();
+      renderLugares();
+      renderVoluntarios();
+      renderRescatistas();
+      renderMotorizados();
+      await renderMapa();
+    }
+
+    async function cargarTodo() {
+      const result = await window.SheetsService.getAll();
+      const data = result.data || {};
+      estado.lugares = data.lugares || data.centros || [];
+      estado.voluntarios = data.voluntarios || DATOS_FALLBACK.voluntarios;
+      estado.rescatistas = data.rescatistas || DATOS_FALLBACK.rescatistas;
+      estado.motorizados = data.motorizados || DATOS_FALLBACK.motorizados;
+      estado.estadisticas = data.estadisticas || data.stats || DATOS_FALLBACK.estadisticas;
+      setStatus(result.source);
+      renderAll();
+    }
+
+    let formMapa = null;
+    let formMarcador = null;
+
+    function initFormMap() {
+      if (!window.L) return;
+      const mapEl = document.getElementById('form-map');
+      if (!mapEl || formMapa) return;
+      
+      formMapa = L.map('form-map').setView([10.4806, -66.9036], 6); // Centro general de Venezuela
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(formMapa);
+      
+      formMarcador = L.marker([10.4806, -66.9036], { draggable: true }).addTo(formMapa);
+      
+      async function reverseGeocode(lat, lon) {
+        try {
+          $('#lugar-ubicacion').value = 'Buscando dirección...';
+          const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, { headers: { 'Accept-Language': 'es' } });
+          const data = await resp.json();
+          if (data && data.display_name) {
+            $('#lugar-ubicacion').value = data.display_name;
+          } else {
+            $('#lugar-ubicacion').value = `${lat}, ${lon}`;
+          }
+        } catch (e) {
+          $('#lugar-ubicacion').value = `${lat}, ${lon}`;
+        }
+      }
+
+      formMarcador.on('dragend', function (e) {
+        const pos = formMarcador.getLatLng();
+        $('#lugar-lat').value = pos.lat.toFixed(6);
+        $('#lugar-lon').value = pos.lng.toFixed(6);
+        reverseGeocode(pos.lat, pos.lng);
+      });
+
+      formMapa.on('click', function(e) {
+        formMarcador.setLatLng(e.latlng);
+        $('#lugar-lat').value = e.latlng.lat.toFixed(6);
+        $('#lugar-lon').value = e.latlng.lng.toFixed(6);
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
+      });
+      
+      // Fix para que Leaflet renderice bien cuando pasa de estar oculto a visible
+      if (window.ResizeObserver) {
+        new ResizeObserver(() => formMapa.invalidateSize()).observe(mapEl);
+      } else {
+        setTimeout(() => formMapa.invalidateSize(), 500);
+      }
+    }
+
+    function buscarEnFormulario() {
+      const btn = $('#btn-buscar-ubicacion');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const query = $('#lugar-ubicacion').value.trim();
+        if (!query) return;
+        btn.textContent = '...';
+        try {
+          const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`, { headers: { 'Accept-Language': 'es' } });
+          const data = await resp.json();
+          if (data && data[0]) {
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            $('#lugar-lat').value = lat.toFixed(6);
+            $('#lugar-lon').value = lon.toFixed(6);
+            if (formMapa && formMarcador) {
+              formMapa.setView([lat, lon], 14);
+              formMarcador.setLatLng([lat, lon]);
+            }
+          } else {
+            alert('No se encontró esa ubicación. Intenta ser más específico (Ej. "Chacao, Caracas").');
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          btn.textContent = 'Buscar';
+        }
+      });
+    }
+
+    function init() {
+      bindFiltros();
+      bindForms();
+      initFormMap();
+      buscarEnFormulario();
+      cargarTodo();
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') {
+          const dialog = $('#modal-root dialog');
+          if (dialog) dialog.close();
+        }
+      });
+      
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').catch((err) => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
