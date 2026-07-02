@@ -101,13 +101,6 @@
       setText('.skip-link', 'a11y.skip');
       setAttr('.brand', 'aria-label', 'a11y.brand');
       setText('.brand span:last-child', 'hero.title');
-      setAttr('.top-nav', 'aria-label', 'a11y.mainNav');
-      setText('.top-nav [data-view-link="inicio"]', 'nav.home');
-      setText('.top-nav [data-view-link="donaciones"]', 'nav.centers');
-      setText('.top-nav [data-view-link="voluntarios"]', 'nav.volunteers');
-      setText('.top-nav [data-view-link="rescatistas"]', 'nav.rescuers');
-      setText('.top-nav [data-view-link="familiar"]', 'nav.searchFamily');
-      setText('.top-nav [data-view-link="seguimiento"]', 'nav.traceability');
       setText('label[for="language-select"]', 'language.selectorLabel');
       setAttr('#language-select', 'aria-label', 'language.selectorAria');
       setText('#btn-panel-centro', 'panel.manageCta');
@@ -132,56 +125,65 @@
         'Fallecido': ['familyStatus', 'Fallecido']
       });
 
-      const eyebrow = $('.eyebrow');
-      if (eyebrow) eyebrow.innerHTML = `<span aria-hidden="true">VE</span> ${e(t('hero.eyebrow'))}`;
-      setText('#hero-title', 'hero.title');
-      setText('.hero-subtitle', 'hero.subtitle');
-      setAttr('.hero-actions', 'aria-label', 'a11y.primaryActions');
-      setText('.hero-actions [data-view-link="familiar"]', 'hero.findFamily');
-      setText('.hero-actions [data-view-link="donaciones"]', 'hero.viewCenters');
-      setText('.hero-actions [data-view-link="voluntarios"]', 'hero.volunteerRegistration');
-      setAttr('.hero-visual', 'aria-label', 'a11y.heroVisual');
-      setAttr('.ops-panel', 'aria-label', 'a11y.operationalPriorities');
-      setText('.ops-card:nth-child(1) .ops-label', 'hero.priorityLabel');
-      setText('.ops-card:nth-child(1) .ops-value', 'hero.priorityValue');
-      setText('.ops-card:nth-child(2) .ops-label', 'hero.coverageLabel');
-      setText('.ops-card:nth-child(2) .ops-value', 'hero.coverageValue');
-      setText('.ops-card:nth-child(3) .ops-label', 'hero.responseLabel');
-      setText('.ops-card:nth-child(3) .ops-value', 'hero.responseValue');
+      // Home de 4 puertas
+      setText('#home-question', 'home.question');
+      setText('#home-sub', 'home.sub');
+      setText('#door-ayuda-title', 'home.doors.ayuda.title');
+      setText('#door-ayuda-copy', 'home.doors.ayuda.copy');
+      setText('#door-ayudar-title', 'home.doors.ayudar.title');
+      setText('#door-ayudar-copy', 'home.doors.ayudar.copy');
+      setText('#door-transporte-title', 'home.doors.transporte.title');
+      setText('#door-transporte-copy', 'home.doors.transporte.copy');
+      setText('#door-centro-title', 'home.doors.centro.title');
+      setText('#door-centro-copy', 'home.doors.centro.copy');
+      setText('#home-foot-q', 'home.footQuestion');
+      setText('#home-foot-link', 'home.footLink');
+      setText('#btn-volver-texto', 'home.back');
+      setAttr('#btn-volver', 'aria-label', 'home.back');
 
-      setText('#dashboard-title', 'dashboard.title');
-      setText('#dashboard-operaciones .section-copy', 'dashboard.copy');
-      setText('#ayudar-title', 'help.title');
-      setText('#ayudar-title + .section-copy', 'help.copy');
-      setText('.help-grid article:nth-child(1) h3', 'help.donateTitle');
-      setText('.help-grid article:nth-child(1) .meta', 'help.donateCopy');
-      setText('.help-grid article:nth-child(1) button', 'help.donateAction');
-      setText('.help-grid article:nth-child(2) h3', 'help.volunteerTitle');
-      setText('.help-grid article:nth-child(2) .meta', 'help.volunteerCopy');
-      setText('.help-grid article:nth-child(2) button', 'help.volunteerAction');
-      setText('.help-grid article:nth-child(3) h3', 'help.reportTitle');
-      setText('.help-grid article:nth-child(3) .meta', 'help.reportCopy');
-      setText('.help-grid article:nth-child(3) button', 'help.reportAction');
-      setText('#urgentes-title', 'urgent.title');
-      setText('#urgentes-title + .section-copy', 'urgent.copy');
-      setText('#mapa-title', 'map.title');
-      setText('#mapa-title + .section-copy', 'map.copy');
-      setText('.map-placeholder h3', 'map.emptyTitle');
-      setText('.map-placeholder .meta', 'map.emptyCopy');
-      setAttr('.map-layers', 'aria-label', 'a11y.mapLayers');
-      const mapBadges = $$('.map-layers .badge');
-      [['map.hospitals'], ['map.shelters'], ['map.collectionCenters'], ['map.helpPoints']].forEach(([key], idx) => { if (mapBadges[idx]) mapBadges[idx].textContent = t(key); });
+      // Puerta 2 · Quiero ayudar
+      setText('#ayudar-hub-title', 'helpHub.title');
+      setText('#ayudar-hub-copy', 'helpHub.copy');
+      setText('#help-donar-title', 'helpHub.donateTitle');
+      setText('#help-donar-copy', 'helpHub.donateCopy');
+      setText('#help-voluntario-title', 'helpHub.volunteerTitle');
+      setText('#help-voluntario-copy', 'helpHub.volunteerCopy');
+      setText('#help-dinero-title', 'helpHub.moneyTitle');
+      setText('#help-dinero-copy', 'helpHub.moneyCopy');
+      setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
+      setText('#reportar-summary', 'helpHub.reportSummary');
+      setText('#form-lugar-copy', 'centers.formCopy');
 
-      setText('#donaciones-title', 'centers.title');
-      setText('#donaciones-title + .section-copy', 'centers.copy');
-      setText('[data-scroll-target="form-lugar"]', 'centers.reportButton');
+      // Puerta 3 · Transportistas
+      setText('#transporte-title', 'transportHub.title');
+      setText('#transporte-copy', 'transportHub.copy');
+      setText('#transporte-registro-title', 'transportHub.registerTitle');
+      setText('#transporte-registro-copy', 'transportHub.registerCopy');
+      setText('#traslados-title', 'transfers.title');
+      setText('#traslados-copy', 'transfers.copy');
+
+      // Puerta 4 · Centros y equipos
+      setText('#centro-hub-title', 'centerHub.title');
+      setText('#centro-hub-copy', 'centerHub.copy');
+      setText('#centro-panel-title', 'centerHub.panelTitle');
+      setText('#centro-panel-copy', 'centerHub.panelCopy');
+      setText('#btn-panel-centro', 'centerHub.panelCta');
+      setText('#centro-crear-title', 'centerHub.createTitle');
+      setText('#centro-crear-copy', 'centerHub.createCopy');
+      setText('#btn-crear-centro', 'centerHub.createCta');
+      setText('#centro-admin-note', 'centerHub.adminNote');
+
+      // Puerta 1 · Centros cerca
+      setText('#donaciones-title', 'centers.nearTitle');
+      setText('#donaciones-copy', 'centers.nearCopy');
+      setText('#btn-mapa-toggle', 'centers.mapToggle');
+      setText('#filtros-extra-summary', 'centers.filtersSummary');
+      setText('#btn-buscar-familiar-texto', 'centers.findFamilyCta');
       setAttr('#view-donaciones .filters', 'aria-label', 'a11y.centerFilters');
-      setText('label[for="filtro-lugar-q"]', 'common.search');
+      setAttr('#filtro-lugar-q', 'aria-label', 'common.search');
       setPlaceholder('#filtro-lugar-q', 'centers.searchPlaceholder');
       setText('label[for="filtro-lugar-tipo"]', 'common.type');
       setText('label[for="filtro-lugar-categoria"]', 'common.category');
-      setText('#form-lugar-title', 'centers.formTitle');
-      setText('#form-lugar-title + .section-copy', 'centers.formCopy');
       setText('label[for="lugar-tipo"]', 'centers.typeLabel');
       setText('label[for="lugar-nombre"]', 'common.name');
       setPlaceholder('#lugar-nombre', 'centers.namePlaceholder');
@@ -310,23 +312,6 @@
       setPlaceholder('#seguimiento-token', 'tracking.tokenPlaceholder');
       setText('#seguimiento-form button[type="submit"]', 'tracking.submit');
 
-      setAttr('.bottom-nav', 'aria-label', 'a11y.mobileNav');
-      const bottomItems = [
-        ['inicio', 'nav.home', 'nav.home'],
-        ['donaciones', 'nav.centers', 'nav.centersLong'],
-        ['voluntarios', 'nav.volunteersShort', 'nav.volunteersLong'],
-        ['rescatistas', 'nav.rescueShort', 'nav.rescuersLong'],
-        ['familiar', 'nav.searchShort', 'nav.searchFamily'],
-        ['seguimiento', 'nav.donationsShort', 'nav.traceabilityLong']
-      ];
-      bottomItems.forEach(([view, textKey, ariaKey]) => {
-        const btn = $(`.bottom-nav [data-view-link="${view}"]`);
-        if (!btn) return;
-        const icon = btn.querySelector('span');
-        btn.setAttribute('aria-label', t(ariaKey));
-        btn.innerHTML = `${icon ? icon.outerHTML : ''}${e(t(textKey))}`;
-      });
-
       aplicarOpciones('#filtro-lugar-tipo', { todos: 'centers.typeAll', Centro: 'centers.typeCenters', Hospital: 'centers.typeHospitals', Refugio: 'centers.typeShelters' });
       aplicarOpciones('#lugar-tipo', { Centro: ['types', 'Centro de acopio'], Hospital: ['types', 'Hospital'], Refugio: ['types', 'Refugio'], 'Punto de ayuda': ['types', 'Punto de ayuda'] });
       aplicarOpciones('#lugar-categoria', { 'Agua potable': ['categories', 'Agua potable'], Medicamentos: ['categories', 'Medicamentos'], 'Insumos médicos': ['categories', 'Insumos médicos'], Alimentos: ['categories', 'Alimentos'], 'Plantas eléctricas': ['categories', 'Plantas eléctricas'], Combustible: ['categories', 'Combustible'], Higiene: ['categories', 'Higiene'], Ropa: ['categories', 'Ropa'], Otros: ['categories', 'Otros'] });
@@ -435,7 +420,7 @@
     const SUPABASE_KEY = 'sb_publishable_T7fK4bKb1f3o9b7z84IbxQ_1HMnEi56'; // clave pública (publishable), segura en el cliente
 
     const estado = {
-      lugares: [], voluntarios: [], rescatistas: [], motorizados: [], donacionesHumanitarias: [], estadisticas: {},
+      lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
       filtros: {
         lugarQ: '', lugarTipo: 'todos', lugarCategoria: '',
         volQ: '', volProfesion: '', volEstado: '',
@@ -537,22 +522,10 @@
         const active = btn.dataset.viewLink === target;
         if (btn.tagName === 'BUTTON') btn.setAttribute('aria-current', active ? 'page' : 'false');
       });
+      const volver = $('#btn-volver');
+      if (volver) volver.hidden = target === 'inicio';
       $('#contenido').focus({ preventScroll: true });
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function calcularStats() {
-      const stats = Object.assign({}, estado.estadisticas);
-      const centrosLocales = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') !== 0).length;
-      const hospitalesLocales = estado.lugares.filter((l) => normalizar(l.tipo).indexOf('hospital') === 0).length;
-      stats.centrosRegistrados = Math.max(numero(stats.centrosRegistrados), centrosLocales);
-      stats.hospitalesRegistrados = Math.max(numero(stats.hospitalesRegistrados), hospitalesLocales);
-      stats.voluntariosActivos = Math.max(numero(stats.voluntariosActivos), estado.voluntarios.length);
-      stats.rescatistasRegistrados = Math.max(numero(stats.rescatistasRegistrados), estado.rescatistas.length);
-      stats.personasLocalizadas = stats.personasLocalizadas == null ? 0 : numero(stats.personasLocalizadas);
-      stats.motorizadosRegistrados = Math.max(numero(stats.motorizadosRegistrados), estado.motorizados.length);
-      stats.actualizado = stats.actualizado || ultimaActualizacion();
-      return stats;
     }
 
     function ultimaActualizacion() {
@@ -564,33 +537,6 @@
         ultimoISO(estado.motorizados, 'ultimoTrayecto')
       ].map((iso) => new Date(iso)).filter((fecha) => !Number.isNaN(fecha.getTime())).sort((a, b) => b - a);
       return fechas[0] ? fechas[0].toISOString() : '';
-    }
-
-    function renderStats() {
-      const s = calcularStats();
-      const items = [
-        [t('dashboard.activeCenters'), s.centrosRegistrados || 0],
-        [t('dashboard.hospitals'), s.hospitalesRegistrados || 0],
-        [t('dashboard.volunteers'), s.voluntariosActivos || 0],
-        [t('dashboard.rescuers'), s.rescatistasRegistrados || 0]
-      ];
-      $('#stats-grid').innerHTML = items.map(([label, value]) => `<div class="stat-card"><span class="stat-num">${e(value)}</span><span class="stat-label">${e(label)}</span></div>`).join('');
-    }
-
-    function renderDashboard() {
-      const s = calcularStats();
-      const actualizacion = ultimaActualizacion() || s.actualizado || '';
-      const voluntariosConTransporte = estado.voluntarios.filter((v) => v.medioTransporte || v.medio_transporte || v.transporte).length;
-      const rescatistasConEquipo = estado.rescatistas.filter((r) => r.equipoDisponible || r.equipo_disponible || r.equipo).length;
-      const items = [
-        [t('dashboard.registeredVolunteers'), s.voluntariosActivos || 0, t('dashboard.withTransport', { count: voluntariosConTransporte }), 'volunteer'],
-        [t('dashboard.registeredRescuers'), s.rescatistasRegistrados || 0, t('dashboard.withEquipment', { count: rescatistasConEquipo }), 'rescue'],
-        [t('dashboard.helpCentersActive'), s.centrosRegistrados || 0, t('dashboard.helpCentersMeta'), 'neutral'],
-        [t('dashboard.hospitalsAvailable'), s.hospitalesRegistrados || 0, t('dashboard.hospitalsMeta'), 'critical'],
-        [t('dashboard.familyReports'), s.personasLocalizadas || 0, t('dashboard.familyReportsMeta'), ''],
-        [t('dashboard.lastUpdate'), actualizacion ? fechaRelativa(actualizacion) : t('relative.noDate'), actualizacion ? new Date(actualizacion).toLocaleString(localeActual()) : t('dashboard.pendingLiveData'), 'neutral']
-      ];
-      $('#dashboard-grid').innerHTML = items.map(([label, value, meta, cls]) => `<article class="dashboard-card ${e(cls)}"><div><span class="dashboard-value">${e(value)}</span><span class="dashboard-label">${e(label)}</span></div><p class="dashboard-meta">${e(meta)}</p></article>`).join('');
     }
 
     function prioridadCanonica(value) {
@@ -1019,29 +965,6 @@
       }
     }
 
-    function renderUrgentes() {
-      const necesidades = [];
-      estado.lugares.forEach((lugar) => {
-        (lugar.necesita || []).forEach((item) => {
-          const cantidad = itemCantidad(item);
-          necesidades.push({
-            nombre: item.nombre,
-            urgencia: item.urgencia,
-            faltan: cantidad.faltan,
-            unidad: cantidad.unidad,
-            lugar: lugar.nombre
-          });
-        });
-      });
-      const prioridad = { critico: 0, moderado: 1, normal: 2 };
-      const urgentes = necesidades
-        .sort((a, b) => (prioridad[normalizar(a.urgencia)] || 3) - (prioridad[normalizar(b.urgencia)] || 3) || b.faltan - a.faltan)
-        .slice(0, 6);
-      $('#urgent-grid').innerHTML = urgentes.length
-        ? urgentes.map((item) => `<div class="urgent-item"><strong>${e(mostrarInsumo(item.nombre))}</strong><span class="badge ${urgenciaClass(item.urgencia)}">${e(mostrarUrgencia(item.urgencia))}</span><span class="meta">${e(t('centers.missing', { count: item.faltan, unit: mostrarUnidad(item.unidad) }))} · ${e(item.lugar)}</span></div>`).join('')
-        : `<div class="empty-state">${e(t('urgent.empty'))}</div>`;
-    }
-
     function poblarCategorias() {
       const cats = new Set();
       estado.lugares.forEach((l) => (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []).forEach((i) => i.categoria && cats.add(i.categoria)));
@@ -1084,11 +1007,12 @@
       return `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${destino}">Maps</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="https://waze.com/ul?q=${destino}&navigate=yes">Waze</a>`;
     }
 
+    // Tarjeta de centro con progressive disclosure: cerrada = resumen en una línea
+    // (tipo, nombre, zona, 1-2 necesidades urgentes, distancia); abierta = detalle
+    // completo con contacto, navegación e historial.
     function renderLugarCard(lugar) {
       const tipoNormal = normalizar(lugar.tipo);
       const claseLugar = tipoNormal.indexOf('hospital') === 0 ? 'hospital' : tipoNormal.indexOf('refugio') === 0 ? 'refugio' : 'centro';
-      const estadoOperativoRaw = lugar.estadoOperativo || (tipoNormal.indexOf('hospital') === 0 ? t('centers.operationalContact') : tipoNormal.indexOf('refugio') === 0 ? (lugar.capacidad || t('centers.capacityPending')) : t('centers.activeCenter'));
-      const estadoOperativo = mostrarTextoConUnidades(mostrarEstadoOperativo(estadoOperativoRaw));
       const necesidades = (lugar.necesita || []).map((item) => {
         const c = itemCantidad(item);
         const matches = item.coincidencias || [];
@@ -1100,7 +1024,32 @@
       const disponibles = (lugar.tiene_disponible || []).map((i) => `<span class="badge green">${e(mostrarInsumo(i.nombre))}</span>`).join('');
       const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(t('centers.covered', { item: mostrarInsumo(i.nombre) }))}</span>`).join('');
       const tipoBadge = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
-      const iconClass = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
-      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span>${lugar.gestionado ? `<span class="badge green">${e(t('centers.managedBadge'))}</span>` : ''}<h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(estadoOperativo)}</span>${(() => { const d = distanciaKm(lugar); return d != null ? `<span><strong>${e(t('centers.distance'))}:</strong> ${d.toFixed(1)} km</span>` : ''; })()}</div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : `<p class="meta">${e(t('centers.noActiveNeeds'))}</p>`}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div><p class="meta">${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</p></article>`;
+      const pesoUrgencia = { critico: 0, moderado: 1 };
+      const urgentesResumen = (lugar.necesita || []).slice()
+        .sort((a, b) => (pesoUrgencia[normalizar(a.urgencia)] ?? 2) - (pesoUrgencia[normalizar(b.urgencia)] ?? 2))
+        .slice(0, 2).map((i) => mostrarInsumo(i.nombre));
+      const resumenNecesita = urgentesResumen.length
+        ? `<span class="pill-necesita">${e(t('centers.needsShort', { items: urgentesResumen.join(', ') }))}</span>`
+        : `<span class="pill-ok">${e(t('centers.noActiveNeeds'))}</span>`;
+      const d = distanciaKm(lugar);
+      const distancia = d != null ? `<span class="centro-dist">${d.toFixed(1)} km</span>` : '';
+      return `<article class="card centro-card ${claseLugar}" data-centro-card>
+        <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
+          <span class="centro-resumen">
+            <span class="badge-row"><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span>${lugar.gestionado ? `<span class="badge green">${e(t('centers.managedBadge'))}</span>` : ''}</span>
+            <span class="centro-nombre">${e(lugar.nombre)}</span>
+            <span class="meta">${e(lugar.ubicacion || t('centers.locationPending'))} · ${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</span>
+            ${resumenNecesita}
+          </span>
+          ${distancia}
+          <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="centro-more" hidden>
+          ${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : ''}
+          ${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}
+          ${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}
+          <div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div>
+        </div>
+      </article>`;
     }
 

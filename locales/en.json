@@ -187,7 +187,14 @@
     "nearbyCta": "📍 Centers near me",
     "distance": "Distance",
     "youAreHere": "You are here",
-    "nearbyOn": "Centers sorted by distance"
+    "nearbyOn": "Centers sorted by distance",
+    "nearTitle": "Centers near you",
+    "nearCopy": "Tap a center to see how to get there and contact it.",
+    "mapToggle": "See all on the map",
+    "mapToggleHide": "Hide map",
+    "filtersSummary": "Filter by type or category",
+    "findFamilyCta": "Find a family member",
+    "needsShort": "Needs: {items}"
   },
   "volunteers": {
     "title": "Volunteer Registration",
@@ -821,5 +828,68 @@
     "panelRegenerated": "Panel regenerated. Hand the new token and PIN to the center.",
     "signOut": "Exit admin mode"
   },
-  "lugar": {}
+  "lugar": {},
+  "home": {
+    "question": "What do you need today?",
+    "sub": "Pick an option and we'll take you straight there.",
+    "back": "Home",
+    "footQuestion": "Did you donate?",
+    "footLink": "Track your donation with your code",
+    "doors": {
+      "ayuda": {
+        "title": "I need help",
+        "copy": "Centers near you, find a family member"
+      },
+      "ayudar": {
+        "title": "I want to help",
+        "copy": "Donate supplies, volunteer, give money"
+      },
+      "transporte": {
+        "title": "I'm a driver",
+        "copy": "Move supplies between centers, log routes"
+      },
+      "centro": {
+        "title": "I run a center or team",
+        "copy": "Update my center, management panel"
+      }
+    }
+  },
+  "helpHub": {
+    "title": "Thank you for helping",
+    "copy": "Three direct ways. Pick one.",
+    "donateTitle": "Donate supplies",
+    "donateCopy": "See what's missing and where to deliver it",
+    "volunteerTitle": "Volunteer",
+    "volunteerCopy": "Sign up with your area and availability",
+    "moneyTitle": "Give money",
+    "moneyCopy": "Verified campaign with public tracking",
+    "rescuerCta": "I'm a rescuer or rescue team",
+    "reportSummary": "Report outdated info or a center"
+  },
+  "transportHub": {
+    "title": "Drivers",
+    "copy": "Move supplies from where they're spare to where they're needed.",
+    "registerTitle": "Register as a driver",
+    "registerCopy": "Your area, vehicle type and availability. Centers will see you to coordinate transfers."
+  },
+  "transfers": {
+    "title": "Suggested transfers",
+    "copy": "One center has what another needs. Tap one to coordinate.",
+    "empty": "No suggested transfers right now.",
+    "coordinate": "Coordinate on WhatsApp",
+    "route": "View route",
+    "pickup": "Pick up at {lugar} ({zona})",
+    "deliver": "Deliver to {lugar} ({zona})"
+  },
+  "centerHub": {
+    "title": "Centers and teams",
+    "copy": "Credentialed access. None of this appears in the public menu.",
+    "panelTitle": "My center's panel",
+    "panelCopy": "Update needs, available supplies and contact details with your token + PIN.",
+    "panelCta": "Enter the panel",
+    "createTitle": "Register a new center",
+    "createCopy": "Only if your center is not in the directory yet.",
+    "createCta": "Register center",
+    "adminNote": "The admin module (invoices, traceability, verification) opens via direct access with a key."
+  }
 }

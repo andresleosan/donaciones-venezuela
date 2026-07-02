@@ -187,7 +187,14 @@
     "nearbyCta": "📍 Centros cerca de mí",
     "distance": "Distancia",
     "youAreHere": "Estás aquí",
-    "nearbyOn": "Centros ordenados por cercanía"
+    "nearbyOn": "Centros ordenados por cercanía",
+    "nearTitle": "Centros cerca de ti",
+    "nearCopy": "Toca un centro para ver cómo llegar y contactar.",
+    "mapToggle": "Ver todos en el mapa",
+    "mapToggleHide": "Ocultar mapa",
+    "filtersSummary": "Filtrar por tipo o categoría",
+    "findFamilyCta": "Buscar a un familiar",
+    "needsShort": "Necesita: {items}"
   },
   "volunteers": {
     "title": "Registro de Voluntarios",
@@ -821,5 +828,68 @@
     "panelRegenerated": "Panel regenerado. Entrega el token y el PIN nuevos al centro.",
     "signOut": "Salir del modo admin"
   },
-  "lugar": {}
+  "lugar": {},
+  "home": {
+    "question": "¿Qué necesitas hoy?",
+    "sub": "Elige una opción y te llevamos directo, sin vueltas.",
+    "back": "Inicio",
+    "footQuestion": "¿Donaste algo?",
+    "footLink": "Sigue tu donación con tu código",
+    "doors": {
+      "ayuda": {
+        "title": "Necesito ayuda",
+        "copy": "Centros cerca de ti, buscar a un familiar"
+      },
+      "ayudar": {
+        "title": "Quiero ayudar",
+        "copy": "Donar insumos, ser voluntario, aportar dinero"
+      },
+      "transporte": {
+        "title": "Soy transportista",
+        "copy": "Llevar insumos entre centros, registrar trayectos"
+      },
+      "centro": {
+        "title": "Soy un centro o equipo",
+        "copy": "Actualizar mi centro, panel de gestión"
+      }
+    }
+  },
+  "helpHub": {
+    "title": "Gracias por ayudar",
+    "copy": "Tres formas directas. Elige una.",
+    "donateTitle": "Donar insumos",
+    "donateCopy": "Ve qué falta y en qué centro entregarlo",
+    "volunteerTitle": "Ser voluntario",
+    "volunteerCopy": "Regístrate con tu zona y disponibilidad",
+    "moneyTitle": "Aportar dinero",
+    "moneyCopy": "Campaña verificada, con seguimiento público",
+    "rescuerCta": "Soy rescatista o equipo de rescate",
+    "reportSummary": "Reportar un dato desactualizado o un centro"
+  },
+  "transportHub": {
+    "title": "Transportistas",
+    "copy": "Mueve insumos de donde sobran a donde faltan.",
+    "registerTitle": "Registrarme como transportista",
+    "registerCopy": "Tu zona, tipo de vehículo y disponibilidad. Los centros te verán para coordinar traslados."
+  },
+  "transfers": {
+    "title": "Traslados sugeridos",
+    "copy": "Un centro tiene lo que otro necesita. Toca uno para coordinar.",
+    "empty": "No hay traslados sugeridos por ahora.",
+    "coordinate": "Coordinar por WhatsApp",
+    "route": "Ver ruta",
+    "pickup": "Recoger en {lugar} ({zona})",
+    "deliver": "Entregar en {lugar} ({zona})"
+  },
+  "centerHub": {
+    "title": "Centros y equipos",
+    "copy": "Acceso con credenciales. Nada de esto aparece en el menú público.",
+    "panelTitle": "Panel de mi centro",
+    "panelCopy": "Actualiza necesidades, disponibles y datos de contacto con tu token + PIN.",
+    "panelCta": "Entrar al panel",
+    "createTitle": "Registrar un centro nuevo",
+    "createCopy": "Solo si tu centro aún no aparece en el directorio.",
+    "createCta": "Registrar centro",
+    "adminNote": "El módulo de administración (facturas, trazabilidad, verificación) se abre por acceso directo con clave."
+  }
 }

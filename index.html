@@ -52,7 +52,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=5">
+  <link rel="stylesheet" href="css/app.css?v=6">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -63,15 +63,11 @@
         <span class="brand-mark" aria-hidden="true">✚</span>
         <span>Respuesta Humanitaria Venezuela</span>
       </a>
-      <nav class="top-nav" aria-label="Navegación principal">
-        <button class="nav-link" type="button" data-view-link="inicio" aria-current="page">Inicio</button>
-        <button class="nav-link" type="button" data-view-link="donaciones">Centros</button>
-        <button class="nav-link" type="button" data-view-link="voluntarios">Voluntarios</button>
-        <button class="nav-link" type="button" data-view-link="rescatistas">Rescatistas</button>
-        <button class="nav-link" type="button" data-view-link="familiar">Buscar familiar</button>
-        <button class="nav-link" type="button" data-view-link="seguimiento">Donaciones</button>
-      </nav>
       <div class="header-actions">
+        <button class="btn-volver" type="button" id="btn-volver" data-view-link="inicio" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="btn-volver-texto">Inicio</span>
+        </button>
         <div class="language-control">
           <label class="visually-hidden" for="language-select">Idioma</label>
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -91,116 +87,146 @@
   <main id="contenido" tabindex="-1">
     <div id="banner" class="notice" role="status"></div>
 
-    <section id="view-inicio" class="view active" data-view="inicio" aria-labelledby="hero-title">
-      <div class="hero">
-        <div class="hero-copy">
-          <span class="eyebrow"><span aria-hidden="true">VE</span> Coordinación humanitaria activa</span>
-          <h1 id="hero-title">Respuesta Humanitaria Venezuela</h1>
-          <p class="hero-subtitle">Conecta centros de ayuda, hospitales, voluntarios, rescatistas, donaciones y reportes familiares en una sola mesa operativa móvil.</p>
-          <div class="hero-actions" aria-label="Acciones principales">
-            <button type="button" class="btn btn-secondary" data-view-link="familiar">Buscar familiar</button>
-            <button type="button" class="btn btn-primary" data-view-link="donaciones">Ver centros de ayuda</button>
-            <button type="button" class="btn btn-ghost" data-view-link="voluntarios">Registro voluntario</button>
-          </div>
-          <div class="stats-grid" id="stats-grid" aria-live="polite"></div>
+    <!-- ══ HOME: una sola pregunta, cuatro puertas ══ -->
+    <section id="view-inicio" class="view active" data-view="inicio" data-pantalla="home" aria-labelledby="home-question">
+      <div class="home-shell">
+        <h1 id="home-question" class="home-question">¿Qué necesitas hoy?</h1>
+        <p class="home-sub" id="home-sub">Elige una opción y te llevamos directo, sin vueltas.</p>
+
+        <div class="doors">
+          <button class="door door-ayuda" type="button" data-puerta="ayuda" data-view-link="donaciones">
+            <span class="door-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8.2v7.6M8.2 12h7.6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="door-text">
+              <span class="door-title" id="door-ayuda-title">Necesito ayuda</span>
+              <span class="door-copy" id="door-ayuda-copy">Centros cerca de ti, buscar a un familiar</span>
+            </span>
+            <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+
+          <button class="door door-ayudar" type="button" data-puerta="ayudar" data-view-link="ayudar">
+            <span class="door-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false"><path d="M12 20.2S4 15 4 9.9C4 7.2 6.1 5 8.7 5c1.4 0 2.6.6 3.3 1.7C12.7 5.6 13.9 5 15.3 5 17.9 5 20 7.2 20 9.9c0 5.1-8 10.3-8 10.3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="door-text">
+              <span class="door-title" id="door-ayudar-title">Quiero ayudar</span>
+              <span class="door-copy" id="door-ayudar-copy">Donar insumos, ser voluntario, aportar dinero</span>
+            </span>
+            <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+
+          <button class="door door-transporte" type="button" data-puerta="transporte" data-view-link="transporte">
+            <span class="door-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false"><path d="M3 7h10v8H3zM13 10h4l3 3v2h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.5" cy="17" r="1.8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </span>
+            <span class="door-text">
+              <span class="door-title" id="door-transporte-title">Soy transportista</span>
+              <span class="door-copy" id="door-transporte-copy">Llevar insumos entre centros, registrar trayectos</span>
+            </span>
+            <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+
+          <button class="door door-centro" type="button" data-puerta="centro" data-view-link="centro">
+            <span class="door-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false"><path d="M4 20V9.5L12 4l8 5.5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 20v-5.5h5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="door-text">
+              <span class="door-title" id="door-centro-title">Soy un centro o equipo</span>
+              <span class="door-copy" id="door-centro-copy">Actualizar mi centro, panel de gestión</span>
+            </span>
+            <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
-        <div class="hero-visual" aria-label="Red visual de operaciones humanitarias">
-          <img class="hero-image" src="assets/icons/icon-192.png" alt="" width="192" height="192" decoding="async" fetchpriority="high" aria-hidden="true" />
-          <div class="route-line" aria-hidden="true"></div>
-          <span class="map-pin pin-a" aria-hidden="true"></span>
-          <span class="map-pin pin-b" aria-hidden="true"></span>
-          <span class="map-pin pin-c" aria-hidden="true"></span>
-          <div class="ops-panel" aria-label="Prioridades operativas">
-            <div class="ops-card"><span class="ops-label">Prioridad</span><span class="ops-value">Agua y medicamentos</span></div>
-            <div class="ops-card"><span class="ops-label">Cobertura</span><span class="ops-value">Estados y ciudades</span></div>
-            <div class="ops-card"><span class="ops-label">Respuesta</span><span class="ops-value">Centros, rutas y equipos</span></div>
-          </div>
-        </div>
+
+        <p class="home-foot"><span id="home-foot-q">¿Donaste algo?</span> <a href="#seguimiento" id="home-foot-link" data-view-link="seguimiento">Sigue tu donación con tu código</a></p>
       </div>
-
-      <section class="section" id="dashboard-operaciones" aria-labelledby="dashboard-title">
-        <div class="section-header">
-          <div>
-            <h2 id="dashboard-title" class="section-title">Dashboard de Operaciones</h2>
-            <p class="section-copy">Vista consolidada para priorizar llamadas, registros y traslado de suministros.</p>
-          </div>
-        </div>
-        <div class="dashboard-grid" id="dashboard-grid" aria-live="polite"></div>
-      </section>
-
-      <section class="section" aria-labelledby="ayudar-title">
-        <div class="section-header">
-          <div>
-            <h2 id="ayudar-title" class="section-title">Cómo ayudar</h2>
-            <p class="section-copy">Tres formas directas de apoyar operaciones verificadas.</p>
-          </div>
-        </div>
-        <div class="help-grid">
-          <article class="card card-bordered"><div class="icon-box" aria-hidden="true">▣</div><h3>Donar suministros</h3><p class="meta">Entrega agua, medicamentos, alimentos o equipos en centros registrados.</p><button class="btn btn-soft" type="button" data-view-link="donaciones">Ver necesidades</button></article>
-          <article class="card card-bordered"><div class="icon-box green" aria-hidden="true">✓</div><h3>Registrarse como voluntario</h3><p class="meta">Indica tu ciudad, profesión y disponibilidad para coordinar apoyo local.</p><button class="btn btn-soft" type="button" data-view-link="voluntarios">Ir al registro</button></article>
-          <article class="card card-bordered"><div class="icon-box red" aria-hidden="true">!</div><h3>Reportar información verificada</h3><p class="meta">Actualiza centros, teléfonos y necesidades con datos confirmados.</p><button class="btn btn-soft" type="button" data-view-link="donaciones">Reportar centro</button></article>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="urgentes-title">
-        <div class="section-header">
-          <div>
-            <h2 id="urgentes-title" class="section-title">Necesidades urgentes</h2>
-            <p class="section-copy">Preparado para conectarse a una hoja de prioridades operativas.</p>
-          </div>
-        </div>
-        <div class="urgent-grid" id="urgent-grid"></div>
-      </section>
-
-      <section class="section" aria-labelledby="mapa-title">
-        <div class="section-header">
-          <div>
-            <h2 id="mapa-title" class="section-title">Centros de ayuda y operaciones</h2>
-            <p class="section-copy">Hospitales, refugios, centros de acopio y puntos de ayuda en una estructura lista para mapa.</p>
-          </div>
-        </div>
-        <div class="map-shell" id="mapa-operaciones" data-map-provider="leaflet-ready">
-          <div class="map-placeholder">
-            <div>
-              <h3>Sin coordenadas verificadas por ahora</h3>
-              <p class="meta">La lista de centros funciona con ubicación textual. El mapa aceptará latitud y longitud cuando estén disponibles.</p>
-              <div class="map-layers" aria-label="Capas preparadas">
-                <span class="badge">Hospitales</span><span class="badge green">Refugios</span><span class="badge yellow">Centros de acopio</span><span class="badge red">Puntos de ayuda</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </section>
 
-    <section id="view-donaciones" class="view" data-view="donaciones" aria-labelledby="donaciones-title">
+    <!-- ══ PUERTA 1 · Necesito ayuda: centros cerca ══ -->
+    <section id="view-donaciones" class="view" data-view="donaciones" data-pantalla="ayuda" aria-labelledby="donaciones-title">
       <div class="section-header">
         <div>
-          <h2 id="donaciones-title" class="section-title">Centros de ayuda</h2>
-          <p class="section-copy">Centros, hospitales y refugios con necesidades, disponibilidad y contactos.</p>
-        </div>
-        <div class="section-actions">
-          <button type="button" class="btn btn-ghost" id="btn-panel-centro">Gestionar mi centro</button>
-          <button type="button" class="btn btn-primary" data-scroll-target="form-lugar">Reportar centro</button>
+          <h2 id="donaciones-title" class="section-title">Centros cerca de ti</h2>
+          <p class="section-copy" id="donaciones-copy">Toca un centro para ver cómo llegar y contactar.</p>
         </div>
       </div>
 
-      <div class="filters" role="search" aria-label="Filtros de centros de ayuda">
-        <div class="field"><label for="filtro-lugar-q">Buscar</label><input id="filtro-lugar-q" type="search" placeholder="Nombre, ubicación o insumo" autocomplete="off" /></div>
-        <div class="field"><label for="filtro-lugar-tipo">Tipo</label><select id="filtro-lugar-tipo"><option value="todos">Todos</option><option value="Centro">Centros</option><option value="Hospital">Hospitales</option><option value="Refugio">Refugios</option></select></div>
-        <div class="field"><label for="filtro-lugar-categoria">Categoría</label><select id="filtro-lugar-categoria"><option value="">Todas</option></select></div>
+      <div class="cerca-acciones">
+        <button class="btn btn-secondary btn-block" type="button" id="btn-cerca">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M12 21s-6.5-5.4-6.5-10A6.5 6.5 0 0 1 12 4.5 6.5 6.5 0 0 1 18.5 11c0 4.6-6.5 10-6.5 10Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="11" r="2.2" fill="currentColor"/></svg>
+          <span>Centros cerca de mí</span>
+        </button>
+        <div class="field">
+          <label class="visually-hidden" for="filtro-lugar-q">Buscar</label>
+          <input id="filtro-lugar-q" type="search" placeholder="Nombre, ubicación o insumo" autocomplete="off" />
+        </div>
+        <button class="link-btn" type="button" id="btn-mapa-toggle">Ver todos en el mapa</button>
       </div>
 
-      <div class="inline-actions" id="centros-acciones">
-        <button class="btn btn-ghost btn-small" type="button" id="btn-cerca">📍 Centros cerca de mí</button>
-      </div>
       <div id="mapa-centros" hidden></div>
-      <p class="meta" id="conteo-lugares" aria-live="polite"></p>
-      <div id="grid-lugares" class="grid" aria-live="polite"><div class="loading-grid"><div class="skeleton"></div><div class="skeleton"></div></div></div>
 
-      <section class="form-panel" id="form-lugar" aria-labelledby="form-lugar-title">
-        <h3 id="form-lugar-title">Reportar centro o insumo</h3>
-        <p class="section-copy">Registra necesidades o disponibilidad sin cambiar la estructura existente de Google Sheets.</p>
+      <details class="filtros-extra">
+        <summary id="filtros-extra-summary">Filtrar por tipo o categoría</summary>
+        <div class="filters" role="search" aria-label="Filtros de centros de ayuda">
+          <div class="field"><label for="filtro-lugar-tipo">Tipo</label><select id="filtro-lugar-tipo"><option value="todos">Todos</option><option value="Centro">Centros</option><option value="Hospital">Hospitales</option><option value="Refugio">Refugios</option></select></div>
+          <div class="field"><label for="filtro-lugar-categoria">Categoría</label><select id="filtro-lugar-categoria"><option value="">Todas</option></select></div>
+        </div>
+      </details>
+
+      <p class="meta" id="conteo-lugares" aria-live="polite"></p>
+      <div id="grid-lugares" class="lista-centros" aria-live="polite"><div class="loading-grid"><div class="skeleton"></div><div class="skeleton"></div></div></div>
+
+      <div class="ayuda-extra">
+        <button class="btn btn-ghost btn-block" type="button" id="btn-buscar-familiar" data-view-link="familiar">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.2 15.2 20 20" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          <span id="btn-buscar-familiar-texto">Buscar a un familiar</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ══ PUERTA 2 · Quiero ayudar ══ -->
+    <section id="view-ayudar" class="view" data-view="ayudar" data-pantalla="ayudar" aria-labelledby="ayudar-hub-title">
+      <div class="section-header">
+        <div>
+          <h2 id="ayudar-hub-title" class="section-title">Gracias por ayudar</h2>
+          <p class="section-copy" id="ayudar-hub-copy">Tres formas directas. Elige una.</p>
+        </div>
+      </div>
+
+      <div class="help3">
+        <button type="button" class="help-card" data-view-link="donaciones">
+          <span class="door-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><path d="M4 8.2 12 4l8 4.2v7.6L12 20l-8-4.2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 8.2 12 12l8-3.8M12 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="help-title" id="help-donar-title">Donar insumos</span>
+          <span class="help-copy" id="help-donar-copy">Ve qué falta y en qué centro entregarlo</span>
+        </button>
+        <button type="button" class="help-card" data-view-link="voluntarios">
+          <span class="door-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 20c.6-3.6 3.2-5.6 6.5-5.6s5.9 2 6.5 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <span class="help-title" id="help-voluntario-title">Ser voluntario</span>
+          <span class="help-copy" id="help-voluntario-copy">Regístrate con tu zona y disponibilidad</span>
+        </button>
+        <button type="button" class="help-card" data-view-link="seguimiento">
+          <span class="door-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><rect x="3.5" y="6" width="17" height="12" rx="2.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17" stroke="currentColor" stroke-width="2"/><path d="M7 14.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <span class="help-title" id="help-dinero-title">Aportar dinero</span>
+          <span class="help-copy" id="help-dinero-copy">Campaña verificada, con seguimiento público</span>
+        </button>
+      </div>
+
+      <div class="ayuda-extra">
+        <button class="btn btn-ghost btn-block" type="button" id="btn-rescatista-link" data-view-link="rescatistas">
+          <span id="btn-rescatista-texto">Soy rescatista o equipo de rescate</span>
+        </button>
+      </div>
+
+      <details class="form-panel" id="reportar-details">
+        <summary id="reportar-summary">Reportar un dato desactualizado o un centro</summary>
+        <p class="section-copy" id="form-lugar-copy">Registra necesidades o disponibilidad de un centro con datos confirmados.</p>
         <form id="lugar-form" novalidate>
           <div class="form-grid">
             <div class="field"><label for="lugar-tipo">Tipo</label><select id="lugar-tipo" required autocomplete="organization-title"><option value="Centro">Centro de acopio</option><option value="Hospital">Hospital</option><option value="Refugio">Refugio</option><option value="Punto de ayuda">Punto de ayuda</option></select></div>
@@ -212,12 +238,78 @@
             <div class="field"><label for="lugar-estado">Estado del insumo</label><select id="lugar-estado" required><option value="Necesita">Necesita</option><option value="Tiene disponible">Tiene disponible</option></select></div>
             <div class="field"><label for="lugar-coords">Coordenadas (lat, lng)</label><input id="lugar-coords" placeholder="10.4806, -66.9036" /></div>
           </div>
-          <div class="form-actions"><button class="btn btn-ghost" type="button" id="btn-geo-lugar">📍 Usar mi ubicación</button><button class="btn btn-primary" type="submit">Guardar reporte</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
+          <div class="form-actions"><button class="btn btn-ghost" type="button" id="btn-geo-lugar">Usar mi ubicación</button><button class="btn btn-primary" type="submit">Guardar reporte</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
           <div id="lugar-message" class="form-message" role="status" aria-live="polite"></div>
         </form>
+      </details>
+    </section>
+
+    <!-- ══ PUERTA 3 · Soy transportista ══ -->
+    <section id="view-transporte" class="view" data-view="transporte" data-pantalla="transporte" aria-labelledby="transporte-title">
+      <div class="section-header">
+        <div>
+          <h2 id="transporte-title" class="section-title">Transportistas</h2>
+          <p class="section-copy" id="transporte-copy">Mueve insumos de donde sobran a donde faltan.</p>
+        </div>
+      </div>
+
+      <div class="gate-card">
+        <h3 id="transporte-registro-title">Registrarme como transportista</h3>
+        <p class="section-copy" id="transporte-registro-copy">Tu zona, tipo de vehículo y disponibilidad. Los centros te verán para coordinar traslados.</p>
+        <button class="btn btn-primary" id="btn-motorizado" type="button">Registrar transportista</button>
+      </div>
+
+      <section class="section" aria-labelledby="traslados-title">
+        <div class="section-header">
+          <div>
+            <h3 id="traslados-title" class="section-title">Traslados sugeridos</h3>
+            <p class="section-copy" id="traslados-copy">Un centro tiene lo que otro necesita. Toca uno para coordinar.</p>
+          </div>
+        </div>
+        <div id="grid-traslados" class="lista-centros" aria-live="polite"></div>
+      </section>
+
+      <section class="section" aria-labelledby="mot-title">
+        <div class="section-header">
+          <div>
+            <h3 id="mot-title" class="section-title">Transportistas solidarios</h3>
+            <p class="section-copy" id="mot-copy">Ranking operativo de rutas y apoyo logístico.</p>
+          </div>
+        </div>
+        <div class="filters" role="search" aria-label="Filtros de transportistas">
+          <div class="field"><label for="filtro-mot-q">Buscar</label><input id="filtro-mot-q" type="search" placeholder="Nombre, zona o vehículo" /></div>
+          <div class="field"><label for="filtro-mot-tipo">Vehículo</label><select id="filtro-mot-tipo"><option value="">Todos</option><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div>
+        </div>
+        <p class="meta" id="conteo-motorizados" aria-live="polite"></p>
+        <div id="grid-motorizados" class="grid" aria-live="polite"></div>
       </section>
     </section>
 
+    <!-- ══ PUERTA 4 · Soy un centro o equipo ══ -->
+    <section id="view-centro" class="view" data-view="centro" data-pantalla="centro" aria-labelledby="centro-hub-title">
+      <div class="section-header">
+        <div>
+          <h2 id="centro-hub-title" class="section-title">Centros y equipos</h2>
+          <p class="section-copy" id="centro-hub-copy">Acceso con credenciales. Nada de esto aparece en el menú público.</p>
+        </div>
+      </div>
+
+      <div class="gate-card">
+        <h3 id="centro-panel-title">Panel de mi centro</h3>
+        <p class="section-copy" id="centro-panel-copy">Actualiza necesidades, disponibles y datos de contacto con tu token + PIN.</p>
+        <button type="button" class="btn btn-primary" id="btn-panel-centro">Entrar al panel</button>
+      </div>
+
+      <div class="gate-card">
+        <h3 id="centro-crear-title">Registrar un centro nuevo</h3>
+        <p class="section-copy" id="centro-crear-copy">Solo si tu centro aún no aparece en el directorio.</p>
+        <button type="button" class="btn btn-ghost" id="btn-crear-centro">Registrar centro</button>
+      </div>
+
+      <p class="meta gate-note" id="centro-admin-note">El módulo de administración (facturas, trazabilidad, verificación) se abre por acceso directo con clave.</p>
+    </section>
+
+    <!-- ══ Pantallas profundas (se llega desde las puertas) ══ -->
     <section id="view-voluntarios" class="view" data-view="voluntarios" aria-labelledby="voluntarios-title">
       <div class="section-header">
         <div>
@@ -229,7 +321,7 @@
       <div class="registry-shell volunteer-shell">
         <section class="form-panel" aria-labelledby="vol-form-title">
           <h3 id="vol-form-title">Datos del voluntario</h3>
-          <p class="section-copy">La información se envía al endpoint existente de voluntarios en Google Sheets.</p>
+          <p class="section-copy">La información se envía al registro de voluntarios de la plataforma.</p>
           <form id="voluntario-form" novalidate>
             <div class="form-grid">
               <div class="field"><label for="vol-nombre">Nombre</label><input id="vol-nombre" required autocomplete="given-name" /></div>
@@ -287,7 +379,7 @@
       <div class="registry-shell rescue-shell">
         <section class="form-panel" aria-labelledby="res-form-title">
           <h3 id="res-form-title">Datos del equipo o rescatista</h3>
-          <p class="section-copy">El registro usa el endpoint existente de rescatistas y conserva compatibilidad con Sheets.</p>
+          <p class="section-copy">El registro usa el directorio de rescatistas de la plataforma.</p>
           <form id="rescatista-form" novalidate>
             <div class="form-grid">
               <div class="field"><label for="res-nombre">Nombre</label><input id="res-nombre" required autocomplete="name" /></div>
@@ -314,7 +406,7 @@
             <span><strong id="res-resumen-equipos">0</strong> con equipo</span>
             <span><strong id="res-resumen-actualizado">sin fecha</strong></span>
           </div>
-          <p class="meta">Usa esta pestaña para perfiles con capacidad técnica, equipo o afiliación operativa.</p>
+          <p class="meta">Usa esta sección para perfiles con capacidad técnica, equipo o afiliación operativa.</p>
         </aside>
       </div>
 
@@ -333,26 +425,10 @@
         <p class="meta" id="conteo-rescatistas" aria-live="polite"></p>
         <div id="grid-rescatistas" class="grid" aria-live="polite"></div>
       </section>
-
-      <section class="section" aria-labelledby="mot-title">
-        <div class="section-header">
-          <div>
-            <h2 id="mot-title" class="section-title">Transportistas solidarios</h2>
-            <p class="section-copy">Ranking operativo de rutas y apoyo logístico existente.</p>
-          </div>
-          <button class="btn btn-primary" id="btn-motorizado" type="button">Registrar transportista</button>
-        </div>
-        <div class="filters" role="search" aria-label="Filtros de transportistas">
-          <div class="field"><label for="filtro-mot-q">Buscar</label><input id="filtro-mot-q" type="search" placeholder="Nombre, zona o vehículo" /></div>
-          <div class="field"><label for="filtro-mot-tipo">Vehículo</label><select id="filtro-mot-tipo"><option value="">Todos</option><option>Moto</option><option>Carro</option><option>Bicicleta</option><option>Camión</option><option>Motocarro</option></select></div>
-        </div>
-        <p class="meta" id="conteo-motorizados" aria-live="polite"></p>
-        <div id="grid-motorizados" class="grid" aria-live="polite"></div>
-      </section>
     </section>
 
     <section id="view-familiar" class="view" data-view="familiar" aria-labelledby="familiar-title">
-      <div class="section-header"><div><h2 id="familiar-title" class="section-title">Buscar familiar</h2><p class="section-copy">Consulta por nombre o cédula en las hojas personas o familiares de Google Sheets.</p></div></div>
+      <div class="section-header"><div><h2 id="familiar-title" class="section-title">Buscar familiar</h2><p class="section-copy">Consulta por nombre o cédula en los reportes de personas de la plataforma.</p></div></div>
       <form class="form-panel" id="familiar-form" novalidate>
         <div class="form-grid">
           <div class="field full"><label for="familiar-query">Nombre completo o cédula</label><input id="familiar-query" required autocomplete="off" placeholder="V-12345678 o nombre completo" /></div>
@@ -396,7 +472,7 @@
 
       <section class="donation-panel" aria-labelledby="donation-dashboard-title">
         <h3 id="donation-dashboard-title">Dashboard humanitario</h3>
-        <p class="section-copy">Indicadores consolidados desde registros de la plataforma y datos compatibles con Google Sheets.</p>
+        <p class="section-copy">Indicadores consolidados desde registros de la plataforma.</p>
         <div id="donation-dashboard-grid" class="donation-kpi-grid" aria-live="polite"></div>
       </section>
 
@@ -461,7 +537,7 @@
 
       <section class="donation-panel" aria-labelledby="donation-history-title">
         <h3 id="donation-history-title">Historial de ayuda</h3>
-        <p class="section-copy">Preparado para estados Pendiente, En proceso y Entregado desde Google Sheets.</p>
+        <p class="section-copy">Estados Pendiente, En proceso y Entregado desde los registros de la plataforma.</p>
         <div id="donation-history-list" class="donation-history-list" aria-live="polite"></div>
       </section>
 
@@ -484,7 +560,7 @@
       <section class="donation-panel" aria-labelledby="donation-transparency-title">
         <h3 id="donation-transparency-title">Transparencia</h3>
         <div id="donation-transparency" class="transparency-grid" aria-live="polite"></div>
-        <p class="transparency-note">Las solicitudes mostradas provienen de registros documentados dentro de la plataforma. La información puede ser auditada y validada mediante los registros almacenados en Google Sheets.</p>
+        <p class="transparency-note">Las solicitudes mostradas provienen de registros documentados dentro de la plataforma y pueden auditarse con los registros almacenados.</p>
       </section>
 
       <section class="donation-panel" id="donation-tracking-panel" aria-labelledby="tracking-panel-title">
@@ -503,23 +579,14 @@
 
   </main>
 
-  <nav class="bottom-nav" aria-label="Navegación móvil">
-    <button type="button" data-view-link="inicio" aria-current="page" aria-label="Inicio"><span aria-hidden="true">⌂</span>Inicio</button>
-    <button type="button" data-view-link="donaciones" aria-label="Centros de ayuda"><span aria-hidden="true">✚</span>Centros</button>
-    <button type="button" data-view-link="voluntarios" aria-label="Registro de voluntarios"><span aria-hidden="true">✓</span>Volunt.</button>
-    <button type="button" data-view-link="rescatistas" aria-label="Registro de rescatistas"><span aria-hidden="true">⚑</span>Rescate</button>
-    <button type="button" data-view-link="familiar" aria-label="Buscar familiar"><span aria-hidden="true">⌕</span>Buscar</button>
-    <button type="button" data-view-link="seguimiento" aria-label="Centro de donaciones"><span aria-hidden="true">#</span>Donar</button>
-  </nav>
-
   <div id="toast-root"></div>
   <div id="modal-root"></div>
 
   <script src="services/leaflet/leaflet.js"></script>
-  <script src="services/api.js?v=3"></script>
-  <script src="js/core.js?v=13"></script>
-  <script src="js/vistas.js?v=13"></script>
-  <script src="js/panel.js?v=13"></script>
-  <script src="js/admin.js?v=13"></script>
+  <script src="services/api.js?v=4"></script>
+  <script src="js/core.js?v=14"></script>
+  <script src="js/vistas.js?v=14"></script>
+  <script src="js/panel.js?v=14"></script>
+  <script src="js/admin.js?v=14"></script>
 </body>
 </html>

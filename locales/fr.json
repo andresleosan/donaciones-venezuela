@@ -187,7 +187,14 @@
     "nearbyCta": "📍 Centres près de moi",
     "distance": "Distance",
     "youAreHere": "Vous êtes ici",
-    "nearbyOn": "Centres triés par distance"
+    "nearbyOn": "Centres triés par distance",
+    "nearTitle": "Centres près de toi",
+    "nearCopy": "Touche un centre pour voir comment y aller et le contacter.",
+    "mapToggle": "Tout voir sur la carte",
+    "mapToggleHide": "Masquer la carte",
+    "filtersSummary": "Filtrer par type ou catégorie",
+    "findFamilyCta": "Retrouver un proche",
+    "needsShort": "Besoin : {items}"
   },
   "volunteers": {
     "title": "Inscription des bénévoles",
@@ -821,5 +828,68 @@
     "panelRegenerated": "Panneau régénéré. Remettez le nouveau token et le PIN au centre.",
     "signOut": "Quitter le mode admin"
   },
-  "lugar": {}
+  "lugar": {},
+  "home": {
+    "question": "De quoi as-tu besoin aujourd'hui ?",
+    "sub": "Choisis une option et on t'y emmène directement.",
+    "back": "Accueil",
+    "footQuestion": "Tu as fait un don ?",
+    "footLink": "Suis ton don avec ton code",
+    "doors": {
+      "ayuda": {
+        "title": "J'ai besoin d'aide",
+        "copy": "Centres près de toi, retrouver un proche"
+      },
+      "ayudar": {
+        "title": "Je veux aider",
+        "copy": "Donner des fournitures, être bénévole, donner de l'argent"
+      },
+      "transporte": {
+        "title": "Je suis transporteur",
+        "copy": "Déplacer des fournitures entre centres, enregistrer des trajets"
+      },
+      "centro": {
+        "title": "Je suis un centre ou une équipe",
+        "copy": "Mettre à jour mon centre, panneau de gestion"
+      }
+    }
+  },
+  "helpHub": {
+    "title": "Merci d'aider",
+    "copy": "Trois façons directes. Choisis-en une.",
+    "donateTitle": "Donner des fournitures",
+    "donateCopy": "Vois ce qui manque et où le livrer",
+    "volunteerTitle": "Être bénévole",
+    "volunteerCopy": "Inscris-toi avec ta zone et ta disponibilité",
+    "moneyTitle": "Donner de l'argent",
+    "moneyCopy": "Campagne vérifiée, avec suivi public",
+    "rescuerCta": "Je suis secouriste ou équipe de secours",
+    "reportSummary": "Signaler une info obsolète ou un centre"
+  },
+  "transportHub": {
+    "title": "Transporteurs",
+    "copy": "Déplace les fournitures de là où il y en a trop vers là où il en manque.",
+    "registerTitle": "M'inscrire comme transporteur",
+    "registerCopy": "Ta zone, ton véhicule et ta disponibilité. Les centres te verront pour coordonner des transferts."
+  },
+  "transfers": {
+    "title": "Transferts suggérés",
+    "copy": "Un centre a ce dont un autre a besoin. Touches-en un pour coordonner.",
+    "empty": "Aucun transfert suggéré pour le moment.",
+    "coordinate": "Coordonner sur WhatsApp",
+    "route": "Voir l'itinéraire",
+    "pickup": "Récupérer à {lugar} ({zona})",
+    "deliver": "Livrer à {lugar} ({zona})"
+  },
+  "centerHub": {
+    "title": "Centres et équipes",
+    "copy": "Accès avec identifiants. Rien de ceci n'apparaît dans le menu public.",
+    "panelTitle": "Panneau de mon centre",
+    "panelCopy": "Mets à jour besoins, disponibilités et contacts avec ton token + PIN.",
+    "panelCta": "Entrer dans le panneau",
+    "createTitle": "Enregistrer un nouveau centre",
+    "createCopy": "Seulement si ton centre n'apparaît pas encore dans l'annuaire.",
+    "createCta": "Enregistrer le centre",
+    "adminNote": "Le module d'administration (factures, traçabilité, vérification) s'ouvre par accès direct avec une clé."
+  }
 }

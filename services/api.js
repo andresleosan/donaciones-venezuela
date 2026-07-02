@@ -24,6 +24,7 @@
     return {
       lugares: [],
       centros: [],
+      traslados: [],
       voluntarios: [],
       rescatistas: [],
       motorizados: [],
@@ -87,12 +88,14 @@
 
   async function getAll() {
     try {
-      const [lugares, voluntarios, rescatistas, motorizados, estadisticas] = await Promise.all([
+      const [lugares, voluntarios, rescatistas, motorizados, estadisticas, traslados] = await Promise.all([
         rest('lugares_directorio', '?order=nombre'),
         rest('voluntarios_public', '?order=fecha_registro.desc'),
         rest('rescatistas_public', '?order=fecha_registro.desc'),
         rest('motorizados_public', '?order=fecha_registro.desc'),
-        rpc('estadisticas')
+        rpc('estadisticas'),
+        // catch propio: si la vista falta, el resto de la app sigue viva
+        rest('traslados_sugeridos', '?order=actualizado.desc&limit=30').catch(() => [])
       ]);
       const data = Object.assign(emptyAll(), {
         lugares: lugares || [],
@@ -100,7 +103,8 @@
         voluntarios: (voluntarios || []).map(voluntarioUI),
         rescatistas: (rescatistas || []).map(rescatistaUI),
         motorizados: (motorizados || []).map(motorizadoUI),
-        estadisticas: estadisticas || {}
+        estadisticas: estadisticas || {},
+        traslados: traslados || []
       });
       return { data, source: 'live' };
     } catch (err) {

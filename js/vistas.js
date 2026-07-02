@@ -20,7 +20,29 @@
       $('#conteo-lugares').textContent = t('centers.count', { shown: filtered.length, total: estado.lugares.length });
       $('#grid-lugares').innerHTML = orden.length ? orden.map(renderLugarCard).join('') : `<div class="empty-state">${e(t('centers.empty'))}</div>`;
       $$('[data-historial]').forEach((btn) => btn.addEventListener('click', () => abrirHistorial(btn.dataset.historial)));
+      bindTarjetasColapsables('#grid-lugares');
       renderMapa(filtered);
+    }
+
+    // Progressive disclosure: las tarjetas nacen cerradas y se expanden al tocar
+    function bindTarjetasColapsables(rootSel) {
+      $$(rootSel + ' [data-centro-toggle]').forEach((btn) => btn.addEventListener('click', () => {
+        const card = btn.closest('[data-centro-card], [data-traslado]');
+        if (!card) return;
+        const abierto = card.classList.toggle('open');
+        btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+        const cuerpo = card.querySelector('.centro-more');
+        if (cuerpo) cuerpo.hidden = !abierto;
+      }));
+    }
+
+    function alternarMapa() {
+      const cont = $('#mapa-centros');
+      if (!cont) return;
+      cont.hidden = !cont.hidden;
+      const btn = $('#btn-mapa-toggle');
+      if (btn) btn.textContent = t(cont.hidden ? 'centers.mapToggle' : 'centers.mapToggleHide');
+      if (!cont.hidden) renderLugares();
     }
 
     // ── Geo: mapa Leaflet + cerca de mí ──
@@ -39,9 +61,9 @@
     function renderMapa(lugares) {
       const cont = $('#mapa-centros');
       if (!cont || typeof window.L === 'undefined') return;
+      if (cont.hidden) return; // el mapa solo se pinta cuando el usuario lo abre
       const conGeo = lugares.filter((l) => l.lat != null && l.lng != null);
-      if (!conGeo.length && !ubicacionUsuario) { cont.hidden = true; return; }
-      cont.hidden = false;
+      if (!conGeo.length && !ubicacionUsuario) return;
       if (!mapaLeaflet) {
         mapaLeaflet = window.L.map(cont);
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -200,6 +222,54 @@
     function toast(msg) {
       $('#toast-root').innerHTML = `<div class="toast" role="status">${e(msg)}</div>`;
       setTimeout(() => { $('#toast-root').innerHTML = ''; }, 3400);
+    }
+
+    // ── Traslados sugeridos (puerta transportista) ──
+    // La vista traslados_sugeridos no expone teléfonos; se resuelven aquí desde
+    // estado.lugares (lugares_directorio, que ya es público).
+    function telefonoDeLugar(nombre) {
+      const lugar = estado.lugares.find((l) => normalizar(l.nombre) === normalizar(nombre));
+      return lugar ? lugar.telefono : '';
+    }
+
+    function rutaHref(origen, destino) {
+      const zona = (q) => encodeURIComponent(/venezuela/i.test(q) ? q : q + ', Venezuela');
+      return `https://www.google.com/maps/dir/?api=1&origin=${zona(String(origen || ''))}&destination=${zona(String(destino || ''))}`;
+    }
+
+    function renderTraslados() {
+      const cont = $('#grid-traslados');
+      if (!cont) return;
+      const lista = estado.traslados || [];
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty-state" data-traslados-vacio>${e(t('transfers.empty'))}</div>`;
+        return;
+      }
+      cont.innerHTML = lista.map((tr) => {
+        const telOrigen = telefonoDeLugar(tr.origen);
+        const whatsapp = soloDigitos(telOrigen)
+          ? `<a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${waHref(telOrigen)}">${e(t('transfers.coordinate'))}</a>`
+          : `<span class="badge gray">${e(t('centers.phonePending'))}</span>`;
+        const ruta = tr.origen_ubicacion && tr.destino_ubicacion
+          ? `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${e(rutaHref(tr.origen_ubicacion, tr.destino_ubicacion))}">${e(t('transfers.route'))}</a>`
+          : '';
+        return `<article class="card centro-card" data-traslado>
+          <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
+            <span class="centro-resumen">
+              <span class="badge-row"><span class="badge ${urgenciaClass(tr.urgencia)}">${e(mostrarUrgencia(tr.urgencia))}</span><span class="badge gray">${e(mostrarCategoria(tr.categoria))}</span></span>
+              <span class="centro-nombre">${e(mostrarInsumo(tr.insumo))}</span>
+              <span class="meta">${e(tr.origen)} → ${e(tr.destino)}</span>
+            </span>
+            <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="centro-more" hidden>
+            <p class="meta">${e(t('transfers.pickup', { lugar: tr.origen, zona: tr.origen_ubicacion || t('centers.locationPending') }))}</p>
+            <p class="meta">${e(t('transfers.deliver', { lugar: tr.destino, zona: tr.destino_ubicacion || t('centers.locationPending') }))}</p>
+            <div class="card-actions">${whatsapp}${ruta}</div>
+          </div>
+        </article>`;
+      }).join('');
+      bindTarjetasColapsables('#grid-traslados');
     }
 
     function abrirModal(titulo, contenido) {

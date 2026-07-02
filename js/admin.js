@@ -503,7 +503,7 @@
     }
 
     function renderAll() {
-      renderStats(); renderDashboard(); renderRegistrySummaries(); renderUrgentes(); poblarCategorias(); renderLugares(); renderVoluntarios(); renderRescatistas(); renderMotorizados(); renderDonations();
+      renderRegistrySummaries(); poblarCategorias(); renderLugares(); renderVoluntarios(); renderRescatistas(); renderMotorizados(); renderTraslados(); renderDonations();
     }
 
     async function cargarTodo() {
@@ -513,6 +513,7 @@
       estado.voluntarios = data.voluntarios || [];
       estado.rescatistas = data.rescatistas || [];
       estado.motorizados = data.motorizados || [];
+      estado.traslados = data.traslados || [];
       estado.donacionesHumanitarias = data.donacionesHumanitarias || data.donaciones_humanitarias || data.donations || [];
       estado.estadisticas = data.estadisticas || data.stats || {};
       setStatus(result.source);
@@ -526,8 +527,12 @@
       renderDonations();
       const btnPanel = $('#btn-panel-centro');
       if (btnPanel) btnPanel.addEventListener('click', () => abrirPanelCentro(''));
+      const btnCrearCentro = $('#btn-crear-centro');
+      if (btnCrearCentro) btnCrearCentro.addEventListener('click', () => abrirCrearPanel());
       const btnCerca = $('#btn-cerca');
       if (btnCerca) btnCerca.addEventListener('click', activarCercaDeMi);
+      const btnMapaToggle = $('#btn-mapa-toggle');
+      if (btnMapaToggle) btnMapaToggle.addEventListener('click', alternarMapa);
       const btnGeoLugar = $('#btn-geo-lugar');
       if (btnGeoLugar) btnGeoLugar.addEventListener('click', () => capturarUbicacion('#lugar-coords'));
       await cargarTodo();
