@@ -1527,6 +1527,9 @@
       const match = hash.match(/^#centro\/(CTR-[A-Z0-9-]+)$/i);
       if (match) abrirPanelCentro(match[1].toUpperCase());
       if (/^#admin$/i.test(hash)) abrirAdmin();
+      // Shortcuts de la PWA: #<vista> abre esa vista directamente
+      const vista = (hash.match(/^#(inicio|donaciones|voluntarios|rescatistas|familiar|seguimiento)$/i) || [])[1];
+      if (vista) cambiarVista(vista.toLowerCase());
     }
 
     // ===== Módulo admin de trazabilidad (#admin) =====

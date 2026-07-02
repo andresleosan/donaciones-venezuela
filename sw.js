@@ -2,7 +2,7 @@
 // Los datos (Supabase) NUNCA se cachean. Los locales van network-first
 // (se actualizan seguido; nunca deben quedar viejos). Una sola VERSION
 // controla el nombre de caché y las URLs versionadas — súbela por release.
-const VERSION = '11';
+const VERSION = '13';
 const CACHE = 'ayuda-ve-v' + VERSION;
 const ESTATICOS = [
   '/',
@@ -17,7 +17,7 @@ const ESTATICOS = [
 // Recursos que deben estar siempre frescos: se sirven de red y solo caen
 // a caché si no hay conexión.
 function esFresco(url) {
-  return url.pathname.startsWith('/locales/');
+  return url.pathname.startsWith('/locales/') || url.pathname === '/manifest.json';
 }
 
 self.addEventListener('install', (ev) => {
