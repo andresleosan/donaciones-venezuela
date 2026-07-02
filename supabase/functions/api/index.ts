@@ -36,6 +36,16 @@ async function sha256Hex(texto: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Comparacion en tiempo constante de dos digest hex de igual longitud: no revela
+// por timing cuantos caracteres coinciden (evita ataques de temporizacion sobre
+// el hash de la clave admin y del PIN del panel).
+function hashIguales(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 function tokenAlfa(prefijo: string): string {
   const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   const rnd = crypto.getRandomValues(new Uint8Array(12));
@@ -55,24 +65,26 @@ async function historial(lugar: string, insumo: string, descripcion: string, ori
   await supa.from('historial_movimientos').insert({ lugar, insumo, descripcion, origen, cantidad });
 }
 
-async function upsertLugar(p: Record<string, unknown>): Promise<{ id: number }> {
+// Obtiene el lugar por nombre. Si NO existe, lo crea con los datos aportados.
+// Si YA existe, lo devuelve SIN modificar su ficha (tipo/ubicacion/telefono/geo).
+// SEGURIDAD: las unicas rutas que llaman aqui — registrar_lugar y panel_crear —
+// son PUBLICAS/anonimas. Sobrescribir un centro existente permitiria a cualquiera
+// alterar el telefono o la ubicacion de un hospital ya listado (spoofing / IDOR).
+// La edicion de un centro existente solo ocurre autenticada: panel_actualizar_lugar
+// (token+PIN) o las acciones admin.
+async function obtenerOCrearLugar(p: Record<string, unknown>): Promise<{ id: number }> {
   const nombre = s(p.nombre, 120);
   if (!nombre) throw new Error('nombre requerido');
   const { data: existente } = await supa.from('lugares').select('id').eq('nombre', nombre).maybeSingle();
-  const campos: Record<string, unknown> = { actualizado: new Date().toISOString() };
-  if (s(p.tipo, 40)) campos.tipo = s(p.tipo, 40);
-  if (s(p.ubicacion)) campos.ubicacion = s(p.ubicacion);
-  if (s(p.telefono, 40)) campos.telefono = s(p.telefono, 40);
+  if (existente) return existente; // no se toca la ficha de un centro ya registrado
+  const campos: Record<string, unknown> = {
+    tipo: s(p.tipo, 40) || 'Centro', nombre,
+    ubicacion: s(p.ubicacion), telefono: s(p.telefono, 40),
+    actualizado: new Date().toISOString(),
+  };
   const geo = geoValida(p);
   if (geo.lat !== null) { campos.lat = geo.lat; campos.lng = geo.lng; }
-  if (existente) {
-    const { error } = await supa.from('lugares').update(campos).eq('id', existente.id);
-    if (error) throw error;
-    return existente;
-  }
-  const { data: lugar, error } = await supa.from('lugares')
-    .insert({ tipo: 'Centro', nombre, ubicacion: '', telefono: '', ...campos })
-    .select('id').single();
+  const { data: lugar, error } = await supa.from('lugares').insert(campos).select('id').single();
   if (error) throw error;
   return lugar;
 }
@@ -88,7 +100,7 @@ async function autenticarPanel(p: Record<string, unknown>) {
     .select('id, lugar_id, pin_hash, pin_salt').eq('token_centro', token).maybeSingle();
   if (!panel) throw new Error('Token o PIN inválido');
   const hash = await sha256Hex(panel.pin_salt + pin);
-  if (hash !== panel.pin_hash) throw new Error('Token o PIN inválido');
+  if (!hashIguales(hash, panel.pin_hash)) throw new Error('Token o PIN inválido');
   return panel;
 }
 
@@ -101,8 +113,8 @@ async function autenticarAdmin(p: Record<string, unknown>, req: Request) {
   if ((fallos?.contador || 0) >= 10) throw new Error('Demasiadas claves incorrectas, espera una hora');
   const { data: cfg } = await supa.from('config').select('valor').eq('clave', 'admin_key_hash').maybeSingle();
   if (!cfg?.valor) throw new Error('Módulo admin no configurado'); // fail-closed
-  const hash = await sha256Hex(s(p.adminKey, 64)); // comparar digests: tiempo constante en la práctica
-  if (hash !== cfg.valor) {
+  const hash = await sha256Hex(s(p.adminKey, 64));
+  if (!hashIguales(hash, cfg.valor)) {
     await rateHit(ip, 'admin_fallos', 999999);
     throw new Error('Clave admin incorrecta');
   }
@@ -145,7 +157,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
 
   switch (accion) {
     case 'registrar_lugar': {
-      const lugar = await upsertLugar(p);
+      const lugar = await obtenerOCrearLugar(p);
       const insumo = s(p.insumo, 120);
       if (insumo) {
         const estado = ['Necesita', 'Disponible', 'Cubierto'].includes(s(p.estado, 20)) ? s(p.estado, 20) : 'Necesita';
@@ -223,16 +235,23 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
     case 'panel_crear': {
       const pin = s(p.pin, 12);
       if (!/^[0-9]{4,8}$/.test(pin)) throw new Error('El PIN debe tener de 4 a 8 dígitos');
-      const lugar = await upsertLugar(p);
-      const { data: existente } = await supa.from('centros_panel')
-        .select('id').eq('lugar_id', lugar.id).maybeSingle();
-      if (existente) throw new Error('Este centro ya tiene un panel. Usa su token o contacta al administrador.');
+      const nombre = s(p.nombre, 120);
+      if (!nombre) throw new Error('nombre requerido');
+      // SEGURIDAD: solo se puede auto-crear el panel de un centro NUEVO. Reclamar de
+      // forma anonima el panel de un centro ya listado permitiria secuestrar un
+      // hospital conocido y sabotear sus necesidades. Para un centro existente, el
+      // acceso lo provisiona un admin (admin_regenerar_panel) y lo entrega al centro.
+      const { data: yaExiste } = await supa.from('lugares').select('id').eq('nombre', nombre).maybeSingle();
+      if (yaExiste) {
+        throw new Error('Este centro ya está registrado. Pide al administrador que genere el acceso del panel.');
+      }
+      const lugar = await obtenerOCrearLugar(p); // crea el centro nuevo
       const token = tokenAlfa('CTR');
       const salt = crypto.randomUUID();
       const { error: e2 } = await supa.from('centros_panel').insert({
         lugar_id: lugar.id, token_centro: token, pin_hash: await sha256Hex(salt + pin), pin_salt: salt });
       if (e2) throw e2;
-      await historial(s(p.nombre, 120), '', 'Panel de centro creado', 'panel');
+      await historial(nombre, '', 'Panel de centro creado', 'panel');
       return { token };
     }
     case 'panel_ver': {
