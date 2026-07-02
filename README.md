@@ -1,71 +1,45 @@
 # Respuesta Humanitaria Venezuela
 
-Aplicación estática para coordinar centros de ayuda, hospitales, refugios, voluntarios, rescatistas, transportistas, trayectos, aportes, búsqueda familiar y trazabilidad pública de donaciones por factura.
+Aplicación estática (sin dependencias ni bundler) para coordinar centros de ayuda, hospitales, refugios, voluntarios, rescatistas, transportistas, trayectos, aportes, búsqueda familiar y trazabilidad pública de donaciones por factura.
 
 ## Fuente de datos
 
-La única fuente operativa es Google Sheets mediante este Google Apps Script:
+**Supabase** (Postgres + PostgREST + Edge Functions). Proyecto: `zryfwbjvlacorryzdaod`.
 
-```text
-https://script.google.com/macros/s/AKfycbzY39NEDPZrRZTtu7zLfuURf_bTnYXLAhjokfOzWq80H8yzrqe_TL7Y2vp-9LpgiU2GDg/exec
-```
+- **Lecturas**: PostgREST sobre vistas públicas sin PII ni tokens (`lugares_directorio`, `voluntarios_public`, `rescatistas_public`, `motorizados_public`, `trayectos_public`, `historial_public`, `facturas_public`, `donaciones_motorizados_public`) y RPCs `estadisticas`, `buscar_familiar`, `seguimiento_factura`.
+- **Escrituras**: edge function `api` (`/functions/v1/api`) con validación estricta por acción y rate-limit por IP (30/hora). Las tablas tienen RLS cerrado: la anon key no puede escribir nada directamente.
+- La clave usada en el cliente es la **publishable** (pública por diseño).
 
-Spreadsheet principal:
-
-```text
-1fnXiSy1TbPqwlLKDSfPoBfKs8pH0WptoECGq_zu_Lco
-```
-
-La app no incluye archivos locales de registros ni datos alternativos. Si Google Sheets no responde, la interfaz muestra estado de error y listas vacías.
+No hay archivos locales de registros ni datos alternativos: si Supabase no responde, la interfaz muestra estado de error y listas vacías.
 
 ## Estructura
 
-- `index.html`: frontend estático con HTML, CSS y JavaScript.
-- `services/sheets.js`: cliente único para lecturas y escrituras contra Apps Script.
-- `apps-script/codigo.gs`: backend de Google Apps Script para leer, escribir, buscar y sincronizar Google Sheets.
+- `index.html`: markup de la app (el CSS y JS viven aparte).
+- `css/app.css`: sistema de diseño (tokens estilo Stripe: índigo `#635BFF`, tinta `#0A2540`, Inter autohospedada).
+- `js/app.js`: lógica de la interfaz (vanilla).
+- `services/api.js`: único cliente de datos (PostgREST + edge function). Mantiene la interfaz histórica `window.SheetsService`.
 - `locales/`: textos de interfaz en español, inglés y francés.
-- `vercel.json`: cabeceras de seguridad y CSP para Apps Script.
+- `manifest.json` + `sw.js`: PWA (los estáticos se cachean; los datos nunca).
+- `vercel.json`: cabeceras de seguridad y CSP (solo permite `connect-src` a Supabase).
 
-## Hojas esperadas
+## Esquema (tablas principales)
 
-- `lugares`: `Tipo`, `Nombre`, `Ubicacion`, `Telefono`, `Insumo`, `Categoria`, `Estado`, `Actualizado`.
-- `voluntarios`
-- `rescatistas`
-- `motorizados`
-- `trayectos`
-- `historial_movimientos`
-- `donaciones_motorizados`
-- `facturas`: `id`, `numero_factura`, `token_publico`, `objetivo`, `descripcion`, `monto_requerido`, `monto_recaudado`, `estado`, `fecha_creacion`, `fecha_cierre`.
-- `donaciones`: `id`, `factura_id`, `nombre_donante`, `monto`, `referencia_pago`, `fecha`, `estado`.
-- `movimientos_factura`: `id`, `factura_id`, `tipo`, `descripcion`, `monto`, `fecha`.
-- `evidencias`: `id`, `factura_id`, `archivo`, `descripcion`, `fecha`.
-- Opcional para búsqueda familiar: `personas` o `familiares`.
-
-`apps-script/codigo.gs` inicializa las hojas base si faltan y mantiene `lugares` con el esquema A-H.
+`lugares` + `insumos` (necesidades/disponibles/cubiertos por centro), `voluntarios`, `rescatistas`, `motorizados`, `trayectos`, `donaciones_motorizados`, `historial_movimientos`, `facturas` + `donaciones` + `movimientos_factura` + `evidencias` (trazabilidad), `personas` (búsqueda familiar), `centros_panel` (acceso token+PIN de cada centro), `rate_limit`.
 
 ## Trazabilidad por token
 
-La vista pública está disponible desde:
+- Vista pública: `/?token=DV-XXXX-XXXX-XXXX` o `#seguimiento/DV-XXXX-XXXX-XXXX`.
+- El RPC `seguimiento_factura` solo devuelve datos públicos: factura, objetivo, montos, porcentaje, movimientos, evidencias públicas y estado. Nunca teléfonos, donantes, referencias de pago ni datos operativos.
 
-```text
-/?token=DV-8K4P-X2MN-7QTR
-#seguimiento/DV-8K4P-X2MN-7QTR
-```
+## Panel por centro
 
-El frontend llama `accion=seguimiento_factura` y muestra solo datos públicos: factura, objetivo, montos, porcentaje, historial financiero, evidencias públicas y estado. No expone teléfonos, correos, coordenadas, donantes, referencias de pago ni datos operativos.
+Cada centro puede gestionar sus insumos en vivo:
 
-Endpoints Apps Script principales:
-
-- `crear_factura` / `registrar_factura`
-- `registrar_donacion` / `registrar_donacion_factura`
-- `registrar_movimiento_factura`
-- `registrar_evidencia` / `registrar_evidencia_factura`
-- `seguimiento_factura` / `seguimiento_token` / `trazabilidad`
-- `facturas`
+- Crear: botón «Gestionar mi centro» → «Crear panel de mi centro» → define un PIN (4-8 dígitos) → recibe un token `CTR-XXXX-XXXX-XXXX` **que se muestra una sola vez**.
+- Entrar: mismo botón o enlace `#centro/CTR-XXXX-XXXX-XXXX` + PIN.
+- El PIN se guarda hasheado (SHA-256 + salt); el backend nunca lo conoce en claro.
 
 ## Desarrollo local
-
-No hay bundler ni dependencias.
 
 ```bash
 python3 -m http.server 8000
@@ -76,14 +50,12 @@ Abrir `http://127.0.0.1:8000/`.
 ## Verificación rápida
 
 ```bash
-curl -sL "https://script.google.com/macros/s/AKfycbzY39NEDPZrRZTtu7zLfuURf_bTnYXLAhjokfOzWq80H8yzrqe_TL7Y2vp-9LpgiU2GDg/exec"
+curl -s -H "apikey: <PUBLISHABLE_KEY>" \
+  "https://zryfwbjvlacorryzdaod.supabase.co/rest/v1/lugares_directorio?select=nombre&limit=1"
 ```
 
-Debe devolver JSON con `lugares`, `voluntarios`, `rescatistas`, `motorizados` y `estadisticas`.
-Si devuelve HTML de inicio de sesión de Google, el despliegue del Apps Script no está publicado para acceso anónimo y la web mostrará estado de error sin datos alternativos.
+Debe devolver JSON con al menos un lugar.
 
 ## Despliegue
 
-1. Pegar el contenido actualizado de `apps-script/codigo.gs` en el proyecto de Apps Script.
-2. Desplegar una nueva versión en el despliegue existente para conservar la URL `/exec`.
-3. Publicar la app estática en Vercel.
+Publicar la app estática en Vercel (sin build). Los cambios de backend se aplican con migraciones SQL y redespliegue de la edge function `api` en Supabase.

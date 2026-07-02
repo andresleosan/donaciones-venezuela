@@ -2,75 +2,54 @@
 
 ## Flujo principal
 
-1. `index.html` carga `services/sheets.js`.
-2. `services/sheets.js` consulta exclusivamente el Apps Script `/exec` configurado.
-3. `apps-script/codigo.gs` abre el Spreadsheet por ID mediante `getSpreadsheet()`.
-4. Las respuestas JSON reconstruyen listados, contadores, filtros, prioridades y estadísticas.
-5. Después de cada escritura, el frontend vuelve a leer Google Sheets y renderiza desde esa respuesta.
+1. `index.html` carga `services/api.js` y `js/app.js`.
+2. `services/api.js` habla exclusivamente con Supabase: lecturas por PostgREST (`/rest/v1/...`) y escrituras por la edge function (`/functions/v1/api`).
+3. Las respuestas JSON reconstruyen listados, contadores, filtros, prioridades y estadísticas.
+4. Después de cada escritura, el frontend vuelve a leer Supabase (`cargarTodo()`) y renderiza desde esa respuesta.
 
-## Backend
+## Backend (Supabase, proyecto `zryfwbjvlacorryzdaod`)
 
-`apps-script/codigo.gs` expone:
+### Lecturas (PostgREST, anon key publishable)
 
-- `doGet`: lecturas y escrituras verificables desde el navegador estático.
-- `doPost`: compatibilidad para clientes servidor-servidor o llamadas directas.
-- `getSheet()`: acceso explícito a la hoja `lugares` del Spreadsheet principal.
-- `sincronizarRegistrosLugares(payload)`: inserta registros faltantes evitando duplicados por `nombre + insumo + estado`.
-- `buscarFamiliares(params)`: busca en `personas` o `familiares` dentro del mismo Spreadsheet.
-- `registrarFactura(payload)`: crea factura con número `FAC-AAAA-000001` y token público no secuencial.
-- `registrarDonacionFactura(payload)`: guarda la donación asociada a factura y actualiza el monto recaudado cuando está confirmada.
-- `registrarMovimientoFactura(payload)`: agrega movimientos financieros a la factura.
-- `registrarEvidenciaFactura(payload)`: registra evidencia pública asociada.
-- `obtenerSeguimientoFactura(params)`: devuelve solo datos públicos por token.
+- Vistas públicas sin PII ni tokens: `lugares_directorio` (con `necesita` / `tiene_disponible` / `cubiertos` agregados en la misma forma que consumía el frontend), `voluntarios_public`, `rescatistas_public`, `motorizados_public`, `trayectos_public`, `historial_public`, `facturas_public` (sin `token_publico`), `donaciones_motorizados_public`.
+- RPCs `security definer`: `estadisticas()`, `buscar_familiar(q)` (mínimo 3 caracteres, máximo 25 resultados), `seguimiento_factura(tok)` (solo datos públicos).
 
-## Fuente única
+### Escrituras (edge function `api`, service role)
 
-No hay registros embebidos, archivos locales de datos, almacenamiento persistente del navegador ni endpoint externo para información operativa. Las opciones estáticas que quedan en HTML son controles de interfaz, no registros.
-
-## Escrituras
-
-El frontend llama `SheetsService.post(payload)`. El servicio construye una URL con `accion` y parámetros, lee la respuesta JSON del Apps Script y lanza error si el backend responde `error`, `success:false` o `exito:false`.
+Todas las tablas tienen **RLS habilitado sin políticas para anon**: la única vía de escritura es la edge function, que valida por acción, recorta longitudes y aplica rate-limit por IP (30 escrituras/hora, RPC `rate_hit`).
 
 Acciones cubiertas:
 
-- `registrar_lugar`
-- `registrar_voluntario`
-- `registrar_rescatista`
-- `registrar_motorizado`
-- `registrar_trayecto`
-- `donar_motorizado`
-- `buscar_familiar`
-- `crear_factura` / `registrar_factura`
-- `registrar_donacion` / `registrar_donacion_factura`
-- `registrar_movimiento_factura`
-- `registrar_evidencia` / `registrar_evidencia_factura`
-- `seguimiento_factura` / `seguimiento_token` / `trazabilidad`
+- `registrar_lugar` (upsert por `nombre`; no pisa campos existentes con valores vacíos)
+- `registrar_voluntario`, `registrar_rescatista`, `registrar_motorizado`
+- `registrar_trayecto`, `donar_motorizado`
+- `reportar_persona`
+- Panel por centro: `panel_crear`, `panel_ver`, `panel_insumo`, `panel_insumo_borrar`
+
+### Panel por centro
+
+Tabla `centros_panel` (`lugar_id` único, `token_centro` `CTR-XXXX-XXXX-XXXX`, `pin_hash` = SHA-256(salt+PIN), `pin_salt`). Cada acción del panel se autentica sin sesión: token+PIN viajan en cada petición y se validan contra el hash. El token se entrega una sola vez al crear el panel.
+
+## Fuente única
+
+No hay registros embebidos, archivos locales de datos ni almacenamiento persistente del navegador para información operativa. El service worker cachea solo assets estáticos versionados; los datos se leen siempre en vivo.
 
 ## Trazabilidad financiera
 
-El módulo público de seguimiento se consulta con `?token=DV-XXXX-XXXX-XXXX` o `#seguimiento/DV-XXXX-XXXX-XXXX`. El frontend llama a Apps Script y renderiza únicamente:
+El módulo público de seguimiento se consulta con `?token=DV-XXXX-XXXX-XXXX` o `#seguimiento/DV-XXXX-XXXX-XXXX`. El RPC `seguimiento_factura` devuelve únicamente:
 
 - factura, objetivo y descripción pública;
 - monto requerido, monto recaudado y porcentaje completado;
-- historial financiero publicado;
-- evidencias públicas;
+- movimientos financieros;
+- evidencias con `publica = true`;
 - estado actual.
 
-Los datos de donante, referencia de pago y cualquier dato operativo quedan en Google Sheets y no se devuelven en el endpoint público. El backend además sanitiza texto público para redactar correos, teléfonos, coordenadas y referencias bancarias si fueran escritos por error en campos visibles.
+Los datos de donante, referencia de pago y cualquier dato operativo viven en tablas sin acceso anon y no se devuelven en el endpoint público.
 
-Hojas financieras inicializadas por Apps Script:
-
-- `facturas`
-- `donaciones`
-- `movimientos_factura`
-- `evidencias`
+Tablas financieras: `facturas`, `donaciones`, `movimientos_factura`, `evidencias`.
 
 ## Integridad
 
-`registrarLugar` y `sincronizarRegistrosLugares` usan la misma clave única:
-
-```text
-nombre + insumo + estado
-```
-
-Si una clave ya existe, no se inserta otra fila.
+- `lugares.nombre` es único (los reportes repetidos actualizan, no duplican).
+- `insumos` tiene clave única `(lugar_id, nombre)`: reportar el mismo insumo actualiza su estado en vez de insertar otra fila.
+- `facturas.numero_factura` y `facturas.token_publico` son únicos.
