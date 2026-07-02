@@ -184,7 +184,7 @@
     "capacityPending": "Capacity to confirm",
     "activeCenter": "Active center",
     "managedBadge": "Managed by the center",
-    "nearbyCta": "📍 Centers near me",
+    "nearbyCta": "Centers near me",
     "distance": "Distance",
     "youAreHere": "You are here",
     "nearbyOn": "Centers sorted by distance",
@@ -781,7 +781,7 @@
     "tokenHint": "To sign in later: the “Manage my center” button or the #centro/YOUR-TOKEN link, plus your PIN.",
     "placeData": "Center details",
     "coordsLabel": "Coordinates (lat, lng)",
-    "useMyLocation": "📍 Use my location",
+    "useMyLocation": "Use my location",
     "savePlace": "Save center details",
     "geoUnavailable": "Your browser does not support geolocation",
     "geoDenied": "Could not get your location"

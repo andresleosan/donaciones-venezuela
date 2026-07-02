@@ -184,7 +184,7 @@
     "capacityPending": "Capacité à confirmer",
     "activeCenter": "Centre actif",
     "managedBadge": "Géré par le centre",
-    "nearbyCta": "📍 Centres près de moi",
+    "nearbyCta": "Centres près de moi",
     "distance": "Distance",
     "youAreHere": "Vous êtes ici",
     "nearbyOn": "Centres triés par distance",
@@ -781,7 +781,7 @@
     "tokenHint": "Pour entrer plus tard : le bouton « Gérer mon centre » ou le lien #centro/VOTRE-TOKEN, plus votre PIN.",
     "placeData": "Données du centre",
     "coordsLabel": "Coordonnées (lat, lng)",
-    "useMyLocation": "📍 Utiliser ma position",
+    "useMyLocation": "Utiliser ma position",
     "savePlace": "Enregistrer les données du centre",
     "geoUnavailable": "Votre navigateur ne prend pas en charge la géolocalisation",
     "geoDenied": "Impossible d'obtenir votre position"

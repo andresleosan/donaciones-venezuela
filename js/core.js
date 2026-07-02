@@ -104,7 +104,7 @@
       setText('label[for="language-select"]', 'language.selectorLabel');
       setAttr('#language-select', 'aria-label', 'language.selectorAria');
       setText('#btn-panel-centro', 'panel.manageCta');
-      setText('#btn-cerca', 'centers.nearbyCta');
+      setText('#btn-cerca-texto', 'centers.nearbyCta');
       setText('#btn-geo-lugar', 'panel.useMyLocation');
       setText('label[for="lugar-coords"]', 'panel.coordsLabel');
       setText('#reportar-persona-summary', 'family.reportTitle');
