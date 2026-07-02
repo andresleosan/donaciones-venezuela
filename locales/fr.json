@@ -183,7 +183,11 @@
     "operationalContact": "Contact opérationnel",
     "capacityPending": "Capacité à confirmer",
     "activeCenter": "Centre actif",
-    "managedBadge": "Géré par le centre"
+    "managedBadge": "Géré par le centre",
+    "nearbyCta": "📍 Centres près de moi",
+    "distance": "Distance",
+    "youAreHere": "Vous êtes ici",
+    "nearbyOn": "Centres triés par distance"
   },
   "volunteers": {
     "title": "Inscription des bénévoles",
@@ -816,5 +820,6 @@
     "regenerate": "Régénérer token et PIN",
     "panelRegenerated": "Panneau régénéré. Remettez le nouveau token et le PIN au centre.",
     "signOut": "Quitter le mode admin"
-  }
+  },
+  "lugar": {}
 }

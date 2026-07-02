@@ -1065,3 +1065,9 @@
     .panel-insumo { padding: 12px 0; border-bottom: 1px solid var(--border); }
     .panel-insumo .form-grid { margin-bottom: 8px; }
     #panel-body h3 { margin-top: 18px; }
+
+
+    /* Mapa de centros (Leaflet) */
+    #mapa-centros { height: 340px; border-radius: var(--radius-lg); overflow: hidden; margin: 12px 0 4px; border: 1px solid var(--border); box-shadow: var(--shadow-soft); }
+    #mapa-centros .leaflet-container { font: inherit; }
+    #centros-acciones { margin-bottom: 6px; }

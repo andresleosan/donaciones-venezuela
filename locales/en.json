@@ -183,7 +183,11 @@
     "operationalContact": "Operational contact",
     "capacityPending": "Capacity to confirm",
     "activeCenter": "Active center",
-    "managedBadge": "Managed by the center"
+    "managedBadge": "Managed by the center",
+    "nearbyCta": "📍 Centers near me",
+    "distance": "Distance",
+    "youAreHere": "You are here",
+    "nearbyOn": "Centers sorted by distance"
   },
   "volunteers": {
     "title": "Volunteer Registration",
@@ -816,5 +820,6 @@
     "regenerate": "Regenerate token and PIN",
     "panelRegenerated": "Panel regenerated. Hand the new token and PIN to the center.",
     "signOut": "Exit admin mode"
-  }
+  },
+  "lugar": {}
 }

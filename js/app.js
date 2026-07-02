@@ -110,6 +110,9 @@
       setText('label[for="language-select"]', 'language.selectorLabel');
       setAttr('#language-select', 'aria-label', 'language.selectorAria');
       setText('#btn-panel-centro', 'panel.manageCta');
+      setText('#btn-cerca', 'centers.nearbyCta');
+      setText('#btn-geo-lugar', 'panel.useMyLocation');
+      setText('label[for="lugar-coords"]', 'panel.coordsLabel');
       setText('#reportar-persona-summary', 'family.reportTitle');
       setText('#reportar-persona-copy', 'family.reportCopy');
       setText('label[for="per-nombre"]', 'family.reportName');
@@ -1097,7 +1100,7 @@
       const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(t('centers.covered', { item: mostrarInsumo(i.nombre) }))}</span>`).join('');
       const tipoBadge = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
       const iconClass = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
-      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span>${lugar.gestionado ? `<span class="badge green">${e(t('centers.managedBadge'))}</span>` : ''}<h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(estadoOperativo)}</span></div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : `<p class="meta">${e(t('centers.noActiveNeeds'))}</p>`}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div><p class="meta">${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</p></article>`;
+      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span>${lugar.gestionado ? `<span class="badge green">${e(t('centers.managedBadge'))}</span>` : ''}<h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(estadoOperativo)}</span>${(() => { const d = distanciaKm(lugar); return d != null ? `<span><strong>${e(t('centers.distance'))}:</strong> ${d.toFixed(1)} km</span>` : ''; })()}</div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : `<p class="meta">${e(t('centers.noActiveNeeds'))}</p>`}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div><p class="meta">${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</p></article>`;
     }
 
     function renderLugares() {
@@ -1111,9 +1114,76 @@
         if (f.lugarCategoria && !items.some((i) => normalizar(i.categoria) === normalizar(f.lugarCategoria))) return false;
         return true;
       });
+      let orden = filtered;
+      if (ubicacionUsuario) {
+        orden = filtered.slice().map((l) => ({ l, d: distanciaKm(l) }))
+          .sort((a, b) => (a.d == null ? Infinity : a.d) - (b.d == null ? Infinity : b.d))
+          .map((x) => x.l);
+      }
       $('#conteo-lugares').textContent = t('centers.count', { shown: filtered.length, total: estado.lugares.length });
-      $('#grid-lugares').innerHTML = filtered.length ? filtered.map(renderLugarCard).join('') : `<div class="empty-state">${e(t('centers.empty'))}</div>`;
+      $('#grid-lugares').innerHTML = orden.length ? orden.map(renderLugarCard).join('') : `<div class="empty-state">${e(t('centers.empty'))}</div>`;
       $$('[data-historial]').forEach((btn) => btn.addEventListener('click', () => abrirHistorial(btn.dataset.historial)));
+      renderMapa(filtered);
+    }
+
+    // ── Geo: mapa Leaflet + cerca de mí ──
+    let ubicacionUsuario = null;
+    let mapaLeaflet = null;
+
+    function distanciaKm(lugar) {
+      if (!ubicacionUsuario || lugar.lat == null || lugar.lng == null) return null;
+      const R = 6371, toRad = (x) => x * Math.PI / 180;
+      const dLat = toRad(lugar.lat - ubicacionUsuario.lat);
+      const dLng = toRad(lugar.lng - ubicacionUsuario.lng);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(ubicacionUsuario.lat)) * Math.cos(toRad(lugar.lat)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function renderMapa(lugares) {
+      const cont = $('#mapa-centros');
+      if (!cont || typeof window.L === 'undefined') return;
+      const conGeo = lugares.filter((l) => l.lat != null && l.lng != null);
+      if (!conGeo.length && !ubicacionUsuario) { cont.hidden = true; return; }
+      cont.hidden = false;
+      if (!mapaLeaflet) {
+        mapaLeaflet = window.L.map(cont);
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18, attribution: '© OpenStreetMap'
+        }).addTo(mapaLeaflet);
+      }
+      if (mapaLeaflet._capaMarcadores) mapaLeaflet.removeLayer(mapaLeaflet._capaMarcadores);
+      const grupo = window.L.layerGroup();
+      const puntos = [];
+      conGeo.forEach((l) => {
+        window.L.marker([l.lat, l.lng]).bindPopup(`<strong>${e(l.nombre)}</strong><br>${e(l.ubicacion || '')}`).addTo(grupo);
+        puntos.push([l.lat, l.lng]);
+      });
+      if (ubicacionUsuario) {
+        window.L.circleMarker([ubicacionUsuario.lat, ubicacionUsuario.lng], { radius: 8, color: '#635BFF' })
+          .bindPopup(t('centers.youAreHere')).addTo(grupo);
+        puntos.push([ubicacionUsuario.lat, ubicacionUsuario.lng]);
+      }
+      grupo.addTo(mapaLeaflet);
+      mapaLeaflet._capaMarcadores = grupo;
+      if (puntos.length === 1) mapaLeaflet.setView(puntos[0], 13);
+      else if (puntos.length) mapaLeaflet.fitBounds(puntos, { padding: [30, 30] });
+      window.setTimeout(() => mapaLeaflet.invalidateSize(), 100);
+    }
+
+    function activarCercaDeMi() {
+      if (!navigator.geolocation) { toast(t('panel.geoUnavailable')); return; }
+      const btn = $('#btn-cerca');
+      if (btn) btn.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          ubicacionUsuario = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          if (btn) btn.disabled = false;
+          renderLugares();
+          toast(t('centers.nearbyOn'));
+        },
+        () => { if (btn) btn.disabled = false; toast(t('panel.geoDenied')); },
+        { timeout: 8000 }
+      );
     }
 
     function personaCard(persona, tipo) {
@@ -1712,7 +1782,8 @@
         ev.preventDefault();
         const form = ev.currentTarget;
         if (!validarFormulario(form, '#lugar-message')) return;
-        const payload = { accion: 'registrar_lugar', tipo: $('#lugar-tipo').value, nombre: $('#lugar-nombre').value.trim(), ubicacion: $('#lugar-ubicacion').value.trim(), telefono: $('#lugar-telefono').value.trim(), insumo: $('#lugar-insumo').value.trim(), categoria: $('#lugar-categoria').value, estado: $('#lugar-estado').value };
+        const coords = parsearCoords($('#lugar-coords') ? $('#lugar-coords').value : '') || {};
+        const payload = Object.assign({ accion: 'registrar_lugar', tipo: $('#lugar-tipo').value, nombre: $('#lugar-nombre').value.trim(), ubicacion: $('#lugar-ubicacion').value.trim(), telefono: $('#lugar-telefono').value.trim(), insumo: $('#lugar-insumo').value.trim(), categoria: $('#lugar-categoria').value, estado: $('#lugar-estado').value }, coords);
         mostrarMensaje('#lugar-message', 'info', t('messages.savingReport'));
         try {
           await window.SheetsService.post(payload);
@@ -1984,6 +2055,10 @@
       renderDonations();
       const btnPanel = $('#btn-panel-centro');
       if (btnPanel) btnPanel.addEventListener('click', () => abrirPanelCentro(''));
+      const btnCerca = $('#btn-cerca');
+      if (btnCerca) btnCerca.addEventListener('click', activarCercaDeMi);
+      const btnGeoLugar = $('#btn-geo-lugar');
+      if (btnGeoLugar) btnGeoLugar.addEventListener('click', () => capturarUbicacion('#lugar-coords'));
       await cargarTodo();
       await cargarSeguimientoDesdeUrl();
       abrirPanelDesdeUrl();
