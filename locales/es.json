@@ -182,7 +182,8 @@
     "locationPending": "Ubicación por confirmar",
     "operationalContact": "Contacto operativo",
     "capacityPending": "Capacidad por confirmar",
-    "activeCenter": "Centro activo"
+    "activeCenter": "Centro activo",
+    "managedBadge": "Gestionado por el centro"
   },
   "volunteers": {
     "title": "Registro de Voluntarios",
@@ -752,6 +753,12 @@
     "create": "Crear panel",
     "creating": "Creando...",
     "tokenCreated": "Panel creado. Guarda este token: se muestra una sola vez.",
-    "tokenHint": "Para entrar después: botón «Gestionar mi centro» o el enlace #centro/TU-TOKEN, más tu PIN."
+    "tokenHint": "Para entrar después: botón «Gestionar mi centro» o el enlace #centro/TU-TOKEN, más tu PIN.",
+    "placeData": "Datos del centro",
+    "coordsLabel": "Coordenadas (lat, lng)",
+    "useMyLocation": "📍 Usar mi ubicación",
+    "savePlace": "Guardar datos del centro",
+    "geoUnavailable": "Tu navegador no soporta geolocalización",
+    "geoDenied": "No se pudo obtener tu ubicación"
   }
 }

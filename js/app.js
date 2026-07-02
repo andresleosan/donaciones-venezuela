@@ -382,6 +382,8 @@
       document.body.classList.add('is-translating');
       idiomaActual = nextLang;
       traducciones = await cargarTraducciones(nextLang);
+      const modalAbierto = $('#modal-root dialog');
+      if (modalAbierto) modalAbierto.close();
       if (shouldPersist) sincronizarUrlIdioma(nextLang);
       const select = $('#language-select');
       if (select) select.value = nextLang;
@@ -1078,7 +1080,7 @@
       const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(t('centers.covered', { item: mostrarInsumo(i.nombre) }))}</span>`).join('');
       const tipoBadge = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
       const iconClass = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
-      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span><h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(estadoOperativo)}</span></div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : `<p class="meta">${e(t('centers.noActiveNeeds'))}</p>`}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div><p class="meta">${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</p></article>`;
+      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span>${lugar.gestionado ? `<span class="badge green">${e(t('centers.managedBadge'))}</span>` : ''}<h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(estadoOperativo)}</span></div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : `<p class="meta">${e(t('centers.noActiveNeeds'))}</p>`}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div><p class="meta">${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</p></article>`;
     }
 
     function renderLugares() {
@@ -1287,16 +1289,64 @@
             ${i.id ? `<button class="btn btn-ghost btn-small" type="button" data-panel-borrar>${e(t('panel.delete'))}</button>` : ''}
           </div>
         </div>`;
+      const tipos = ['Centro', 'Hospital', 'Refugio'].map((v) => `<option value="${v}" ${v === lugar.tipo ? 'selected' : ''}>${e(tValue('types', v) || v)}</option>`).join('');
       $('#panel-body').innerHTML = `
         <h3>${e(lugar.nombre || '')}</h3>
-        <p class="meta">${e(lugar.ubicacion || '')}</p>
         <div id="panel-msg2" class="form-message"></div>
+        <h3>${e(t('panel.placeData'))}</h3>
+        <div class="panel-insumo" id="panel-datos-lugar">
+          <div class="form-grid">
+            <div class="field"><label>${e(t('panel.typeLabel'))}</label><select id="pd-tipo">${tipos}</select></div>
+            <div class="field"><label>${e(t('panel.locationLabel'))}</label><input id="pd-ubicacion" value="${e(lugar.ubicacion || '')}" /></div>
+            <div class="field"><label>${e(t('panel.phoneLabel'))}</label><input id="pd-telefono" type="tel" value="${e(lugar.telefono || '')}" /></div>
+            <div class="field"><label>${e(t('panel.coordsLabel'))}</label><input id="pd-coords" placeholder="10.4806, -66.9036" value="${lugar.lat != null && lugar.lng != null ? e(lugar.lat + ', ' + lugar.lng) : ''}" /></div>
+          </div>
+          <div class="inline-actions">
+            <button class="btn btn-ghost btn-small" type="button" id="pd-geo">${e(t('panel.useMyLocation'))}</button>
+            <button class="btn btn-soft btn-small" type="button" id="pd-guardar">${e(t('panel.savePlace'))}</button>
+          </div>
+        </div>
         <h3>${e(t('panel.supplies'))}</h3>
         ${insumos.map(fila).join('') || `<p class="meta">${e(t('panel.noSupplies'))}</p>`}
         <h3>${e(t('panel.add'))}</h3>
         ${fila({ nombre: '', categoria: '', estado: 'Necesita', urgencia: 'Normal' })}`;
       $$('#panel-body [data-panel-guardar]').forEach((btn) => btn.addEventListener('click', () => guardarInsumoPanel(btn.closest('.panel-insumo'))));
       $$('#panel-body [data-panel-borrar]').forEach((btn) => btn.addEventListener('click', () => borrarInsumoPanel(btn.closest('.panel-insumo'))));
+      $('#pd-geo').addEventListener('click', () => capturarUbicacion('#pd-coords'));
+      $('#pd-guardar').addEventListener('click', guardarDatosLugarPanel);
+    }
+
+    function parsearCoords(texto) {
+      const m = String(texto || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+      if (!m) return null;
+      return { lat: Number(m[1]), lng: Number(m[2]) };
+    }
+
+    function capturarUbicacion(selector) {
+      if (!navigator.geolocation) { toast(t('panel.geoUnavailable')); return; }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { $(selector).value = pos.coords.latitude.toFixed(6) + ', ' + pos.coords.longitude.toFixed(6); },
+        () => toast(t('panel.geoDenied')),
+        { timeout: 8000 }
+      );
+    }
+
+    async function guardarDatosLugarPanel() {
+      if (!credencialesPanel) return;
+      const coords = parsearCoords($('#pd-coords').value) || {};
+      try {
+        const data = await window.SheetsService.post(Object.assign({
+          accion: 'panel_actualizar_lugar',
+          tipo: $('#pd-tipo').value,
+          ubicacion: $('#pd-ubicacion').value.trim(),
+          telefono: $('#pd-telefono').value.trim()
+        }, coords, credencialesPanel));
+        renderPanelCentro(data);
+        mensajePanel2('success', t('panel.saved'));
+        cargarTodo();
+      } catch (err) {
+        mensajePanel2('error', String(err && err.message || t('panel.saveError')));
+      }
     }
 
     function mensajePanel2(tipo, texto) {

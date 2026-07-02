@@ -182,7 +182,8 @@
     "locationPending": "Location to confirm",
     "operationalContact": "Operational contact",
     "capacityPending": "Capacity to confirm",
-    "activeCenter": "Active center"
+    "activeCenter": "Active center",
+    "managedBadge": "Managed by the center"
   },
   "volunteers": {
     "title": "Volunteer Registration",
@@ -752,6 +753,12 @@
     "create": "Create panel",
     "creating": "Creating...",
     "tokenCreated": "Panel created. Save this token: it is shown only once.",
-    "tokenHint": "To sign in later: the “Manage my center” button or the #centro/YOUR-TOKEN link, plus your PIN."
+    "tokenHint": "To sign in later: the “Manage my center” button or the #centro/YOUR-TOKEN link, plus your PIN.",
+    "placeData": "Center details",
+    "coordsLabel": "Coordinates (lat, lng)",
+    "useMyLocation": "📍 Use my location",
+    "savePlace": "Save center details",
+    "geoUnavailable": "Your browser does not support geolocation",
+    "geoDenied": "Could not get your location"
   }
 }
