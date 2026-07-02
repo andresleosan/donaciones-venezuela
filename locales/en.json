@@ -344,7 +344,11 @@
     "driverTitle": "Register transporter",
     "zone": "Area",
     "plate": "Plate",
-    "saveDriver": "Save transporter"
+    "saveDriver": "Save transporter",
+    "photosIntro": "For safety, take 3 photos with your camera: the plate, the vehicle and your ID card. Only the verification team will see them.",
+    "photoPlate": "Photo of the plate",
+    "photoVehicle": "Photo of the vehicle",
+    "photoId": "Photo of your ID card"
   },
   "messages": {
     "whatsappText": "Hi, I saw on Humanitarian Response Venezuela that help is needed. How can I contribute?",
@@ -359,7 +363,10 @@
     "rescuerError": "We could not save the rescuer. Check the connection and try again.",
     "routeSaved": "Route registered.",
     "supportSaved": "Support registered.",
-    "driverSaved": "Transporter registered."
+    "driverSaved": "Transporter registered.",
+    "driverPhotosMissing": "Photos missing: take the plate, the vehicle and your ID card.",
+    "driverUploading": "Uploading photos and saving...",
+    "driverPhotoError": "The photos could not be uploaded. Try again."
   },
   "validation": {
     "fieldFallback": "This field",

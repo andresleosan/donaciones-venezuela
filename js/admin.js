@@ -236,15 +236,65 @@
       });
     }
 
+    // Comprime una foto del input a JPEG ≤1280px (el backend limita ~1.8MB) y
+    // devuelve un data URL listo para enviar a la edge function.
+    function comprimirFoto(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const escala = Math.min(1, 1280 / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * escala);
+          canvas.height = Math.round(img.height * escala);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('foto ilegible')); };
+        img.src = url;
+      });
+    }
+
+    function campoFoto(id, labelKey) {
+      return `<div class="field full foto-field"><label for="${id}">${e(t(labelKey))}</label>
+        <input id="${id}" type="file" accept="image/*" capture="environment" required />
+        <img id="${id}-prev" class="foto-prev" alt="" hidden /></div>`;
+    }
+
     function abrirRegistrarMotorizado() {
-      abrirModal(t('modal.driverTitle'), `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><select id="mot-tipo"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div><div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><input id="mot-telefono" type="tel" /></div><div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><input id="mot-placa" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div></form>`);
+      abrirModal(t('modal.driverTitle'), `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><select id="mot-tipo"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div><div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><input id="mot-telefono" type="tel" /></div><div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><input id="mot-placa" /></div></div><p class="meta">${e(t('modal.photosIntro'))}</p><div class="form-grid">${campoFoto('mot-foto-placa', 'modal.photoPlate')}${campoFoto('mot-foto-vehiculo', 'modal.photoVehicle')}${campoFoto('mot-foto-cedula', 'modal.photoId')}</div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div><div id="mot-message" class="form-message" role="status" aria-live="polite"></div></form>`);
+      ['mot-foto-placa', 'mot-foto-vehiculo', 'mot-foto-cedula'].forEach((id) => {
+        $('#' + id).addEventListener('change', (ev) => {
+          const file = ev.target.files && ev.target.files[0];
+          const prev = $('#' + id + '-prev');
+          if (!file) { prev.hidden = true; return; }
+          prev.src = URL.createObjectURL(file);
+          prev.hidden = false;
+        });
+      });
       $('#mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim() };
-        await window.SheetsService.post(Object.assign({ accion: 'registrar_motorizado' }, nuevo));
-        await cargarTodo();
-        $('#modal-root dialog').close();
-        toast(t('messages.driverSaved'));
+        const archivos = ['mot-foto-placa', 'mot-foto-vehiculo', 'mot-foto-cedula']
+          .map((id) => $('#' + id).files && $('#' + id).files[0]);
+        if (archivos.some((f) => !f)) {
+          mostrarMensaje('#mot-message', 'error', t('messages.driverPhotosMissing'));
+          return;
+        }
+        const boton = ev.currentTarget.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensaje('#mot-message', 'info', t('messages.driverUploading'));
+        try {
+          const [fotoPlaca, fotoVehiculo, fotoCedula] = await Promise.all(archivos.map(comprimirFoto));
+          const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), fotoPlaca, fotoVehiculo, fotoCedula };
+          await window.SheetsService.post(Object.assign({ accion: 'registrar_motorizado' }, nuevo));
+          await cargarTodo();
+          $('#modal-root dialog').close();
+          toast(t('messages.driverSaved'));
+        } catch (err) {
+          boton.disabled = false;
+          mostrarMensaje('#mot-message', 'error', String(err && err.message || t('messages.driverPhotoError')));
+        }
       });
     }
 

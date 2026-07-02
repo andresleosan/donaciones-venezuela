@@ -61,6 +61,22 @@ function geoValida(p: Record<string, unknown>): { lat: number | null; lng: numbe
   return { lat: null, lng: null };
 }
 
+// Guarda una foto (data URL JPEG/PNG/WebP, máx ~1.8MB decodificada) en el bucket
+// PRIVADO registro-transportistas. Solo el service role accede; nada es público.
+async function guardarFoto(dataUrl: unknown, carpeta: string, nombre: string): Promise<string> {
+  const m = String(dataUrl ?? '').match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) throw new Error(`foto de ${nombre} inválida (se espera imagen JPEG/PNG)`);
+  const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+  if (bytes.length < 1000) throw new Error(`foto de ${nombre} vacía`);
+  if (bytes.length > 1_800_000) throw new Error(`foto de ${nombre} demasiado grande`);
+  const ext = m[1] === 'jpeg' ? 'jpg' : m[1];
+  const ruta = `${carpeta}/${nombre}.${ext}`;
+  const { error } = await supa.storage.from('registro-transportistas')
+    .upload(ruta, bytes, { contentType: `image/${m[1]}`, upsert: false });
+  if (error) throw new Error(`no se pudo guardar la foto de ${nombre}`);
+  return ruta;
+}
+
 async function historial(lugar: string, insumo: string, descripcion: string, origen: string, cantidad = 0) {
   await supa.from('historial_movimientos').insert({ lugar, insumo, descripcion, origen, cantidad });
 }
@@ -196,11 +212,17 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
     }
     case 'registrar_motorizado': {
       if (!s(p.nombre)) throw new Error('nombre requerido');
+      if (!p.fotoPlaca || !p.fotoVehiculo || !p.fotoCedula) {
+        throw new Error('Faltan fotos: placa, vehículo y cédula son obligatorias');
+      }
+      const id = s(p.id, 40) || 'MOT' + crypto.randomUUID().slice(0, 8);
+      const foto_placa = await guardarFoto(p.fotoPlaca, id, 'placa');
+      const foto_vehiculo = await guardarFoto(p.fotoVehiculo, id, 'vehiculo');
+      const foto_cedula = await guardarFoto(p.fotoCedula, id, 'cedula');
       const { error } = await supa.from('motorizados').insert({
-        id: s(p.id, 40) || 'MOT' + crypto.randomUUID().slice(0, 8),
-        nombre: s(p.nombre, 120), tipo_vehiculo: s(p.tipoVehiculo ?? p.tipo_vehiculo, 40) || 'Moto',
+        id, nombre: s(p.nombre, 120), tipo_vehiculo: s(p.tipoVehiculo ?? p.tipo_vehiculo, 40) || 'Moto',
         telefono: s(p.telefono, 40), zona_operacion: s(p.zonaOperacion ?? p.operaEn, 120),
-        placa: s(p.placa, 20) });
+        placa: s(p.placa, 20), foto_placa, foto_vehiculo, foto_cedula });
       if (error) throw error;
       return {};
     }

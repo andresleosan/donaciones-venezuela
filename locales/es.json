@@ -344,7 +344,11 @@
     "driverTitle": "Registrar transportista",
     "zone": "Zona",
     "plate": "Placa",
-    "saveDriver": "Guardar transportista"
+    "saveDriver": "Guardar transportista",
+    "photosIntro": "Por seguridad, toma 3 fotos con tu camara: la placa, el vehiculo y tu cedula. Solo las vera el equipo verificador.",
+    "photoPlate": "Foto de la placa",
+    "photoVehicle": "Foto del vehiculo",
+    "photoId": "Foto de tu cedula"
   },
   "messages": {
     "whatsappText": "Hola, vi en Respuesta Humanitaria Venezuela que necesitan ayuda. ¿Cómo puedo contribuir?",
@@ -359,7 +363,10 @@
     "rescuerError": "No pudimos guardar el rescatista. Revisa la conexión e inténtalo de nuevo.",
     "routeSaved": "Trayecto registrado.",
     "supportSaved": "Apoyo registrado.",
-    "driverSaved": "Transportista registrado."
+    "driverSaved": "Transportista registrado.",
+    "driverPhotosMissing": "Faltan fotos: toma la placa, el vehiculo y tu cedula.",
+    "driverUploading": "Subiendo fotos y guardando registro...",
+    "driverPhotoError": "No se pudieron subir las fotos. Intenta de nuevo."
   },
   "validation": {
     "fieldFallback": "Este campo",

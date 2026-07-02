@@ -36,10 +36,10 @@
     };
   }
 
-  async function fetchJson(path, options) {
+  async function fetchJson(path, options, timeoutMs) {
     assertConfigured();
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs || 8000);
     try {
       // La clave publishable (sb_publishable_…) solo va en `apikey`; Authorization
       // exige un JWT y con esta clave el gateway devuelve 401.
@@ -141,11 +141,12 @@
   }
 
   async function post(payload) {
+    // 45s: los registros con fotos (transportistas) suben ~1-2MB en móvil
     const data = await fetchJson('/functions/v1/api', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload || {})
-    });
+    }, 45000);
     if (!data || data.success === false) {
       throw new Error((data && data.error) || 'No se pudo guardar');
     }

@@ -344,7 +344,11 @@
     "driverTitle": "Inscrire un transporteur",
     "zone": "Zone",
     "plate": "Plaque",
-    "saveDriver": "Enregistrer le transporteur"
+    "saveDriver": "Enregistrer le transporteur",
+    "photosIntro": "Par securite, prends 3 photos avec ta camera : la plaque, le vehicule et ta carte d'identite. Seule l'equipe de verification les verra.",
+    "photoPlate": "Photo de la plaque",
+    "photoVehicle": "Photo du vehicule",
+    "photoId": "Photo de ta carte d'identite"
   },
   "messages": {
     "whatsappText": "Bonjour, j'ai vu sur Réponse Humanitaire Venezuela que de l'aide est nécessaire. Comment puis-je contribuer ?",
@@ -359,7 +363,10 @@
     "rescuerError": "Nous n'avons pas pu enregistrer le secouriste. Vérifiez la connexion et réessayez.",
     "routeSaved": "Trajet enregistré.",
     "supportSaved": "Aide enregistrée.",
-    "driverSaved": "Transporteur enregistré."
+    "driverSaved": "Transporteur enregistré.",
+    "driverPhotosMissing": "Photos manquantes : prends la plaque, le vehicule et ta carte d'identite.",
+    "driverUploading": "Envoi des photos et enregistrement...",
+    "driverPhotoError": "Impossible d'envoyer les photos. Reessaie."
   },
   "validation": {
     "fieldFallback": "Ce champ",

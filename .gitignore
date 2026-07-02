@@ -27,3 +27,4 @@ service-account.json
 *.pem
 *.key
 *.p12
+.env*

@@ -1230,3 +1230,6 @@
     .btn-small { min-height: 44px; padding: 0 14px; }
     .language-control select { min-height: 44px; }
     .brand { min-height: 44px; align-items: center; }
+
+    .foto-field input[type="file"] { padding: 10px; background: #fff; border: 1px dashed var(--border-strong); border-radius: var(--radius); width: 100%; min-height: 44px; }
+    .foto-prev { margin-top: 8px; max-height: 140px; border-radius: var(--radius); border: 1px solid var(--border); }
