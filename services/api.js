@@ -160,8 +160,6 @@
     getHistorial: (lugar) => getList('historial_public',
       '?order=fecha.desc' + (lugar ? '&lugar=eq.' + encodeURIComponent(lugar) : '')),
     getFamiliares,
-    getFacturas: () => getList('facturas_public', '?order=fecha_creacion.desc'),
-    getDonacionesHumanitarias: () => getList('donaciones_motorizados_public', '?order=fecha.desc'),
     getSeguimiento,
     post
   };
