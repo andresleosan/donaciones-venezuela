@@ -1456,6 +1456,200 @@
       const hash = decodeURIComponent(window.location.hash || '');
       const match = hash.match(/^#centro\/(CTR-[A-Z0-9-]+)$/i);
       if (match) abrirPanelCentro(match[1].toUpperCase());
+      if (/^#admin$/i.test(hash)) abrirAdmin();
+    }
+
+    // ===== Módulo admin de trazabilidad (#admin) =====
+    let facturaActiva = null;
+
+    function claveAdmin() { return window.sessionStorage.getItem('adminKey') || ''; }
+
+    async function postAdmin(payload) {
+      return window.SheetsService.post(Object.assign({ adminKey: claveAdmin() }, payload));
+    }
+
+    function abrirAdmin() {
+      facturaActiva = null;
+      abrirModal(t('admin.title'), `
+        <form id="admin-auth-form">
+          <p class="meta">${e(t('admin.intro'))}</p>
+          <div class="form-grid">
+            <div class="field full"><label for="admin-key">${e(t('admin.keyLabel'))}</label><input id="admin-key" type="password" autocomplete="off" value="${e(claveAdmin())}" /></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('admin.enter'))}</button></div>
+          <div id="admin-msg" class="form-message"></div>
+        </form>
+        <div id="admin-body"></div>`);
+      $('#admin-auth-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        window.sessionStorage.setItem('adminKey', $('#admin-key').value.trim());
+        mensajeAdmin('#admin-msg', 'info', t('admin.checking'));
+        try {
+          const data = await postAdmin({ accion: 'admin_listar_facturas' });
+          $('#admin-auth-form').hidden = true;
+          renderAdmin(data.facturas || []);
+        } catch (err) {
+          window.sessionStorage.removeItem('adminKey');
+          mensajeAdmin('#admin-msg', 'error', String(err && err.message || t('admin.authError')));
+        }
+      });
+    }
+
+    function mensajeAdmin(sel, tipo, texto) {
+      const el = $(sel);
+      if (!el) return;
+      el.className = `form-message visible ${tipo}`;
+      el.textContent = texto;
+    }
+
+    async function refrescarAdmin(avisoHTML) {
+      try {
+        const data = await postAdmin({ accion: 'admin_listar_facturas' });
+        renderAdmin(data.facturas || [], avisoHTML);
+      } catch (err) {
+        mensajeAdmin('#admin-msg2', 'error', String(err && err.message || ''));
+      }
+    }
+
+    async function renderAdmin(facturas, avisoHTML) {
+      let personas = [];
+      try {
+        personas = (await postAdmin({ accion: 'admin_listar_personas' })).personas || [];
+      } catch (err) { /* la lista de personas no bloquea el módulo */ }
+      const filaFactura = (f) => `
+        <div class="supply-item"><div class="supply-line">
+          <strong>${e(f.numero_factura)}</strong>
+          <span class="badge ${f.estado === 'Cerrada' ? 'gray' : 'green'}">${e(f.estado)}</span></div>
+          <p class="meta">${e(f.objetivo)} · ${e(String(f.monto_recaudado))} / ${e(String(f.monto_requerido))}</p>
+          <p class="meta tracking-code">${e(f.token_publico)}</p>
+          <div class="inline-actions">
+            <button class="btn btn-soft btn-small" type="button" data-admin-usar="${e(f.token_publico)}">${e(t('admin.useInvoice'))}</button>
+          </div>
+        </div>`;
+      const filaPersona = (p) => `
+        <div class="supply-item"><div class="supply-line"><strong>${e(p.nombre)}</strong><span class="badge yellow">${e(t('family.unverifiedBadge'))}</span></div>
+          <p class="meta">${e(p.cedula || '')} · ${e(p.estado || '')} · ${e(p.ubicacion || '')} · ${e(p.fuente || '')}</p>
+          <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" data-admin-verificar="${e(String(p.id))}">${e(t('admin.verify'))}</button></div>
+        </div>`;
+      $('#admin-body').innerHTML = `
+        <div id="admin-msg2" class="form-message"></div>
+        ${avisoHTML || ''}
+        <h3>${e(t('admin.createInvoice'))}</h3>
+        <div class="panel-insumo">
+          <div class="form-grid">
+            <div class="field"><label>${e(t('admin.objective'))}</label><input id="adm-objetivo" /></div>
+            <div class="field"><label>${e(t('admin.description'))}</label><input id="adm-descripcion" /></div>
+            <div class="field"><label>${e(t('admin.requiredAmount'))}</label><input id="adm-monto" type="number" min="1" /></div>
+          </div>
+          <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="adm-crear">${e(t('admin.create'))}</button></div>
+        </div>
+        <h3>${e(t('admin.invoices'))} (${facturas.length})</h3>
+        ${facturas.map(filaFactura).join('') || `<p class="meta">${e(t('admin.noInvoices'))}</p>`}
+        <div id="admin-factura-ops" hidden>
+          <h3>${e(t('admin.opsOn'))} <span id="adm-factura-sel" class="tracking-code"></span></h3>
+          <div class="panel-insumo">
+            <p class="meta"><strong>${e(t('admin.donation'))}</strong></p>
+            <div class="form-grid">
+              <div class="field"><label>${e(t('admin.donor'))}</label><input id="adm-don-nombre" /></div>
+              <div class="field"><label>${e(t('admin.amount'))}</label><input id="adm-don-monto" type="number" min="1" /></div>
+              <div class="field"><label>${e(t('admin.reference'))}</label><input id="adm-don-ref" /></div>
+              <div class="field"><label>${e(t('admin.status'))}</label><select id="adm-don-estado"><option value="Registrada">${e(t('admin.stateRegistered'))}</option><option value="Confirmada">${e(t('admin.stateConfirmed'))}</option></select></div>
+            </div>
+            <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" id="adm-don-guardar">${e(t('admin.saveDonation'))}</button></div>
+          </div>
+          <div class="panel-insumo">
+            <p class="meta"><strong>${e(t('admin.movement'))}</strong></p>
+            <div class="form-grid">
+              <div class="field"><label>${e(t('admin.type'))}</label><select id="adm-mov-tipo"><option>Ingreso</option><option>Egreso</option><option>Compra</option><option>Entrega</option></select></div>
+              <div class="field"><label>${e(t('admin.description'))}</label><input id="adm-mov-desc" /></div>
+              <div class="field"><label>${e(t('admin.amount'))}</label><input id="adm-mov-monto" type="number" min="0" /></div>
+            </div>
+            <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" id="adm-mov-guardar">${e(t('admin.saveMovement'))}</button></div>
+          </div>
+          <div class="panel-insumo">
+            <p class="meta"><strong>${e(t('admin.evidence'))}</strong></p>
+            <div class="form-grid">
+              <div class="field"><label>URL (https)</label><input id="adm-evi-url" placeholder="https://…" /></div>
+              <div class="field"><label>${e(t('admin.description'))}</label><input id="adm-evi-desc" /></div>
+            </div>
+            <div class="inline-actions">
+              <button class="btn btn-soft btn-small" type="button" id="adm-evi-guardar">${e(t('admin.saveEvidence'))}</button>
+              <button class="btn btn-ghost btn-small" type="button" id="adm-cerrar-factura">${e(t('admin.closeInvoice'))}</button>
+            </div>
+          </div>
+        </div>
+        <h3>${e(t('admin.pendingPeople'))} (${personas.length})</h3>
+        ${personas.map(filaPersona).join('') || `<p class="meta">${e(t('admin.noPendingPeople'))}</p>`}
+        <h3>${e(t('admin.regeneratePanel'))}</h3>
+        <div class="panel-insumo">
+          <div class="form-grid">
+            <div class="field"><label>${e(t('admin.centerName'))}</label><input id="adm-regen-nombre" /></div>
+          </div>
+          <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" id="adm-regen">${e(t('admin.regenerate'))}</button></div>
+          <div id="adm-regen-out"></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-ghost btn-small" type="button" id="adm-salir">${e(t('admin.signOut'))}</button></div>`;
+
+      $('#adm-crear').addEventListener('click', async () => {
+        try {
+          const r = await postAdmin({ accion: 'admin_crear_factura', objetivo: $('#adm-objetivo').value.trim(),
+            descripcion: $('#adm-descripcion').value.trim(), montoRequerido: $('#adm-monto').value });
+          const aviso = `<div class="notice success visible">${e(t('admin.invoiceCreated'))}</div><p class="tracking-code">${e(r.numeroFactura)} · ${e(r.token)}</p><p class="meta">${e(t('admin.tokenHint'))}</p>`;
+          await refrescarAdmin(aviso);
+          // Auto-seleccionar la factura recién creada para operarla ya (evita la
+          // carrera read-after-write del listado tras el insert).
+          facturaActiva = r.token;
+          $('#admin-factura-ops').hidden = false;
+          $('#adm-factura-sel').textContent = r.numeroFactura + ' · ' + r.token;
+        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      });
+      $$('#admin-body [data-admin-usar]').forEach((btn) => btn.addEventListener('click', () => {
+        facturaActiva = btn.dataset.adminUsar;
+        $('#admin-factura-ops').hidden = false;
+        $('#adm-factura-sel').textContent = facturaActiva;
+        $('#admin-factura-ops').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      $$('#admin-body [data-admin-verificar]').forEach((btn) => btn.addEventListener('click', async () => {
+        try {
+          await postAdmin({ accion: 'admin_verificar_persona', id: btn.dataset.adminVerificar });
+          await refrescarAdmin();
+        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      }));
+      const conFactura = (fn) => async () => {
+        if (!facturaActiva) { mensajeAdmin('#admin-msg2', 'error', t('admin.pickInvoice')); return; }
+        try { await fn(); mensajeAdmin('#admin-msg2', 'success', t('panel.saved')); await refrescarAdmin(); }
+        catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      };
+      $('#adm-don-guardar').addEventListener('click', conFactura(() => postAdmin({
+        accion: 'admin_registrar_donacion', token: facturaActiva,
+        nombreDonante: $('#adm-don-nombre').value.trim(), monto: $('#adm-don-monto').value,
+        referencia: $('#adm-don-ref').value.trim(), estado: $('#adm-don-estado').value })));
+      $('#adm-mov-guardar').addEventListener('click', conFactura(() => postAdmin({
+        accion: 'admin_registrar_movimiento', token: facturaActiva,
+        tipo: $('#adm-mov-tipo').value, descripcion: $('#adm-mov-desc').value.trim(), monto: $('#adm-mov-monto').value })));
+      $('#adm-evi-guardar').addEventListener('click', conFactura(() => postAdmin({
+        accion: 'admin_registrar_evidencia', token: facturaActiva,
+        archivo: $('#adm-evi-url').value.trim(), descripcion: $('#adm-evi-desc').value.trim() })));
+      $('#adm-cerrar-factura').addEventListener('click', conFactura(() => postAdmin({
+        accion: 'admin_cerrar_factura', token: facturaActiva })));
+      $('#adm-regen').addEventListener('click', async () => {
+        try {
+          const r = await postAdmin({ accion: 'admin_regenerar_panel', nombre: $('#adm-regen-nombre').value.trim() });
+          $('#adm-regen-out').innerHTML = `<div class="notice success visible">${e(t('admin.panelRegenerated'))}</div><p class="tracking-code">${e(r.token)} · PIN ${e(r.pin)}</p><p class="meta">${e(t('admin.tokenHint'))}</p>`;
+        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      });
+      $('#adm-salir').addEventListener('click', () => {
+        window.sessionStorage.removeItem('adminKey');
+        facturaActiva = null;
+        const dialog = $('#modal-root dialog');
+        if (dialog) dialog.close();
+      });
+      // Preservar la factura en operación tras cada re-render
+      if (facturaActiva && facturas.some((f) => f.token_publico === facturaActiva)) {
+        const f = facturas.find((x) => x.token_publico === facturaActiva);
+        $('#admin-factura-ops').hidden = false;
+        $('#adm-factura-sel').textContent = f.numero_factura + ' · ' + f.token_publico;
+      }
     }
 
     async function abrirHistorial(nombre) {
