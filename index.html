@@ -355,6 +355,23 @@
       </form>
       <div id="familiar-message" class="notice" role="status" aria-live="polite"></div>
       <div id="familiar-resultados" class="grid results-grid" aria-live="polite"></div>
+
+      <details class="form-panel" id="reportar-persona-details">
+        <summary id="reportar-persona-summary">Reportar a una persona</summary>
+        <p class="meta" id="reportar-persona-copy">Registra a una persona localizada, hospitalizada o buscada. El reporte queda marcado como sin verificar hasta que el equipo lo confirme.</p>
+        <form id="persona-form" novalidate>
+          <div class="form-grid">
+            <div class="field"><label for="per-nombre">Nombre completo</label><input id="per-nombre" required /></div>
+            <div class="field"><label for="per-cedula">Cédula</label><input id="per-cedula" autocomplete="off" /></div>
+            <div class="field"><label for="per-estado">Estado</label><select id="per-estado"><option value="Localizado con vida">Localizado con vida</option><option value="Hospitalizado">Hospitalizado</option><option value="En refugio">En refugio</option><option value="Sin información reciente">Sin información reciente</option><option value="Fallecido">Fallecido</option></select></div>
+            <div class="field"><label for="per-ubicacion">Ubicación</label><input id="per-ubicacion" /></div>
+            <div class="field"><label for="per-contacto">Contacto</label><input id="per-contacto" /></div>
+            <div class="field"><label for="per-fuente">Fuente</label><input id="per-fuente" placeholder="Familiar, hospital, refugio…" /></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit" id="per-guardar">Reportar persona</button></div>
+          <div id="persona-message" class="form-message"></div>
+        </form>
+      </details>
     </section>
 
     <section id="view-seguimiento" class="view" data-view="seguimiento" aria-labelledby="seguimiento-title">
@@ -493,6 +510,6 @@
   <div id="modal-root"></div>
 
   <script src="services/api.js?v=3"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

@@ -269,7 +269,21 @@
     "sourceLabel": "Source :",
     "updatedLabel": "Mis à jour :",
     "supportLine": "Ligne d'aide psychologique : en attente de publication officielle.",
-    "lastSeenPrefix": "Dernière fois :"
+    "lastSeenPrefix": "Dernière fois :",
+    "reportTitle": "Signaler une personne",
+    "reportCopy": "Enregistrez une personne localisée, hospitalisée ou recherchée. Le signalement reste non vérifié jusqu'à confirmation par l'équipe.",
+    "reportName": "Nom complet",
+    "reportId": "Pièce d'identité",
+    "reportStatus": "Statut",
+    "reportLocation": "Localisation",
+    "reportContact": "Contact",
+    "reportSource": "Source",
+    "reportSourcePh": "Proche, hôpital, refuge…",
+    "reportCta": "Signaler la personne",
+    "reportSaving": "Enregistrement du signalement...",
+    "reportSaved": "Signalement enregistré. Il restera non vérifié jusqu'à confirmation par l'équipe.",
+    "reportError": "Le signalement n'a pas pu être enregistré",
+    "unverifiedBadge": "Non vérifié"
   },
   "tracking": {
     "title": "Suivi des dons",

@@ -1,10 +1,10 @@
 // Service worker: cache de assets estáticos para uso offline del cascarón.
 // Los datos (Supabase) NUNCA se cachean: la app exige información en vivo.
-const CACHE = 'ayuda-ve-v3';
+const CACHE = 'ayuda-ve-v4';
 const ESTATICOS = [
   '/',
   '/css/app.css?v=4',
-  '/js/app.js?v=5',
+  '/js/app.js?v=6',
   '/services/api.js?v=3',
   '/locales/es.json',
   '/locales/en.json',

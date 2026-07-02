@@ -269,7 +269,21 @@
     "sourceLabel": "Fuente:",
     "updatedLabel": "Actualizado:",
     "supportLine": "Línea de apoyo psicológico: pendiente de publicación oficial.",
-    "lastSeenPrefix": "Última vez:"
+    "lastSeenPrefix": "Última vez:",
+    "reportTitle": "Reportar a una persona",
+    "reportCopy": "Registra a una persona localizada, hospitalizada o buscada. El reporte queda marcado como sin verificar hasta que el equipo lo confirme.",
+    "reportName": "Nombre completo",
+    "reportId": "Cédula",
+    "reportStatus": "Estado",
+    "reportLocation": "Ubicación",
+    "reportContact": "Contacto",
+    "reportSource": "Fuente",
+    "reportSourcePh": "Familiar, hospital, refugio…",
+    "reportCta": "Reportar persona",
+    "reportSaving": "Guardando el reporte...",
+    "reportSaved": "Reporte guardado. Quedará como sin verificar hasta que el equipo lo confirme.",
+    "reportError": "No se pudo guardar el reporte",
+    "unverifiedBadge": "Sin verificar"
   },
   "tracking": {
     "title": "Seguimiento de donaciones",

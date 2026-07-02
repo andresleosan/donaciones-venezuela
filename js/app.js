@@ -110,6 +110,23 @@
       setText('label[for="language-select"]', 'language.selectorLabel');
       setAttr('#language-select', 'aria-label', 'language.selectorAria');
       setText('#btn-panel-centro', 'panel.manageCta');
+      setText('#reportar-persona-summary', 'family.reportTitle');
+      setText('#reportar-persona-copy', 'family.reportCopy');
+      setText('label[for="per-nombre"]', 'family.reportName');
+      setText('label[for="per-cedula"]', 'family.reportId');
+      setText('label[for="per-estado"]', 'family.reportStatus');
+      setText('label[for="per-ubicacion"]', 'family.reportLocation');
+      setText('label[for="per-contacto"]', 'family.reportContact');
+      setText('label[for="per-fuente"]', 'family.reportSource');
+      setPlaceholder('#per-fuente', 'family.reportSourcePh');
+      setText('#per-guardar', 'family.reportCta');
+      aplicarOpciones('#per-estado', {
+        'Localizado con vida': ['familyStatus', 'Localizado con vida'],
+        'Hospitalizado': ['familyStatus', 'Hospitalizado'],
+        'En refugio': ['familyStatus', 'En refugio'],
+        'Sin información reciente': ['familyStatus', 'Sin información reciente'],
+        'Fallecido': ['familyStatus', 'Fallecido']
+      });
 
       const eyebrow = $('.eyebrow');
       if (eyebrow) eyebrow.innerHTML = `<span aria-hidden="true">VE</span> ${e(t('hero.eyebrow'))}`;
@@ -1582,6 +1599,29 @@
         buscarFamiliar($('#familiar-query').value);
       });
 
+      $('#persona-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#persona-message')) return;
+        mostrarMensaje('#persona-message', 'info', t('family.reportSaving'));
+        try {
+          await window.SheetsService.post({
+            accion: 'reportar_persona',
+            nombre: $('#per-nombre').value.trim(),
+            cedula: $('#per-cedula').value.trim(),
+            estado: $('#per-estado').value,
+            ubicacion: $('#per-ubicacion').value.trim(),
+            contacto: $('#per-contacto').value.trim(),
+            fuente: $('#per-fuente').value.trim()
+          });
+          mostrarMensaje('#persona-message', 'success', t('family.reportSaved'));
+          limpiarErrores(form);
+          form.reset();
+        } catch (err) {
+          mostrarMensaje('#persona-message', 'error', String(err && err.message || t('family.reportError')));
+        }
+      });
+
       $('#seguimiento-form').addEventListener('submit', (ev) => {
         ev.preventDefault();
         if (!validarFormulario(ev.currentTarget, '#seguimiento-message')) return;
@@ -1614,7 +1654,7 @@
       }
       $('#familiar-resultados').innerHTML = resultados.map((p) => {
         const delicado = normalizar(p.estado).includes('fallec');
-        return `<article class="card card-bordered family-card"><span class="badge ${delicado ? 'gray' : 'green'}">${e(mostrarEstadoFamiliar(p.estado))}</span><h3>${e(p.nombre)}</h3><div class="meta-grid"><span><strong>${e(t('family.idLabel'))}</strong> ${e(p.cedula)}</span>${p.ubicacion ? `<span><strong>${e(t('family.locationLabel'))}</strong> ${e(mostrarUbicacionFamiliar(p.ubicacion))}</span>` : ''}${p.fuente ? `<span><strong>${e(t('family.sourceLabel'))}</strong> ${e(mostrarFuente(p.fuente))}</span>` : ''}<span><strong>${e(t('family.updatedLabel'))}</strong> ${e(fechaRelativa(p.actualizado))}</span></div>${delicado ? `<p class="meta">${e(t('family.supportLine'))}</p>` : ''}</article>`;
+        return `<article class="card card-bordered family-card"><div class="badge-row"><span class="badge ${delicado ? 'gray' : 'green'}">${e(mostrarEstadoFamiliar(p.estado))}</span>${p.verificada === false ? `<span class="badge yellow">${e(t('family.unverifiedBadge'))}</span>` : ''}</div><h3>${e(p.nombre)}</h3><div class="meta-grid"><span><strong>${e(t('family.idLabel'))}</strong> ${e(p.cedula)}</span>${p.ubicacion ? `<span><strong>${e(t('family.locationLabel'))}</strong> ${e(mostrarUbicacionFamiliar(p.ubicacion))}</span>` : ''}${p.fuente ? `<span><strong>${e(t('family.sourceLabel'))}</strong> ${e(mostrarFuente(p.fuente))}</span>` : ''}<span><strong>${e(t('family.updatedLabel'))}</strong> ${e(fechaRelativa(p.actualizado))}</span></div>${delicado ? `<p class="meta">${e(t('family.supportLine'))}</p>` : ''}</article>`;
       }).join('');
     }
 

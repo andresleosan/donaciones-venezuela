@@ -269,7 +269,21 @@
     "sourceLabel": "Source:",
     "updatedLabel": "Updated:",
     "supportLine": "Psychological support line: pending official publication.",
-    "lastSeenPrefix": "Last seen:"
+    "lastSeenPrefix": "Last seen:",
+    "reportTitle": "Report a person",
+    "reportCopy": "Register a located, hospitalized, or missing person. The report stays marked as unverified until the team confirms it.",
+    "reportName": "Full name",
+    "reportId": "ID number",
+    "reportStatus": "Status",
+    "reportLocation": "Location",
+    "reportContact": "Contact",
+    "reportSource": "Source",
+    "reportSourcePh": "Relative, hospital, shelter…",
+    "reportCta": "Report person",
+    "reportSaving": "Saving the report...",
+    "reportSaved": "Report saved. It will remain unverified until the team confirms it.",
+    "reportError": "The report could not be saved",
+    "unverifiedBadge": "Unverified"
   },
   "tracking": {
     "title": "Donation tracking",
