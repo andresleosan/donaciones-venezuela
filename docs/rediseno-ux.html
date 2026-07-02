@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rediseño UX · Ayuda Venezuela — maqueta navegable</title>
+<style>
+  :root{
+    --indigo:#635BFF; --indigo-dark:#5147e5; --ink:#0A2540; --slate:#425466;
+    --bg:#F6F9FC; --card:#ffffff; --line:#E3E8EE;
+    --green:#0E8A5F; --green-bg:#E6F6EF; --red:#C0392B; --red-bg:#FDECEA;
+    --radius:14px;
+    --shadow:0 2px 5px -1px rgba(50,50,93,.12), 0 1px 3px -1px rgba(0,0,0,.08);
+    --shadow-lg:0 13px 27px -5px rgba(50,50,93,.15), 0 8px 16px -8px rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:16px}
+  .wrap{max-width:640px;margin:0 auto;padding:0 20px 80px}
+  button{font:inherit;cursor:pointer}
+
+  /* barra mínima */
+  header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .bar{max-width:640px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:10px}
+  .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--indigo),#8f88ff);display:grid;place-items:center;color:#fff;font-weight:800}
+  .bar b{font-size:16px}
+  .back{margin-left:auto;background:none;border:1px solid var(--line);border-radius:99px;padding:7px 16px;color:var(--slate);font-weight:600;display:none}
+  .back.on{display:block}
+
+  .screen{display:none}
+  .screen.on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ── Pantalla HOME: una sola pregunta ── */
+  .home-q{font-size:clamp(26px,6vw,34px);font-weight:800;letter-spacing:-.02em;margin:48px 0 6px;text-align:center}
+  .home-sub{color:var(--slate);text-align:center;margin-bottom:32px}
+  .door{width:100%;display:flex;align-items:center;gap:16px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 20px;margin-bottom:14px;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s}
+  .door:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+  .door .ico{font-size:30px;width:56px;height:56px;border-radius:12px;display:grid;place-items:center;flex:none}
+  .door h2{font-size:19px;margin-bottom:2px}
+  .door p{color:var(--slate);font-size:14px}
+  .door .chev{margin-left:auto;color:var(--indigo);font-size:22px;flex:none}
+  .d1 .ico{background:var(--green-bg)} .d2 .ico{background:#EEEDFF} .d3 .ico{background:#E8EDF3} .d4 .ico{background:#FFF3E0}
+  .footlink{display:block;text-align:center;margin-top:26px;color:var(--slate);font-size:14px}
+  .footlink a{color:var(--indigo);text-decoration:none;font-weight:600;display:inline-block;padding:12px 4px}
+
+  h1.sec{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:28px 0 4px}
+  .sec-sub{color:var(--slate);margin-bottom:20px;font-size:15px}
+
+  /* ── Puerta 1: centros cerca ── */
+  .locbtn{width:100%;background:var(--ink);color:#fff;border:0;border-radius:10px;padding:14px;font-weight:700;font-size:16px;margin-bottom:14px}
+  .search{width:100%;border:1px solid var(--line);border-radius:10px;padding:13px 16px;font:inherit;background:#fff;margin-bottom:20px}
+  .centro{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+  .centro-top{width:100%;background:none;border:0;text-align:left;padding:16px 18px;display:flex;align-items:center;gap:12px}
+  .centro-top .info{flex:1;min-width:0}
+  .centro-top h3{font-size:17px}
+  .centro-top .meta{color:var(--slate);font-size:14px}
+  .need{display:inline-block;background:var(--red-bg);color:var(--red);font-size:13px;font-weight:700;border-radius:99px;padding:2px 10px;margin-top:6px}
+  .dist{color:var(--indigo);font-weight:700;font-size:14px;flex:none}
+  .centro-more{display:none;border-top:1px solid var(--line);padding:14px 18px;background:#FBFCFE}
+  .centro.open .centro-more{display:block}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .acts a{flex:1;min-width:120px;text-align:center;text-decoration:none;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px;color:var(--ink);font-weight:700;font-size:15px}
+  .acts a.pri{background:var(--indigo);border-color:var(--indigo);color:#fff}
+  .tag-ok{display:inline-block;background:var(--green-bg);color:var(--green);font-size:13px;font-weight:600;border-radius:99px;padding:2px 10px;margin:2px 4px 0 0}
+  .quiet{color:var(--slate);font-size:14px}
+  .maplink{display:block;text-align:center;color:var(--indigo);font-weight:600;text-decoration:none;margin:6px 0 18px;font-size:15px}
+
+  /* ── Puerta 2: quiero ayudar ── */
+  .help3{display:grid;gap:12px}
+  @media(min-width:520px){.help3{grid-template-columns:1fr 1fr 1fr}}
+  .help3 button{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 16px;text-align:left;box-shadow:var(--shadow)}
+  .help3 .e{font-size:26px}
+  .help3 h3{font-size:16px;margin:8px 0 2px}
+  .help3 p{color:var(--slate);font-size:13px}
+
+  /* ── Puerta 3 ── */
+  .gate{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:14px}
+  .gate h3{margin-bottom:4px}
+  .gate p{color:var(--slate);font-size:14px;margin-bottom:12px}
+  .gate .go{background:var(--indigo);color:#fff;border:0;border-radius:10px;padding:11px 20px;font-weight:700}
+
+  .note{background:#FFF9E8;border:1px solid #F0E1B0;border-radius:10px;padding:12px 14px;font-size:13px;color:#6B5A1E;margin-top:26px}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <div class="logo">+</div><b>Ayuda Venezuela</b>
+  <button class="back" id="back" onclick="go('home')">← Inicio</button>
+</div></header>
+
+<div class="wrap">
+
+  <!-- HOME: UNA sola pregunta, TRES puertas -->
+  <section class="screen on" id="home">
+    <h1 class="home-q">¿Qué necesitas hoy?</h1>
+    <p class="home-sub">Elige una opción y te llevamos directo, sin vueltas.</p>
+    <button class="door d1" onclick="go('ayuda')">
+      <span class="ico">🆘</span>
+      <span><h2>Necesito ayuda</h2><p>Centros cerca de ti, buscar a un familiar</p></span>
+      <span class="chev">→</span>
+    </button>
+    <button class="door d2" onclick="go('ayudar')">
+      <span class="ico">💛</span>
+      <span><h2>Quiero ayudar</h2><p>Donar insumos, ser voluntario, aportar dinero</p></span>
+      <span class="chev">→</span>
+    </button>
+    <button class="door d4" onclick="go('transporte')">
+      <span class="ico">🛵</span>
+      <span><h2>Soy transportista</h2><p>Llevar insumos entre centros, registrar trayectos</p></span>
+      <span class="chev">→</span>
+    </button>
+    <button class="door d3" onclick="go('centro')">
+      <span class="ico">🛠️</span>
+      <span><h2>Soy un centro o equipo</h2><p>Actualizar mi centro, panel de gestión</p></span>
+      <span class="chev">→</span>
+    </button>
+    <p class="footlink">¿Donaste algo? <a href="#" onclick="return false">Sigue tu donación con tu código</a></p>
+  </section>
+
+  <!-- PUERTA 1: necesito ayuda -->
+  <section class="screen" id="ayuda">
+    <h1 class="sec">Centros cerca de ti</h1>
+    <p class="sec-sub">Toca un centro para ver cómo llegar y contactar.</p>
+    <button class="locbtn">📍 Usar mi ubicación</button>
+    <input class="search" placeholder="O escribe tu zona: El Hatillo, La Guaira…">
+    <a class="maplink" href="#" onclick="return false">Ver todos en el mapa</a>
+
+    <div class="centro open">
+      <button class="centro-top" onclick="this.parentNode.classList.toggle('open')">
+        <span class="info">
+          <h3>Comunidad El Hatillo</h3>
+          <span class="meta">El Hatillo, Caracas · actualizado hace 4 h</span><br>
+          <span class="need">Necesita: arroz, jabón</span>
+        </span>
+        <span class="dist">2,3 km</span>
+      </button>
+      <div class="centro-more">
+        <span class="quiet">Tiene disponible:</span><br>
+        <span class="tag-ok">Pañales</span><span class="tag-ok">Calzado</span>
+        <div class="acts">
+          <a class="pri" href="#" onclick="return false">Llamar</a>
+          <a href="#" onclick="return false">WhatsApp</a>
+          <a href="#" onclick="return false">Cómo llegar</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="centro">
+      <button class="centro-top" onclick="this.parentNode.classList.toggle('open')">
+        <span class="info">
+          <h3>Hospital El Algodonal</h3>
+          <span class="meta">El Algodonal, Caracas · actualizado hace 5 h</span><br>
+          <span class="need">Necesita: analgésicos</span>
+        </span>
+        <span class="dist">5,1 km</span>
+      </button>
+      <div class="centro-more">
+        <span class="quiet">Tiene disponible:</span><br>
+        <span class="tag-ok">Gasas estériles</span>
+        <div class="acts">
+          <a class="pri" href="#" onclick="return false">Llamar</a>
+          <a href="#" onclick="return false">WhatsApp</a>
+          <a href="#" onclick="return false">Cómo llegar</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="centro">
+      <button class="centro-top" onclick="this.parentNode.classList.toggle('open')">
+        <span class="info">
+          <h3>Refugio Naiguatá</h3>
+          <span class="meta">Naiguatá, Vargas · actualizado hace 5 h</span><br>
+          <span class="need">Necesita: colchonetas</span>
+        </span>
+        <span class="dist">28 km</span>
+      </button>
+      <div class="centro-more">
+        <span class="quiet">Tiene disponible:</span><br>
+        <span class="tag-ok">Agua embotellada</span>
+        <div class="acts">
+          <a class="pri" href="#" onclick="return false">Llamar</a>
+          <a href="#" onclick="return false">WhatsApp</a>
+          <a href="#" onclick="return false">Cómo llegar</a>
+        </div>
+      </div>
+    </div>
+
+    <a class="maplink" href="#" onclick="return false">🔍 Buscar a un familiar por nombre</a>
+  </section>
+
+  <!-- PUERTA 2: quiero ayudar -->
+  <section class="screen" id="ayudar">
+    <h1 class="sec">Gracias por ayudar</h1>
+    <p class="sec-sub">Tres formas directas. Elige una.</p>
+    <div class="help3">
+      <button><span class="e">📦</span><h3>Donar insumos</h3><p>Ve qué falta y en qué centro entregarlo</p></button>
+      <button><span class="e">🙋</span><h3>Ser voluntario</h3><p>Regístrate con tu zona y disponibilidad</p></button>
+      <button><span class="e">💳</span><h3>Aportar dinero</h3><p>Campaña verificada, con seguimiento</p></button>
+    </div>
+    <p class="footlink" style="margin-top:22px">¿Viste un dato desactualizado? <a href="#" onclick="return false">Repórtalo aquí</a></p>
+  </section>
+
+  <!-- PUERTA 4: transportistas -->
+  <section class="screen" id="transporte">
+    <h1 class="sec">Transportistas</h1>
+    <p class="sec-sub">Mueve insumos de donde sobran a donde faltan.</p>
+
+    <div class="gate">
+      <h3>🛵 Registrarme como transportista</h3>
+      <p>Tu zona, tipo de vehículo y disponibilidad. Los centros te verán para coordinar traslados.</p>
+      <button class="go">Registrarme</button>
+    </div>
+
+    <h1 class="sec" style="font-size:19px">Traslados sugeridos cerca de ti</h1>
+    <p class="sec-sub">Un centro tiene lo que otro necesita. Toca uno para coordinar.</p>
+
+    <div class="centro">
+      <button class="centro-top" onclick="this.parentNode.classList.toggle('open')">
+        <span class="info">
+          <h3>Gasas estériles</h3>
+          <span class="meta">Iglesia San José → Hospital El Algodonal</span><br>
+          <span class="need">Lo necesita un hospital</span>
+        </span>
+        <span class="dist">7,4 km</span>
+      </button>
+      <div class="centro-more">
+        <span class="quiet">Recoger en Los Corales (La Guaira) · entregar en El Algodonal (Caracas)</span>
+        <div class="acts">
+          <a class="pri" href="#" onclick="return false">Coordinar por WhatsApp</a>
+          <a href="#" onclick="return false">Ver ruta</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="centro">
+      <button class="centro-top" onclick="this.parentNode.classList.toggle('open')">
+        <span class="info">
+          <h3>Pañales</h3>
+          <span class="meta">Comunidad El Hatillo → Refugio Naiguatá</span><br>
+          <span class="need">Lo necesita un refugio</span>
+        </span>
+        <span class="dist">31 km</span>
+      </button>
+      <div class="centro-more">
+        <span class="quiet">Recoger en El Hatillo (Caracas) · entregar en Naiguatá (Vargas)</span>
+        <div class="acts">
+          <a class="pri" href="#" onclick="return false">Coordinar por WhatsApp</a>
+          <a href="#" onclick="return false">Ver ruta</a>
+        </div>
+      </div>
+    </div>
+
+    <p class="footlink">¿Ya hiciste un traslado? <a href="#" onclick="return false">Registrar mi trayecto</a></p>
+  </section>
+
+  <!-- PUERTA 3: soy un centro / equipo -->
+  <section class="screen" id="centro">
+    <h1 class="sec">Centros y equipos</h1>
+    <p class="sec-sub">Acceso con credenciales. Nada de esto aparece en el menú público.</p>
+    <div class="gate">
+      <h3>Panel de mi centro</h3>
+      <p>Actualiza necesidades, disponibles y datos de contacto con tu token + PIN.</p>
+      <button class="go">Entrar al panel</button>
+    </div>
+    <div class="gate">
+      <h3>Registrar un centro nuevo</h3>
+      <p>Solo si tu centro aún no aparece en el directorio.</p>
+      <button class="go" style="background:#fff;color:var(--indigo);border:1px solid var(--line)">Registrar centro</button>
+    </div>
+    <div class="note">🔒 El módulo de administración (facturas, trazabilidad, verificación) queda fuera de esta app pública — se entra por URL directa con clave de admin.</div>
+  </section>
+
+</div>
+
+<script>
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id));
+  document.getElementById('back').classList.toggle('on', id!=='home');
+  scrollTo(0,0);
+}
+</script>
+</body>
+</html>

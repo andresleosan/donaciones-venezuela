@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mapa de funcionalidades · Respuesta Humanitaria Venezuela</title>
+<style>
+  :root{
+    --primary:#635BFF; --primary-soft:#F0EFFF; --primary-border:#D6D3FF;
+    --ink:#0A2540; --text:#3C4257; --muted:#6B7C93;
+    --bg:#F6F9FC; --surface:#fff; --border:#E6EBF1;
+    --publico:#0E7A5F; --publico-bg:#E6F6F1;
+    --panel:#635BFF; --panel-bg:#F0EFFF;
+    --admin:#B7791F; --admin-bg:#FBF3E2;
+    --infra:#5A6B82; --infra-bg:#EEF2F7;
+    --radius:14px;
+    --shadow:0 2px 5px -1px rgba(50,50,93,.16),0 1px 3px -1px rgba(0,0,0,.2);
+    --shadow-lg:0 13px 27px -8px rgba(50,50,93,.22);
+    --font:"Inter","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;font-family:var(--font);color:var(--text);line-height:1.55;
+    background:
+      radial-gradient(circle at 15% -5%,rgba(99,91,255,.07),transparent 38%),
+      radial-gradient(circle at 100% 0%,rgba(0,212,255,.05),transparent 34%),
+      var(--bg);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--primary);text-decoration:none}
+  h1,h2,h3{color:var(--ink);margin:0;line-height:1.2;letter-spacing:-.01em}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  /* Header */
+  header.top{padding:52px 0 20px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;
+    color:var(--primary);background:var(--primary-soft);border:1px solid var(--primary-border);
+    padding:5px 12px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+  header.top h1{font-size:2.5rem;margin:16px 0 10px;font-weight:800}
+  header.top p{font-size:1.08rem;color:var(--muted);max-width:70ch;margin:0}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:12px 16px;box-shadow:var(--shadow)}
+  .stat b{display:block;font-size:1.5rem;color:var(--ink);font-weight:800;line-height:1}
+  .stat span{font-size:.8rem;color:var(--muted)}
+
+  /* Sticky toolbar */
+  .toolbar{position:sticky;top:0;z-index:20;background:rgba(246,249,252,.85);
+    backdrop-filter:blur(12px);border-bottom:1px solid var(--border);margin-top:28px}
+  .toolbar .wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding-top:14px;padding-bottom:14px}
+  #buscar{flex:1 1 260px;min-height:44px;border:1px solid var(--border);border-radius:10px;
+    padding:0 14px;font:inherit;background:var(--surface);color:var(--ink)}
+  #buscar:focus{outline:3px solid rgba(99,91,255,.35);outline-offset:1px;border-color:var(--primary)}
+  .filtros{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--border);background:var(--surface);border-radius:999px;
+    padding:7px 13px;font-size:.82rem;font-weight:650;color:var(--text);cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .chip:hover{border-color:var(--primary-border)}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip .dot{width:9px;height:9px;border-radius:50%}
+  .dot-publico{background:var(--publico)} .dot-panel{background:var(--panel)}
+  .dot-admin{background:var(--admin)} .dot-infra{background:var(--infra)}
+
+  section{padding:40px 0 8px}
+  .section-title{font-size:1.5rem;font-weight:800;margin-bottom:6px}
+  .section-sub{color:var(--muted);margin:0 0 26px;max-width:72ch}
+
+  /* Mapa de arquitectura */
+  .map-legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:22px;font-size:.82rem;color:var(--muted)}
+  .map-legend span{display:inline-flex;align-items:center;gap:7px}
+  .arch{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .entry{border-radius:var(--radius);padding:20px;color:#fff;box-shadow:var(--shadow-lg);
+    display:flex;flex-direction:column;gap:4px}
+  .entry.help{background:linear-gradient(150deg,#0E7A5F,#12987a)}
+  .entry.give{background:linear-gradient(150deg,#635BFF,#8B85FF)}
+  .entry.ops{background:linear-gradient(150deg,#0A2540,#1c3f63)}
+  .entry .k{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;opacity:.85;font-weight:700}
+  .entry h3{color:#fff;font-size:1.18rem}
+  .entry p{margin:2px 0 12px;font-size:.86rem;opacity:.92;line-height:1.4}
+  .entry ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+  .entry li{background:rgba(255,255,255,.16);border-radius:9px;padding:8px 11px;font-size:.85rem;font-weight:600}
+  .arch-note{margin-top:16px;font-size:.85rem;color:var(--muted);background:var(--primary-soft);
+    border:1px solid var(--primary-border);border-radius:10px;padding:12px 16px}
+
+  /* Módulos */
+  .modulo{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+  .modulo-head{display:flex;align-items:center;gap:14px;padding:18px 22px;cursor:pointer;user-select:none}
+  .modulo-head .ico{width:44px;height:44px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;
+    font-size:1.3rem;background:var(--primary-soft)}
+  .modulo-head .txt{flex:1;min-width:0}
+  .modulo-head h3{font-size:1.12rem;font-weight:750}
+  .modulo-head p{margin:2px 0 0;font-size:.85rem;color:var(--muted)}
+  .modulo-head .count{font-size:.78rem;font-weight:700;color:var(--muted);background:var(--bg);
+    border:1px solid var(--border);border-radius:999px;padding:4px 11px;flex:0 0 auto}
+  .modulo-head .arrow{color:var(--muted);transition:transform .2s;flex:0 0 auto}
+  .modulo.open .arrow{transform:rotate(90deg)}
+  .feats{display:none;border-top:1px solid var(--border)}
+  .modulo.open .feats{display:block}
+  .feat{display:flex;gap:14px;padding:14px 22px;border-bottom:1px solid var(--border);align-items:flex-start}
+  .feat:last-child{border-bottom:0}
+  .feat .num{font-size:.72rem;font-weight:800;color:var(--muted);min-width:26px;padding-top:2px}
+  .feat .body{flex:1;min-width:0}
+  .feat .body b{color:var(--ink);font-weight:700;font-size:.96rem}
+  .feat .body p{margin:3px 0 0;font-size:.86rem;color:var(--muted)}
+  .tag{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
+    padding:3px 9px;border-radius:999px;white-space:nowrap;flex:0 0 auto;margin-top:1px}
+  .tag.publico{color:var(--publico);background:var(--publico-bg)}
+  .tag.panel{color:var(--panel);background:var(--panel-bg)}
+  .tag.admin{color:var(--admin);background:var(--admin-bg)}
+  .tag.infra{color:var(--infra);background:var(--infra-bg)}
+  .empty{display:none;text-align:center;color:var(--muted);padding:40px;font-size:.95rem}
+
+  /* Guía de rebuild */
+  .tips{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .tip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+  .tip h4{margin:0 0 6px;color:var(--ink);font-size:1rem}
+  .tip p{margin:0;font-size:.88rem;color:var(--muted)}
+  .tip .b{color:var(--primary);font-weight:700}
+
+  footer{padding:40px 0 60px;color:var(--muted);font-size:.82rem;text-align:center}
+  @media(max-width:820px){
+    .arch{grid-template-columns:1fr}
+    .tips{grid-template-columns:1fr}
+    header.top h1{font-size:2rem}
+  }
+  @media print{.toolbar{display:none}.modulo .feats{display:block!important}.modulo .arrow{display:none}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="eyebrow">🗺️ Guía para reconstruir · UX simplificada</span>
+    <h1>Mapa de funcionalidades</h1>
+    <p>Inventario completo de <strong>Respuesta Humanitaria Venezuela</strong> para guiar una reconstrucción desde cero con una experiencia más simple. Toda función que tiene la app hoy está aquí, agrupada por <em>a quién sirve</em>, no por pantalla — así el rebuild puede partir de la intención del usuario y no de un menú sobrecargado.</p>
+    <div class="meta-row">
+      <div class="stat"><b>47</b><span>funcionalidades</span></div>
+      <div class="stat"><b>8</b><span>módulos</span></div>
+      <div class="stat"><b>3</b><span>intenciones de usuario</span></div>
+      <div class="stat"><b>21</b><span>acciones de backend</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap">
+    <input id="buscar" type="search" placeholder="🔍 Filtrar funcionalidades (ej. mapa, factura, PIN, voluntario…)" autocomplete="off" />
+    <div class="filtros" id="filtros">
+      <button class="chip on" data-f="todos">Todas</button>
+      <button class="chip" data-f="publico"><span class="dot dot-publico"></span>Público</button>
+      <button class="chip" data-f="panel"><span class="dot dot-panel"></span>Panel centro</button>
+      <button class="chip" data-f="admin"><span class="dot dot-admin"></span>Admin</button>
+      <button class="chip" data-f="infra"><span class="dot dot-infra"></span>Plataforma</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAPA DE ARQUITECTURA ===== -->
+<section class="wrap">
+  <h2 class="section-title">1 · Mapa: 3 puertas de entrada</h2>
+  <p class="section-sub">La app de hoy pone 6 secciones en paralelo en el menú (Inicio, Centros, Voluntarios, Rescatistas, Buscar familiar, Donaciones) más dos módulos ocultos (panel y admin). Para el rebuild, propongo que el usuario elija primero <strong>qué necesita</strong>, y todo lo demás cuelgue de ahí. Tres puertas en vez de un menú saturado.</p>
+
+  <div class="map-legend">
+    <span><span class="dot dot-publico"></span> Público (cualquiera)</span>
+    <span><span class="dot dot-panel"></span> Centro autenticado (token + PIN)</span>
+    <span><span class="dot dot-admin"></span> Administración (clave)</span>
+    <span><span class="dot dot-infra"></span> Plataforma (transversal)</span>
+  </div>
+
+  <div class="arch">
+    <div class="entry help">
+      <span class="k">Puerta 1</span>
+      <h3>🆘 Necesito ayuda</h3>
+      <p>Quien está en emergencia o busca a alguien.</p>
+      <ul>
+        <li>Centros de ayuda cerca de mí</li>
+        <li>Qué necesita / qué tiene cada centro</li>
+        <li>Buscar un familiar</li>
+        <li>Trazabilidad de una donación (token)</li>
+      </ul>
+    </div>
+    <div class="entry give">
+      <span class="k">Puerta 2</span>
+      <h3>💛 Quiero ayudar</h3>
+      <p>Quien aporta insumos, tiempo o transporte.</p>
+      <ul>
+        <li>Ver necesidades y llevar insumos</li>
+        <li>Registrarme (voluntario / rescatista / transportista)</li>
+        <li>Reportar un centro o una persona</li>
+        <li>Aportar a una campaña</li>
+      </ul>
+    </div>
+    <div class="entry ops">
+      <span class="k">Puerta 3</span>
+      <h3>🛠️ Soy un centro / equipo</h3>
+      <p>Quien gestiona un centro o coordina.</p>
+      <ul>
+        <li>Panel de mi centro (token + PIN)</li>
+        <li>Actualizar necesidades en vivo</li>
+        <li>Administración de campañas y facturas</li>
+        <li>Verificar reportes</li>
+      </ul>
+    </div>
+  </div>
+  <p class="arch-note">💡 <strong>Idea central del rebuild:</strong> la pantalla de inicio hace una sola pregunta —¿qué necesitas?— con estas 3 tarjetas grandes. Los KPIs, el dashboard y el "mapa de necesidades" pasan a ser <em>secundarios</em> (dentro de cada puerta), no lo primero que abruma al entrar.</p>
+</section>
+
+<!-- ===== LISTA COMPLETA ===== -->
+<section class="wrap" id="lista">
+  <h2 class="section-title">2 · Lista completa de funcionalidades</h2>
+  <p class="section-sub">Las 47 funcionalidades de la app, agrupadas en 8 módulos. Cada una lleva su nivel de acceso. Usa el buscador o los filtros de arriba. Toca un módulo para abrir/cerrar.</p>
+
+  <!-- A -->
+  <div class="modulo open" data-mod>
+    <div class="modulo-head">
+      <div class="ico">📍</div>
+      <div class="txt"><h3>A · Directorio de centros</h3><p>Encontrar y contactar centros, hospitales y refugios.</p></div>
+      <span class="count">10</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="publico centros directorio acopio hospital refugio"><span class="num">01</span><div class="body"><b>Directorio de centros</b><p>Listado de centros de acopio, hospitales, refugios y puntos de ayuda.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico insumos necesita disponible cubierto categoria urgencia"><span class="num">02</span><div class="body"><b>Insumos por centro</b><p>Qué necesita / qué tiene disponible / qué está cubierto, con categoría, cantidades, urgencia y unidad.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico matching coincidencias emparejar"><span class="num">03</span><div class="body"><b>Matching automático de insumos</b><p>Si un centro necesita algo y otro lo tiene disponible, muestra "Disponible en N lugar(es)" con contacto directo.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico filtros buscar tipo categoria"><span class="num">04</span><div class="body"><b>Filtros y búsqueda de centros</b><p>Por nombre, ubicación o insumo; por tipo; por categoría.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico contacto llamar whatsapp telefono"><span class="num">05</span><div class="body"><b>Contacto directo</b><p>Botones de Llamar (teléfono) y WhatsApp por centro.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico navegacion maps waze ruta"><span class="num">06</span><div class="body"><b>Navegación Maps / Waze</b><p>Enlaces para llegar al centro (funciona con ubicación de texto).</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico mapa leaflet coordenadas marcadores"><span class="num">07</span><div class="body"><b>Mapa de centros (Leaflet)</b><p>Mapa interactivo autohospedado con marcadores; aparece cuando hay coordenadas.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico cerca geolocalizacion distancia haversine"><span class="num">08</span><div class="body"><b>Centros cerca de mí</b><p>Geolocalización, orden por distancia y distancia en cada tarjeta.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico historial movimientos"><span class="num">09</span><div class="body"><b>Historial de movimientos por centro</b><p>Registro de altas y cambios de insumos de cada centro.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico badge gestionado"><span class="num">10</span><div class="body"><b>Badge "Gestionado por el centro"</b><p>Indica que el propio centro mantiene su información al día.</p></div><span class="tag publico">Público</span></div>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="modulo" data-mod>
+    <div class="modulo-head">
+      <div class="ico">🙌</div>
+      <div class="txt"><h3>B · Aportar y colaborar</h3><p>Sumar insumos, tiempo, rescate o transporte.</p></div>
+      <span class="count">6</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="publico reportar centro insumo coordenadas geolocalizacion"><span class="num">11</span><div class="body"><b>Reportar centro o insumo</b><p>Alta pública de un centro/necesidad, con captura opcional de coordenadas (📍 usar mi ubicación).</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico voluntario registro"><span class="num">12</span><div class="body"><b>Registro de voluntarios</b><p>Nombre, ciudad, estado, profesión, disponibilidad, transporte, observaciones.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico rescatista registro equipo capacidad"><span class="num">13</span><div class="body"><b>Registro de rescatistas</b><p>Organización, especialidad, equipo disponible, capacidad operativa.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico transportista motorizado vehiculo placa zona"><span class="num">14</span><div class="body"><b>Registro de transportistas</b><p>Tipo de vehículo, zona de operación, placa (motos, carros, bicis, camiones).</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico trayecto origen destino km"><span class="num">15</span><div class="body"><b>Registrar trayectos</b><p>Origen, destino, km e insumo transportado por un motorizado.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico aporte logistico donacion motorizado"><span class="num">16</span><div class="body"><b>Aportes logísticos a transportistas</b><p>Donación de combustible/apoyo a un motorizado que traslada ayuda.</p></div><span class="tag publico">Público</span></div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="modulo" data-mod>
+    <div class="modulo-head">
+      <div class="ico">🔎</div>
+      <div class="txt"><h3>C · Buscar personas</h3><p>Localizar familiares y reportar personas.</p></div>
+      <span class="count">3</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="publico buscar familiar nombre cedula"><span class="num">17</span><div class="body"><b>Buscar familiar</b><p>Consulta por nombre o cédula en el registro de personas reportadas.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico reportar persona localizada hospitalizada fallecida"><span class="num">18</span><div class="body"><b>Reportar una persona</b><p>Estado (localizada, hospitalizada, buscándose, en refugio, fallecida), ubicación, contacto, fuente.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico sin verificar badge confianza"><span class="num">19</span><div class="body"><b>Estado "sin verificar"</b><p>Los reportes salen marcados como no verificados hasta que el equipo los confirma.</p></div><span class="tag publico">Público</span></div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div class="modulo" data-mod>
+    <div class="modulo-head">
+      <div class="ico">🧾</div>
+      <div class="txt"><h3>D · Transparencia de donaciones</h3><p>Trazabilidad pública por token de factura.</p></div>
+      <span class="count">5</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="publico trazabilidad token seguimiento factura"><span class="num">20</span><div class="body"><b>Trazabilidad pública por token</b><p>Vista abierta con un enlace/token (DV-…); no expone donantes, referencias de pago ni datos operativos.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico factura objetivo monto porcentaje recaudado"><span class="num">21</span><div class="body"><b>Ficha de la factura</b><p>Objetivo, monto requerido, monto recaudado y porcentaje completado.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico movimientos financiero historial"><span class="num">22</span><div class="body"><b>Historial financiero</b><p>Movimientos de la campaña (ingresos, compras, entregas).</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico evidencias fotos comprobantes"><span class="num">23</span><div class="body"><b>Evidencias públicas</b><p>Comprobantes/enlaces marcados como públicos.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico estado factura abierta cerrada"><span class="num">24</span><div class="body"><b>Estado de la factura</b><p>Abierta o cerrada, con fecha de cierre.</p></div><span class="tag publico">Público</span></div>
+    </div>
+  </div>
+
+  <!-- E -->
+  <div class="modulo" data-mod>
+    <div class="modulo-head">
+      <div class="ico">🔑</div>
+      <div class="txt"><h3>E · Panel del centro</h3><p>Cada centro gestiona lo suyo (token + PIN).</p></div>
+      <span class="count">4</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="panel crear token pin nuevo centro"><span class="num">25</span><div class="body"><b>Crear panel de centro</b><p>Un centro nuevo se registra y recibe un token CTR-… + PIN (mostrado una sola vez). Los centros ya listados los provisiona un admin.</p></div><span class="tag panel">Panel</span></div>
+      <div class="feat" data-tags="panel entrar token pin acceso ruta"><span class="num">26</span><div class="body"><b>Acceso por token + PIN</b><p>Ingreso con el botón «Gestionar mi centro» o el enlace #centro/TOKEN, más el PIN (hasheado).</p></div><span class="tag panel">Panel</span></div>
+      <div class="feat" data-tags="panel editar datos ubicacion telefono coordenadas"><span class="num">27</span><div class="body"><b>Editar datos del centro</b><p>Tipo, ubicación, teléfono y coordenadas del propio centro.</p></div><span class="tag panel">Panel</span></div>
+      <div class="feat" data-tags="panel insumos vivo alta editar borrar urgencia cantidad"><span class="num">28</span><div class="body"><b>Gestión de insumos en vivo</b><p>Alta, cambio de estado, cantidades, urgencia y borrado de insumos, reflejado al instante.</p></div><span class="tag panel">Panel</span></div>
+    </div>
+  </div>
+
+  <!-- F -->
+  <div class="modulo" data-mod>
+    <div class="modulo-head">
+      <div class="ico">🛡️</div>
+      <div class="txt"><h3>F · Administración</h3><p>Facturas, donaciones y verificación (clave admin).</p></div>
+      <span class="count">9</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="admin acceso clave hash login"><span class="num">29</span><div class="body"><b>Acceso admin</b><p>Ruta #admin con clave hasheada (fail-closed + anti-fuerza-bruta); la clave queda solo en la sesión.</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin crear factura numero token campana"><span class="num">30</span><div class="body"><b>Crear factura / campaña</b><p>Número FAC-año-NNNNNN + token público DV-… para compartir con donantes.</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin registrar donacion confirmada recaudado"><span class="num">31</span><div class="body"><b>Registrar donación</b><p>Registrada o confirmada; al confirmar recalcula el monto recaudado.</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin movimiento ingreso egreso compra entrega"><span class="num">32</span><div class="body"><b>Registrar movimiento</b><p>Ingreso, egreso, compra o entrega, con descripción y monto.</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin evidencia url comprobante"><span class="num">33</span><div class="body"><b>Registrar evidencia</b><p>URL https de comprobante, pública o privada.</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin cerrar factura"><span class="num">34</span><div class="body"><b>Cerrar factura</b><p>Marca la campaña como cerrada con fecha.</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin listar facturas"><span class="num">35</span><div class="body"><b>Listar facturas</b><p>Todas las campañas con sus tokens (solo admin).</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin verificar persona reporte"><span class="num">36</span><div class="body"><b>Verificar personas reportadas</b><p>Confirma un reporte de persona (le quita el "sin verificar").</p></div><span class="tag admin">Admin</span></div>
+      <div class="feat" data-tags="admin regenerar panel provisionar recuperar token pin"><span class="num">37</span><div class="body"><b>Regenerar / provisionar panel</b><p>Genera token+PIN para un centro existente (recuperación de acceso o provisión inicial).</p></div><span class="tag admin">Admin</span></div>
+    </div>
+  </div>
+
+  <!-- G -->
+  <div class="modulo" data-mod>
+    <div class="modulo-head">
+      <div class="ico">📊</div>
+      <div class="txt"><h3>G · Dashboard e indicadores</h3><p>Panorama de la operación.</p></div>
+      <span class="count">4</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="publico kpis estadisticas indicadores"><span class="num">38</span><div class="body"><b>KPIs de operación</b><p>Centros, hospitales, voluntarios, rescatistas, motorizados, personas localizadas, donaciones, monto recaudado.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico necesidades urgentes prioridad"><span class="num">39</span><div class="body"><b>Necesidades urgentes</b><p>Prioridades calculadas desde los registros actuales.</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico mapa necesidades region resumen"><span class="num">40</span><div class="body"><b>Resumen de necesidades por región</b><p>Agrupación regional (base para el mapa geográfico).</p></div><span class="tag publico">Público</span></div>
+      <div class="feat" data-tags="publico impacto humanitario beneficiarios"><span class="num">41</span><div class="body"><b>Impacto humanitario</b><p>Indicadores acumulados de la respuesta.</p></div><span class="tag publico">Público</span></div>
+    </div>
+  </div>
+
+  <!-- H -->
+  <div class="modulo" data-mod>
+    <div class="modulo-head">
+      <div class="ico">⚙️</div>
+      <div class="txt"><h3>H · Plataforma (transversal)</h3><p>Lo que sostiene todo lo anterior.</p></div>
+      <span class="count">6</span>
+      <span class="arrow">▸</span>
+    </div>
+    <div class="feats">
+      <div class="feat" data-tags="infra idioma multilenguaje espanol ingles frances i18n"><span class="num">42</span><div class="body"><b>Multilenguaje ES / EN / FR</b><p>Toda la interfaz traducida a español, inglés y francés.</p></div><span class="tag infra">Plataforma</span></div>
+      <div class="feat" data-tags="infra pwa offline instalable service worker shortcuts"><span class="num">43</span><div class="body"><b>PWA instalable + offline</b><p>Se instala en el móvil, cascarón offline y accesos directos.</p></div><span class="tag infra">Plataforma</span></div>
+      <div class="feat" data-tags="infra seo open graph twitter json-ld sitemap"><span class="num">44</span><div class="body"><b>SEO y compartir</b><p>Open Graph, Twitter Cards, JSON-LD, sitemap y robots.</p></div><span class="tag infra">Plataforma</span></div>
+      <div class="feat" data-tags="infra seguridad csp rls rate-limit token pin hash"><span class="num">45</span><div class="body"><b>Seguridad</b><p>CSP, RLS en la base, rate-limit por cubo, tokens sin caracteres ambiguos, PIN y clave hasheados.</p></div><span class="tag infra">Plataforma</span></div>
+      <div class="feat" data-tags="infra accesibilidad a11y focus aria reduced-motion"><span class="num">46</span><div class="body"><b>Accesibilidad</b><p>Skip link, focus visible, prefers-reduced-motion, ARIA en tabs y modales.</p></div><span class="tag infra">Plataforma</span></div>
+      <div class="feat" data-tags="infra responsive movil escritorio diseno"><span class="num">47</span><div class="body"><b>Diseño responsive</b><p>Funciona en móvil (público real con datos limitados) y escritorio.</p></div><span class="tag infra">Plataforma</span></div>
+    </div>
+  </div>
+
+  <div class="empty" id="vacio">Ninguna funcionalidad coincide con tu búsqueda.</div>
+</section>
+
+<!-- ===== GUÍA DE SIMPLIFICACIÓN ===== -->
+<section class="wrap">
+  <h2 class="section-title">3 · Cómo simplificar la UX en el rebuild</h2>
+  <p class="section-sub">Principios concretos para que la app deje de sentirse sobrecargada, sin perder ninguna de las 47 funcionalidades.</p>
+  <div class="tips">
+    <div class="tip"><h4>Una pregunta al entrar</h4><p>La portada muestra <span class="b">solo las 3 puertas</span> del mapa. Los KPIs y el "dashboard de operaciones" se mueven dentro de cada puerta o a una pestaña "Panorama" separada — no son lo primero que ve el usuario.</p></div>
+    <div class="tip"><h4>Progressive disclosure</h4><p>Cada centro muestra <span class="b">lo esencial</span> (nombre, qué necesita, contacto). Historial, evidencias, disponibles y coincidencias se abren solo si el usuario los pide (acordeón), no todo a la vez.</p></div>
+    <div class="tip"><h4>Formularios en pasos</h4><p>Registro de voluntario/rescatista/transportista en <span class="b">2–3 pasos cortos</span> en vez de un formulario largo con 8+ campos visibles de golpe.</p></div>
+    <div class="tip"><h4>Menos navegación paralela</h4><p>De 6 ítems de menú a <span class="b">3 puertas + búsqueda</span>. Voluntarios/rescatistas/transportistas se agrupan bajo "Quiero ayudar".</p></div>
+    <div class="tip"><h4>El mapa como vista, no como adorno</h4><p>Un solo <span class="b">mapa central</span> con filtros (tipo de centro, insumo) reemplaza la lista + el "mapa de necesidades" textual + "cerca de mí" como piezas separadas.</p></div>
+    <div class="tip"><h4>Módulos ocultos siguen ocultos</h4><p>Panel del centro y Administración <span class="b">no van en el menú principal</span>: se llega por enlace/token. Correcto hoy; mantenerlo.</p></div>
+  </div>
+</section>
+
+<footer class="wrap">
+  Guía generada para reconstruir <strong>Respuesta Humanitaria Venezuela</strong> con una UX más simple · 47 funcionalidades · archivo único, offline · 2026-07-02
+</footer>
+
+<script>
+  // Abrir / cerrar módulos
+  document.querySelectorAll('[data-mod] .modulo-head').forEach(function(h){
+    h.addEventListener('click', function(){ h.parentElement.classList.toggle('open'); });
+  });
+
+  var buscar = document.getElementById('buscar');
+  var chips = document.querySelectorAll('#filtros .chip');
+  var vacio = document.getElementById('vacio');
+  var filtroActivo = 'todos';
+
+  function aplicar(){
+    var q = buscar.value.trim().toLowerCase();
+    var totalVisible = 0;
+    document.querySelectorAll('[data-mod]').forEach(function(mod){
+      var visiblesMod = 0;
+      mod.querySelectorAll('.feat').forEach(function(f){
+        var tags = f.getAttribute('data-tags');
+        var texto = f.textContent.toLowerCase();
+        var okTexto = !q || texto.indexOf(q) > -1 || tags.indexOf(q) > -1;
+        var okFiltro = filtroActivo === 'todos' || tags.indexOf(filtroActivo) > -1;
+        var ver = okTexto && okFiltro;
+        f.style.display = ver ? '' : 'none';
+        if(ver){ visiblesMod++; totalVisible++; }
+      });
+      // ocultar módulos sin resultados; abrir los que sí tienen al filtrar
+      mod.style.display = visiblesMod ? '' : 'none';
+      if(q || filtroActivo !== 'todos'){ if(visiblesMod) mod.classList.add('open'); }
+    });
+    vacio.style.display = totalVisible ? 'none' : 'block';
+  }
+
+  buscar.addEventListener('input', aplicar);
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){
+      chips.forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on');
+      filtroActivo = c.getAttribute('data-f');
+      aplicar();
+    });
+  });
+</script>
+</body>
+</html>
