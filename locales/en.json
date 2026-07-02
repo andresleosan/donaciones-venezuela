@@ -51,10 +51,10 @@
     "donationsShort": "Donate"
   },
   "status": {
-    "live": "Google Sheets data",
-    "loading": "Connecting to Sheets",
-    "error": "Sheets unavailable",
-    "errorBanner": "Google Sheets could not be read. No alternate data is shown."
+    "live": "Live data",
+    "loading": "Connecting to the database",
+    "error": "Database unavailable",
+    "errorBanner": "The database could not be read. No alternate data is shown."
   },
   "hero": {
     "eyebrow": "Active humanitarian coordination",
@@ -105,9 +105,9 @@
   },
   "urgent": {
     "title": "Urgent needs",
-    "copy": "Priorities calculated from current Google Sheets records.",
+    "copy": "Priorities calculated from the platform's current records.",
     "priority": "priority",
-    "empty": "No needs are registered in Google Sheets."
+    "empty": "No needs are registered yet."
   },
   "map": {
     "title": "Aid centers and operations",
@@ -164,7 +164,7 @@
     "count": "Showing {shown} of {total} centers",
     "empty": "No centers match those filters.",
     "formTitle": "Report center or supply",
-    "formCopy": "Register needs or availability without changing the existing Google Sheets structure.",
+    "formCopy": "Register needs or availability; it is saved instantly to the database.",
     "typeLabel": "Type",
     "namePlaceholder": "Hospital, church, school",
     "locationPlaceholder": "State, city, area",
@@ -188,7 +188,7 @@
     "title": "Volunteer Registration",
     "copy": "Fast intake, search, and coordination for people available for local support.",
     "formTitle": "Volunteer details",
-    "formCopy": "The information is sent to the existing volunteer endpoint in Google Sheets.",
+    "formCopy": "The information is stored securely in the platform database.",
     "cityPlaceholder": "Caraballeda",
     "statePlaceholder": "La Guaira",
     "availabilityPlaceholder": "Today, tomorrow, weekends",
@@ -213,7 +213,7 @@
     "title": "Rescuer Registration",
     "copy": "Specialized teams, operational capacity, and rescue logistics separated from general volunteering.",
     "formTitle": "Team or rescuer details",
-    "formCopy": "The registration uses the existing rescuer endpoint and keeps Sheets compatibility.",
+    "formCopy": "The registration is stored securely in the platform database.",
     "organizationPlaceholder": "Civil Protection, firefighters, NGO",
     "equipment": "Available equipment",
     "equipmentPlaceholder": "Tools, ambulance, radio, ropes",
@@ -256,12 +256,12 @@
   },
   "family": {
     "title": "Find family",
-    "copy": "Search by name or ID in the Google Sheets personas or familiares tabs.",
+    "copy": "Search by name or ID in the reported-persons registry.",
     "queryLabel": "Full name or ID",
     "queryPlaceholder": "V-12345678 or full name",
     "submit": "Find family",
     "searching": "Searching...",
-    "errorMessage": "Google Sheets could not be queried for this search.",
+    "errorMessage": "This search could not be completed.",
     "notFound": "We did not find this person in the available records.",
     "idLabel": "ID:",
     "locationLabel": "Location:",
@@ -276,10 +276,10 @@
     "tokenLabel": "Public token",
     "tokenPlaceholder": "DV-8K4P-X2MN-7QTR",
     "submit": "Check invoice",
-    "searching": "Checking Google Sheets...",
+    "searching": "Checking the database...",
     "invalidToken": "Enter a token in the DV-XXXX-XXXX-XXXX format.",
     "notFound": "No invoice was found for that token.",
-    "error": "The traceability record could not be read from Google Sheets.",
+    "error": "The traceability record could not be read.",
     "invoice": "Invoice",
     "requiredAmount": "Required amount",
     "raisedAmount": "Raised amount",
@@ -510,7 +510,7 @@
     "heroUrgentAction": "View urgent needs",
     "heroTrackingAction": "Check token",
     "dashboardTitle": "Humanitarian dashboard",
-    "dashboardCopy": "Consolidated indicators from platform records and Google Sheets-compatible data.",
+    "dashboardCopy": "Consolidated indicators from the platform's live records.",
     "filtersTitle": "Advanced filters",
     "filters": {
       "type": "Help type",
@@ -540,13 +540,13 @@
       "rescuers": "Rescuers"
     },
     "historyTitle": "Aid history",
-    "historyCopy": "Prepared for Pending, In progress, and Delivered statuses from Google Sheets.",
+    "historyCopy": "Prepared for Pending, In progress, and Delivered statuses.",
     "inKindTitle": "In-kind donations",
     "servicesTitle": "Service donations",
     "alliesTitle": "Humanitarian allies",
     "alliesCopy": "Structure prepared for NGOs, hospitals, universities, companies, and community centers.",
     "transparencyTitle": "Transparency",
-    "transparencyCopy": "The requests shown come from documented records inside the platform. The information can be audited and validated through records stored in Google Sheets.",
+    "transparencyCopy": "The requests shown come from documented records inside the platform. The information can be audited and validated through records stored in the database.",
     "emptyFiltered": "No requests match those filters.",
     "emptySection": "No records for this section with the current filters.",
     "kpis": {
@@ -599,7 +599,7 @@
       "lastUpdate": "Update date",
       "source": "Data source",
       "validation": "Validation status",
-      "platformSource": "Documented platform and Google Sheets records",
+      "platformSource": "Documented platform records",
       "exampleSource": "Simulated example data",
       "validated": "Operational validation available",
       "exampleValidation": "Visible example until compatible columns are received"

@@ -51,10 +51,10 @@
     "donationsShort": "Donner"
   },
   "status": {
-    "live": "Données Google Sheets",
-    "loading": "Connexion à Sheets",
-    "error": "Sheets indisponible",
-    "errorBanner": "Impossible de lire Google Sheets. Aucune donnée alternative n'est affichée."
+    "live": "Données en direct",
+    "loading": "Connexion à la base de données",
+    "error": "Base de données indisponible",
+    "errorBanner": "Impossible de lire la base de données. Aucune donnée alternative n'est affichée."
   },
   "hero": {
     "eyebrow": "Coordination humanitaire active",
@@ -105,9 +105,9 @@
   },
   "urgent": {
     "title": "Besoins urgents",
-    "copy": "Priorités calculées depuis les enregistrements actuels de Google Sheets.",
+    "copy": "Priorités calculées depuis les enregistrements actuels de la plateforme.",
     "priority": "priorité",
-    "empty": "Aucun besoin n'est enregistré dans Google Sheets."
+    "empty": "Aucun besoin n'est enregistré pour le moment."
   },
   "map": {
     "title": "Centres d'aide et opérations",
@@ -164,7 +164,7 @@
     "count": "Affichage de {shown} sur {total} centres",
     "empty": "Aucun centre ne correspond à ces filtres.",
     "formTitle": "Signaler un centre ou une fourniture",
-    "formCopy": "Enregistrez les besoins ou disponibilités sans changer la structure Google Sheets existante.",
+    "formCopy": "Enregistrez les besoins ou disponibilités ; tout est sauvegardé instantanément dans la base de données.",
     "typeLabel": "Type",
     "namePlaceholder": "Hôpital, église, école",
     "locationPlaceholder": "État, ville, secteur",
@@ -188,7 +188,7 @@
     "title": "Inscription des bénévoles",
     "copy": "Inscription rapide, recherche et coordination des personnes disponibles pour l'aide locale.",
     "formTitle": "Données du bénévole",
-    "formCopy": "Les informations sont envoyées à l'endpoint existant des bénévoles dans Google Sheets.",
+    "formCopy": "Les informations sont stockées en toute sécurité dans la base de données de la plateforme.",
     "cityPlaceholder": "Caraballeda",
     "statePlaceholder": "La Guaira",
     "availabilityPlaceholder": "Aujourd'hui, demain, week-ends",
@@ -213,7 +213,7 @@
     "title": "Inscription des secouristes",
     "copy": "Équipes spécialisées, capacité opérationnelle et logistique de secours séparées du bénévolat général.",
     "formTitle": "Données de l'équipe ou du secouriste",
-    "formCopy": "L'inscription utilise l'endpoint existant des secouristes et conserve la compatibilité avec Sheets.",
+    "formCopy": "L'inscription est stockée en toute sécurité dans la base de données de la plateforme.",
     "organizationPlaceholder": "Protection civile, pompiers, ONG",
     "equipment": "Équipement disponible",
     "equipmentPlaceholder": "Outils, ambulance, radio, cordes",
@@ -256,12 +256,12 @@
   },
   "family": {
     "title": "Rechercher un proche",
-    "copy": "Recherchez par nom ou pièce d'identité dans les feuilles Google Sheets personas ou familiares.",
+    "copy": "Recherchez par nom ou pièce d'identité dans le registre des personnes signalées.",
     "queryLabel": "Nom complet ou pièce d'identité",
     "queryPlaceholder": "V-12345678 ou nom complet",
     "submit": "Rechercher un proche",
     "searching": "Recherche...",
-    "errorMessage": "Impossible de consulter Google Sheets pour cette recherche.",
+    "errorMessage": "Impossible de terminer cette recherche.",
     "notFound": "Nous n'avons pas trouvé cette personne dans les registres disponibles.",
     "idLabel": "Pièce d'identité :",
     "locationLabel": "Emplacement :",
@@ -276,10 +276,10 @@
     "tokenLabel": "Jeton public",
     "tokenPlaceholder": "DV-8K4P-X2MN-7QTR",
     "submit": "Consulter la facture",
-    "searching": "Consultation de Google Sheets...",
+    "searching": "Consultation de la base de données...",
     "invalidToken": "Saisissez un jeton au format DV-XXXX-XXXX-XXXX.",
     "notFound": "Aucune facture n'a été trouvée pour ce jeton.",
-    "error": "Impossible de consulter la traçabilité dans Google Sheets.",
+    "error": "Impossible de consulter le registre de traçabilité.",
     "invoice": "Facture",
     "requiredAmount": "Montant requis",
     "raisedAmount": "Montant collecté",
@@ -510,7 +510,7 @@
     "heroUrgentAction": "Voir les urgences",
     "heroTrackingAction": "Consulter le jeton",
     "dashboardTitle": "Tableau humanitaire",
-    "dashboardCopy": "Indicateurs consolidés depuis les registres de la plateforme et les données compatibles avec Google Sheets.",
+    "dashboardCopy": "Indicateurs consolidés depuis les registres en direct de la plateforme.",
     "filtersTitle": "Filtres avancés",
     "filters": {
       "type": "Type d’aide",
@@ -540,13 +540,13 @@
       "rescuers": "Secouristes"
     },
     "historyTitle": "Historique de l’aide",
-    "historyCopy": "Préparé pour les états En attente, En cours et Livré depuis Google Sheets.",
+    "historyCopy": "Préparé pour les états En attente, En cours et Livré.",
     "inKindTitle": "Dons en nature",
     "servicesTitle": "Dons de services",
     "alliesTitle": "Alliés humanitaires",
     "alliesCopy": "Structure préparée pour ONG, hôpitaux, universités, entreprises et centres communautaires.",
     "transparencyTitle": "Transparence",
-    "transparencyCopy": "Les demandes affichées proviennent de registres documentés dans la plateforme. Les informations peuvent être auditées et validées via les registres stockés dans Google Sheets.",
+    "transparencyCopy": "Les demandes affichées proviennent de registres documentés dans la plateforme. Les informations peuvent être auditées et validées via les registres stockés dans la base de données.",
     "emptyFiltered": "Aucune demande ne correspond à ces filtres.",
     "emptySection": "Aucun registre pour cette section avec les filtres actuels.",
     "kpis": {
@@ -599,7 +599,7 @@
       "lastUpdate": "Date de mise à jour",
       "source": "Source des données",
       "validation": "État de validation",
-      "platformSource": "Registres documentés de la plateforme et de Google Sheets",
+      "platformSource": "Registres documentés de la plateforme",
       "exampleSource": "Données simulées d’exemple",
       "validated": "Validation opérationnelle disponible",
       "exampleValidation": "Exemple visible jusqu’à réception de colonnes compatibles"

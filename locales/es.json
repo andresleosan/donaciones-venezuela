@@ -51,10 +51,10 @@
     "donationsShort": "Donar"
   },
   "status": {
-    "live": "Datos de Google Sheets",
-    "loading": "Conectando a Sheets",
-    "error": "Sin conexión a Sheets",
-    "errorBanner": "No se pudo leer Google Sheets. No se muestran datos alternativos."
+    "live": "Datos en vivo",
+    "loading": "Conectando a la base de datos",
+    "error": "Sin conexión a la base de datos",
+    "errorBanner": "No se pudo leer la base de datos. No se muestran datos alternativos."
   },
   "hero": {
     "eyebrow": "Coordinación humanitaria activa",
@@ -105,9 +105,9 @@
   },
   "urgent": {
     "title": "Necesidades urgentes",
-    "copy": "Prioridades calculadas desde los registros actuales de Google Sheets.",
+    "copy": "Prioridades calculadas desde los registros actuales de la plataforma.",
     "priority": "prioridad",
-    "empty": "No hay necesidades registradas en Google Sheets."
+    "empty": "No hay necesidades registradas por ahora."
   },
   "map": {
     "title": "Centros de ayuda y operaciones",
@@ -164,7 +164,7 @@
     "count": "Mostrando {shown} de {total} centros",
     "empty": "No hay centros con esos filtros.",
     "formTitle": "Reportar centro o insumo",
-    "formCopy": "Registra necesidades o disponibilidad sin cambiar la estructura existente de Google Sheets.",
+    "formCopy": "Registra necesidades o disponibilidad; se guarda al instante en la base de datos.",
     "typeLabel": "Tipo",
     "namePlaceholder": "Hospital, iglesia, escuela",
     "locationPlaceholder": "Estado, ciudad, sector",
@@ -188,7 +188,7 @@
     "title": "Registro de Voluntarios",
     "copy": "Alta rápida, búsqueda y coordinación de personas disponibles para apoyo local.",
     "formTitle": "Datos del voluntario",
-    "formCopy": "La información se envía al endpoint existente de voluntarios en Google Sheets.",
+    "formCopy": "La información se guarda de forma segura en la base de datos de la plataforma.",
     "cityPlaceholder": "Caraballeda",
     "statePlaceholder": "La Guaira",
     "availabilityPlaceholder": "Hoy, mañana, fines de semana",
@@ -213,7 +213,7 @@
     "title": "Registro de Rescatistas",
     "copy": "Equipos especializados, capacidad operativa y logística de rescate diferenciada del voluntariado general.",
     "formTitle": "Datos del equipo o rescatista",
-    "formCopy": "El registro usa el endpoint existente de rescatistas y conserva compatibilidad con Sheets.",
+    "formCopy": "El registro se guarda de forma segura en la base de datos de la plataforma.",
     "organizationPlaceholder": "Protección Civil, bomberos, ONG",
     "equipment": "Equipo disponible",
     "equipmentPlaceholder": "Herramientas, ambulancia, radio, cuerdas",
@@ -256,12 +256,12 @@
   },
   "family": {
     "title": "Buscar familiar",
-    "copy": "Consulta por nombre o cédula en las hojas personas o familiares de Google Sheets.",
+    "copy": "Consulta por nombre o cédula en el registro de personas reportadas.",
     "queryLabel": "Nombre completo o cédula",
     "queryPlaceholder": "V-12345678 o nombre completo",
     "submit": "Buscar familiar",
     "searching": "Buscando...",
-    "errorMessage": "No se pudo consultar Google Sheets para esta búsqueda.",
+    "errorMessage": "No se pudo completar esta búsqueda.",
     "notFound": "No encontramos a esta persona en los registros disponibles.",
     "idLabel": "Cédula:",
     "locationLabel": "Ubicación:",
@@ -276,10 +276,10 @@
     "tokenLabel": "Token público",
     "tokenPlaceholder": "DV-8K4P-X2MN-7QTR",
     "submit": "Consultar factura",
-    "searching": "Consultando Google Sheets...",
+    "searching": "Consultando la base de datos...",
     "invalidToken": "Ingresa un token con formato DV-XXXX-XXXX-XXXX.",
     "notFound": "No encontramos una factura para ese token.",
-    "error": "No se pudo consultar la trazabilidad en Google Sheets.",
+    "error": "No se pudo consultar el registro de trazabilidad.",
     "invoice": "Factura",
     "requiredAmount": "Monto requerido",
     "raisedAmount": "Monto recaudado",
@@ -510,7 +510,7 @@
     "heroUrgentAction": "Ver urgencias",
     "heroTrackingAction": "Consultar token",
     "dashboardTitle": "Dashboard humanitario",
-    "dashboardCopy": "Indicadores consolidados desde registros de la plataforma y datos compatibles con Google Sheets.",
+    "dashboardCopy": "Indicadores consolidados desde los registros en vivo de la plataforma.",
     "filtersTitle": "Filtros avanzados",
     "filters": {
       "type": "Tipo de ayuda",
@@ -540,13 +540,13 @@
       "rescuers": "Rescatistas"
     },
     "historyTitle": "Historial de ayuda",
-    "historyCopy": "Preparado para estados Pendiente, En proceso y Entregado desde Google Sheets.",
+    "historyCopy": "Preparado para estados Pendiente, En proceso y Entregado.",
     "inKindTitle": "Donaciones en especie",
     "servicesTitle": "Donación de servicios",
     "alliesTitle": "Aliados humanitarios",
     "alliesCopy": "Estructura preparada para ONG, hospitales, universidades, empresas y centros comunitarios.",
     "transparencyTitle": "Transparencia",
-    "transparencyCopy": "Las solicitudes mostradas provienen de registros documentados dentro de la plataforma. La información puede ser auditada y validada mediante los registros almacenados en Google Sheets.",
+    "transparencyCopy": "Las solicitudes mostradas provienen de registros documentados dentro de la plataforma. La información puede ser auditada y validada mediante los registros almacenados en la base de datos.",
     "emptyFiltered": "No hay solicitudes con esos filtros.",
     "emptySection": "No hay registros para esta sección con los filtros actuales.",
     "kpis": {
@@ -599,7 +599,7 @@
       "lastUpdate": "Fecha actualización",
       "source": "Fuente de datos",
       "validation": "Estado de validación",
-      "platformSource": "Registros documentados de la plataforma y Google Sheets",
+      "platformSource": "Registros documentados de la plataforma",
       "exampleSource": "Datos simulados de ejemplo",
       "validated": "Validación operativa disponible",
       "exampleValidation": "Ejemplo visible hasta recibir columnas compatibles"
