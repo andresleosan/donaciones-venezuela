@@ -373,12 +373,16 @@
     },
     "supplyStatus": {
       "Necesita": "A besoin",
-      "Tiene disponible": "Disponible"
+      "Tiene disponible": "Disponible",
+      "Disponible": "Disponible",
+      "Cubierto": "Couvert"
     },
     "urgency": {
       "Crítico": "Critique",
       "Moderado": "Modéré",
-      "Normal": "Normal"
+      "Normal": "Normal",
+      "Alta": "Haute",
+      "Baja": "Basse"
     },
     "professions": {
       "Voluntario": "Bénévole",
@@ -712,5 +716,42 @@
         "copy": "Points locaux de distribution et d’inscription."
       }
     }
+  },
+  "panel": {
+    "manageCta": "Gérer mon centre",
+    "title": "Panneau de mon centre",
+    "intro": "Entrez le token de votre centre et votre PIN pour mettre à jour les besoins en direct.",
+    "tokenLabel": "Token du centre",
+    "pinLabel": "PIN",
+    "enter": "Entrer",
+    "createCta": "Créer le panneau de mon centre",
+    "checking": "Vérification...",
+    "authError": "Token ou PIN invalide",
+    "supplies": "Fournitures du centre",
+    "noSupplies": "Ce centre n'a pas encore de fournitures enregistrées.",
+    "add": "Ajouter une fourniture",
+    "supplyName": "Fourniture",
+    "category": "Catégorie",
+    "status": "Statut",
+    "needed": "Nécessaire",
+    "received": "Reçu",
+    "urgency": "Urgence",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "saved": "Enregistré ✓",
+    "deleted": "Fourniture supprimée",
+    "saveError": "Impossible d'enregistrer",
+    "supplyRequired": "Saisissez le nom de la fourniture",
+    "createTitle": "Créer le panneau du centre",
+    "createIntro": "Enregistrez votre centre et définissez un PIN. Vous recevrez un token affiché UNE seule fois.",
+    "nameLabel": "Nom du centre",
+    "typeLabel": "Type",
+    "locationLabel": "Localisation",
+    "phoneLabel": "Téléphone",
+    "pinNewLabel": "PIN (4 à 8 chiffres)",
+    "create": "Créer le panneau",
+    "creating": "Création...",
+    "tokenCreated": "Panneau créé. Conservez ce token : il n'est affiché qu'une seule fois.",
+    "tokenHint": "Pour entrer plus tard : le bouton « Gérer mon centre » ou le lien #centro/VOTRE-TOKEN, plus votre PIN."
   }
 }

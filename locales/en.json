@@ -373,12 +373,16 @@
     },
     "supplyStatus": {
       "Necesita": "Needs",
-      "Tiene disponible": "Has available"
+      "Tiene disponible": "Has available",
+      "Disponible": "Available",
+      "Cubierto": "Covered"
     },
     "urgency": {
       "Crítico": "Critical",
       "Moderado": "Moderate",
-      "Normal": "Normal"
+      "Normal": "Normal",
+      "Alta": "High",
+      "Baja": "Low"
     },
     "professions": {
       "Voluntario": "Volunteer",
@@ -712,5 +716,42 @@
         "copy": "Local distribution and registration points."
       }
     }
+  },
+  "panel": {
+    "manageCta": "Manage my center",
+    "title": "My center panel",
+    "intro": "Enter your center token and PIN to update needs and supplies live.",
+    "tokenLabel": "Center token",
+    "pinLabel": "PIN",
+    "enter": "Enter",
+    "createCta": "Create my center panel",
+    "checking": "Checking...",
+    "authError": "Invalid token or PIN",
+    "supplies": "Center supplies",
+    "noSupplies": "This center has no registered supplies yet.",
+    "add": "Add supply",
+    "supplyName": "Supply",
+    "category": "Category",
+    "status": "Status",
+    "needed": "Needed",
+    "received": "Received",
+    "urgency": "Urgency",
+    "save": "Save",
+    "delete": "Delete",
+    "saved": "Saved ✓",
+    "deleted": "Supply deleted",
+    "saveError": "Could not save",
+    "supplyRequired": "Enter the supply name",
+    "createTitle": "Create center panel",
+    "createIntro": "Register your center and set a PIN. You will get an access token shown ONLY once.",
+    "nameLabel": "Center name",
+    "typeLabel": "Type",
+    "locationLabel": "Location",
+    "phoneLabel": "Phone",
+    "pinNewLabel": "PIN (4 to 8 digits)",
+    "create": "Create panel",
+    "creating": "Creating...",
+    "tokenCreated": "Panel created. Save this token: it is shown only once.",
+    "tokenHint": "To sign in later: the “Manage my center” button or the #centro/YOUR-TOKEN link, plus your PIN."
   }
 }

@@ -1060,3 +1060,8 @@
       .section-actions .btn, .form-actions .btn, .card-actions .btn, .inline-actions .btn { flex: 1 1 100%; }
       h1 { font-size: clamp(2.2rem, 13vw, 3.2rem); }
     }
+
+    /* Panel interno por centro */
+    .panel-insumo { padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .panel-insumo .form-grid { margin-bottom: 8px; }
+    #panel-body h3 { margin-top: 18px; }

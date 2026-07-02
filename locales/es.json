@@ -373,12 +373,16 @@
     },
     "supplyStatus": {
       "Necesita": "Necesita",
-      "Tiene disponible": "Tiene disponible"
+      "Tiene disponible": "Tiene disponible",
+      "Disponible": "Disponible",
+      "Cubierto": "Cubierto"
     },
     "urgency": {
       "Crítico": "Crítico",
       "Moderado": "Moderado",
-      "Normal": "Normal"
+      "Normal": "Normal",
+      "Alta": "Alta",
+      "Baja": "Baja"
     },
     "professions": {
       "Voluntario": "Voluntario",
@@ -712,5 +716,42 @@
         "copy": "Puntos locales de distribución y registro."
       }
     }
+  },
+  "panel": {
+    "manageCta": "Gestionar mi centro",
+    "title": "Panel de mi centro",
+    "intro": "Entra con el token de tu centro y tu PIN para actualizar necesidades e insumos en vivo.",
+    "tokenLabel": "Token del centro",
+    "pinLabel": "PIN",
+    "enter": "Entrar",
+    "createCta": "Crear panel de mi centro",
+    "checking": "Verificando...",
+    "authError": "Token o PIN inválido",
+    "supplies": "Insumos del centro",
+    "noSupplies": "Este centro aún no tiene insumos registrados.",
+    "add": "Agregar insumo",
+    "supplyName": "Insumo",
+    "category": "Categoría",
+    "status": "Estado",
+    "needed": "Necesario",
+    "received": "Recibido",
+    "urgency": "Urgencia",
+    "save": "Guardar",
+    "delete": "Borrar",
+    "saved": "Guardado ✓",
+    "deleted": "Insumo borrado",
+    "saveError": "No se pudo guardar",
+    "supplyRequired": "Escribe el nombre del insumo",
+    "createTitle": "Crear panel de centro",
+    "createIntro": "Registra tu centro y define un PIN. Recibirás un token de acceso que se muestra UNA sola vez.",
+    "nameLabel": "Nombre del centro",
+    "typeLabel": "Tipo",
+    "locationLabel": "Ubicación",
+    "phoneLabel": "Teléfono",
+    "pinNewLabel": "PIN (4 a 8 dígitos)",
+    "create": "Crear panel",
+    "creating": "Creando...",
+    "tokenCreated": "Panel creado. Guarda este token: se muestra una sola vez.",
+    "tokenHint": "Para entrar después: botón «Gestionar mi centro» o el enlace #centro/TU-TOKEN, más tu PIN."
   }
 }

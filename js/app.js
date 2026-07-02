@@ -109,6 +109,7 @@
       setText('.top-nav [data-view-link="seguimiento"]', 'nav.traceability');
       setText('label[for="language-select"]', 'language.selectorLabel');
       setAttr('#language-select', 'aria-label', 'language.selectorAria');
+      setText('#btn-panel-centro', 'panel.manageCta');
 
       const eyebrow = $('.eyebrow');
       if (eyebrow) eyebrow.innerHTML = `<span aria-hidden="true">VE</span> ${e(t('hero.eyebrow'))}`;
@@ -1053,6 +1054,13 @@
       return `<a class="btn btn-soft btn-small" href="${telHref(telefono)}" aria-label="${e(t('a11y.call', { target }))}">${e(t('common.call'))}</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(telefono)}" aria-label="${e(t('a11y.whatsapp', { target }))}">${e(t('common.whatsapp'))}</a>`;
     }
 
+    function accionesNavegacion(ubicacion) {
+      const q = String(ubicacion || '').trim();
+      if (!q) return '';
+      const destino = encodeURIComponent(/venezuela/i.test(q) ? q : q + ', Venezuela');
+      return `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${destino}">Maps</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="https://waze.com/ul?q=${destino}&navigate=yes">Waze</a>`;
+    }
+
     function renderLugarCard(lugar) {
       const tipoNormal = normalizar(lugar.tipo);
       const claseLugar = tipoNormal.indexOf('hospital') === 0 ? 'hospital' : tipoNormal.indexOf('refugio') === 0 ? 'refugio' : 'centro';
@@ -1070,7 +1078,7 @@
       const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(t('centers.covered', { item: mostrarInsumo(i.nombre) }))}</span>`).join('');
       const tipoBadge = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
       const iconClass = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
-      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span><h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(estadoOperativo)}</span></div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : `<p class="meta">${e(t('centers.noActiveNeeds'))}</p>`}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div><p class="meta">${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</p></article>`;
+      return `<article class="card card-bordered place-card ${claseLugar}"><div class="card-top"><div><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span><h3>${e(lugar.nombre)}</h3></div><div class="icon-box ${iconClass}" aria-hidden="true">${tipoIcono(lugar.tipo)}</div></div><div class="meta-grid"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(estadoOperativo)}</span></div>${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : `<p class="meta">${e(t('centers.noActiveNeeds'))}</p>`}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}<div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div><p class="meta">${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</p></article>`;
     }
 
     function renderLugares() {
@@ -1214,6 +1222,173 @@
       dialog.querySelector('.modal-close').addEventListener('click', () => dialog.close());
       dialog.addEventListener('close', () => { $('#modal-root').innerHTML = ''; });
       dialog.showModal();
+    }
+
+    // ===== Panel interno por centro (token + PIN) =====
+    let credencialesPanel = null;
+
+    function abrirPanelCentro(tokenPrefill) {
+      credencialesPanel = null;
+      abrirModal(t('panel.title'), `
+        <form id="panel-auth-form">
+          <p class="meta">${e(t('panel.intro'))}</p>
+          <div class="form-grid">
+            <div class="field"><label for="panel-token">${e(t('panel.tokenLabel'))}</label><input id="panel-token" required placeholder="CTR-XXXX-XXXX-XXXX" value="${e(tokenPrefill || '')}" autocomplete="off" /></div>
+            <div class="field"><label for="panel-pin">${e(t('panel.pinLabel'))}</label><input id="panel-pin" type="password" inputmode="numeric" required minlength="4" maxlength="8" autocomplete="off" /></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">${e(t('panel.enter'))}</button>
+            <button class="btn btn-ghost" type="button" id="panel-crear-link">${e(t('panel.createCta'))}</button>
+          </div>
+          <div id="panel-msg" class="form-message"></div>
+        </form>
+        <div id="panel-body"></div>`);
+      $('#panel-auth-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const token = $('#panel-token').value.trim().toUpperCase();
+        const pin = $('#panel-pin').value.trim();
+        mensajePanel('info', t('panel.checking'));
+        try {
+          const data = await window.SheetsService.post({ accion: 'panel_ver', token, pin });
+          credencialesPanel = { token, pin };
+          $('#panel-auth-form').hidden = true;
+          renderPanelCentro(data);
+        } catch (err) {
+          mensajePanel('error', String(err && err.message || t('panel.authError')));
+        }
+      });
+      $('#panel-crear-link').addEventListener('click', abrirCrearPanel);
+    }
+
+    function mensajePanel(tipo, texto) {
+      const el = $('#panel-msg');
+      if (!el) return;
+      el.className = `form-message visible ${tipo}`;
+      el.textContent = texto;
+    }
+
+    function renderPanelCentro(data) {
+      const lugar = data.lugar || {};
+      const insumos = data.insumos || [];
+      const opcionesEstado = (sel) => ['Necesita', 'Disponible', 'Cubierto'].map((v) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${e(tValue('supplyStatus', v) || v)}</option>`).join('');
+      const opcionesUrgencia = (sel) => ['Alta', 'Normal', 'Baja'].map((v) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${e(tValue('urgency', v) || v)}</option>`).join('');
+      const fila = (i) => `
+        <div class="panel-insumo" data-insumo="${e(i.nombre)}">
+          <div class="form-grid">
+            <div class="field"><label>${e(t('panel.supplyName'))}</label><input data-campo="nombre" value="${e(i.nombre)}" ${i.id ? 'readonly' : ''} /></div>
+            <div class="field"><label>${e(t('panel.category'))}</label><input data-campo="categoria" value="${e(i.categoria || '')}" /></div>
+            <div class="field"><label>${e(t('panel.status'))}</label><select data-campo="estado">${opcionesEstado(i.estado)}</select></div>
+            <div class="field"><label>${e(t('panel.needed'))}</label><input data-campo="cantidadNecesaria" type="number" min="0" value="${e(i.cantidad_necesaria != null ? i.cantidad_necesaria : 1)}" /></div>
+            <div class="field"><label>${e(t('panel.received'))}</label><input data-campo="cantidadRecibida" type="number" min="0" value="${e(i.cantidad_recibida != null ? i.cantidad_recibida : 0)}" /></div>
+            <div class="field"><label>${e(t('panel.urgency'))}</label><select data-campo="urgencia">${opcionesUrgencia(i.urgencia || 'Normal')}</select></div>
+          </div>
+          <div class="inline-actions">
+            <button class="btn btn-soft btn-small" type="button" data-panel-guardar>${e(t('panel.save'))}</button>
+            ${i.id ? `<button class="btn btn-ghost btn-small" type="button" data-panel-borrar>${e(t('panel.delete'))}</button>` : ''}
+          </div>
+        </div>`;
+      $('#panel-body').innerHTML = `
+        <h3>${e(lugar.nombre || '')}</h3>
+        <p class="meta">${e(lugar.ubicacion || '')}</p>
+        <div id="panel-msg2" class="form-message"></div>
+        <h3>${e(t('panel.supplies'))}</h3>
+        ${insumos.map(fila).join('') || `<p class="meta">${e(t('panel.noSupplies'))}</p>`}
+        <h3>${e(t('panel.add'))}</h3>
+        ${fila({ nombre: '', categoria: '', estado: 'Necesita', urgencia: 'Normal' })}`;
+      $$('#panel-body [data-panel-guardar]').forEach((btn) => btn.addEventListener('click', () => guardarInsumoPanel(btn.closest('.panel-insumo'))));
+      $$('#panel-body [data-panel-borrar]').forEach((btn) => btn.addEventListener('click', () => borrarInsumoPanel(btn.closest('.panel-insumo'))));
+    }
+
+    function mensajePanel2(tipo, texto) {
+      const el = $('#panel-msg2');
+      if (!el) return;
+      el.className = `form-message visible ${tipo}`;
+      el.textContent = texto;
+    }
+
+    function leerFilaPanel(fila) {
+      const valor = (campo) => { const el = fila.querySelector(`[data-campo="${campo}"]`); return el ? el.value : ''; };
+      return {
+        insumoNombre: valor('nombre').trim(),
+        categoria: valor('categoria').trim(),
+        estado: valor('estado'),
+        cantidadNecesaria: valor('cantidadNecesaria'),
+        cantidadRecibida: valor('cantidadRecibida'),
+        urgencia: valor('urgencia')
+      };
+    }
+
+    async function guardarInsumoPanel(fila) {
+      if (!credencialesPanel) return;
+      const campos = leerFilaPanel(fila);
+      if (!campos.insumoNombre) { mensajePanel2('error', t('panel.supplyRequired')); return; }
+      try {
+        const data = await window.SheetsService.post(Object.assign({ accion: 'panel_insumo' }, credencialesPanel, campos));
+        renderPanelCentro(data);
+        mensajePanel2('success', t('panel.saved'));
+        cargarTodo();
+      } catch (err) {
+        mensajePanel2('error', String(err && err.message || t('panel.saveError')));
+      }
+    }
+
+    async function borrarInsumoPanel(fila) {
+      if (!credencialesPanel) return;
+      const campos = leerFilaPanel(fila);
+      try {
+        const data = await window.SheetsService.post(Object.assign({ accion: 'panel_insumo_borrar' }, credencialesPanel, campos));
+        renderPanelCentro(data);
+        mensajePanel2('success', t('panel.deleted'));
+        cargarTodo();
+      } catch (err) {
+        mensajePanel2('error', String(err && err.message || t('panel.saveError')));
+      }
+    }
+
+    function abrirCrearPanel() {
+      abrirModal(t('panel.createTitle'), `
+        <form id="panel-crear-form">
+          <p class="meta">${e(t('panel.createIntro'))}</p>
+          <div class="form-grid">
+            <div class="field"><label for="pc-nombre">${e(t('panel.nameLabel'))}</label><input id="pc-nombre" required /></div>
+            <div class="field"><label for="pc-tipo">${e(t('panel.typeLabel'))}</label><select id="pc-tipo"><option value="Centro">${e(tValue('types', 'Centro') || 'Centro')}</option><option value="Hospital">${e(tValue('types', 'Hospital') || 'Hospital')}</option><option value="Refugio">${e(tValue('types', 'Refugio') || 'Refugio')}</option></select></div>
+            <div class="field"><label for="pc-ubicacion">${e(t('panel.locationLabel'))}</label><input id="pc-ubicacion" /></div>
+            <div class="field"><label for="pc-telefono">${e(t('panel.phoneLabel'))}</label><input id="pc-telefono" type="tel" /></div>
+            <div class="field"><label for="pc-pin">${e(t('panel.pinNewLabel'))}</label><input id="pc-pin" type="password" inputmode="numeric" required minlength="4" maxlength="8" /></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('panel.create'))}</button></div>
+          <div id="panel-crear-msg" class="form-message"></div>
+        </form>`);
+      $('#panel-crear-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const msg = $('#panel-crear-msg');
+        msg.className = 'form-message visible info';
+        msg.textContent = t('panel.creating');
+        try {
+          const data = await window.SheetsService.post({
+            accion: 'panel_crear',
+            nombre: $('#pc-nombre').value.trim(),
+            tipo: $('#pc-tipo').value,
+            ubicacion: $('#pc-ubicacion').value.trim(),
+            telefono: $('#pc-telefono').value.trim(),
+            pin: $('#pc-pin').value.trim()
+          });
+          $('#panel-crear-form').innerHTML = `
+            <div class="notice success visible">${e(t('panel.tokenCreated'))}</div>
+            <p class="tracking-code" style="font-size:1.3rem">${e(data.token)}</p>
+            <p class="meta">${e(t('panel.tokenHint'))}</p>`;
+          cargarTodo();
+        } catch (err) {
+          msg.className = 'form-message visible error';
+          msg.textContent = String(err && err.message || t('panel.saveError'));
+        }
+      });
+    }
+
+    function abrirPanelDesdeUrl() {
+      const hash = decodeURIComponent(window.location.hash || '');
+      const match = hash.match(/^#centro\/(CTR-[A-Z0-9-]+)$/i);
+      if (match) abrirPanelCentro(match[1].toUpperCase());
     }
 
     async function abrirHistorial(nombre) {
@@ -1523,9 +1698,12 @@
       bindFiltros();
       bindForms();
       renderDonations();
+      const btnPanel = $('#btn-panel-centro');
+      if (btnPanel) btnPanel.addEventListener('click', () => abrirPanelCentro(''));
       await cargarTodo();
       await cargarSeguimientoDesdeUrl();
-      window.addEventListener('hashchange', () => { cargarSeguimientoDesdeUrl(); });
+      abrirPanelDesdeUrl();
+      window.addEventListener('hashchange', () => { cargarSeguimientoDesdeUrl(); abrirPanelDesdeUrl(); });
       document.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape') {
           const dialog = $('#modal-root dialog');
@@ -1535,3 +1713,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => { init(); });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => { /* origen sin soporte (http plano) */ });
+      });
+    }

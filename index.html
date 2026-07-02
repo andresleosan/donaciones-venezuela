@@ -15,7 +15,8 @@
   <link rel="alternate" hreflang="fr" href="https://donacionesvenezuela.vercel.app/?lang=fr" />
   <link rel="alternate" hreflang="x-default" href="https://donacionesvenezuela.vercel.app/" />
   <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#0B1220" />
+  <meta name="theme-color" content="#0A2540" />
+  <link rel="manifest" href="manifest.json" />
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Respuesta Humanitaria Venezuela" />
@@ -50,7 +51,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="css/app.css?v=3">
+  <link rel="stylesheet" href="css/app.css?v=4">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -177,7 +178,10 @@
           <h2 id="donaciones-title" class="section-title">Centros de ayuda</h2>
           <p class="section-copy">Centros, hospitales y refugios con necesidades, disponibilidad y contactos.</p>
         </div>
-        <button type="button" class="btn btn-primary" data-scroll-target="form-lugar">Reportar centro</button>
+        <div class="section-actions">
+          <button type="button" class="btn btn-ghost" id="btn-panel-centro">Gestionar mi centro</button>
+          <button type="button" class="btn btn-primary" data-scroll-target="form-lugar">Reportar centro</button>
+        </div>
       </div>
 
       <div class="filters" role="search" aria-label="Filtros de centros de ayuda">
@@ -489,6 +493,6 @@
   <div id="modal-root"></div>
 
   <script src="services/api.js?v=3"></script>
-  <script src="js/app.js?v=2"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

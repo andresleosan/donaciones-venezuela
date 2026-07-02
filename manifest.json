@@ -1,0 +1,19 @@
+{
+  "name": "Respuesta Humanitaria Venezuela",
+  "short_name": "Ayuda VE",
+  "description": "Coordinación de centros de ayuda, hospitales, voluntarios, rescatistas y donaciones en Venezuela.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F9FC",
+  "theme_color": "#0A2540",
+  "lang": "es-VE",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
