@@ -407,7 +407,8 @@
     }
 
     // ── CONFIGURACIÓN ─────────────────────────────────────────
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY39NEDPZrRZTtu7zLfuURf_bTnYXLAhjokfOzWq80H8yzrqe_TL7Y2vp-9LpgiU2GDg/exec';
+    const SUPABASE_URL = 'https://zryfwbjvlacorryzdaod.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_T7fK4bKb1f3o9b7z84IbxQ_1HMnEi56'; // clave pública (publishable), segura en el cliente
 
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], donacionesHumanitarias: [], estadisticas: {},
@@ -484,7 +485,7 @@
     };
     const mostrarUbicacionFamiliar = (value) => String(value || '').replace(/^Última vez:/i, t('family.lastSeenPrefix'));
 
-    window.SheetsService.configure({ appsScriptUrl: APPS_SCRIPT_URL });
+    window.SheetsService.configure({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_KEY });
 
     function fechaRelativa(iso) {
       if (!iso) return t('relative.noDate');
