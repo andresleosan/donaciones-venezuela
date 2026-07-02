@@ -7,7 +7,10 @@ const CACHE = 'ayuda-ve-v' + VERSION;
 const ESTATICOS = [
   '/',
   '/css/app.css?v=5',
-  '/js/app.js?v=' + VERSION,
+  '/js/core.js?v=' + VERSION,
+  '/js/vistas.js?v=' + VERSION,
+  '/js/panel.js?v=' + VERSION,
+  '/js/admin.js?v=' + VERSION,
   '/services/api.js?v=3',
   '/assets/fonts/inter-var.woff2',
   '/assets/icons/icon-192.png',
