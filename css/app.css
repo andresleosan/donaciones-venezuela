@@ -1148,6 +1148,7 @@
       font-weight: 700;
       font-size: 0.95rem;
       padding: 10px;
+      min-height: 44px;
       justify-self: center;
     }
     .link-btn:hover { text-decoration: underline; }
@@ -1172,6 +1173,7 @@
     .centro-chevron { flex: none; color: var(--muted); transition: transform 0.15s ease; }
     .centro-card.open .centro-chevron { transform: rotate(180deg); }
     .centro-more { border-top: 1px solid var(--border); padding: 14px 18px; background: var(--surface-muted); display: grid; gap: 10px; }
+    .centro-more[hidden] { display: none; } /* hidden debe ganar al display de la clase */
     .pill-necesita {
       justify-self: start;
       background: #FDECEA;
@@ -1233,3 +1235,50 @@
 
     .foto-field input[type="file"] { padding: 10px; background: #fff; border: 1px dashed var(--border-strong); border-radius: var(--radius); width: 100%; min-height: 44px; }
     .foto-prev { margin-top: 8px; max-height: 140px; border-radius: var(--radius); border: 1px solid var(--border); }
+
+    /* ══ Ronda 3 · Layout de escritorio (sin zonas vacías) ═══════════ */
+    @media (min-width: 960px) {
+      /* Home: pregunta protagonista + puertas 2×2 amplias */
+      .home-shell { max-width: 960px; padding: 72px 0 30px; }
+      .home-question { font-size: 2.7rem; }
+      .home-sub { font-size: 1.08rem; margin-bottom: 40px; }
+      .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+      .door { padding: 30px 26px; gap: 20px; }
+      .door-icon { width: 64px; height: 64px; border-radius: 14px; }
+      .door-title { font-size: 1.25rem; }
+      .door-copy { font-size: 0.95rem; }
+      .home-foot { margin-top: 34px; }
+
+      /* Puerta 1: barra de acciones en una fila + centros a 2 columnas */
+      .cerca-acciones {
+        max-width: none;
+        grid-template-columns: auto minmax(260px, 420px) auto;
+        align-items: center;
+        justify-content: start;
+        gap: 14px;
+      }
+      .cerca-acciones .btn-block { width: auto; }
+      .cerca-acciones .field { margin: 0; }
+      .lista-centros { max-width: none; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+      .ayuda-extra { max-width: 420px; }
+      #mapa-centros { height: 420px; }
+
+      /* Puerta 2: tarjetas de ayuda más generosas */
+      .help3 { max-width: none; gap: 16px; }
+      .help-card { padding: 26px 22px; }
+
+      /* Puertas 3 y 4: tarjetas de acceso horizontales, botón a la derecha */
+      .gate-card {
+        max-width: none;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "titulo boton" "copy boton";
+        align-items: center;
+        column-gap: 28px;
+        padding: 24px 26px;
+      }
+      .gate-card h3 { grid-area: titulo; margin-bottom: 0; }
+      .gate-card .section-copy { grid-area: copy; }
+      .gate-card .btn { grid-area: boton; }
+      .gate-note { max-width: none; }
+    }
