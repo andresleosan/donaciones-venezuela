@@ -539,6 +539,294 @@
       return fechas[0] ? fechas[0].toISOString() : '';
     }
 
+    function initEditAssistant() {
+      if (document.getElementById('edit-assistant')) return;
+
+      const ui = document.createElement('div');
+      ui.id = 'edit-assistant';
+      ui.className = 'edit-assistant';
+      ui.innerHTML = `
+        <button class="edit-assistant-btn" id="edit-screen-btn" type="button" aria-pressed="false" title="Copiar la pantalla activa para pedir cambios">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="label">Copiar pantalla</span>
+        </button>
+        <button class="edit-assistant-btn" id="edit-pick-btn" type="button" aria-pressed="false" title="Seleccionar cualquier elemento para pedir un cambio">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4l6.8 16 2.2-6 6-2.2L4 4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13 13l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="label">Seleccionar elemento</span>
+        </button>`;
+      document.body.appendChild(ui);
+
+      const mark = document.createElement('div');
+      mark.className = 'edit-assistant-mark';
+      mark.id = 'edit-assistant-mark';
+      mark.innerHTML = '<span class="edit-assistant-tag" id="edit-assistant-tag"></span>';
+      document.body.appendChild(mark);
+
+      const pop = document.createElement('div');
+      pop.className = 'edit-assistant-pop';
+      pop.id = 'edit-assistant-pop';
+      pop.innerHTML = `
+        <h3>Elemento seleccionado</h3>
+        <p class="edit-assistant-selector" id="edit-assistant-selector"></p>
+        <p class="edit-assistant-preview" id="edit-assistant-preview"></p>
+        <textarea id="edit-assistant-note" placeholder="Describe el cambio que quieres hacer aquí..."></textarea>
+        <div class="edit-assistant-actions">
+          <button class="btn btn-ghost btn-small" type="button" id="edit-assistant-cancel">Cancelar</button>
+          <button class="btn btn-primary btn-small" type="button" id="edit-assistant-copy">Copiar prompt</button>
+        </div>`;
+      document.body.appendChild(pop);
+
+      const screenBtn = $('#edit-screen-btn');
+      const pickBtn = $('#edit-pick-btn');
+      const tag = $('#edit-assistant-tag');
+      const selectorNode = $('#edit-assistant-selector');
+      const previewNode = $('#edit-assistant-preview');
+      const noteNode = $('#edit-assistant-note');
+      let inspectMode = false;
+      let picked = null;
+      let pickedPath = '';
+
+      function editToast(msg) {
+        if (typeof toast === 'function') {
+          toast(msg);
+          return;
+        }
+        const root = $('#toast-root');
+        if (!root) return;
+        root.innerHTML = `<div class="toast" role="status">${e(msg)}</div>`;
+        window.setTimeout(() => { root.innerHTML = ''; }, 2800);
+      }
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          editToast('Prompt copiado. Pégalo en el chat.');
+        } catch (err) {
+          editToast('No se pudo copiar automáticamente.');
+        }
+        document.body.removeChild(ta);
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text)
+            .then(() => editToast('Prompt copiado. Pégalo en el chat.'))
+            .catch(() => fallbackCopy(text));
+          return;
+        }
+        fallbackCopy(text);
+      }
+
+      function compactText(value, max) {
+        const clean = String(value || '').replace(/\s+/g, ' ').trim();
+        return clean.length > max ? clean.slice(0, max - 1) + '…' : clean;
+      }
+
+      function cssIdent(value) {
+        if (window.CSS && CSS.escape) return CSS.escape(value);
+        return String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+      }
+
+      function classSummary(el) {
+        if (!el || !el.classList || !el.classList.length) return '';
+        return Array.from(el.classList).slice(0, 4).join('.');
+      }
+
+      function cssPath(el) {
+        const parts = [];
+        let node = el;
+        while (node && node.nodeType === 1 && node !== document.body) {
+          if (node.id) {
+            parts.unshift('#' + cssIdent(node.id));
+            break;
+          }
+          let part = node.tagName.toLowerCase();
+          const cls = classSummary(node);
+          if (cls) part += '.' + cls.split('.').map(cssIdent).join('.');
+          const siblings = node.parentElement
+            ? Array.from(node.parentElement.children).filter((sibling) => sibling.tagName === node.tagName)
+            : [];
+          if (siblings.length > 1) part += ':nth-of-type(' + (siblings.indexOf(node) + 1) + ')';
+          parts.unshift(part);
+          node = node.parentElement;
+        }
+        return parts.join(' > ');
+      }
+
+      function isOwnUi(el) {
+        return !!(el && el.closest('.edit-assistant,.edit-assistant-mark,.edit-assistant-pop,#toast-root,#modal-root,dialog'));
+      }
+
+      function activeView() {
+        return $('.view.active') || $('main');
+      }
+
+      function contextLabel(el) {
+        const context = el && el.closest('section, article, form, .card, .gate-card, .donation-panel, .door, .view');
+        if (!context) return '';
+        const id = context.id ? '#' + context.id : '';
+        const data = context.dataset && (context.dataset.view || context.dataset.pantalla || context.dataset.puerta);
+        const heading = context.querySelector && context.querySelector('h1, h2, h3, .door-title, .centro-nombre');
+        const name = heading ? compactText(heading.textContent, 80) : '';
+        return [context.tagName ? context.tagName.toLowerCase() : '', id, data ? '[' + data + ']' : '', name].filter(Boolean).join(' ');
+      }
+
+      function domSnippet(el) {
+        if (!el) return '';
+        const clone = el.cloneNode(true);
+        clone.querySelectorAll('script, style, svg, img, input[type="file"]').forEach((node) => node.remove());
+        return compactText(clone.outerHTML || clone.textContent || '', 1600);
+      }
+
+      function buildElementPrompt(changeText) {
+        const view = activeView();
+        const visibleText = compactText(picked ? picked.innerText || picked.textContent : '', 500);
+        return [
+          'EDITAR ELEMENTO EN DONACIONES VENEZUELA',
+          '------------------------------------------------',
+          'URL: ' + location.href,
+          'Vista activa: ' + (view ? cssPath(view) : '(sin vista)'),
+          'Contexto: ' + contextLabel(picked),
+          'Selector CSS: ' + pickedPath,
+          'Elemento: <' + picked.tagName.toLowerCase() + '>' + (picked.className && typeof picked.className === 'string' ? ' class="' + picked.className + '"' : ''),
+          'Texto visible: ' + (visibleText || '(sin texto visible)'),
+          'HTML resumido: ' + domSnippet(picked),
+          '------------------------------------------------',
+          'Cambio pedido: ' + (changeText || '(describe el cambio aquí)'),
+          '------------------------------------------------',
+          'Notas técnicas:',
+          '- Mantener vanilla HTML/CSS/JS, sin frameworks ni npm.',
+          '- Archivos esperados: index.html, css/app.css, js/core.js/js/vistas.js/js/panel.js/js/admin.js según corresponda.',
+          '- Todo valor dinámico insertado con innerHTML debe pasar por e().',
+          '- Si se cambian assets estáticos, subir versiones en index.html y sw.js.'
+        ].join('\n');
+      }
+
+      function buildScreenPrompt() {
+        const view = activeView();
+        const title = view ? (view.querySelector('h1, h2') || view).textContent : '';
+        return [
+          'EDITAR PANTALLA EN DONACIONES VENEZUELA',
+          '------------------------------------------------',
+          'URL: ' + location.href,
+          'Vista activa: ' + (view ? cssPath(view) : '(sin vista)'),
+          'Título/contexto: ' + compactText(title, 120),
+          'Texto visible:',
+          compactText(view ? view.innerText : document.body.innerText, 1800),
+          '------------------------------------------------',
+          'Cambio pedido: (describe aquí lo que quieres cambiar en esta pantalla)',
+          '------------------------------------------------',
+          'Notas técnicas:',
+          '- Mantener vanilla HTML/CSS/JS, sin frameworks ni npm.',
+          '- No tocar Supabase ni datos si el cambio es solo visual.',
+          '- Si se cambian assets estáticos, subir versiones en index.html y sw.js.'
+        ].join('\n');
+      }
+
+      function highlight(el) {
+        if (!el || isOwnUi(el) || el === document.body || el === document.documentElement) {
+          mark.style.display = 'none';
+          return;
+        }
+        const r = el.getBoundingClientRect();
+        mark.style.display = 'block';
+        mark.style.left = r.left + 'px';
+        mark.style.top = r.top + 'px';
+        mark.style.width = r.width + 'px';
+        mark.style.height = r.height + 'px';
+        tag.textContent = cssPath(el);
+      }
+
+      function elementAt(ev) {
+        return document.elementFromPoint(ev.clientX, ev.clientY);
+      }
+
+      function onMove(ev) {
+        highlight(elementAt(ev));
+      }
+
+      function positionPop(ev) {
+        const width = Math.min(380, window.innerWidth - 24);
+        pop.style.left = Math.max(12, Math.min(ev.clientX, window.innerWidth - width - 12)) + 'px';
+        pop.style.top = Math.max(12, Math.min(ev.clientY + 12, window.innerHeight - 270)) + 'px';
+      }
+
+      function onPick(ev) {
+        const el = elementAt(ev);
+        if (!el || isOwnUi(el)) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        picked = el;
+        pickedPath = cssPath(el);
+        selectorNode.textContent = pickedPath;
+        const text = compactText(el.innerText || el.textContent || '', 150);
+        previewNode.textContent = text ? '“' + text + '”' : '(sin texto visible)';
+        noteNode.value = '';
+        pop.style.display = 'block';
+        positionPop(ev);
+        noteNode.focus();
+      }
+
+      function setInspectMode(on) {
+        inspectMode = on;
+        document.body.classList.toggle('edit-inspect-mode', on);
+        pickBtn.classList.toggle('is-active', on);
+        pickBtn.setAttribute('aria-pressed', String(on));
+        pickBtn.querySelector('.label').textContent = on ? 'Listo' : 'Seleccionar elemento';
+        mark.style.display = 'none';
+        if (!on) pop.style.display = 'none';
+        if (on) {
+          editToast('Haz clic en cualquier elemento para pedir un cambio.');
+          document.addEventListener('mousemove', onMove, true);
+          document.addEventListener('click', onPick, true);
+        } else {
+          document.removeEventListener('mousemove', onMove, true);
+          document.removeEventListener('click', onPick, true);
+        }
+      }
+
+      screenBtn.addEventListener('click', () => {
+        document.body.classList.toggle('edit-screen-mode');
+        const active = document.body.classList.contains('edit-screen-mode');
+        screenBtn.classList.toggle('is-active', active);
+        screenBtn.setAttribute('aria-pressed', String(active));
+        copyText(buildScreenPrompt());
+      });
+
+      pickBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        setInspectMode(!inspectMode);
+      });
+
+      $('#edit-assistant-cancel').addEventListener('click', () => {
+        pop.style.display = 'none';
+      });
+
+      $('#edit-assistant-copy').addEventListener('click', () => {
+        if (!picked) return;
+        copyText(buildElementPrompt(noteNode.value.trim()));
+        pop.style.display = 'none';
+      });
+
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape') return;
+        pop.style.display = 'none';
+        if (inspectMode) setInspectMode(false);
+        document.body.classList.remove('edit-screen-mode');
+        screenBtn.classList.remove('is-active');
+        screenBtn.setAttribute('aria-pressed', 'false');
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initEditAssistant);
+
     function prioridadCanonica(value) {
       const n = normalizar(value);
       if (n.indexOf('critico') === 0 || n.indexOf('emergencia') !== -1) return 'Crítico';
@@ -1052,4 +1340,3 @@
         </div>
       </article>`;
     }
-
