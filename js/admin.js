@@ -549,7 +549,7 @@
       [['#filtro-donacion-reciente', 'donacionReciente'], ['#filtro-donacion-verificado', 'donacionVerificado']].forEach(([id, key]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.checked; renderDonations(); }));
       $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); cambiarVista(el.dataset.viewLink); }));
       $$('[data-scroll-target]').forEach((el) => el.addEventListener('click', () => document.getElementById(el.dataset.scrollTarget).scrollIntoView({ behavior: 'smooth', block: 'start' })));
-      $('#btn-motorizado').addEventListener('click', abrirRegistrarMotorizado);
+      $('#btn-motorizado').addEventListener('click', () => { window.location.href = '/registrar-transportista'; });
     }
 
     function renderAll() {
@@ -576,15 +576,20 @@
       bindForms();
       renderDonations();
       const btnPanel = $('#btn-panel-centro');
-      if (btnPanel) btnPanel.addEventListener('click', () => abrirPanelCentro(''));
+      if (btnPanel) btnPanel.addEventListener('click', () => { window.location.href = '/panel-centro'; });
       const btnCrearCentro = $('#btn-crear-centro');
-      if (btnCrearCentro) btnCrearCentro.addEventListener('click', () => abrirCrearPanel());
+      if (btnCrearCentro) btnCrearCentro.addEventListener('click', () => { window.location.href = '/crear-centro'; });
       const btnCerca = $('#btn-cerca');
       if (btnCerca) btnCerca.addEventListener('click', activarCercaDeMi);
       const btnMapaToggle = $('#btn-mapa-toggle');
       if (btnMapaToggle) btnMapaToggle.addEventListener('click', alternarMapa);
       const btnGeoLugar = $('#btn-geo-lugar');
       if (btnGeoLugar) btnGeoLugar.addEventListener('click', () => capturarUbicacion('#lugar-coords'));
+      // Mensaje de éxito relevado desde una página-ventana tras volver al inicio.
+      try {
+        const relayo = window.sessionStorage.getItem('ventana-toast');
+        if (relayo) { window.sessionStorage.removeItem('ventana-toast'); toast(relayo); }
+      } catch (err) { /* modo privado */ }
       await cargarTodo();
       await cargarSeguimientoDesdeUrl();
       abrirPanelDesdeUrl();
@@ -597,7 +602,9 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', () => { init(); });
+    // Sólo el index arranca la app completa; la página-ventana (sin vistas)
+    // tiene su propio arranque en js/ventana.js.
+    document.addEventListener('DOMContentLoaded', () => { if (document.querySelector('.view')) init(); });
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

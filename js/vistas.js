@@ -19,7 +19,7 @@
       }
       $('#conteo-lugares').textContent = t('centers.count', { shown: filtered.length, total: estado.lugares.length });
       $('#grid-lugares').innerHTML = orden.length ? orden.map(renderLugarCard).join('') : `<div class="empty-state">${e(t('centers.empty'))}</div>`;
-      $$('[data-historial]').forEach((btn) => btn.addEventListener('click', () => abrirHistorial(btn.dataset.historial)));
+      $$('[data-historial]').forEach((btn) => btn.addEventListener('click', () => irAVentana('historial', { nombre: btn.dataset.historial })));
       bindTarjetasColapsables('#grid-lugares');
       renderMapa(filtered);
     }
@@ -157,8 +157,14 @@
       });
       $('#conteo-motorizados').textContent = t('drivers.count', { shown: lista.length, total: estado.motorizados.length });
       $('#grid-motorizados').innerHTML = lista.length ? lista.map((m) => `<article class="card card-bordered"><div class="card-top"><div><span class="badge">${e(mostrarTransporte(m.tipoVehiculo) || t('drivers.vehicleFallback'))}</span><h3>${e(m.nombre)}</h3></div><div class="icon-box" aria-hidden="true">↗</div></div><p class="meta">${e(m.zonaOperacion || m.operaEn || t('drivers.zonePending'))}${m.placa ? ' · ' + e(t('drivers.plate')) + ' ' + e(m.placa) : ''}</p><div class="badge-row"><span class="badge green">${e(t('drivers.routes', { count: m.totalTrayectos || 0 }))}</span><span class="badge">${e(t('drivers.kilometers', { count: m.totalKm || 0 }))}</span><span class="badge yellow">${e(t('drivers.contribution', { amount: m.aporteDonado || 0 }))}</span></div><div class="card-actions"><button class="btn btn-soft btn-small" data-trayectos="${e(m.id)}" type="button">${e(t('drivers.routesButton'))}</button><button class="btn btn-ghost btn-small" data-donar-mot="${e(m.id)}" type="button">${e(t('drivers.supportButton'))}</button>${m.telefono ? `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(m.telefono)}">${e(t('common.whatsapp'))}</a>` : ''}</div></article>`).join('') : `<div class="empty-state">${e(t('drivers.empty'))}</div>`;
-      $$('[data-trayectos]').forEach((btn) => btn.addEventListener('click', () => abrirTrayectos(btn.dataset.trayectos)));
-      $$('[data-donar-mot]').forEach((btn) => btn.addEventListener('click', () => abrirDonarMotorizado(btn.dataset.donarMot)));
+      $$('[data-trayectos]').forEach((btn) => btn.addEventListener('click', () => {
+        const m = estado.motorizados.find((x) => String(x.id) === String(btn.dataset.trayectos));
+        irAVentana('trayectos', { id: btn.dataset.trayectos, nombre: m ? m.nombre : '' });
+      }));
+      $$('[data-donar-mot]').forEach((btn) => btn.addEventListener('click', () => {
+        const m = estado.motorizados.find((x) => String(x.id) === String(btn.dataset.donarMot));
+        irAVentana('apoyar-transportista', { id: btn.dataset.donarMot, nombre: m ? m.nombre : '' });
+      }));
     }
 
     function mostrarMensaje(id, tipo, textoMsg) {
@@ -222,6 +228,12 @@
     function toast(msg) {
       $('#toast-root').innerHTML = `<div class="toast" role="status">${e(msg)}</div>`;
       setTimeout(() => { $('#toast-root').innerHTML = ''; }, 3400);
+    }
+
+    // Navega a una página-ventana (antes un modal) con sus parámetros.
+    function irAVentana(ruta, params) {
+      const q = new URLSearchParams(params || {}).toString();
+      window.location.href = '/' + ruta + (q ? '?' + q : '');
     }
 
     // ── Traslados sugeridos (puerta transportista) ──

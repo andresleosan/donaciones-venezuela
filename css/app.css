@@ -1451,3 +1451,15 @@
       .gate-card .btn { grid-area: boton; }
       .gate-note { max-width: none; }
     }
+
+    /* ── Página-ventana ─────────────────────────────────────────────────
+       Cada modal es ahora su propia página. El <dialog open> se presenta
+       como una tarjeta en el flujo normal, no como ventana flotante. */
+    .ventana-main { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+    .ventana-dialog {
+      position: static; display: block; width: 100%; max-width: none; max-height: none;
+      margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--surface); box-shadow: 0 12px 40px rgba(10, 37, 64, 0.10);
+    }
+    .ventana-dialog .modal-body { max-height: none; overflow: visible; padding: 24px; }
+    .ventana .btn-volver { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }

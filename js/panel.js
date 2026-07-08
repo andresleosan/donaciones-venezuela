@@ -212,8 +212,8 @@
     function abrirPanelDesdeUrl() {
       const hash = decodeURIComponent(window.location.hash || '');
       const match = hash.match(/^#centro\/(CTR-[A-Z0-9-]+)$/i);
-      if (match) abrirPanelCentro(match[1].toUpperCase());
-      if (/^#admin$/i.test(hash)) abrirAdmin();
+      if (match) { window.location.href = '/panel-centro?token=' + encodeURIComponent(match[1].toUpperCase()); return; }
+      if (/^#admin$/i.test(hash)) { window.location.href = '/admin'; return; }
       // Shortcuts de la PWA: #<vista> abre esa vista directamente
       const vista = (hash.match(/^#(inicio|donaciones|voluntarios|rescatistas|familiar|seguimiento)$/i) || [])[1];
       if (vista) cambiarVista(vista.toLowerCase());
