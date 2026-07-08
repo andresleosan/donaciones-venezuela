@@ -547,7 +547,7 @@
       [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-vol-q', 'volQ', renderVoluntarios], ['#filtro-vol-estado', 'volEstado', renderVoluntarios], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados], ['#filtro-donacion-ciudad', 'donacionCiudad', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
       [['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares], ['#filtro-vol-profesion', 'volProfesion', renderVoluntarios], ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados], ['#filtro-donacion-tipo', 'donacionTipo', renderDonations], ['#filtro-donacion-estado', 'donacionEstado', renderDonations], ['#filtro-donacion-urgencia', 'donacionUrgencia', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
       [['#filtro-donacion-reciente', 'donacionReciente'], ['#filtro-donacion-verificado', 'donacionVerificado']].forEach(([id, key]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.checked; renderDonations(); }));
-      $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); cambiarVista(el.dataset.viewLink); }));
+      $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); window.location.hash = el.dataset.viewLink; }));
       $$('[data-scroll-target]').forEach((el) => el.addEventListener('click', () => document.getElementById(el.dataset.scrollTarget).scrollIntoView({ behavior: 'smooth', block: 'start' })));
       $('#btn-motorizado').addEventListener('click', () => { window.location.href = '/registrar-transportista'; });
     }
@@ -591,9 +591,9 @@
         if (relayo) { window.sessionStorage.removeItem('ventana-toast'); toast(relayo); }
       } catch (err) { /* modo privado */ }
       await cargarTodo();
-      await cargarSeguimientoDesdeUrl();
       abrirPanelDesdeUrl();
-      window.addEventListener('hashchange', () => { cargarSeguimientoDesdeUrl(); abrirPanelDesdeUrl(); });
+      await cargarSeguimientoDesdeUrl();
+      window.addEventListener('hashchange', () => { abrirPanelDesdeUrl(); cargarSeguimientoDesdeUrl(); });
       document.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape') {
           const dialog = $('#modal-root dialog');

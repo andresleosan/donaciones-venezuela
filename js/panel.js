@@ -209,13 +209,18 @@
       });
     }
 
+    // Router por hash: la vista activa vive en location.hash, así el botón
+    // "atrás" del navegador recorre los menús y sólo sale del sitio desde el
+    // inicio. Los deep-links a páginas (centro/admin) redirigen a su página.
     function abrirPanelDesdeUrl() {
-      const hash = decodeURIComponent(window.location.hash || '');
-      const match = hash.match(/^#centro\/(CTR-[A-Z0-9-]+)$/i);
+      const hashRaw = decodeURIComponent(window.location.hash || '');
+      const match = hashRaw.match(/^#centro\/(CTR-[A-Z0-9-]+)$/i);
       if (match) { window.location.href = '/panel-centro?token=' + encodeURIComponent(match[1].toUpperCase()); return; }
-      if (/^#admin$/i.test(hash)) { window.location.href = '/admin'; return; }
-      // Shortcuts de la PWA: #<vista> abre esa vista directamente
-      const vista = (hash.match(/^#(inicio|donaciones|voluntarios|rescatistas|familiar|seguimiento)$/i) || [])[1];
-      if (vista) cambiarVista(vista.toLowerCase());
+      if (/^#admin$/i.test(hashRaw)) { window.location.href = '/admin'; return; }
+      // El token de seguimiento (#seguimiento/DV-…) lo pinta cargarSeguimientoDesdeUrl.
+      if (/^#seguimiento\//i.test(hashRaw)) return;
+      const VISTAS = ['inicio', 'donaciones', 'ayudar', 'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento'];
+      const hash = hashRaw.replace(/^#/, '').toLowerCase();
+      cambiarVista(VISTAS.indexOf(hash) >= 0 ? hash : 'inicio');
     }
 
