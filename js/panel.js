@@ -3,6 +3,20 @@
     // ===== Panel interno por centro (token + PIN) =====
     let credencialesPanel = null;
 
+    // Catálogo de insumos frecuentes: el centro los agrega tocando una tarjeta;
+    // si falta alguno, usa "Otro insumo". Los nombres son canónicos y se
+    // traducen con mostrarInsumo()/tValue('categories', …).
+    const CATALOGO_INSUMOS = [
+      { categoria: 'Agua potable', items: ['Agua potable', 'Agua embotellada'] },
+      { categoria: 'Alimentos', items: ['Arroz', 'Leche en polvo'] },
+      { categoria: 'Medicamentos', items: ['Analgésicos', 'Sueros fisiológicos'] },
+      { categoria: 'Insumos médicos', items: ['Gasas estériles', 'Guantes', 'Oxímetros', 'Material médico'] },
+      { categoria: 'Higiene', items: ['Jabón', 'Kits de higiene', 'Pañales'] },
+      { categoria: 'Ropa', items: ['Ropa de adulto', 'Calzado', 'Mantas'] },
+      { categoria: 'Otros', items: ['Colchonetas', 'Plantas eléctricas', 'Herramientas', 'Equipos'] }
+    ];
+    const CATEGORIAS_INSUMO = ['Agua potable', 'Alimentos', 'Medicamentos', 'Insumos médicos', 'Higiene', 'Ropa', 'Otros'];
+
     function abrirPanelCentro(tokenPrefill) {
       credencialesPanel = null;
       abrirModal(t('panel.title'), `
@@ -46,24 +60,35 @@
     function renderPanelCentro(data) {
       const lugar = data.lugar || {};
       const insumos = data.insumos || [];
-      const opcionesEstado = (sel) => ['Necesita', 'Disponible', 'Cubierto'].map((v) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${e(tValue('supplyStatus', v) || v)}</option>`).join('');
-      const opcionesUrgencia = (sel) => ['Alta', 'Normal', 'Baja'].map((v) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${e(tValue('urgency', v) || v)}</option>`).join('');
-      const fila = (i) => `
-        <div class="panel-insumo" data-insumo="${e(i.nombre)}">
-          <div class="form-grid">
-            <div class="field"><label>${e(t('panel.supplyName'))}</label><input data-campo="nombre" value="${e(i.nombre)}" ${i.id ? 'readonly' : ''} /></div>
-            <div class="field"><label>${e(t('panel.category'))}</label><input data-campo="categoria" value="${e(i.categoria || '')}" /></div>
-            <div class="field"><label>${e(t('panel.status'))}</label><select data-campo="estado">${opcionesEstado(i.estado)}</select></div>
-            <div class="field"><label>${e(t('panel.needed'))}</label><input data-campo="cantidadNecesaria" type="number" min="0" value="${e(i.cantidad_necesaria != null ? i.cantidad_necesaria : 1)}" /></div>
-            <div class="field"><label>${e(t('panel.received'))}</label><input data-campo="cantidadRecibida" type="number" min="0" value="${e(i.cantidad_recibida != null ? i.cantidad_recibida : 0)}" /></div>
-            <div class="field"><label>${e(t('panel.urgency'))}</label><select data-campo="urgencia">${opcionesUrgencia(i.urgencia || 'Normal')}</select></div>
+      const existentes = new Set(insumos.map((i) => normalizar(i.nombre)));
+      const tipos = ['Centro', 'Hospital', 'Refugio'].map((v) => `<option value="${v}" ${v === lugar.tipo ? 'selected' : ''}>${e(tValue('types', v) || v)}</option>`).join('');
+
+      // Catálogo: una tarjeta-chip por insumo frecuente. Tocar = agregar.
+      const catalogoHtml = CATALOGO_INSUMOS.map((grupo) => {
+        const chips = grupo.items.map((item) => {
+          const ya = existentes.has(normalizar(item));
+          return `<button type="button" class="chip-add${ya ? ' ya' : ''}" data-add-insumo="${e(item)}" data-add-cat="${e(grupo.categoria)}"${ya ? ' disabled' : ''}>${ya ? '✓ ' : '+ '}${e(mostrarInsumo(item))}</button>`;
+        }).join('');
+        return `<div class="catalogo-grupo"><span class="catalogo-cat">${e(tValue('categories', grupo.categoria) || grupo.categoria)}</span><div class="segmented">${chips}</div></div>`;
+      }).join('');
+
+      // Una tarjeta editable por insumo ya en la lista del centro.
+      const chipsEstado = (i) => ['Necesita', 'Disponible', 'Cubierto'].map((v) => `<button type="button" class="chip-btn" data-estado="${v}" aria-pressed="${(i.estado || 'Necesita') === v}">${e(tValue('supplyStatus', v) || v)}</button>`).join('');
+      const chipsUrgencia = (i) => ['Alta', 'Normal', 'Baja'].map((v) => `<button type="button" class="chip-btn urg-${v}" data-urgencia="${v}" aria-pressed="${(i.urgencia || 'Normal') === v}">${e(tValue('urgency', v) || v)}</button>`).join('');
+      const tarjeta = (i) => `
+        <div class="insumo-card" data-insumo="${e(i.nombre)}" data-categoria="${e(i.categoria || '')}">
+          <div class="insumo-card-head">
+            <div class="insumo-title"><strong>${e(mostrarInsumo(i.nombre))}</strong>${i.categoria ? `<span class="badge gray">${e(tValue('categories', i.categoria) || i.categoria)}</span>` : ''}</div>
+            <button type="button" class="insumo-del" data-panel-borrar aria-label="${e(t('panel.delete'))}">🗑</button>
           </div>
-          <div class="inline-actions">
-            <button class="btn btn-soft btn-small" type="button" data-panel-guardar>${e(t('panel.save'))}</button>
-            ${i.id ? `<button class="btn btn-ghost btn-small" type="button" data-panel-borrar>${e(t('panel.delete'))}</button>` : ''}
+          <div class="insumo-row"><span class="insumo-lbl">${e(t('panel.status'))}</span><div class="segmented" data-grupo="estado">${chipsEstado(i)}</div></div>
+          <div class="insumo-row"><span class="insumo-lbl">${e(t('panel.urgency'))}</span><div class="segmented" data-grupo="urgencia">${chipsUrgencia(i)}</div></div>
+          <div class="insumo-cant">
+            <label class="field-mini"><span>${e(t('panel.needed'))}</span><input type="number" min="0" data-campo="cantidadNecesaria" value="${e(i.cantidad_necesaria != null ? i.cantidad_necesaria : 1)}" /></label>
+            <label class="field-mini"><span>${e(t('panel.received'))}</span><input type="number" min="0" data-campo="cantidadRecibida" value="${e(i.cantidad_recibida != null ? i.cantidad_recibida : 0)}" /></label>
           </div>
         </div>`;
-      const tipos = ['Centro', 'Hospital', 'Refugio'].map((v) => `<option value="${v}" ${v === lugar.tipo ? 'selected' : ''}>${e(tValue('types', v) || v)}</option>`).join('');
+
       $('#panel-body').innerHTML = `
         <h3>${e(lugar.nombre || '')}</h3>
         <div id="panel-msg2" class="form-message"></div>
@@ -80,14 +105,49 @@
             <button class="btn btn-soft btn-small" type="button" id="pd-guardar">${e(t('panel.savePlace'))}</button>
           </div>
         </div>
-        <h3>${e(t('panel.supplies'))}</h3>
-        ${insumos.map(fila).join('') || `<p class="meta">${e(t('panel.noSupplies'))}</p>`}
-        <h3>${e(t('panel.add'))}</h3>
-        ${fila({ nombre: '', categoria: '', estado: 'Necesita', urgencia: 'Normal' })}`;
-      $$('#panel-body [data-panel-guardar]').forEach((btn) => btn.addEventListener('click', () => guardarInsumoPanel(btn.closest('.panel-insumo'))));
-      $$('#panel-body [data-panel-borrar]').forEach((btn) => btn.addEventListener('click', () => borrarInsumoPanel(btn.closest('.panel-insumo'))));
+        <h3>${e(t('panel.catalogTitle'))}</h3>
+        <p class="meta">${e(t('panel.catalogIntro'))}</p>
+        <div class="catalogo">${catalogoHtml}</div>
+        <div class="catalogo-otro">
+          <button type="button" class="btn btn-ghost btn-small" id="insumo-otro-toggle" aria-expanded="false">+ ${e(t('panel.addCustom'))}</button>
+          <div id="insumo-otro-form" hidden>
+            <div class="form-grid">
+              <div class="field"><label for="io-nombre">${e(t('panel.supplyName'))}</label><input id="io-nombre" /></div>
+              <div class="field"><label for="io-categoria">${e(t('panel.category'))}</label><select id="io-categoria">${CATEGORIAS_INSUMO.map((c) => `<option value="${e(c)}">${e(tValue('categories', c) || c)}</option>`).join('')}</select></div>
+            </div>
+            <div class="inline-actions"><button type="button" class="btn btn-soft btn-small" id="io-add">${e(t('panel.addToList'))}</button></div>
+          </div>
+        </div>
+        <h3>${e(t('panel.supplies'))} (${insumos.length})</h3>
+        <div class="insumo-list">${insumos.map(tarjeta).join('') || `<p class="meta">${e(t('panel.noSupplies'))}</p>`}</div>`;
+
       $('#pd-geo').addEventListener('click', () => capturarUbicacion('#pd-coords'));
       $('#pd-guardar').addEventListener('click', guardarDatosLugarPanel);
+      $$('#panel-body [data-add-insumo]').forEach((btn) => btn.addEventListener('click', () => agregarInsumoPanel(btn.dataset.addInsumo, btn.dataset.addCat)));
+
+      const otroToggle = $('#insumo-otro-toggle');
+      otroToggle.addEventListener('click', () => {
+        const form = $('#insumo-otro-form');
+        const abrir = form.hidden;
+        form.hidden = !abrir;
+        otroToggle.setAttribute('aria-expanded', String(abrir));
+        if (abrir) $('#io-nombre').focus();
+      });
+      $('#io-add').addEventListener('click', () => {
+        const nombre = $('#io-nombre').value.trim();
+        if (!nombre) { mensajePanel2('error', t('panel.supplyRequired')); return; }
+        agregarInsumoPanel(nombre, $('#io-categoria').value);
+      });
+
+      $$('#panel-body .insumo-card').forEach((card) => {
+        card.querySelectorAll('.segmented .chip-btn').forEach((chip) => chip.addEventListener('click', () => {
+          chip.parentElement.querySelectorAll('.chip-btn').forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+          guardarTarjetaInsumo(card);
+        }));
+        card.querySelectorAll('[data-campo]').forEach((inp) => inp.addEventListener('change', () => guardarTarjetaInsumo(card)));
+        const del = card.querySelector('[data-panel-borrar]');
+        if (del) del.addEventListener('click', () => borrarTarjetaInsumo(card));
+      });
     }
 
     function parsearCoords(texto) {
@@ -130,43 +190,50 @@
       el.textContent = texto;
     }
 
-    function leerFilaPanel(fila) {
-      const valor = (campo) => { const el = fila.querySelector(`[data-campo="${campo}"]`); return el ? el.value : ''; };
+    function leerTarjetaInsumo(card) {
+      const val = (sel) => { const el = card.querySelector(sel); return el ? el.value : ''; };
+      const activo = (grupo, attr) => { const b = card.querySelector(`.segmented[data-grupo="${grupo}"] [aria-pressed="true"]`); return b ? b.dataset[attr] : ''; };
       return {
-        insumoNombre: valor('nombre').trim(),
-        categoria: valor('categoria').trim(),
-        estado: valor('estado'),
-        cantidadNecesaria: valor('cantidadNecesaria'),
-        cantidadRecibida: valor('cantidadRecibida'),
-        urgencia: valor('urgencia')
+        insumoNombre: card.dataset.insumo,
+        categoria: card.dataset.categoria || '',
+        estado: activo('estado', 'estado') || 'Necesita',
+        urgencia: activo('urgencia', 'urgencia') || 'Normal',
+        cantidadNecesaria: val('[data-campo="cantidadNecesaria"]'),
+        cantidadRecibida: val('[data-campo="cantidadRecibida"]')
       };
     }
 
-    async function guardarInsumoPanel(fila) {
+    // Re-render tras cada acción conservando la posición de scroll (evita el
+    // salto al tope cuando se edita una tarjeta al final de la lista).
+    async function persistirInsumo(payload, msgOkKey) {
       if (!credencialesPanel) return;
-      const campos = leerFilaPanel(fila);
-      if (!campos.insumoNombre) { mensajePanel2('error', t('panel.supplyRequired')); return; }
+      const y = window.scrollY;
       try {
-        const data = await window.SheetsService.post(Object.assign({ accion: 'panel_insumo' }, credencialesPanel, campos));
+        const data = await window.SheetsService.post(Object.assign({ accion: payload.accion }, credencialesPanel, payload.datos));
         renderPanelCentro(data);
-        mensajePanel2('success', t('panel.saved'));
+        window.scrollTo({ top: y });
+        mensajePanel2('success', t(msgOkKey));
         cargarTodo();
       } catch (err) {
         mensajePanel2('error', String(err && err.message || t('panel.saveError')));
       }
     }
 
-    async function borrarInsumoPanel(fila) {
-      if (!credencialesPanel) return;
-      const campos = leerFilaPanel(fila);
-      try {
-        const data = await window.SheetsService.post(Object.assign({ accion: 'panel_insumo_borrar' }, credencialesPanel, campos));
-        renderPanelCentro(data);
-        mensajePanel2('success', t('panel.deleted'));
-        cargarTodo();
-      } catch (err) {
-        mensajePanel2('error', String(err && err.message || t('panel.saveError')));
-      }
+    function agregarInsumoPanel(nombre, categoria) {
+      if (!nombre) return;
+      return persistirInsumo({ accion: 'panel_insumo', datos: {
+        insumoNombre: nombre, categoria: categoria || '', estado: 'Necesita', urgencia: 'Normal', cantidadNecesaria: 1, cantidadRecibida: 0
+      } }, 'panel.saved');
+    }
+
+    function guardarTarjetaInsumo(card) {
+      const campos = leerTarjetaInsumo(card);
+      if (!campos.insumoNombre) { mensajePanel2('error', t('panel.supplyRequired')); return; }
+      return persistirInsumo({ accion: 'panel_insumo', datos: campos }, 'panel.saved');
+    }
+
+    function borrarTarjetaInsumo(card) {
+      return persistirInsumo({ accion: 'panel_insumo_borrar', datos: leerTarjetaInsumo(card) }, 'panel.deleted');
     }
 
     function abrirCrearPanel() {

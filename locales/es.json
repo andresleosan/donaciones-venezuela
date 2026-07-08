@@ -791,7 +791,11 @@
     "useMyLocation": "Usar mi ubicación",
     "savePlace": "Guardar datos del centro",
     "geoUnavailable": "Tu navegador no soporta geolocalización",
-    "geoDenied": "No se pudo obtener tu ubicación"
+    "geoDenied": "No se pudo obtener tu ubicación",
+    "catalogTitle": "¿Qué necesita tu centro?",
+    "catalogIntro": "Toca lo que tu centro necesita. Si no aparece, agrégalo con «Otro insumo».",
+    "addCustom": "Otro insumo",
+    "addToList": "Agregar a mi lista"
   },
   "admin": {
     "title": "Administración de trazabilidad",

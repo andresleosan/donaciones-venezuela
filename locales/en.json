@@ -791,7 +791,11 @@
     "useMyLocation": "Use my location",
     "savePlace": "Save center details",
     "geoUnavailable": "Your browser does not support geolocation",
-    "geoDenied": "Could not get your location"
+    "geoDenied": "Could not get your location",
+    "catalogTitle": "What does your center need?",
+    "catalogIntro": "Tap what your center needs. If it is not here, add it with “Other supply”.",
+    "addCustom": "Other supply",
+    "addToList": "Add to my list"
   },
   "admin": {
     "title": "Traceability administration",

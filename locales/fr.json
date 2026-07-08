@@ -791,7 +791,11 @@
     "useMyLocation": "Utiliser ma position",
     "savePlace": "Enregistrer les données du centre",
     "geoUnavailable": "Votre navigateur ne prend pas en charge la géolocalisation",
-    "geoDenied": "Impossible d'obtenir votre position"
+    "geoDenied": "Impossible d'obtenir votre position",
+    "catalogTitle": "De quoi votre centre a-t-il besoin ?",
+    "catalogIntro": "Touchez ce dont votre centre a besoin. Si ce n’est pas là, ajoutez-le avec « Autre article ».",
+    "addCustom": "Autre article",
+    "addToList": "Ajouter à ma liste"
   },
   "admin": {
     "title": "Administration de la traçabilité",

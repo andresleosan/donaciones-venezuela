@@ -1463,3 +1463,33 @@
     }
     .ventana-dialog .modal-body { max-height: none; overflow: visible; padding: 24px; }
     .ventana .btn-volver { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+
+    /* ── Panel del centro: catálogo de insumos + tarjetas editables ───────── */
+    .catalogo { display: grid; gap: 12px; margin: 4px 0 10px; }
+    .catalogo-grupo { display: grid; gap: 6px; }
+    .catalogo-cat { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+    .chip-add {
+      min-height: 38px; border: 1px dashed var(--primary-border); border-radius: 999px;
+      padding: 0 13px; background: var(--primary-soft); color: var(--primary-dark);
+      font-size: 0.84rem; font-weight: 800; cursor: pointer; transition: background .12s ease, border-color .12s ease;
+    }
+    .chip-add:hover { background: #E6E4FF; border-style: solid; }
+    .chip-add.ya { border-style: solid; border-color: var(--volunteer); background: var(--volunteer-soft); color: var(--volunteer); cursor: default; }
+    .catalogo-otro { margin: 4px 0 6px; }
+    #insumo-otro-form { margin-top: 10px; }
+
+    .insumo-list { display: grid; gap: 12px; }
+    .insumo-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; background: var(--surface); display: grid; gap: 10px; }
+    .insumo-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .insumo-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .insumo-title strong { font-size: 1rem; color: var(--ink); }
+    .insumo-del { border: 0; background: transparent; font-size: 1.05rem; line-height: 1; padding: 6px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+    .insumo-del:hover { background: #FFF0F0; color: var(--critical); }
+    .insumo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .insumo-lbl { flex: 0 0 78px; font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+    .insumo-cant { display: flex; gap: 12px; flex-wrap: wrap; }
+    .field-mini { display: grid; gap: 4px; }
+    .field-mini span { font-size: 0.76rem; font-weight: 700; color: var(--muted); }
+    .field-mini input { width: 108px; }
+    /* Acento semántico: urgencia Alta seleccionada en rojo */
+    .chip-btn.urg-Alta[aria-pressed="true"] { background: var(--critical); border-color: var(--critical); }
