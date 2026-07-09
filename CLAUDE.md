@@ -1,6 +1,6 @@
 # Notas operativas
 
-- Proyecto estático sin dependencias: `index.html`, `css/app.css`, `js/app.js`, `services/api.js`, `locales/` y archivos de despliegue.
+- Proyecto estático sin dependencias: `index.html`, `ventana.html`, `css/app.css`, `js/` (`core.js`, `vistas.js`, `panel.js`, `admin.js`, `ventana.js`), `services/api.js`, `locales/` y archivos de despliegue.
 - La única fuente de registros es **Supabase** (proyecto `zryfwbjvlacorryzdaod`): lecturas por PostgREST (vistas `*_public` y `lugares_directorio`, RPCs), escrituras por la edge function `api`. No reintroducir Google Sheets ni Apps Script.
 - No reintroducir archivos locales con registros, datos embebidos ni almacenamiento persistente del navegador para listados o estadísticas (el service worker solo cachea estáticos).
 - Después de cada guardado, la UI debe llamar `cargarTodo()` y volver a pintar desde Supabase.

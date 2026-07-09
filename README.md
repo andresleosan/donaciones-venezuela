@@ -2,6 +2,8 @@
 
 Aplicación estática (sin dependencias ni bundler) para coordinar centros de ayuda, hospitales, refugios, voluntarios, rescatistas, transportistas, trayectos, aportes, búsqueda familiar y trazabilidad pública de donaciones por factura.
 
+**App en producción:** <https://donacionesvenezuela.vercel.app/>
+
 ## Fuente de datos
 
 **Supabase** (Postgres + PostgREST + Edge Functions). Proyecto: `zryfwbjvlacorryzdaod`.
@@ -15,12 +17,13 @@ No hay archivos locales de registros ni datos alternativos: si Supabase no respo
 ## Estructura
 
 - `index.html`: markup de la app (el CSS y JS viven aparte).
+- `ventana.html`: cascarón de los formularios como páginas propias (`/registrar-transportista`, `/panel-centro`, `/admin`, …); `vercel.json` reescribe esas URLs limpias hacia él.
 - `css/app.css`: sistema de diseño (tokens estilo Stripe: índigo `#635BFF`, tinta `#0A2540`, Inter autohospedada).
-- `js/app.js`: lógica de la interfaz (vanilla).
+- `js/`: lógica de la interfaz (vanilla, scripts clásicos que comparten ámbito): `core.js` (estado, i18n, utilidades), `vistas.js` (render de listas y navegación), `panel.js` (panel por centro y router de hash), `admin.js` (formularios y admin), `ventana.js` (adaptador de las páginas-formulario).
 - `services/api.js`: único cliente de datos (PostgREST + edge function). Mantiene la interfaz histórica `window.SheetsService`.
 - `locales/`: textos de interfaz en español, inglés y francés.
 - `manifest.json` + `sw.js`: PWA (los estáticos se cachean; los datos nunca).
-- `vercel.json`: cabeceras de seguridad y CSP (solo permite `connect-src` a Supabase).
+- `vercel.json`: cabeceras de seguridad, CSP (solo permite `connect-src` a Supabase) y rewrites de las páginas-formulario.
 
 ## Esquema (tablas principales)
 

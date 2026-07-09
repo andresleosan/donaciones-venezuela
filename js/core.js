@@ -440,7 +440,6 @@
     const telHref = (tel) => `tel:${String(tel || '').replace(/[^0-9+]/g, '')}`;
     const numero = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
     const formatearMonto = (value) => new Intl.NumberFormat(localeActual(), { maximumFractionDigits: 2 }).format(numero(value));
-    const setTexto = (id, value) => { const el = $(id); if (el) el.textContent = value; };
     const normalizarTokenCliente = (value) => {
       const raw = String(value || '').toUpperCase().replace(/\s+/g, '');
       const compacto = raw.replace(/[^A-Z0-9]/g, '');
@@ -474,7 +473,6 @@
     const localeActual = () => t('meta.htmlLang') || 'es-VE';
     const mostrarTipo = (value) => tValue('types', value || 'Centro');
     const mostrarCategoria = (value) => tValue('categories', value || 'Otros');
-    const mostrarEstadoInsumo = (value) => tValue('supplyStatus', value || 'Necesita');
     const mostrarUrgencia = (value) => tValue('urgency', value || 'Normal');
     const mostrarInsumo = (value) => tValue('items', value);
     const mostrarUnidad = (value) => tValue('units', value || 'unidades');

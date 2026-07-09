@@ -2,7 +2,7 @@
 
 ## Flujo principal
 
-1. `index.html` carga `services/api.js` y `js/app.js`.
+1. `index.html` carga `services/api.js` y los módulos `js/core.js`, `js/vistas.js`, `js/panel.js` y `js/admin.js`; las páginas-formulario (`ventana.html`) añaden `js/ventana.js`.
 2. `services/api.js` habla exclusivamente con Supabase: lecturas por PostgREST (`/rest/v1/...`) y escrituras por la edge function (`/functions/v1/api`).
 3. Las respuestas JSON reconstruyen listados, contadores, filtros, prioridades y estadísticas.
 4. Después de cada escritura, el frontend vuelve a leer Supabase (`cargarTodo()`) y renderiza desde esa respuesta.

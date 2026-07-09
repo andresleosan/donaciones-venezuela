@@ -6,7 +6,7 @@ This is a static, dependency-free emergency response app:
 
 - `index.html` contains the frontend markup.
 - `css/app.css` holds the design system (Stripe-style tokens, self-hosted Inter).
-- `js/app.js` holds the vanilla JavaScript UI logic.
+- `js/` holds the vanilla JavaScript UI logic (`core.js`, `vistas.js`, `panel.js`, `admin.js`, plus `ventana.js` for the standalone form pages served via `ventana.html`).
 - `services/api.js` is the single frontend data service for Supabase (PostgREST reads + edge function writes). It keeps the historical `window.SheetsService` interface.
 - The backend lives in Supabase project `zryfwbjvlacorryzdaod`: SQL schema with closed RLS, public views/RPCs for reads, and the `api` edge function for writes.
 - `locales/` contains UI translations (es/en/fr).
@@ -36,4 +36,4 @@ There is no automated test runner or coverage target. Verify manually in a brows
 
 ## Security & Configuration Tips
 
-Never hardcode private keys in the frontend; only the Supabase **publishable** key belongs in `js/app.js` (it is public by design; RLS keeps tables closed). Writes must stay behind the `api` edge function (validation + IP rate-limit). Public invoice tokens may appear in URLs but must not expose donor references, phones, emails, coordinates, internal centers, deposits, bank details, or operational data. Center-panel PINs are stored only as SHA-256(salt+pin). If an external endpoint is added, update `vercel.json` CSP.
+Never hardcode private keys in the frontend; only the Supabase **publishable** key belongs in `js/core.js` (it is public by design; RLS keeps tables closed). Writes must stay behind the `api` edge function (validation + IP rate-limit). Public invoice tokens may appear in URLs but must not expose donor references, phones, emails, coordinates, internal centers, deposits, bank details, or operational data. Center-panel PINs are stored only as SHA-256(salt+pin). If an external endpoint is added, update `vercel.json` CSP.
