@@ -862,6 +862,14 @@
       "centro": {
         "title": "I run a center or team",
         "copy": "Update my center, management panel"
+      },
+      "necesidad": {
+        "title": "Donate to a need",
+        "copy": "Pick what is missing and get your tracking code"
+      },
+      "acceso": {
+        "title": "Register or sign in",
+        "copy": "Driver, volunteer or center"
       }
     }
   },
@@ -902,5 +910,44 @@
     "createCopy": "Only if your center is not in the directory yet.",
     "createCta": "Register center",
     "adminNote": "The admin module (invoices, traceability, verification) opens via direct access with a key."
+  },
+  "needs": {
+    "title": "Open needs",
+    "copy": "Pick what is missing and which center. When you donate you get a code to follow your help until the center receives it.",
+    "searchPlaceholder": "Supply, center or city",
+    "count": "{count} open needs",
+    "empty": "No open needs right now.",
+    "progress": "Received: {recibida} of {necesaria} {unidad}",
+    "pending": "{count} {unidad} still missing",
+    "donateCta": "Donate to this need",
+    "modalTitle": "Donate to a need",
+    "modalCopy": "You are donating {insumo} to {centro}.",
+    "amountLabel": "How much will you donate? ({unidad})",
+    "donorLabel": "Your name (optional)",
+    "donorPlaceholder": "Anonymous",
+    "submit": "Register my donation",
+    "saving": "Registering your donation…",
+    "invalidAmount": "Enter an amount greater than zero.",
+    "error": "Your donation could not be registered.",
+    "thanksTitle": "Thank you! Your donation is registered",
+    "thanksCopy": "Save this code: use it to follow your {insumo} until {centro} confirms it arrived.",
+    "tokenLabel": "Your tracking code",
+    "copied": "Code copied",
+    "track": "Track my donation",
+    "copyCta": "Copy code"
+  },
+  "access": {
+    "title": "Register or sign in",
+    "copy": "Pick your role. If you already have credentials, go straight in.",
+    "driverTitle": "Driver",
+    "driverCopy": "Register your vehicle and area to move supplies between centers.",
+    "driverCta": "Register as a driver",
+    "volunteerTitle": "Volunteer",
+    "volunteerCopy": "Sign up with your area, profession and availability.",
+    "volunteerCta": "Register as a volunteer",
+    "centerTitle": "Center or team",
+    "centerCopy": "Enter your panel with token + PIN, or register a new center.",
+    "centerCta": "Enter the panel",
+    "centerCreateCta": "Register a new center"
   }
 }

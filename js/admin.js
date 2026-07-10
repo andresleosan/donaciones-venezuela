@@ -236,6 +236,74 @@
       });
     }
 
+    // Donar a UNA necesidad concreta. Al guardar, la edge function devuelve el
+    // token público de la necesidad: con él el donante sigue cada movimiento
+    // hasta que el centro confirma la recepción.
+    function abrirDonarNecesidad(datos) {
+      const centro = datos.centro;
+      const insumo = datos.insumo;
+      const unidad = mostrarUnidad(datos.unidad);
+      const pendiente = numero(datos.pendiente);
+      abrirModal(t('needs.modalTitle'), `<form id="donar-necesidad-form" novalidate>
+        <p class="section-copy">${e(t('needs.modalCopy', { insumo: mostrarInsumo(insumo), centro }))}</p>
+        <div class="form-grid">
+          <div class="field"><label for="nec-cantidad">${e(t('needs.amountLabel', { unidad }))}</label><input id="nec-cantidad" type="number" min="1" step="1" value="${e(pendiente > 0 ? pendiente : 1)}" required /></div>
+          <div class="field"><label for="nec-nombre">${e(t('needs.donorLabel'))}</label><input id="nec-nombre" autocomplete="name" placeholder="${e(t('needs.donorPlaceholder'))}" /></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('needs.submit'))}</button></div>
+        <div id="nec-message" class="form-message" role="status" aria-live="polite"></div>
+      </form>`);
+      $('#donar-necesidad-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#nec-message')) return;
+        const cantidad = numero($('#nec-cantidad').value);
+        if (cantidad <= 0) { mostrarMensaje('#nec-message', 'error', t('needs.invalidAmount')); return; }
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensaje('#nec-message', 'info', t('needs.saving'));
+        try {
+          const res = await window.SheetsService.post({
+            accion: 'donar_necesidad', centro, insumo, cantidad,
+            nombreDonante: $('#nec-nombre').value.trim()
+          });
+          mostrarTokenNecesidad(res.token, insumo, centro);
+          cargarTodo();
+        } catch (err) {
+          boton.disabled = false;
+          mostrarMensaje('#nec-message', 'error', String(err && err.message || t('needs.error')));
+        }
+      });
+    }
+
+    // Reemplaza el formulario por el token: el donante debe poder copiarlo, así
+    // que no vale un toast pasajero.
+    function mostrarTokenNecesidad(token, insumo, centro) {
+      const cuerpo = $('#modal-root .modal-body');
+      cuerpo.innerHTML = `<div class="token-result">
+        <h3>${e(t('needs.thanksTitle'))}</h3>
+        <p class="section-copy">${e(t('needs.thanksCopy', { insumo: mostrarInsumo(insumo), centro }))}</p>
+        <p class="meta">${e(t('needs.tokenLabel'))}</p>
+        <p class="token-value"><strong>${e(token)}</strong></p>
+        <div class="card-actions">
+          <button class="btn btn-soft btn-small" type="button" id="nec-copiar">${e(t('needs.copyCta'))}</button>
+          <button class="btn btn-primary btn-small" type="button" id="nec-seguir">${e(t('needs.track'))}</button>
+        </div>
+      </div>`;
+      $('#nec-copiar').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(token);
+          toast(t('needs.copied'));
+        } catch (err) {
+          toast(token); // sin permiso de portapapeles: al menos queda a la vista
+        }
+      });
+      $('#nec-seguir').addEventListener('click', () => {
+        $('#modal-root dialog').close();
+        buscarSeguimiento(token);
+      });
+    }
+
     // Comprime una foto del input a JPEG ≤1280px (el backend limita ~1.8MB) y
     // devuelve un data URL listo para enviar a la edge function.
     function comprimirFoto(file) {
@@ -544,7 +612,7 @@
     }
 
     function bindFiltros() {
-      [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-vol-q', 'volQ', renderVoluntarios], ['#filtro-vol-estado', 'volEstado', renderVoluntarios], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados], ['#filtro-donacion-ciudad', 'donacionCiudad', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-necesidad-q', 'necesidadQ', renderNecesidades], ['#filtro-vol-q', 'volQ', renderVoluntarios], ['#filtro-vol-estado', 'volEstado', renderVoluntarios], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados], ['#filtro-donacion-ciudad', 'donacionCiudad', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
       [['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares], ['#filtro-vol-profesion', 'volProfesion', renderVoluntarios], ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados], ['#filtro-donacion-tipo', 'donacionTipo', renderDonations], ['#filtro-donacion-estado', 'donacionEstado', renderDonations], ['#filtro-donacion-urgencia', 'donacionUrgencia', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
       [['#filtro-donacion-reciente', 'donacionReciente'], ['#filtro-donacion-verificado', 'donacionVerificado']].forEach(([id, key]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.checked; renderDonations(); }));
       $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); window.location.hash = el.dataset.viewLink; }));
@@ -553,7 +621,7 @@
     }
 
     function renderAll() {
-      renderRegistrySummaries(); poblarCategorias(); renderLugares(); renderVoluntarios(); renderRescatistas(); renderMotorizados(); renderTraslados(); renderDonations();
+      renderRegistrySummaries(); poblarCategorias(); renderLugares(); renderNecesidades(); renderVoluntarios(); renderRescatistas(); renderMotorizados(); renderTraslados(); renderDonations();
     }
 
     async function cargarTodo() {
@@ -575,10 +643,12 @@
       bindFiltros();
       bindForms();
       renderDonations();
-      const btnPanel = $('#btn-panel-centro');
-      if (btnPanel) btnPanel.addEventListener('click', () => { window.location.href = '/panel-centro'; });
-      const btnCrearCentro = $('#btn-crear-centro');
-      if (btnCrearCentro) btnCrearCentro.addEventListener('click', () => { window.location.href = '/crear-centro'; });
+      [['#btn-panel-centro', '/panel-centro'], ['#btn-acceso-panel', '/panel-centro'],
+       ['#btn-crear-centro', '/crear-centro'], ['#btn-acceso-crear-centro', '/crear-centro'],
+       ['#btn-acceso-transportista', '/registrar-transportista']].forEach(([sel, ruta]) => {
+        const btn = $(sel);
+        if (btn) btn.addEventListener('click', () => { window.location.href = ruta; });
+      });
       const btnCerca = $('#btn-cerca');
       if (btnCerca) btnCerca.addEventListener('click', activarCercaDeMi);
       const btnMapaToggle = $('#btn-mapa-toggle');

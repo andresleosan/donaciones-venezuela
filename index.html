@@ -52,7 +52,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=12">
+  <link rel="stylesheet" href="css/app.css?v=13">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -116,6 +116,17 @@
             <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
 
+          <button class="door door-necesidad" type="button" data-puerta="necesidad" data-view-link="necesidades">
+            <span class="door-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false"><path d="M4 9h16v10.5H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 5.5h18V9H3zM12 5.5v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 5.5C10.6 3.4 7 3.6 7 5.5c0 1.2 2.4 1.4 5 0Zm0 0c1.4-2.1 5-1.9 5 0 0 1.2-2.4 1.4-5 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="door-text">
+              <span class="door-title" id="door-necesidad-title">Donar a una necesidad</span>
+              <span class="door-copy" id="door-necesidad-copy">Elige qué falta y recibe tu código de seguimiento</span>
+            </span>
+            <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+
           <button class="door door-transporte" type="button" data-puerta="transporte" data-view-link="transporte">
             <span class="door-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="28" height="28" focusable="false"><path d="M3 7h10v8H3zM13 10h4l3 3v2h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.5" cy="17" r="1.8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -134,6 +145,16 @@
             <span class="door-text">
               <span class="door-title" id="door-centro-title">Soy un centro o equipo</span>
               <span class="door-copy" id="door-centro-copy">Actualizar mi centro, panel de gestión</span>
+            </span>
+            <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="door door-acceso" type="button" data-puerta="acceso" data-view-link="acceso">
+            <span class="door-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false"><path d="M13.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 8.5 13.5 12 10 15.5M13 12H3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="door-text">
+              <span class="door-title" id="door-acceso-title">Registrarme o entrar</span>
+              <span class="door-copy" id="door-acceso-copy">Transportista, voluntario o centro</span>
             </span>
             <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -242,6 +263,55 @@
           <div id="lugar-message" class="form-message" role="status" aria-live="polite"></div>
         </form>
       </details>
+    </section>
+
+    <!-- ══ PUERTA · Donar a una necesidad concreta ══ -->
+    <section id="view-necesidades" class="view" data-view="necesidades" data-pantalla="ayudar" aria-labelledby="necesidades-title">
+      <div class="section-header">
+        <div>
+          <h2 id="necesidades-title" class="section-title">Necesidades abiertas</h2>
+          <p class="section-copy" id="necesidades-copy">Elige qué falta y a qué centro. Al donar recibes un código para seguir tu ayuda hasta que el centro la reciba.</p>
+        </div>
+      </div>
+
+      <div class="cerca-acciones">
+        <div class="field">
+          <label class="visually-hidden" for="filtro-necesidad-q">Buscar necesidad</label>
+          <input id="filtro-necesidad-q" type="search" placeholder="Insumo, centro o ciudad" autocomplete="off" />
+        </div>
+      </div>
+
+      <p class="meta" id="conteo-necesidades" aria-live="polite"></p>
+      <div id="grid-necesidades" class="lista-centros" aria-live="polite"></div>
+    </section>
+
+    <!-- ══ PUERTA · Registrarme o entrar ══ -->
+    <section id="view-acceso" class="view" data-view="acceso" data-pantalla="acceso" aria-labelledby="acceso-title">
+      <div class="section-header">
+        <div>
+          <h2 id="acceso-title" class="section-title">Registrarme o entrar</h2>
+          <p class="section-copy" id="acceso-copy">Elige tu rol. Si ya tienes credenciales, entra directo.</p>
+        </div>
+      </div>
+
+      <div class="gate-card">
+        <h3 id="acceso-transportista-title">Transportista</h3>
+        <p class="section-copy" id="acceso-transportista-copy">Registra tu vehículo y tu zona para mover insumos entre centros.</p>
+        <button type="button" class="btn btn-primary" id="btn-acceso-transportista">Registrarme como transportista</button>
+      </div>
+
+      <div class="gate-card">
+        <h3 id="acceso-voluntario-title">Voluntario</h3>
+        <p class="section-copy" id="acceso-voluntario-copy">Regístrate con tu zona, profesión y disponibilidad.</p>
+        <button type="button" class="btn btn-primary" data-view-link="voluntarios" id="btn-acceso-voluntario">Registrarme como voluntario</button>
+      </div>
+
+      <div class="gate-card">
+        <h3 id="acceso-centro-title">Centro o equipo</h3>
+        <p class="section-copy" id="acceso-centro-copy">Entra a tu panel con token + PIN, o registra un centro nuevo.</p>
+        <button type="button" class="btn btn-primary" id="btn-acceso-panel">Entrar al panel</button>
+        <button type="button" class="btn btn-ghost" id="btn-acceso-crear-centro">Registrar centro nuevo</button>
+      </div>
     </section>
 
     <!-- ══ PUERTA 3 · Soy transportista ══ -->
@@ -584,9 +654,9 @@
 
   <script src="services/leaflet/leaflet.js"></script>
   <script src="services/api.js?v=5"></script>
-  <script src="js/core.js?v=22"></script>
-  <script src="js/vistas.js?v=22"></script>
-  <script src="js/panel.js?v=22"></script>
-  <script src="js/admin.js?v=22"></script>
+  <script src="js/core.js?v=24"></script>
+  <script src="js/vistas.js?v=24"></script>
+  <script src="js/panel.js?v=24"></script>
+  <script src="js/admin.js?v=24"></script>
 </body>
 </html>

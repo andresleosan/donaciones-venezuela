@@ -1113,6 +1113,8 @@
     .door-ayudar .door-icon { background: var(--primary-soft); color: var(--primary); }
     .door-transporte .door-icon { background: #FFF3E0; color: var(--rescue); }
     .door-centro .door-icon { background: #E8EDF3; color: var(--ink); }
+    .door-necesidad .door-icon { background: #E6F4EF; color: var(--volunteer); }
+    .door-acceso .door-icon { background: #E8EDF3; color: var(--ink); }
     .door-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
     .door-title { font-size: 1.12rem; font-weight: 800; color: var(--ink); }
     .door-copy { font-size: 0.88rem; color: var(--muted); }
@@ -1493,3 +1495,16 @@
     .field-mini input { width: 108px; }
     /* Acento semántico: urgencia Alta seleccionada en rojo */
     .chip-btn.urg-Alta[aria-pressed="true"] { background: var(--critical); border-color: var(--critical); }
+
+    /* Token de seguimiento tras donar: legible y fácil de copiar a mano */
+    .token-result { display: grid; gap: 10px; }
+    .token-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 1.25rem;
+      letter-spacing: 0.06em;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      overflow-wrap: anywhere;
+    }

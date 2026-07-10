@@ -136,6 +136,10 @@
       setText('#door-transporte-copy', 'home.doors.transporte.copy');
       setText('#door-centro-title', 'home.doors.centro.title');
       setText('#door-centro-copy', 'home.doors.centro.copy');
+      setText('#door-necesidad-title', 'home.doors.necesidad.title');
+      setText('#door-necesidad-copy', 'home.doors.necesidad.copy');
+      setText('#door-acceso-title', 'home.doors.acceso.title');
+      setText('#door-acceso-copy', 'home.doors.acceso.copy');
       setText('#home-foot-q', 'home.footQuestion');
       setText('#home-foot-link', 'home.footLink');
       setText('#btn-volver-texto', 'home.back');
@@ -153,6 +157,25 @@
       setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
       setText('#reportar-summary', 'helpHub.reportSummary');
       setText('#form-lugar-copy', 'centers.formCopy');
+
+      // Puerta · Donar a una necesidad
+      setText('#necesidades-title', 'needs.title');
+      setText('#necesidades-copy', 'needs.copy');
+      setPlaceholder('#filtro-necesidad-q', 'needs.searchPlaceholder');
+
+      // Puerta · Registrarme o entrar
+      setText('#acceso-title', 'access.title');
+      setText('#acceso-copy', 'access.copy');
+      setText('#acceso-transportista-title', 'access.driverTitle');
+      setText('#acceso-transportista-copy', 'access.driverCopy');
+      setText('#btn-acceso-transportista', 'access.driverCta');
+      setText('#acceso-voluntario-title', 'access.volunteerTitle');
+      setText('#acceso-voluntario-copy', 'access.volunteerCopy');
+      setText('#btn-acceso-voluntario', 'access.volunteerCta');
+      setText('#acceso-centro-title', 'access.centerTitle');
+      setText('#acceso-centro-copy', 'access.centerCopy');
+      setText('#btn-acceso-panel', 'access.centerCta');
+      setText('#btn-acceso-crear-centro', 'access.centerCreateCta');
 
       // Puerta 3 · Transportistas
       setText('#transporte-title', 'transportHub.title');
@@ -422,7 +445,7 @@
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
       filtros: {
-        lugarQ: '', lugarTipo: 'todos', lugarCategoria: '',
+        lugarQ: '', lugarTipo: 'todos', lugarCategoria: '', necesidadQ: '',
         volQ: '', volProfesion: '', volEstado: '',
         resQ: '', resEspecialidad: '', resEstado: '',
         motQ: '', motTipo: '',

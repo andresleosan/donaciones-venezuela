@@ -862,6 +862,14 @@
       "centro": {
         "title": "Je suis un centre ou une équipe",
         "copy": "Mettre à jour mon centre, panneau de gestion"
+      },
+      "necesidad": {
+        "title": "Donner à un besoin",
+        "copy": "Choisissez ce qui manque et recevez votre code de suivi"
+      },
+      "acceso": {
+        "title": "M'inscrire ou me connecter",
+        "copy": "Transporteur, bénévole ou centre"
       }
     }
   },
@@ -902,5 +910,44 @@
     "createCopy": "Seulement si ton centre n'apparaît pas encore dans l'annuaire.",
     "createCta": "Enregistrer le centre",
     "adminNote": "Le module d'administration (factures, traçabilité, vérification) s'ouvre par accès direct avec une clé."
+  },
+  "needs": {
+    "title": "Besoins ouverts",
+    "copy": "Choisissez ce qui manque et dans quel centre. En donnant, vous recevez un code pour suivre votre aide jusqu'à sa réception.",
+    "searchPlaceholder": "Fourniture, centre ou ville",
+    "count": "{count} besoins ouverts",
+    "empty": "Aucun besoin ouvert pour le moment.",
+    "progress": "Reçu : {recibida} sur {necesaria} {unidad}",
+    "pending": "Il manque {count} {unidad}",
+    "donateCta": "Donner à ce besoin",
+    "modalTitle": "Donner à un besoin",
+    "modalCopy": "Vous donnez {insumo} à {centro}.",
+    "amountLabel": "Combien allez-vous donner ? ({unidad})",
+    "donorLabel": "Votre nom (facultatif)",
+    "donorPlaceholder": "Anonyme",
+    "submit": "Enregistrer mon don",
+    "saving": "Enregistrement de votre don…",
+    "invalidAmount": "Indiquez une quantité supérieure à zéro.",
+    "error": "Votre don n'a pas pu être enregistré.",
+    "thanksTitle": "Merci ! Votre don est enregistré",
+    "thanksCopy": "Gardez ce code : il vous permet de suivre votre {insumo} jusqu'à ce que {centro} confirme sa réception.",
+    "tokenLabel": "Votre code de suivi",
+    "copied": "Code copié",
+    "track": "Suivre mon don",
+    "copyCta": "Copier le code"
+  },
+  "access": {
+    "title": "M'inscrire ou me connecter",
+    "copy": "Choisissez votre rôle. Si vous avez déjà des identifiants, entrez directement.",
+    "driverTitle": "Transporteur",
+    "driverCopy": "Enregistrez votre véhicule et votre zone pour déplacer des fournitures.",
+    "driverCta": "M'inscrire comme transporteur",
+    "volunteerTitle": "Bénévole",
+    "volunteerCopy": "Inscrivez-vous avec votre zone, votre profession et vos disponibilités.",
+    "volunteerCta": "M'inscrire comme bénévole",
+    "centerTitle": "Centre ou équipe",
+    "centerCopy": "Entrez dans votre panneau avec jeton + PIN, ou enregistrez un nouveau centre.",
+    "centerCta": "Entrer dans le panneau",
+    "centerCreateCta": "Enregistrer un nouveau centre"
   }
 }

@@ -284,6 +284,54 @@
       bindTarjetasColapsables('#grid-traslados');
     }
 
+    // ── Necesidades abiertas (puerta «Donar a una necesidad») ──
+    // Aplana los insumos «Necesita» aún no cubiertos de todos los centros y los
+    // ordena por urgencia. La necesidad se identifica por centro + insumo, que
+    // es lo que la edge function usa como hilo de trazabilidad.
+    function necesidadesAbiertas() {
+      const q = normalizar(estado.filtros.necesidadQ);
+      const lista = [];
+      estado.lugares.forEach((lugar) => (lugar.necesita || []).forEach((item) => {
+        if (item.yaCubierto) return;
+        const texto = normalizar([lugar.nombre, lugar.ubicacion, item.nombre, item.categoria].join(' '));
+        if (q && !texto.includes(q)) return;
+        lista.push({ lugar, item });
+      }));
+      return lista.sort((a, b) => (b.item.urgencia === 'Alta') - (a.item.urgencia === 'Alta'));
+    }
+
+    function renderNecesidades() {
+      const cont = $('#grid-necesidades');
+      if (!cont) return;
+      const lista = necesidadesAbiertas();
+      $('#conteo-necesidades').textContent = t('needs.count', { count: lista.length });
+      cont.innerHTML = lista.length ? lista.map(({ lugar, item }) => {
+        const unidad = item.unidad || 'unidades';
+        const pendiente = Math.max(0, numero(item.cantidadNecesaria) - numero(item.cantidadRecibida));
+        return `<article class="card centro-card" data-centro-card data-necesidad-card>
+          <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
+            <span class="centro-resumen">
+              <span class="badge-row"><span class="badge ${urgenciaClass(item.urgencia)}">${e(mostrarUrgencia(item.urgencia))}</span><span class="badge gray">${e(mostrarCategoria(item.categoria))}</span></span>
+              <span class="centro-nombre">${e(mostrarInsumo(item.nombre))}</span>
+              <span class="meta">${e(lugar.nombre)} · ${e(lugar.ubicacion || t('centers.locationPending'))}</span>
+            </span>
+            <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="centro-more" hidden>
+            <p class="meta">${e(t('needs.progress', { recibida: numero(item.cantidadRecibida), necesaria: numero(item.cantidadNecesaria), unidad: mostrarUnidad(unidad) }))}</p>
+            <p class="meta">${e(t('needs.pending', { count: pendiente, unidad: mostrarUnidad(unidad) }))}</p>
+            <div class="card-actions">
+              <button class="btn btn-primary btn-small" type="button" data-donar-necesidad
+                data-centro="${e(lugar.nombre)}" data-insumo="${e(item.nombre)}"
+                data-unidad="${e(unidad)}" data-pendiente="${e(pendiente)}">${e(t('needs.donateCta'))}</button>
+            </div>
+          </div>
+        </article>`;
+      }).join('') : `<div class="empty-state">${e(t('needs.empty'))}</div>`;
+      bindTarjetasColapsables('#grid-necesidades');
+      $$('[data-donar-necesidad]').forEach((btn) => btn.addEventListener('click', () => abrirDonarNecesidad(btn.dataset)));
+    }
+
     function abrirModal(titulo, contenido) {
       $('#modal-root').innerHTML = `<dialog><div class="modal-head"><h3>${e(titulo)}</h3><button class="modal-close" type="button" aria-label="${e(t('a11y.close'))}">×</button></div><div class="modal-body">${contenido}</div></dialog>`;
       const dialog = $('#modal-root dialog');

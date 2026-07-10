@@ -148,6 +148,54 @@ async function facturaPor(p: Record<string, unknown>) {
   return f;
 }
 
+// ===== Donación pública a UNA necesidad concreta =====
+// La necesidad se identifica por su objetivo textual «insumo → centro»: ese es
+// el hilo público de trazabilidad que comparten todos los donantes del mismo
+// insumo en el mismo centro. No se guarda ningún dato del donante en la factura
+// ni en sus movimientos (seguimiento_factura es público).
+function objetivoNecesidad(insumo: string, centro: string): string {
+  return `${insumo} → ${centro}`;
+}
+
+async function facturaAbiertaDe(objetivo: string) {
+  const { data } = await supa.from('facturas')
+    .select('id, numero_factura, token_publico')
+    .eq('objetivo', objetivo).eq('estado', 'Abierta')
+    .order('fecha_creacion').limit(1);
+  return data?.[0] ?? null;
+}
+
+// Reusa la factura viva de la necesidad; si no hay, abre una con token nuevo.
+async function facturaDeNecesidad(objetivo: string, descripcion: string, montoRequerido: number) {
+  const abierta = await facturaAbiertaDe(objetivo);
+  if (abierta) return abierta;
+  const { data: seq, error: eSeq } = await supa.rpc('factura_numero_siguiente');
+  if (eSeq) throw eSeq;
+  const numero = `FAC-${new Date().getFullYear()}-${String(seq).padStart(6, '0')}`;
+  const { data, error } = await supa.from('facturas').insert({
+    numero_factura: numero, token_publico: tokenAlfa('DV'), objetivo,
+    descripcion, monto_requerido: montoRequerido,
+  }).select('id, numero_factura, token_publico').single();
+  if (error) throw error;
+  return data;
+}
+
+// El centro confirma recepción desde su panel → el donante lo ve en su token.
+async function registrarEntrega(centro: string, insumo: string, unidad: string,
+                                delta: number, recibida: number, necesaria: number) {
+  const f = await facturaAbiertaDe(objetivoNecesidad(insumo, centro));
+  if (!f) return;
+  if (delta > 0) {
+    await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Entrega',
+      descripcion: `El centro confirmó la recepción de ${delta} ${unidad}`, monto: delta });
+  }
+  if (necesaria > 0 && recibida >= necesaria) {
+    await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Entrega',
+      descripcion: 'Necesidad cubierta: el centro ya recibió todo lo solicitado', monto: 0 });
+    await supa.from('facturas').update({ estado: 'Cerrada', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
+  }
+}
+
 async function verPanel(lugarId: number) {
   const { data: lugar, error } = await supa.from('lugares')
     .select('id, tipo, nombre, ubicacion, telefono, lat, lng, actualizado').eq('id', lugarId).single();
@@ -243,6 +291,32 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (error) throw error;
       return {};
     }
+    case 'donar_necesidad': {
+      const centro = s(p.centro, 120);
+      const insumo = s(p.insumo, 120);
+      const cantidad = n(p.cantidad);
+      if (!centro || !insumo) throw new Error('centro e insumo requeridos');
+      if (cantidad <= 0 || cantidad > 1_000_000) throw new Error('cantidad inválida');
+      const { data: lugar } = await supa.from('lugares').select('id, nombre').eq('nombre', centro).maybeSingle();
+      if (!lugar) throw new Error('Centro no encontrado');
+      const { data: item } = await supa.from('insumos')
+        .select('nombre, unidad, cantidad_necesaria')
+        .eq('lugar_id', lugar.id).eq('nombre', insumo).maybeSingle();
+      if (!item) throw new Error('Necesidad no encontrada');
+      const unidad = item.unidad || 'unidades';
+      const objetivo = objetivoNecesidad(item.nombre, lugar.nombre);
+      const f = await facturaDeNecesidad(objetivo,
+        `Necesidad publicada por ${lugar.nombre}`,
+        Math.max(Number(item.cantidad_necesaria) || 0, cantidad));
+      const { error } = await supa.from('donaciones').insert({
+        factura_id: f.id, nombre_donante: s(p.nombreDonante, 120) || 'Anónimo',
+        monto: cantidad, referencia_pago: s(p.referencia, 80), estado: 'Registrada' });
+      if (error) throw error;
+      await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Ingreso',
+        descripcion: `Donación registrada: ${cantidad} ${unidad} de ${item.nombre}`, monto: cantidad });
+      await historial(lugar.nombre, item.nombre, `Donación registrada: ${cantidad} ${unidad}`, 'publico', cantidad);
+      return { token: f.token_publico, numeroFactura: f.numero_factura, objetivo };
+    }
     case 'reportar_persona': {
       if (!s(p.nombre)) throw new Error('nombre requerido');
       const { error } = await supa.from('personas').insert({
@@ -300,16 +374,21 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const estado = ['Necesita', 'Disponible', 'Cubierto'].includes(s(p.estado, 20)) ? s(p.estado, 20) : 'Necesita';
       const necesaria = Math.max(0, n(p.cantidadNecesaria)) || 1;
       const recibida = Math.max(0, n(p.cantidadRecibida));
+      const unidad = s(p.unidad, 30) || 'unidades';
+      const { data: previo } = await supa.from('insumos').select('cantidad_recibida')
+        .eq('lugar_id', panel.lugar_id).eq('nombre', nombre).maybeSingle();
       const { error } = await supa.from('insumos').upsert({
         lugar_id: panel.lugar_id, nombre, categoria: s(p.categoria, 60) || 'General', estado,
         cantidad_necesaria: necesaria, cantidad_recibida: recibida,
         urgencia: ['Alta', 'Normal', 'Baja'].includes(s(p.urgencia, 12)) ? s(p.urgencia, 12) : 'Normal',
-        unidad: s(p.unidad, 30) || 'unidades',
+        unidad,
         actualizado: new Date().toISOString() }, { onConflict: 'lugar_id,nombre' });
       if (error) throw error;
       await supa.from('lugares').update({ actualizado: new Date().toISOString() }).eq('id', panel.lugar_id);
-      await historial(await nombreDeLugar(panel.lugar_id), nombre,
-        `Panel: ${nombre} (${estado}, ${recibida} de ${necesaria})`, 'panel', recibida);
+      const centro = await nombreDeLugar(panel.lugar_id);
+      await historial(centro, nombre, `Panel: ${nombre} (${estado}, ${recibida} de ${necesaria})`, 'panel', recibida);
+      // Cierra el círculo del donante: su token muestra que el centro ya recibió.
+      await registrarEntrega(centro, nombre, unidad, recibida - (Number(previo?.cantidad_recibida) || 0), recibida, necesaria);
       return await verPanel(panel.lugar_id);
     }
     case 'panel_insumo_borrar': {
