@@ -539,6 +539,12 @@
       "Pendiente": "Pending",
       "En proceso": "In progress",
       "Entregado": "Delivered"
+    },
+    "budgetState": {
+      "Abierta": "Raising funds",
+      "Comprada": "Purchased · awaiting pickup",
+      "EnTransito": "On its way to the center",
+      "Entregada": "Delivered"
     }
   },
   "donations": {
@@ -837,7 +843,20 @@
     "centerName": "Exact center name",
     "regenerate": "Regenerate token and PIN",
     "panelRegenerated": "Panel regenerated. Hand the new token and PIN to the center.",
-    "signOut": "Exit admin mode"
+    "signOut": "Exit admin mode",
+    "budgetTitle": "Create a supply budget",
+    "budgetIntro": "Quote a needed supply at a specific store (you can create several budgets for the same supply at different stores). Donors will see the price and what is missing in real time.",
+    "budgetSupply": "Supply",
+    "budgetSupplyPh": "Acetaminophen 250 mg",
+    "budgetStore": "Store / pharmacy",
+    "budgetStorePh": "San Rafael Pharmacy",
+    "budgetAddress": "Store address",
+    "budgetQty": "Quantity",
+    "budgetPresentation": "Presentation",
+    "budgetPresentationPh": "Box of 20 pills, 250 mg each",
+    "budgetPrice": "Total price",
+    "budgetCreate": "Create budget",
+    "budgetCreated": "Budget created. It is now visible to donors."
   },
   "lugar": {},
   "home": {
@@ -871,7 +890,8 @@
         "title": "Register or sign in",
         "copy": "Driver, volunteer or center"
       }
-    }
+    },
+    "adminCta": "Administration access"
   },
   "helpHub": {
     "title": "Thank you for helping",
@@ -934,7 +954,17 @@
     "tokenLabel": "Your tracking code",
     "copied": "Code copied",
     "track": "Track my donation",
-    "copyCta": "Copy code"
+    "copyCta": "Copy code",
+    "budgetsTitle": "Buy supplies with your donation",
+    "budgetsCopy": "Each budget is a real quote for a supply at a store. Donate money and follow the whole cycle: purchase, pickup and delivery to the center.",
+    "inKindTitle": "Or donate the supply directly",
+    "noBudgets": "No budgets published yet.",
+    "donateMoneyCta": "Donate money",
+    "raised": "Raised: {recaudado} of {precio}",
+    "missing": "{faltan} still missing to complete the purchase",
+    "budgetLine": "{cantidad} × {presentacion} · {tienda}",
+    "storeLabel": "Store:",
+    "forCenter": "For center:"
   },
   "access": {
     "title": "Register or sign in",
@@ -949,5 +979,43 @@
     "centerCopy": "Enter your panel with token + PIN, or register a new center.",
     "centerCta": "Enter the panel",
     "centerCreateCta": "Register a new center"
+  },
+  "money": {
+    "modalTitle": "Donate money",
+    "modalCopy": "Your contribution buys {insumo} at {tienda} for {centro}.",
+    "amountLabel": "How much will you give?",
+    "simNote": "Simulated payment for now: confirming generates your transaction reference. Once the bank account is connected, you will pay and use the real reference.",
+    "submit": "Confirm my contribution",
+    "saving": "Registering your contribution…",
+    "thanksTitle": "Thank you! Your contribution is registered",
+    "thanksBought": "Goal reached! {insumo} can now be purchased: a driver will pick it up and you will see every step with your code.",
+    "thanksPartial": "Your contribution to {insumo} adds up. {recaudado} of {precio} so far: once complete, you will see the purchase, pickup and delivery with your code.",
+    "refLabel": "Your transaction reference",
+    "copyText": "Reference: {referencia} · Tracking code: {token}"
+  },
+  "cycle": {
+    "title": "Purchased supplies, ready for pickup",
+    "copy": "Donors already paid for these supplies. Pick them up at the store with photos of the site and the supply, and deliver them to the center registering who receives.",
+    "empty": "No purchased supplies pending pickup.",
+    "pickupCta": "Register pickup",
+    "deliverCta": "Register delivery",
+    "pickupAt": "Pick up at:",
+    "deliverTo": "Deliver to:",
+    "pickupTitle": "Register supply pickup",
+    "pickupCopy": "You are picking up {insumo} at {tienda} ({direccion}). Take one photo of the site and one of the supply.",
+    "driverName": "Your name (driver)",
+    "notes": "Notes (optional)",
+    "photoSite": "Photo of the pickup site",
+    "photoSupply": "Photo of the purchased supply",
+    "pickupSave": "Confirm pickup",
+    "pickupSaved": "Pickup registered. Safe travels!",
+    "photosMissing": "Photos are missing.",
+    "deliverTitle": "Register delivery at the center",
+    "deliverCopy": "You are delivering {insumo} at {centro}. Register the person receiving and a photo of the supplies.",
+    "receiverName": "Name of who receives",
+    "receiverRole": "Role (optional)",
+    "photoDelivered": "Photo of the delivered supplies",
+    "deliverSave": "Confirm delivery",
+    "deliverSaved": "Delivery registered. Cycle complete."
   }
 }

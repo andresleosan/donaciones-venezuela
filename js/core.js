@@ -162,6 +162,12 @@
       setText('#necesidades-title', 'needs.title');
       setText('#necesidades-copy', 'needs.copy');
       setPlaceholder('#filtro-necesidad-q', 'needs.searchPlaceholder');
+      setText('#presupuestos-title', 'needs.budgetsTitle');
+      setText('#presupuestos-copy', 'needs.budgetsCopy');
+      setText('#necesidades-insumos-title', 'needs.inKindTitle');
+      setText('#btn-home-admin', 'home.adminCta');
+      setText('#comprados-title', 'cycle.title');
+      setText('#comprados-copy', 'cycle.copy');
 
       // Puerta · Registrarme o entrar
       setText('#acceso-title', 'access.title');
@@ -444,6 +450,7 @@
 
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
+      presupuestos: [], comprados: [],
       filtros: {
         lugarQ: '', lugarTipo: 'todos', lugarCategoria: '', necesidadQ: '',
         volQ: '', volProfesion: '', volEstado: '',

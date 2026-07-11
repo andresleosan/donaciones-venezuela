@@ -161,6 +161,7 @@
         </div>
 
         <p class="home-foot"><span id="home-foot-q">¿Donaste algo?</span> <a href="#seguimiento" id="home-foot-link" data-view-link="seguimiento">Sigue tu donación con tu código</a></p>
+        <p class="home-foot"><button class="link-btn" type="button" id="btn-home-admin">Acceso de administración</button></p>
       </div>
     </section>
 
@@ -281,8 +282,25 @@
         </div>
       </div>
 
-      <p class="meta" id="conteo-necesidades" aria-live="polite"></p>
-      <div id="grid-necesidades" class="lista-centros" aria-live="polite"></div>
+      <section class="section" aria-labelledby="presupuestos-title">
+        <div class="section-header">
+          <div>
+            <h3 id="presupuestos-title" class="section-title">Compra insumos con tu donación</h3>
+            <p class="section-copy" id="presupuestos-copy">Cada presupuesto es una cotización real de un insumo en una tienda. Dona dinero y sigue el ciclo completo: compra, recogida y entrega al centro.</p>
+          </div>
+        </div>
+        <div id="grid-presupuestos" class="lista-centros" aria-live="polite"><div class="loading-grid"><div class="skeleton"></div></div></div>
+      </section>
+
+      <section class="section" aria-labelledby="necesidades-insumos-title">
+        <div class="section-header">
+          <div>
+            <h3 id="necesidades-insumos-title" class="section-title">O dona el insumo directamente</h3>
+          </div>
+        </div>
+        <p class="meta" id="conteo-necesidades" aria-live="polite"></p>
+        <div id="grid-necesidades" class="lista-centros" aria-live="polite"></div>
+      </section>
     </section>
 
     <!-- ══ PUERTA · Registrarme o entrar ══ -->
@@ -328,6 +346,16 @@
         <p class="section-copy" id="transporte-registro-copy">Tu zona, tipo de vehículo y disponibilidad. Los centros te verán para coordinar traslados.</p>
         <button class="btn btn-primary" id="btn-motorizado" type="button">Registrar transportista</button>
       </div>
+
+      <section class="section" aria-labelledby="comprados-title">
+        <div class="section-header">
+          <div>
+            <h3 id="comprados-title" class="section-title">Insumos comprados, listos para recoger</h3>
+            <p class="section-copy" id="comprados-copy">Donantes ya pagaron estos insumos. Retíralos en la tienda con fotos del sitio y del insumo, y entrégalos en el centro registrando a quien recibe.</p>
+          </div>
+        </div>
+        <div id="grid-comprados" class="lista-centros" aria-live="polite"></div>
+      </section>
 
       <section class="section" aria-labelledby="traslados-title">
         <div class="section-header">
@@ -654,9 +682,9 @@
 
   <script src="services/leaflet/leaflet.js"></script>
   <script src="services/api.js?v=5"></script>
-  <script src="js/core.js?v=24"></script>
-  <script src="js/vistas.js?v=24"></script>
-  <script src="js/panel.js?v=24"></script>
-  <script src="js/admin.js?v=24"></script>
+  <script src="js/core.js?v=25"></script>
+  <script src="js/vistas.js?v=25"></script>
+  <script src="js/panel.js?v=25"></script>
+  <script src="js/admin.js?v=25"></script>
 </body>
 </html>

@@ -539,6 +539,12 @@
       "Pendiente": "En attente",
       "En proceso": "En cours",
       "Entregado": "Livré"
+    },
+    "budgetState": {
+      "Abierta": "Collecte en cours",
+      "Comprada": "Acheté · à retirer",
+      "EnTransito": "En route vers le centre",
+      "Entregada": "Livré"
     }
   },
   "donations": {
@@ -837,7 +843,20 @@
     "centerName": "Nom exact du centre",
     "regenerate": "Régénérer token et PIN",
     "panelRegenerated": "Panneau régénéré. Remettez le nouveau token et le PIN au centre.",
-    "signOut": "Quitter le mode admin"
+    "signOut": "Quitter le mode admin",
+    "budgetTitle": "Créer le devis d'une fourniture",
+    "budgetIntro": "Cotez une fourniture nécessaire dans un magasin précis (plusieurs devis possibles pour la même fourniture). Les donateurs verront le prix et ce qu'il manque en temps réel.",
+    "budgetSupply": "Fourniture",
+    "budgetSupplyPh": "Paracétamol 250 mg",
+    "budgetStore": "Magasin / pharmacie",
+    "budgetStorePh": "Pharmacie San Rafael",
+    "budgetAddress": "Adresse du magasin",
+    "budgetQty": "Quantité",
+    "budgetPresentation": "Présentation",
+    "budgetPresentationPh": "Boîte de 20 comprimés de 250 mg",
+    "budgetPrice": "Prix total",
+    "budgetCreate": "Créer le devis",
+    "budgetCreated": "Devis créé. Il est maintenant visible pour les donateurs."
   },
   "lugar": {},
   "home": {
@@ -871,7 +890,8 @@
         "title": "M'inscrire ou me connecter",
         "copy": "Transporteur, bénévole ou centre"
       }
-    }
+    },
+    "adminCta": "Accès administration"
   },
   "helpHub": {
     "title": "Merci d'aider",
@@ -934,7 +954,17 @@
     "tokenLabel": "Votre code de suivi",
     "copied": "Code copié",
     "track": "Suivre mon don",
-    "copyCta": "Copier le code"
+    "copyCta": "Copier le code",
+    "budgetsTitle": "Achetez des fournitures avec votre don",
+    "budgetsCopy": "Chaque devis est une cotation réelle d'une fourniture dans un magasin. Donnez de l'argent et suivez tout le cycle : achat, retrait et livraison au centre.",
+    "inKindTitle": "Ou donnez directement la fourniture",
+    "noBudgets": "Aucun devis publié pour le moment.",
+    "donateMoneyCta": "Donner de l'argent",
+    "raised": "Collecté : {recaudado} sur {precio}",
+    "missing": "Il manque {faltan} pour compléter l'achat",
+    "budgetLine": "{cantidad} × {presentacion} · {tienda}",
+    "storeLabel": "Magasin :",
+    "forCenter": "Pour le centre :"
   },
   "access": {
     "title": "M'inscrire ou me connecter",
@@ -949,5 +979,43 @@
     "centerCopy": "Entrez dans votre panneau avec jeton + PIN, ou enregistrez un nouveau centre.",
     "centerCta": "Entrer dans le panneau",
     "centerCreateCta": "Enregistrer un nouveau centre"
+  },
+  "money": {
+    "modalTitle": "Donner de l'argent",
+    "modalCopy": "Votre contribution achète {insumo} chez {tienda} pour {centro}.",
+    "amountLabel": "Combien allez-vous donner ?",
+    "simNote": "Paiement simulé pour le moment : la confirmation génère votre référence de transaction. Une fois le compte bancaire connecté, vous paierez et utiliserez la référence réelle.",
+    "submit": "Confirmer ma contribution",
+    "saving": "Enregistrement de votre contribution…",
+    "thanksTitle": "Merci ! Votre contribution est enregistrée",
+    "thanksBought": "Objectif atteint ! {insumo} peut maintenant être acheté : un transporteur ira le chercher et vous verrez chaque étape avec votre code.",
+    "thanksPartial": "Votre contribution à {insumo} s'ajoute. {recaudado} sur {precio} : une fois complété, vous verrez l'achat, le retrait et la livraison avec votre code.",
+    "refLabel": "Votre référence de transaction",
+    "copyText": "Référence : {referencia} · Code de suivi : {token}"
+  },
+  "cycle": {
+    "title": "Fournitures achetées, prêtes au retrait",
+    "copy": "Des donateurs ont déjà payé ces fournitures. Retirez-les au magasin avec des photos du lieu et de la fourniture, puis livrez-les au centre en enregistrant qui reçoit.",
+    "empty": "Aucune fourniture achetée en attente de retrait.",
+    "pickupCta": "Enregistrer le retrait",
+    "deliverCta": "Enregistrer la livraison",
+    "pickupAt": "Retirer chez :",
+    "deliverTo": "Livrer à :",
+    "pickupTitle": "Enregistrer le retrait de la fourniture",
+    "pickupCopy": "Vous retirez {insumo} chez {tienda} ({direccion}). Prenez une photo du lieu et une de la fourniture.",
+    "driverName": "Votre nom (transporteur)",
+    "notes": "Notes (facultatif)",
+    "photoSite": "Photo du lieu de retrait",
+    "photoSupply": "Photo de la fourniture achetée",
+    "pickupSave": "Confirmer le retrait",
+    "pickupSaved": "Retrait enregistré. Bonne route !",
+    "photosMissing": "Des photos manquent.",
+    "deliverTitle": "Enregistrer la livraison au centre",
+    "deliverCopy": "Vous livrez {insumo} à {centro}. Enregistrez la personne qui reçoit et une photo des fournitures.",
+    "receiverName": "Nom de la personne qui reçoit",
+    "receiverRole": "Fonction (facultatif)",
+    "photoDelivered": "Photo des fournitures livrées",
+    "deliverSave": "Confirmer la livraison",
+    "deliverSaved": "Livraison enregistrée. Cycle terminé."
   }
 }

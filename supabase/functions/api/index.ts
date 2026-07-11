@@ -196,6 +196,26 @@ async function registrarEntrega(centro: string, insumo: string, unidad: string,
   }
 }
 
+// ===== Presupuestos + ciclo logístico (reusan facturas/donaciones/movimientos/evidencias) =====
+// Un PRESUPUESTO es una factura cuya `descripcion` lleva metadatos JSON de la
+// cotización (tienda, dirección, cantidad, presentación) y su precio en
+// `monto_requerido`. Los donantes aportan DINERO; al cubrir el precio pasa a
+// 'Comprada' y entra al ciclo del transportista: 'EnTransito' → 'Entregada'.
+function metaPresupuesto(descripcion: string): Record<string, unknown> | null {
+  try { const o = JSON.parse(descripcion); return o && o.k === 'pres' ? o : null; } catch { return null; }
+}
+
+function presupuestoUI(f: Record<string, unknown>) {
+  const m = metaPresupuesto(String(f.descripcion ?? ''));
+  if (!m) return null;
+  return {
+    token: f.token_publico, objetivo: f.objetivo, estado: f.estado,
+    centro: m.centro, insumo: m.insumo, tienda: m.tienda, direccion: m.direccion,
+    cantidad: m.cantidad, presentacion: m.presentacion,
+    precio: Number(f.monto_requerido) || 0, recaudado: Number(f.monto_recaudado) || 0,
+  };
+}
+
 async function verPanel(lugarId: number) {
   const { data: lugar, error } = await supa.from('lugares')
     .select('id, tipo, nombre, ubicacion, telefono, lat, lng, actualizado').eq('id', lugarId).single();
@@ -214,8 +234,13 @@ async function nombreDeLugar(lugarId: number): Promise<string> {
 async function handle(accion: string, p: Record<string, unknown>, req: Request) {
   const esPanel = accion.startsWith('panel_') && accion !== 'panel_crear';
   const esAdmin = accion.startsWith('admin_');
+  // Las lecturas públicas no gastan el cupo de escrituras (30/h): navegar los
+  // presupuestos o la lista de recogidas no debe bloquear el poder donar.
+  const esLectura = ['listar_presupuestos', 'listar_comprados'].includes(accion);
   if (esAdmin) await autenticarAdmin(p, req);
-  else if (!esPanel && !(await rateHit(ipDe(req), 'publico', 30))) {
+  else if (esLectura) {
+    if (!(await rateHit(ipDe(req), 'lectura', 240))) throw new Error('Demasiadas solicitudes, intenta en una hora');
+  } else if (!esPanel && !(await rateHit(ipDe(req), 'publico', 30))) {
     throw new Error('Demasiadas solicitudes, intenta en una hora');
   }
 
@@ -317,6 +342,107 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       await historial(lugar.nombre, item.nombre, `Donación registrada: ${cantidad} ${unidad}`, 'publico', cantidad);
       return { token: f.token_publico, numeroFactura: f.numero_factura, objetivo };
     }
+
+    // ===== Presupuestos: donación en DINERO + ciclo logístico =====
+    case 'listar_presupuestos': {
+      const { data } = await supa.from('facturas')
+        .select('token_publico, objetivo, descripcion, monto_requerido, monto_recaudado, estado, fecha_creacion')
+        .like('descripcion', '{"k":"pres"%')
+        .order('fecha_creacion', { ascending: false }).limit(200);
+      return { presupuestos: (data || []).map(presupuestoUI).filter(Boolean) };
+    }
+    case 'listar_comprados': {
+      const { data } = await supa.from('facturas')
+        .select('numero_factura, token_publico, objetivo, descripcion, monto_requerido, monto_recaudado, estado, fecha_creacion')
+        .like('descripcion', '{"k":"pres"%')
+        .in('estado', ['Comprada', 'EnTransito'])
+        .order('fecha_creacion').limit(100);
+      return { comprados: (data || []).map(presupuestoUI).filter(Boolean) };
+    }
+    case 'donar_dinero': {
+      // Aporte monetario a UN presupuesto. Simulación por ahora: el sistema
+      // genera la referencia de transacción; cuando exista la cuenta real, la
+      // referencia vendrá del pago y entrará por este mismo camino.
+      const monto = n(p.monto);
+      if (monto <= 0 || monto > 10_000_000) throw new Error('monto inválido');
+      const token = s(p.token, 24).toUpperCase();
+      const { data: f } = await supa.from('facturas')
+        .select('id, numero_factura, token_publico, descripcion, monto_requerido, monto_recaudado, estado')
+        .eq('token_publico', token).maybeSingle();
+      const m = f && metaPresupuesto(String(f.descripcion));
+      if (!f || !m) throw new Error('Presupuesto no encontrado');
+      if (f.estado !== 'Abierta') throw new Error('Este presupuesto ya está financiado');
+      const referencia = tokenAlfa('REF');
+      const { error } = await supa.from('donaciones').insert({
+        factura_id: f.id, nombre_donante: s(p.nombreDonante, 120) || 'Anónimo',
+        monto, referencia_pago: referencia, estado: 'Confirmada' }); // Confirmada: el trigger suma al recaudado en vivo
+      if (error) throw error;
+      await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Ingreso',
+        descripcion: `Donación de dinero recibida (ref ${referencia})`, monto });
+      // ¿Se completó la meta? → el insumo queda Comprado y entra al ciclo logístico.
+      const { data: tras } = await supa.from('facturas')
+        .select('monto_recaudado, monto_requerido, estado').eq('id', f.id).single();
+      let estadoFinal = tras?.estado || 'Abierta';
+      if (tras && Number(tras.monto_recaudado) >= Number(tras.monto_requerido) && tras.estado === 'Abierta') {
+        estadoFinal = 'Comprada';
+        await supa.from('facturas').update({ estado: 'Comprada' }).eq('id', f.id);
+        await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Compra',
+          descripcion: `Meta alcanzada: fondos completos para ${m.insumo} en ${m.tienda}. Un transportista ya puede retirarlo.`, monto: 0 });
+      }
+      await historial(String(m.centro), String(m.insumo), `Donación en dinero de ${monto} (ref ${referencia})`, 'publico', monto);
+      return { referencia, token: f.token_publico, numeroFactura: f.numero_factura,
+               recaudado: Number(tras?.monto_recaudado) || 0, precio: Number(f.monto_requerido) || 0, estado: estadoFinal };
+    }
+    case 'registrar_recogida': {
+      // El transportista retira el insumo comprado en la tienda: fotos del
+      // sitio y del insumo (bucket privado) + movimiento público con el relato.
+      const nombre = s(p.nombreTransportista, 120);
+      if (!nombre) throw new Error('nombre del transportista requerido');
+      if (!p.fotoSitio || !p.fotoInsumo) throw new Error('Faltan fotos: sitio de recogida e insumo son obligatorias');
+      const token = s(p.token, 24).toUpperCase();
+      const { data: f } = await supa.from('facturas')
+        .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
+      const m = f && metaPresupuesto(String(f.descripcion));
+      if (!f || !m) throw new Error('Presupuesto no encontrado');
+      if (f.estado !== 'Comprada') throw new Error('Este insumo no está listo para recoger');
+      const carpeta = `ciclo/${f.numero_factura}`;
+      const marca = crypto.randomUUID().slice(0, 8);
+      const fotoSitio = await guardarFoto(p.fotoSitio, carpeta, `recogida-sitio-${marca}`);
+      const fotoInsumo = await guardarFoto(p.fotoInsumo, carpeta, `recogida-insumo-${marca}`);
+      await supa.from('evidencias').insert([
+        { factura_id: f.id, archivo: fotoSitio, descripcion: `Foto del sitio de recogida (${m.tienda})`, publica: false },
+        { factura_id: f.id, archivo: fotoInsumo, descripcion: 'Foto del insumo comprado', publica: false }]);
+      const notas = s(p.notas, 300);
+      const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Recogida',
+        descripcion: `${nombre} recogió el insumo en ${m.tienda} (${m.direccion}). Fotos del sitio y del insumo registradas.${notas ? ' Nota: ' + notas : ''}`, monto: 0 });
+      if (error) throw error;
+      await supa.from('facturas').update({ estado: 'EnTransito' }).eq('id', f.id);
+      await historial(String(m.centro), String(m.insumo), `Transportista ${nombre} recogió el insumo comprado en ${m.tienda}`, 'publico');
+      return { estado: 'EnTransito' };
+    }
+    case 'registrar_entrega_final': {
+      // Cierre del ciclo: el transportista entrega en el centro, registra a la
+      // persona que recibe + foto de los insumos. El donante lo ve en su token.
+      const receptor = s(p.nombreReceptor, 120);
+      if (!receptor) throw new Error('nombre de quien recibe requerido');
+      if (!p.fotoEntrega) throw new Error('Falta la foto de los insumos entregados');
+      const token = s(p.token, 24).toUpperCase();
+      const { data: f } = await supa.from('facturas')
+        .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
+      const m = f && metaPresupuesto(String(f.descripcion));
+      if (!f || !m) throw new Error('Presupuesto no encontrado');
+      if (f.estado !== 'EnTransito') throw new Error('Este insumo no está en tránsito');
+      const foto = await guardarFoto(p.fotoEntrega, `ciclo/${f.numero_factura}`, `entrega-${crypto.randomUUID().slice(0, 8)}`);
+      await supa.from('evidencias').insert({
+        factura_id: f.id, archivo: foto, descripcion: `Foto de los insumos entregados en ${m.centro}`, publica: false });
+      const cargo = s(p.cargoReceptor, 80);
+      const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Entrega',
+        descripcion: `Entregado en ${m.centro}. Recibió: ${receptor}${cargo ? ' (' + cargo + ')' : ''}. Foto de los insumos registrada.`, monto: 0 });
+      if (error) throw error;
+      await supa.from('facturas').update({ estado: 'Entregada', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
+      await historial(String(m.centro), String(m.insumo), `Insumo comprado entregado en el centro. Recibió ${receptor}`, 'publico');
+      return { estado: 'Entregada' };
+    }
     case 'reportar_persona': {
       if (!s(p.nombre)) throw new Error('nombre requerido');
       const { error } = await supa.from('personas').insert({
@@ -416,6 +542,35 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         descripcion: s(p.descripcion, 500), monto_requerido: montoReq });
       if (error) throw error;
       await historial('Administración', '', `Factura ${numero} creada: ${objetivo}`, 'admin');
+      return { numeroFactura: numero, token };
+    }
+    case 'admin_crear_presupuesto': {
+      // Cotización de un insumo necesitado en una tienda concreta. Puede haber
+      // varios presupuestos por insumo (una farmacia tiene 200, otra 1000…):
+      // cada uno es su propia factura con su meta de dinero y su token.
+      const centro = s(p.centro, 120);
+      const insumo = s(p.insumo, 120);
+      const tienda = s(p.tienda, 100);
+      const direccion = s(p.direccion, 160);
+      const cantidad = n(p.cantidad);
+      const presentacion = s(p.presentacion, 140);
+      const precio = n(p.precio);
+      if (!centro || !insumo || !tienda) throw new Error('centro, insumo y tienda requeridos');
+      if (cantidad <= 0) throw new Error('cantidad debe ser mayor que 0');
+      if (precio <= 0 || precio > 100_000_000) throw new Error('precio inválido');
+      const { data: lugar } = await supa.from('lugares').select('id').eq('nombre', centro).maybeSingle();
+      if (!lugar) throw new Error('Centro no encontrado');
+      const { data: seq2, error: eSeq2 } = await supa.rpc('factura_numero_siguiente');
+      if (eSeq2) throw eSeq2;
+      const numero = `FAC-${new Date().getFullYear()}-${String(seq2).padStart(6, '0')}`;
+      const token = tokenAlfa('DV');
+      const { error } = await supa.from('facturas').insert({
+        numero_factura: numero, token_publico: token,
+        objetivo: s(`${insumo} → ${centro} · ${tienda}`, 200),
+        descripcion: JSON.stringify({ k: 'pres', centro, insumo, tienda, direccion, cantidad, presentacion }),
+        monto_requerido: precio });
+      if (error) throw error;
+      await historial(centro, insumo, `Presupuesto ${numero}: ${cantidad} × ${insumo} en ${tienda} por ${precio}`, 'admin', cantidad);
       return { numeroFactura: numero, token };
     }
     case 'admin_listar_facturas': {

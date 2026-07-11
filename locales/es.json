@@ -539,6 +539,12 @@
       "Pendiente": "Pendiente",
       "En proceso": "En proceso",
       "Entregado": "Entregado"
+    },
+    "budgetState": {
+      "Abierta": "Recaudando",
+      "Comprada": "Comprado · por recoger",
+      "EnTransito": "En camino al centro",
+      "Entregada": "Entregado"
     }
   },
   "donations": {
@@ -837,7 +843,20 @@
     "centerName": "Nombre exacto del centro",
     "regenerate": "Regenerar token y PIN",
     "panelRegenerated": "Panel regenerado. Entrega el token y el PIN nuevos al centro.",
-    "signOut": "Salir del modo admin"
+    "signOut": "Salir del modo admin",
+    "budgetTitle": "Crear presupuesto de un insumo",
+    "budgetIntro": "Cotiza un insumo necesitado en una tienda concreta (puedes crear varios presupuestos del mismo insumo en distintas tiendas). Los donantes verán el precio y cuánto falta en tiempo real.",
+    "budgetSupply": "Insumo",
+    "budgetSupplyPh": "Acetaminofén 250 mg",
+    "budgetStore": "Tienda / farmacia",
+    "budgetStorePh": "Farmacia San Rafael",
+    "budgetAddress": "Dirección de la tienda",
+    "budgetQty": "Cantidad",
+    "budgetPresentation": "Presentación",
+    "budgetPresentationPh": "Caja de 20 pastillas de 250 mg",
+    "budgetPrice": "Precio total",
+    "budgetCreate": "Crear presupuesto",
+    "budgetCreated": "Presupuesto creado. Ya es visible para los donantes."
   },
   "lugar": {},
   "home": {
@@ -871,7 +890,8 @@
         "title": "Registrarme o entrar",
         "copy": "Transportista, voluntario o centro"
       }
-    }
+    },
+    "adminCta": "Acceso de administración"
   },
   "helpHub": {
     "title": "Gracias por ayudar",
@@ -934,7 +954,17 @@
     "tokenLabel": "Tu código de seguimiento",
     "copied": "Código copiado",
     "track": "Seguir mi donación",
-    "copyCta": "Copiar código"
+    "copyCta": "Copiar código",
+    "budgetsTitle": "Compra insumos con tu donación",
+    "budgetsCopy": "Cada presupuesto es una cotización real de un insumo en una tienda. Dona dinero y sigue el ciclo completo: compra, recogida y entrega al centro.",
+    "inKindTitle": "O dona el insumo directamente",
+    "noBudgets": "No hay presupuestos publicados todavía.",
+    "donateMoneyCta": "Donar dinero",
+    "raised": "Recaudado: {recaudado} de {precio}",
+    "missing": "Faltan {faltan} para completar la compra",
+    "budgetLine": "{cantidad} × {presentacion} · {tienda}",
+    "storeLabel": "Tienda:",
+    "forCenter": "Para el centro:"
   },
   "access": {
     "title": "Registrarme o entrar",
@@ -949,5 +979,43 @@
     "centerCopy": "Entra a tu panel con token + PIN, o registra un centro nuevo.",
     "centerCta": "Entrar al panel",
     "centerCreateCta": "Registrar centro nuevo"
+  },
+  "money": {
+    "modalTitle": "Donar dinero",
+    "modalCopy": "Tu aporte compra {insumo} en {tienda} para {centro}.",
+    "amountLabel": "¿Cuánto vas a aportar?",
+    "simNote": "Pago simulado por ahora: al confirmar se genera tu referencia de transacción. Cuando se conecte la cuenta bancaria, pagarás y usarás la referencia real.",
+    "submit": "Confirmar mi aporte",
+    "saving": "Registrando tu aporte…",
+    "thanksTitle": "¡Gracias! Tu aporte quedó registrado",
+    "thanksBought": "¡Meta completada! {insumo} ya puede comprarse: un transportista lo recogerá y verás cada paso con tu código.",
+    "thanksPartial": "Tu aporte a {insumo} suma. Van {recaudado} de {precio}: cuando se complete, verás la compra, la recogida y la entrega con tu código.",
+    "refLabel": "Tu referencia de transacción",
+    "copyText": "Referencia: {referencia} · Código de seguimiento: {token}"
+  },
+  "cycle": {
+    "title": "Insumos comprados, listos para recoger",
+    "copy": "Donantes ya pagaron estos insumos. Retíralos en la tienda con fotos del sitio y del insumo, y entrégalos en el centro registrando a quien recibe.",
+    "empty": "No hay insumos comprados pendientes de recoger.",
+    "pickupCta": "Registrar recogida",
+    "deliverCta": "Registrar entrega",
+    "pickupAt": "Recoger en:",
+    "deliverTo": "Entregar en:",
+    "pickupTitle": "Registrar recogida del insumo",
+    "pickupCopy": "Vas a recoger {insumo} en {tienda} ({direccion}). Toma una foto del sitio y otra del insumo.",
+    "driverName": "Tu nombre (transportista)",
+    "notes": "Notas (opcional)",
+    "photoSite": "Foto del sitio de recogida",
+    "photoSupply": "Foto del insumo comprado",
+    "pickupSave": "Confirmar recogida",
+    "pickupSaved": "Recogida registrada. ¡Buen viaje!",
+    "photosMissing": "Faltan fotos por tomar.",
+    "deliverTitle": "Registrar entrega en el centro",
+    "deliverCopy": "Vas a entregar {insumo} en {centro}. Registra a la persona que recibe y una foto de los insumos.",
+    "receiverName": "Nombre de quien recibe",
+    "receiverRole": "Cargo o rol (opcional)",
+    "photoDelivered": "Foto de los insumos entregados",
+    "deliverSave": "Confirmar entrega",
+    "deliverSaved": "Entrega registrada. Ciclo completado."
   }
 }

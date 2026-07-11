@@ -84,6 +84,20 @@
           </div>
           <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="adm-crear">${e(t('admin.create'))}</button></div>
         </div>
+        <h3>${e(t('admin.budgetTitle'))}</h3>
+        <p class="meta">${e(t('admin.budgetIntro'))}</p>
+        <div class="panel-insumo">
+          <div class="form-grid">
+            <div class="field"><label>${e(t('admin.centerName'))}</label><input id="pre-centro" /></div>
+            <div class="field"><label>${e(t('admin.budgetSupply'))}</label><input id="pre-insumo" placeholder="${e(t('admin.budgetSupplyPh'))}" /></div>
+            <div class="field"><label>${e(t('admin.budgetStore'))}</label><input id="pre-tienda" placeholder="${e(t('admin.budgetStorePh'))}" /></div>
+            <div class="field"><label>${e(t('admin.budgetAddress'))}</label><input id="pre-direccion" /></div>
+            <div class="field"><label>${e(t('admin.budgetQty'))}</label><input id="pre-cantidad" type="number" min="1" /></div>
+            <div class="field"><label>${e(t('admin.budgetPresentation'))}</label><input id="pre-presentacion" placeholder="${e(t('admin.budgetPresentationPh'))}" /></div>
+            <div class="field"><label>${e(t('admin.budgetPrice'))}</label><input id="pre-precio" type="number" min="1" /></div>
+          </div>
+          <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="pre-crear">${e(t('admin.budgetCreate'))}</button></div>
+        </div>
         <h3>${e(t('admin.invoices'))} (${facturas.length})</h3>
         ${facturas.map(filaFactura).join('') || `<p class="meta">${e(t('admin.noInvoices'))}</p>`}
         <div id="admin-factura-ops" hidden>
@@ -142,6 +156,17 @@
           facturaActiva = r.token;
           $('#admin-factura-ops').hidden = false;
           $('#adm-factura-sel').textContent = r.numeroFactura + ' · ' + r.token;
+        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      });
+      $('#pre-crear').addEventListener('click', async () => {
+        try {
+          const r = await postAdmin({ accion: 'admin_crear_presupuesto',
+            centro: $('#pre-centro').value.trim(), insumo: $('#pre-insumo').value.trim(),
+            tienda: $('#pre-tienda').value.trim(), direccion: $('#pre-direccion').value.trim(),
+            cantidad: $('#pre-cantidad').value, presentacion: $('#pre-presentacion').value.trim(),
+            precio: $('#pre-precio').value });
+          const aviso = `<div class="notice success visible">${e(t('admin.budgetCreated'))}</div><p class="tracking-code">${e(r.numeroFactura)} · ${e(r.token)}</p>`;
+          await refrescarAdmin(aviso);
         } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
       });
       $$('#admin-body [data-admin-usar]').forEach((btn) => btn.addEventListener('click', () => {
@@ -301,6 +326,167 @@
       $('#nec-seguir').addEventListener('click', () => {
         $('#modal-root dialog').close();
         buscarSeguimiento(token);
+      });
+    }
+
+    // ── Donación en DINERO a un presupuesto (simulada hasta conectar la cuenta) ──
+    // El sistema genera la referencia de transacción; con la cuenta real, la
+    // referencia vendrá del pago y entrará por este mismo flujo.
+    function abrirDonarDinero(pr) {
+      const faltan = Math.max(1, numero(pr.precio) - numero(pr.recaudado));
+      abrirModal(t('money.modalTitle'), `<form id="donar-dinero-form" novalidate>
+        <p class="section-copy">${e(t('money.modalCopy', { insumo: mostrarInsumo(pr.insumo), tienda: pr.tienda, centro: pr.centro }))}</p>
+        <p class="meta">${e(t('needs.missing', { faltan: formatearMonto(faltan) }))}</p>
+        <div class="form-grid">
+          <div class="field"><label for="din-monto">${e(t('money.amountLabel'))}</label><input id="din-monto" type="number" min="1" step="1" value="${e(faltan)}" required /></div>
+          <div class="field"><label for="din-nombre">${e(t('needs.donorLabel'))}</label><input id="din-nombre" autocomplete="name" placeholder="${e(t('needs.donorPlaceholder'))}" /></div>
+        </div>
+        <p class="meta">${e(t('money.simNote'))}</p>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('money.submit'))}</button></div>
+        <div id="din-message" class="form-message" role="status" aria-live="polite"></div>
+      </form>`);
+      $('#donar-dinero-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#din-message')) return;
+        const monto = numero($('#din-monto').value);
+        if (monto <= 0) { mostrarMensaje('#din-message', 'error', t('needs.invalidAmount')); return; }
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensaje('#din-message', 'info', t('money.saving'));
+        try {
+          const res = await window.SheetsService.post({
+            accion: 'donar_dinero', token: pr.token, monto,
+            nombreDonante: $('#din-nombre').value.trim()
+          });
+          mostrarReciboDinero(res, pr);
+          cargarPresupuestos();
+          cargarComprados();
+        } catch (err) {
+          boton.disabled = false;
+          mostrarMensaje('#din-message', 'error', String(err && err.message || t('needs.error')));
+        }
+      });
+    }
+
+    // Recibo tras donar dinero: referencia de la transacción + token de
+    // seguimiento. Debe poder copiarse, no vale un toast pasajero.
+    function mostrarReciboDinero(res, pr) {
+      const cuerpo = $('#modal-root .modal-body');
+      const comprado = res.estado === 'Comprada';
+      cuerpo.innerHTML = `<div class="token-result">
+        <h3>${e(t('money.thanksTitle'))}</h3>
+        <p class="section-copy">${e(comprado ? t('money.thanksBought', { insumo: mostrarInsumo(pr.insumo) }) : t('money.thanksPartial', { insumo: mostrarInsumo(pr.insumo), recaudado: formatearMonto(res.recaudado), precio: formatearMonto(res.precio) }))}</p>
+        <p class="meta">${e(t('money.refLabel'))}</p>
+        <p class="token-value"><strong>${e(res.referencia)}</strong></p>
+        <p class="meta">${e(t('needs.tokenLabel'))}</p>
+        <p class="token-value"><strong>${e(res.token)}</strong></p>
+        <div class="card-actions">
+          <button class="btn btn-soft btn-small" type="button" id="din-copiar">${e(t('needs.copyCta'))}</button>
+          <button class="btn btn-primary btn-small" type="button" id="din-seguir">${e(t('needs.track'))}</button>
+        </div>
+      </div>`;
+      $('#din-copiar').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(t('money.copyText', { referencia: res.referencia, token: res.token }));
+          toast(t('needs.copied'));
+        } catch (err) { toast(res.token); }
+      });
+      $('#din-seguir').addEventListener('click', () => {
+        $('#modal-root dialog').close();
+        buscarSeguimiento(res.token);
+      });
+    }
+
+    // ── Ciclo del transportista sobre un insumo comprado ──
+    function bindPreviewsFoto(ids) {
+      ids.forEach((id) => {
+        $('#' + id).addEventListener('change', (ev) => {
+          const file = ev.target.files && ev.target.files[0];
+          const prev = $('#' + id + '-prev');
+          if (!file) { prev.hidden = true; return; }
+          prev.src = URL.createObjectURL(file);
+          prev.hidden = false;
+        });
+      });
+    }
+
+    function abrirRegistrarRecogida(pr) {
+      abrirModal(t('cycle.pickupTitle'), `<form id="recogida-form" novalidate>
+        <p class="section-copy">${e(t('cycle.pickupCopy', { insumo: mostrarInsumo(pr.insumo), tienda: pr.tienda, direccion: pr.direccion || '' }))}</p>
+        <div class="form-grid">
+          <div class="field"><label for="rec-nombre">${e(t('cycle.driverName'))}</label><input id="rec-nombre" required autocomplete="name" /></div>
+          <div class="field full"><label for="rec-notas">${e(t('cycle.notes'))}</label><input id="rec-notas" /></div>
+          ${campoFoto('rec-foto-sitio', 'cycle.photoSite')}
+          ${campoFoto('rec-foto-insumo', 'cycle.photoSupply')}
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('cycle.pickupSave'))}</button></div>
+        <div id="rec-message" class="form-message" role="status" aria-live="polite"></div>
+      </form>`);
+      bindPreviewsFoto(['rec-foto-sitio', 'rec-foto-insumo']);
+      $('#recogida-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#rec-message')) return;
+        const archivos = ['rec-foto-sitio', 'rec-foto-insumo'].map((id) => $('#' + id).files && $('#' + id).files[0]);
+        if (archivos.some((f) => !f)) { mostrarMensaje('#rec-message', 'error', t('cycle.photosMissing')); return; }
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensaje('#rec-message', 'info', t('messages.driverUploading'));
+        try {
+          const [fotoSitio, fotoInsumo] = await Promise.all(archivos.map(comprimirFoto));
+          await window.SheetsService.post({
+            accion: 'registrar_recogida', token: pr.token,
+            nombreTransportista: $('#rec-nombre').value.trim(),
+            notas: $('#rec-notas').value.trim(), fotoSitio, fotoInsumo
+          });
+          $('#modal-root dialog').close();
+          toast(t('cycle.pickupSaved'));
+          cargarComprados();
+          cargarPresupuestos();
+        } catch (err) {
+          boton.disabled = false;
+          mostrarMensaje('#rec-message', 'error', String(err && err.message || t('needs.error')));
+        }
+      });
+    }
+
+    function abrirRegistrarEntrega(pr) {
+      abrirModal(t('cycle.deliverTitle'), `<form id="entrega-form" novalidate>
+        <p class="section-copy">${e(t('cycle.deliverCopy', { insumo: mostrarInsumo(pr.insumo), centro: pr.centro }))}</p>
+        <div class="form-grid">
+          <div class="field"><label for="ent-receptor">${e(t('cycle.receiverName'))}</label><input id="ent-receptor" required autocomplete="name" /></div>
+          <div class="field"><label for="ent-cargo">${e(t('cycle.receiverRole'))}</label><input id="ent-cargo" /></div>
+          ${campoFoto('ent-foto', 'cycle.photoDelivered')}
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('cycle.deliverSave'))}</button></div>
+        <div id="ent-message" class="form-message" role="status" aria-live="polite"></div>
+      </form>`);
+      bindPreviewsFoto(['ent-foto']);
+      $('#entrega-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#ent-message')) return;
+        const archivo = $('#ent-foto').files && $('#ent-foto').files[0];
+        if (!archivo) { mostrarMensaje('#ent-message', 'error', t('cycle.photosMissing')); return; }
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensaje('#ent-message', 'info', t('messages.driverUploading'));
+        try {
+          const fotoEntrega = await comprimirFoto(archivo);
+          await window.SheetsService.post({
+            accion: 'registrar_entrega_final', token: pr.token,
+            nombreReceptor: $('#ent-receptor').value.trim(),
+            cargoReceptor: $('#ent-cargo').value.trim(), fotoEntrega
+          });
+          $('#modal-root dialog').close();
+          toast(t('cycle.deliverSaved'));
+          cargarComprados();
+          cargarPresupuestos();
+        } catch (err) {
+          boton.disabled = false;
+          mostrarMensaje('#ent-message', 'error', String(err && err.message || t('needs.error')));
+        }
       });
     }
 
@@ -562,6 +748,16 @@
 
       ultimoSeguimiento = data;
       const factura = data.factura;
+      // Si la factura es un presupuesto, su descripcion lleva el JSON de la
+      // cotización: se pinta legible en vez del JSON crudo.
+      let descripcionVisible = factura.descripcion || '';
+      try {
+        const meta = JSON.parse(descripcionVisible);
+        if (meta && meta.k === 'pres') {
+          descripcionVisible = t('needs.budgetLine', { cantidad: numero(meta.cantidad), presentacion: meta.presentacion || '', tienda: meta.tienda }) +
+            (meta.direccion ? ' · ' + meta.direccion : '') + ' → ' + meta.centro;
+        }
+      } catch (err) { /* descripcion normal, se muestra tal cual */ }
       const porcentaje = Math.max(0, Math.min(100, numero(factura.porcentaje_completado != null ? factura.porcentaje_completado : factura.porcentaje)));
       const historial = data.historial || data.movimientos || [];
       const evidencias = data.evidencias || [];
@@ -580,7 +776,7 @@
             <div>
               <span class="badge ${estadoClase}">${e(factura.estado || t('common.pending'))}</span>
               <h3>${e(factura.objetivo || t('tracking.invoice'))}</h3>
-              ${factura.descripcion ? `<p class="meta">${e(factura.descripcion)}</p>` : ''}
+              ${descripcionVisible ? `<p class="meta">${e(descripcionVisible)}</p>` : ''}
             </div>
             <span class="tracking-code">${e(factura.numero_factura || '')}</span>
           </div>
@@ -622,6 +818,7 @@
 
     function renderAll() {
       renderRegistrySummaries(); poblarCategorias(); renderLugares(); renderNecesidades(); renderVoluntarios(); renderRescatistas(); renderMotorizados(); renderTraslados(); renderDonations();
+      cargarPresupuestos(); cargarComprados(); // asíncronos: pintan sus grillas al llegar
     }
 
     async function cargarTodo() {
@@ -645,7 +842,7 @@
       renderDonations();
       [['#btn-panel-centro', '/panel-centro'], ['#btn-acceso-panel', '/panel-centro'],
        ['#btn-crear-centro', '/crear-centro'], ['#btn-acceso-crear-centro', '/crear-centro'],
-       ['#btn-acceso-transportista', '/registrar-transportista']].forEach(([sel, ruta]) => {
+       ['#btn-acceso-transportista', '/registrar-transportista'], ['#btn-home-admin', '/admin']].forEach(([sel, ruta]) => {
         const btn = $(sel);
         if (btn) btn.addEventListener('click', () => { window.location.href = ruta; });
       });

@@ -330,6 +330,131 @@
       }).join('') : `<div class="empty-state">${e(t('needs.empty'))}</div>`;
       bindTarjetasColapsables('#grid-necesidades');
       $$('[data-donar-necesidad]').forEach((btn) => btn.addEventListener('click', () => abrirDonarNecesidad(btn.dataset)));
+      renderPresupuestos(); // el buscador de esta vista filtra también los presupuestos
+    }
+
+    // ── Presupuestos: donación en dinero con ciclo logístico ──
+    // Cada presupuesto es una factura-cotización (insumo en una tienda concreta,
+    // con precio y dirección). El recaudado llega en vivo desde Supabase; al
+    // cubrirse pasa a Comprada y aparece en la lista de recogidas.
+    let cargandoPresupuestos = false;
+    async function cargarPresupuestos() {
+      if (cargandoPresupuestos || !$('#grid-presupuestos')) return;
+      cargandoPresupuestos = true;
+      try {
+        const r = await window.SheetsService.post({ accion: 'listar_presupuestos' });
+        estado.presupuestos = r.presupuestos || [];
+      } catch (err) { /* se reintenta en la próxima recarga */ }
+      cargandoPresupuestos = false;
+      renderPresupuestos();
+    }
+
+    function estadoPresupuesto(estadoP) {
+      const clases = { Abierta: 'yellow', Comprada: 'green', EnTransito: 'rescue', Entregada: 'gray' };
+      return { clase: clases[estadoP] || 'gray', texto: tValue('budgetState', estadoP) || estadoP };
+    }
+
+    function barraProgreso(recaudado, precio) {
+      const pct = precio > 0 ? Math.max(0, Math.min(100, Math.round(100 * recaudado / precio))) : 0;
+      return `<div class="tracking-progress"><div class="supply-line"><strong>${e(t('needs.raised', { recaudado: formatearMonto(recaudado), precio: formatearMonto(precio) }))}</strong><span>${e(pct)}%</span></div>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${e(pct)}"><span style="--value:${e(pct)}%"></span></div></div>`;
+    }
+
+    function renderPresupuestos() {
+      const cont = $('#grid-presupuestos');
+      if (!cont) return;
+      const q = normalizar(estado.filtros.necesidadQ);
+      const lista = (estado.presupuestos || []).filter((pr) => {
+        if (!q) return true;
+        return normalizar([pr.insumo, pr.centro, pr.tienda, pr.direccion].join(' ')).includes(q);
+      });
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty-state">${e(t('needs.noBudgets'))}</div>`;
+        return;
+      }
+      cont.innerHTML = lista.map((pr) => {
+        const est = estadoPresupuesto(pr.estado);
+        const faltan = Math.max(0, numero(pr.precio) - numero(pr.recaudado));
+        const accion = pr.estado === 'Abierta'
+          ? `<button class="btn btn-primary btn-small" type="button" data-donar-dinero="${e(pr.token)}">${e(t('needs.donateMoneyCta'))}</button>`
+          : `<span class="badge ${est.clase}">${e(est.texto)}</span>`;
+        return `<article class="card centro-card" data-centro-card data-presupuesto-card>
+          <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
+            <span class="centro-resumen">
+              <span class="badge-row"><span class="badge ${est.clase}">${e(est.texto)}</span><span class="badge gray">${e(formatearMonto(pr.precio))}</span></span>
+              <span class="centro-nombre">${e(mostrarInsumo(pr.insumo))}</span>
+              <span class="meta">${e(t('needs.budgetLine', { cantidad: numero(pr.cantidad), presentacion: pr.presentacion || '', tienda: pr.tienda }))}</span>
+            </span>
+            <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="centro-more" hidden>
+            ${barraProgreso(numero(pr.recaudado), numero(pr.precio))}
+            <p class="meta">${e(t('needs.missing', { faltan: formatearMonto(faltan) }))}</p>
+            <p class="meta"><strong>${e(t('needs.storeLabel'))}</strong> ${e(pr.tienda)}${pr.direccion ? ' · ' + e(pr.direccion) : ''}</p>
+            <p class="meta"><strong>${e(t('needs.forCenter'))}</strong> ${e(pr.centro)}</p>
+            <div class="card-actions">${accion}</div>
+          </div>
+        </article>`;
+      }).join('');
+      bindTarjetasColapsables('#grid-presupuestos');
+      $$('[data-donar-dinero]').forEach((btn) => btn.addEventListener('click', () => {
+        const pr = (estado.presupuestos || []).find((x) => x.token === btn.dataset.donarDinero);
+        if (pr) abrirDonarDinero(pr);
+      }));
+    }
+
+    // ── Ciclo del transportista: recoger lo comprado y entregarlo ──
+    let cargandoComprados = false;
+    async function cargarComprados() {
+      if (cargandoComprados || !$('#grid-comprados')) return;
+      cargandoComprados = true;
+      try {
+        const r = await window.SheetsService.post({ accion: 'listar_comprados' });
+        estado.comprados = r.comprados || [];
+      } catch (err) { /* se reintenta en la próxima recarga */ }
+      cargandoComprados = false;
+      renderComprados();
+    }
+
+    function renderComprados() {
+      const cont = $('#grid-comprados');
+      if (!cont) return;
+      const lista = estado.comprados || [];
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty-state">${e(t('cycle.empty'))}</div>`;
+        return;
+      }
+      cont.innerHTML = lista.map((pr) => {
+        const est = estadoPresupuesto(pr.estado);
+        const boton = pr.estado === 'Comprada'
+          ? `<button class="btn btn-primary btn-small" type="button" data-recogida="${e(pr.token)}">${e(t('cycle.pickupCta'))}</button>`
+          : `<button class="btn btn-primary btn-small" type="button" data-entrega="${e(pr.token)}">${e(t('cycle.deliverCta'))}</button>`;
+        return `<article class="card centro-card" data-centro-card>
+          <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
+            <span class="centro-resumen">
+              <span class="badge-row"><span class="badge ${est.clase}">${e(est.texto)}</span></span>
+              <span class="centro-nombre">${e(mostrarInsumo(pr.insumo))}</span>
+              <span class="meta">${e(pr.tienda)} → ${e(pr.centro)}</span>
+            </span>
+            <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="centro-more" hidden>
+            <p class="meta">${e(t('needs.budgetLine', { cantidad: numero(pr.cantidad), presentacion: pr.presentacion || '', tienda: pr.tienda }))}</p>
+            <p class="meta"><strong>${e(t('cycle.pickupAt'))}</strong> ${e(pr.tienda)}${pr.direccion ? ' · ' + e(pr.direccion) : ''}</p>
+            <p class="meta"><strong>${e(t('cycle.deliverTo'))}</strong> ${e(pr.centro)}</p>
+            <div class="card-actions">${boton}</div>
+          </div>
+        </article>`;
+      }).join('');
+      bindTarjetasColapsables('#grid-comprados');
+      $$('[data-recogida]').forEach((btn) => btn.addEventListener('click', () => {
+        const pr = (estado.comprados || []).find((x) => x.token === btn.dataset.recogida);
+        if (pr) abrirRegistrarRecogida(pr);
+      }));
+      $$('[data-entrega]').forEach((btn) => btn.addEventListener('click', () => {
+        const pr = (estado.comprados || []).find((x) => x.token === btn.dataset.entrega);
+        if (pr) abrirRegistrarEntrega(pr);
+      }));
     }
 
     function abrirModal(titulo, contenido) {
