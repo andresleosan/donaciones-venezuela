@@ -205,6 +205,23 @@ function metaPresupuesto(descripcion: string): Record<string, unknown> | null {
   try { const o = JSON.parse(descripcion); return o && o.k === 'pres' ? o : null; } catch { return null; }
 }
 
+// Una OFERTA es una factura cuya descripcion lleva el JSON de un insumo que un
+// donante YA TIENE (cantidad, ubicación y teléfono para coordinar): el
+// transportista la ve localizada y la recoge para llevarla a un centro.
+function metaOferta(descripcion: string): Record<string, unknown> | null {
+  try { const o = JSON.parse(descripcion); return o && o.k === 'oferta' ? o : null; } catch { return null; }
+}
+
+function ofertaUI(f: Record<string, unknown>) {
+  const m = metaOferta(String(f.descripcion ?? ''));
+  if (!m) return null;
+  return {
+    token: f.token_publico, estado: f.estado,
+    insumo: m.insumo, cantidad: m.cantidad, unidad: m.unidad,
+    ubicacion: m.ubicacion, telefono: m.telefono, centro: m.centro,
+  };
+}
+
 function presupuestoUI(f: Record<string, unknown>) {
   const m = metaPresupuesto(String(f.descripcion ?? ''));
   if (!m) return null;
@@ -236,7 +253,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
   const esAdmin = accion.startsWith('admin_');
   // Las lecturas públicas no gastan el cupo de escrituras (30/h): navegar los
   // presupuestos o la lista de recogidas no debe bloquear el poder donar.
-  const esLectura = ['listar_presupuestos', 'listar_comprados'].includes(accion);
+  const esLectura = ['listar_presupuestos', 'listar_comprados', 'listar_ofertas'].includes(accion);
   if (esAdmin) await autenticarAdmin(p, req);
   else if (esLectura) {
     if (!(await rateHit(ipDe(req), 'lectura', 240))) throw new Error('Demasiadas solicitudes, intenta en una hora');
@@ -442,6 +459,59 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       await supa.from('facturas').update({ estado: 'Entregada', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
       await historial(String(m.centro), String(m.insumo), `Insumo comprado entregado en el centro. Recibió ${receptor}`, 'publico');
       return { estado: 'Entregada' };
+    }
+    // ===== Ofertas: un donante YA TIENE el insumo; el transportista lo recoge =====
+    case 'ofrecer_insumo': {
+      const insumo = s(p.insumo, 120);
+      const cantidad = n(p.cantidad);
+      const unidad = s(p.unidad, 30) || 'unidades';
+      const ubicacion = s(p.ubicacion, 160);
+      const telefono = s(p.telefono, 40);
+      const centro = s(p.centro, 120); // destino sugerido (opcional)
+      if (!insumo) throw new Error('insumo requerido');
+      if (cantidad <= 0 || cantidad > 1_000_000) throw new Error('cantidad inválida');
+      if (!ubicacion) throw new Error('ubicación requerida: el transportista debe saber dónde recogerlo');
+      if (telefono.replace(/[^0-9]/g, '').length < 7) throw new Error('teléfono requerido para coordinar la recogida');
+      const { data: seq3, error: eSeq3 } = await supa.rpc('factura_numero_siguiente');
+      if (eSeq3) throw eSeq3;
+      const numero = `FAC-${new Date().getFullYear()}-${String(seq3).padStart(6, '0')}`;
+      const token = tokenAlfa('DV');
+      const { data: fila, error } = await supa.from('facturas').insert({
+        numero_factura: numero, token_publico: token,
+        objetivo: s(`Oferta: ${insumo} (${ubicacion})`, 200),
+        descripcion: JSON.stringify({ k: 'oferta', insumo, cantidad, unidad, ubicacion, telefono, centro }),
+        monto_requerido: cantidad, estado: 'Ofrecida' }).select('id').single();
+      if (error) throw error;
+      await supa.from('movimientos_factura').insert({ factura_id: fila.id, tipo: 'Oferta',
+        descripcion: `Donación ofrecida: ${cantidad} ${unidad} de ${insumo} en ${ubicacion}. Esperando transportista.`, monto: cantidad });
+      await historial(centro || 'Donaciones ofrecidas', insumo, `Oferta de ${cantidad} ${unidad} en ${ubicacion}`, 'publico', cantidad);
+      return { token, numeroFactura: numero };
+    }
+    case 'listar_ofertas': {
+      const { data } = await supa.from('facturas')
+        .select('token_publico, descripcion, estado, fecha_creacion')
+        .like('descripcion', '{"k":"oferta"%')
+        .eq('estado', 'Ofrecida')
+        .order('fecha_creacion').limit(100);
+      return { ofertas: (data || []).map(ofertaUI).filter(Boolean) };
+    }
+    case 'recoger_oferta': {
+      const nombre = s(p.nombreTransportista, 120);
+      const centroDestino = s(p.centroDestino, 120);
+      if (!nombre) throw new Error('nombre del transportista requerido');
+      if (!centroDestino) throw new Error('centro de destino requerido');
+      const token = s(p.token, 24).toUpperCase();
+      const { data: f } = await supa.from('facturas')
+        .select('id, descripcion, estado').eq('token_publico', token).maybeSingle();
+      const m = f && metaOferta(String(f.descripcion));
+      if (!f || !m) throw new Error('Oferta no encontrada');
+      if (f.estado !== 'Ofrecida') throw new Error('Esta donación ya fue recogida');
+      const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Recogida',
+        descripcion: `${nombre} recogió la donación en ${m.ubicacion} para llevarla a ${centroDestino}.`, monto: 0 });
+      if (error) throw error;
+      await supa.from('facturas').update({ estado: 'Recogida', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
+      await historial(centroDestino, String(m.insumo), `Transportista ${nombre} recogió la donación ofrecida (${m.cantidad} ${m.unidad})`, 'publico', n(m.cantidad));
+      return { estado: 'Recogida' };
     }
     case 'reportar_persona': {
       if (!s(p.nombre)) throw new Error('nombre requerido');

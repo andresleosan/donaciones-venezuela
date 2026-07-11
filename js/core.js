@@ -152,8 +152,8 @@
       setText('#help-donar-copy', 'helpHub.donateCopy');
       setText('#help-voluntario-title', 'helpHub.volunteerTitle');
       setText('#help-voluntario-copy', 'helpHub.volunteerCopy');
-      setText('#help-dinero-title', 'helpHub.moneyTitle');
-      setText('#help-dinero-copy', 'helpHub.moneyCopy');
+      setText('#help-ofrecer-title', 'helpHub.offerTitle');
+      setText('#help-ofrecer-copy', 'helpHub.offerCopy');
       setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
       setText('#reportar-summary', 'helpHub.reportSummary');
       setText('#form-lugar-copy', 'centers.formCopy');
@@ -168,6 +168,8 @@
       setText('#btn-home-admin', 'home.adminCta');
       setText('#comprados-title', 'cycle.title');
       setText('#comprados-copy', 'cycle.copy');
+      setText('#ofertas-title', 'offer.listTitle');
+      setText('#ofertas-copy', 'offer.listCopy');
 
       // Puerta · Registrarme o entrar
       setText('#acceso-title', 'access.title');
@@ -450,7 +452,7 @@
 
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
-      presupuestos: [], comprados: [],
+      presupuestos: [], comprados: [], ofertas: [],
       filtros: {
         lugarQ: '', lugarTipo: 'todos', lugarCategoria: '', necesidadQ: '',
         volQ: '', volProfesion: '', volEstado: '',

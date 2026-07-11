@@ -111,7 +111,7 @@
             </span>
             <span class="door-text">
               <span class="door-title" id="door-ayudar-title">Quiero ayudar</span>
-              <span class="door-copy" id="door-ayudar-copy">Donar insumos, ser voluntario, aportar dinero</span>
+              <span class="door-copy" id="door-ayudar-copy">Donar insumos que ya tienes o ser voluntario</span>
             </span>
             <svg class="door-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -231,12 +231,12 @@
           <span class="help-title" id="help-voluntario-title">Ser voluntario</span>
           <span class="help-copy" id="help-voluntario-copy">Regístrate con tu zona y disponibilidad</span>
         </button>
-        <button type="button" class="help-card" data-view-link="seguimiento">
+        <button type="button" class="help-card" id="btn-tengo-insumo">
           <span class="door-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><rect x="3.5" y="6" width="17" height="12" rx="2.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17" stroke="currentColor" stroke-width="2"/><path d="M7 14.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><path d="M4 8.2 12 4l8 4.2v7.6L12 20l-8-4.2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 12v8M4 8.2 12 12l8-3.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 14.8l6-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </span>
-          <span class="help-title" id="help-dinero-title">Aportar dinero</span>
-          <span class="help-copy" id="help-dinero-copy">Campaña verificada, con seguimiento público</span>
+          <span class="help-title" id="help-ofrecer-title">Tengo un insumo para donar</span>
+          <span class="help-copy" id="help-ofrecer-copy">Di qué tienes, cuánto y dónde: un transportista lo recoge</span>
         </button>
       </div>
 
@@ -295,7 +295,7 @@
       <section class="section" aria-labelledby="necesidades-insumos-title">
         <div class="section-header">
           <div>
-            <h3 id="necesidades-insumos-title" class="section-title">O dona el insumo directamente</h3>
+            <h3 id="necesidades-insumos-title" class="section-title">¿Ya tienes el insumo? Ofrécelo aquí</h3>
           </div>
         </div>
         <p class="meta" id="conteo-necesidades" aria-live="polite"></p>
@@ -355,6 +355,16 @@
           </div>
         </div>
         <div id="grid-comprados" class="lista-centros" aria-live="polite"></div>
+      </section>
+
+      <section class="section" aria-labelledby="ofertas-title">
+        <div class="section-header">
+          <div>
+            <h3 id="ofertas-title" class="section-title">Donaciones ofrecidas, localizadas para recoger</h3>
+            <p class="section-copy" id="ofertas-copy">Personas que ya tienen el insumo y esperan que lo recojas: cantidad, ubicación y teléfono para coordinar. Llévalo a un centro que lo necesite.</p>
+          </div>
+        </div>
+        <div id="grid-ofertas" class="lista-centros" aria-live="polite"></div>
       </section>
 
       <section class="section" aria-labelledby="traslados-title">
@@ -682,9 +692,9 @@
 
   <script src="services/leaflet/leaflet.js"></script>
   <script src="services/api.js?v=5"></script>
-  <script src="js/core.js?v=25"></script>
-  <script src="js/vistas.js?v=25"></script>
-  <script src="js/panel.js?v=25"></script>
-  <script src="js/admin.js?v=25"></script>
+  <script src="js/core.js?v=26"></script>
+  <script src="js/vistas.js?v=26"></script>
+  <script src="js/panel.js?v=26"></script>
+  <script src="js/admin.js?v=26"></script>
 </body>
 </html>

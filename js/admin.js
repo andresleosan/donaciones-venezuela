@@ -261,61 +261,68 @@
       });
     }
 
-    // Donar a UNA necesidad concreta. Al guardar, la edge function devuelve el
-    // token público de la necesidad: con él el donante sigue cada movimiento
-    // hasta que el centro confirma la recepción.
-    function abrirDonarNecesidad(datos) {
-      const centro = datos.centro;
-      const insumo = datos.insumo;
-      const unidad = mostrarUnidad(datos.unidad);
-      const pendiente = numero(datos.pendiente);
-      abrirModal(t('needs.modalTitle'), `<form id="donar-necesidad-form" novalidate>
-        <p class="section-copy">${e(t('needs.modalCopy', { insumo: mostrarInsumo(insumo), centro }))}</p>
+    // «Tengo el insumo»: el donante ofrece algo que YA TIENE, con cantidad,
+    // ubicación y teléfono, para que un transportista lo recoja y lo lleve a
+    // un centro. Devuelve un token para seguir la donación.
+    function abrirOfrecerInsumo(datos) {
+      const pre = datos || {};
+      abrirModal(t('offer.modalTitle'), `<form id="ofrecer-form" novalidate>
+        <p class="section-copy">${e(pre.centro ? t('offer.modalCopyCentro', { insumo: mostrarInsumo(pre.insumo), centro: pre.centro }) : t('offer.modalCopy'))}</p>
         <div class="form-grid">
-          <div class="field"><label for="nec-cantidad">${e(t('needs.amountLabel', { unidad }))}</label><input id="nec-cantidad" type="number" min="1" step="1" value="${e(pendiente > 0 ? pendiente : 1)}" required /></div>
-          <div class="field"><label for="nec-nombre">${e(t('needs.donorLabel'))}</label><input id="nec-nombre" autocomplete="name" placeholder="${e(t('needs.donorPlaceholder'))}" /></div>
+          <div class="field"><label for="of-insumo">${e(t('offer.supplyLabel'))}</label><input id="of-insumo" required value="${e(pre.insumo || '')}" placeholder="${e(t('offer.supplyPh'))}" /></div>
+          <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
+          <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
+          <div class="field"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
+          <div class="field"><label for="of-telefono">${e(t('common.phone'))}</label><input id="of-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+          <div class="field"><label for="of-nombre">${e(t('needs.donorLabel'))}</label><input id="of-nombre" autocomplete="name" placeholder="${e(t('needs.donorPlaceholder'))}" /></div>
         </div>
-        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('needs.submit'))}</button></div>
-        <div id="nec-message" class="form-message" role="status" aria-live="polite"></div>
+        <p class="meta">${e(t('offer.privacyNote'))}</p>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.submit'))}</button></div>
+        <div id="of-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
-      $('#donar-necesidad-form').addEventListener('submit', async (ev) => {
+      $('#ofrecer-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
-        if (!validarFormulario(form, '#nec-message')) return;
-        const cantidad = numero($('#nec-cantidad').value);
-        if (cantidad <= 0) { mostrarMensaje('#nec-message', 'error', t('needs.invalidAmount')); return; }
+        if (!validarFormulario(form, '#of-message')) return;
+        const cantidad = numero($('#of-cantidad').value);
+        if (cantidad <= 0) { mostrarMensaje('#of-message', 'error', t('needs.invalidAmount')); return; }
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
-        mostrarMensaje('#nec-message', 'info', t('needs.saving'));
+        mostrarMensaje('#of-message', 'info', t('offer.saving'));
         try {
           const res = await window.SheetsService.post({
-            accion: 'donar_necesidad', centro, insumo, cantidad,
-            nombreDonante: $('#nec-nombre').value.trim()
+            accion: 'ofrecer_insumo',
+            insumo: $('#of-insumo').value.trim(), cantidad,
+            unidad: $('#of-unidad').value.trim(),
+            ubicacion: $('#of-ubicacion').value.trim(),
+            telefono: $('#of-telefono').value.trim(),
+            nombreDonante: $('#of-nombre').value.trim(),
+            centro: pre.centro || ''
           });
-          mostrarTokenNecesidad(res.token, insumo, centro);
-          cargarTodo();
+          mostrarTokenOferta(res.token);
+          cargarOfertas();
         } catch (err) {
           boton.disabled = false;
-          mostrarMensaje('#nec-message', 'error', String(err && err.message || t('needs.error')));
+          mostrarMensaje('#of-message', 'error', String(err && err.message || t('needs.error')));
         }
       });
     }
 
     // Reemplaza el formulario por el token: el donante debe poder copiarlo, así
     // que no vale un toast pasajero.
-    function mostrarTokenNecesidad(token, insumo, centro) {
+    function mostrarTokenOferta(token) {
       const cuerpo = $('#modal-root .modal-body');
       cuerpo.innerHTML = `<div class="token-result">
-        <h3>${e(t('needs.thanksTitle'))}</h3>
-        <p class="section-copy">${e(t('needs.thanksCopy', { insumo: mostrarInsumo(insumo), centro }))}</p>
+        <h3>${e(t('offer.thanksTitle'))}</h3>
+        <p class="section-copy">${e(t('offer.thanksCopy'))}</p>
         <p class="meta">${e(t('needs.tokenLabel'))}</p>
         <p class="token-value"><strong>${e(token)}</strong></p>
         <div class="card-actions">
-          <button class="btn btn-soft btn-small" type="button" id="nec-copiar">${e(t('needs.copyCta'))}</button>
-          <button class="btn btn-primary btn-small" type="button" id="nec-seguir">${e(t('needs.track'))}</button>
+          <button class="btn btn-soft btn-small" type="button" id="of-copiar">${e(t('needs.copyCta'))}</button>
+          <button class="btn btn-primary btn-small" type="button" id="of-seguir">${e(t('needs.track'))}</button>
         </div>
       </div>`;
-      $('#nec-copiar').addEventListener('click', async () => {
+      $('#of-copiar').addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(token);
           toast(t('needs.copied'));
@@ -323,9 +330,43 @@
           toast(token); // sin permiso de portapapeles: al menos queda a la vista
         }
       });
-      $('#nec-seguir').addEventListener('click', () => {
+      $('#of-seguir').addEventListener('click', () => {
         $('#modal-root dialog').close();
         buscarSeguimiento(token);
+      });
+    }
+
+    // El transportista reclama una oferta: su nombre + centro de destino.
+    function abrirRecogerOferta(of) {
+      abrirModal(t('offer.pickupTitle'), `<form id="recoger-oferta-form" novalidate>
+        <p class="section-copy">${e(t('offer.pickupCopy', { cantidad: numero(of.cantidad), unidad: mostrarUnidad(of.unidad), insumo: mostrarInsumo(of.insumo), ubicacion: of.ubicacion }))}</p>
+        <div class="form-grid">
+          <div class="field"><label for="rof-nombre">${e(t('cycle.driverName'))}</label><input id="rof-nombre" required autocomplete="name" /></div>
+          <div class="field"><label for="rof-centro">${e(t('offer.destLabel'))}</label><input id="rof-centro" required value="${e(of.centro || '')}" placeholder="${e(t('offer.destPh'))}" /></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.pickupSave'))}</button></div>
+        <div id="rof-message" class="form-message" role="status" aria-live="polite"></div>
+      </form>`);
+      $('#recoger-oferta-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        if (!validarFormulario(form, '#rof-message')) return;
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensaje('#rof-message', 'info', t('money.saving'));
+        try {
+          await window.SheetsService.post({
+            accion: 'recoger_oferta', token: of.token,
+            nombreTransportista: $('#rof-nombre').value.trim(),
+            centroDestino: $('#rof-centro').value.trim()
+          });
+          $('#modal-root dialog').close();
+          toast(t('offer.pickupSaved'));
+          cargarOfertas();
+        } catch (err) {
+          boton.disabled = false;
+          mostrarMensaje('#rof-message', 'error', String(err && err.message || t('needs.error')));
+        }
       });
     }
 
@@ -756,6 +797,9 @@
         if (meta && meta.k === 'pres') {
           descripcionVisible = t('needs.budgetLine', { cantidad: numero(meta.cantidad), presentacion: meta.presentacion || '', tienda: meta.tienda }) +
             (meta.direccion ? ' · ' + meta.direccion : '') + ' → ' + meta.centro;
+        } else if (meta && meta.k === 'oferta') {
+          // Vista pública del token: sin teléfono del donante
+          descripcionVisible = `${numero(meta.cantidad)} ${mostrarUnidad(meta.unidad)} · ${meta.ubicacion}${meta.centro ? ' → ' + meta.centro : ''}`;
         }
       } catch (err) { /* descripcion normal, se muestra tal cual */ }
       const porcentaje = Math.max(0, Math.min(100, numero(factura.porcentaje_completado != null ? factura.porcentaje_completado : factura.porcentaje)));
@@ -818,7 +862,7 @@
 
     function renderAll() {
       renderRegistrySummaries(); poblarCategorias(); renderLugares(); renderNecesidades(); renderVoluntarios(); renderRescatistas(); renderMotorizados(); renderTraslados(); renderDonations();
-      cargarPresupuestos(); cargarComprados(); // asíncronos: pintan sus grillas al llegar
+      cargarPresupuestos(); cargarComprados(); cargarOfertas(); // asíncronos: pintan sus grillas al llegar
     }
 
     async function cargarTodo() {
@@ -846,6 +890,8 @@
         const btn = $(sel);
         if (btn) btn.addEventListener('click', () => { window.location.href = ruta; });
       });
+      const btnTengoInsumo = $('#btn-tengo-insumo');
+      if (btnTengoInsumo) btnTengoInsumo.addEventListener('click', () => abrirOfrecerInsumo());
       const btnCerca = $('#btn-cerca');
       if (btnCerca) btnCerca.addEventListener('click', activarCercaDeMi);
       const btnMapaToggle = $('#btn-mapa-toggle');

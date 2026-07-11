@@ -329,7 +329,9 @@
         </article>`;
       }).join('') : `<div class="empty-state">${e(t('needs.empty'))}</div>`;
       bindTarjetasColapsables('#grid-necesidades');
-      $$('[data-donar-necesidad]').forEach((btn) => btn.addEventListener('click', () => abrirDonarNecesidad(btn.dataset)));
+      // «Lo tengo»: la donación en especie ahora se ofrece con cantidad,
+      // ubicación y teléfono para que un transportista pueda recogerla.
+      $$('[data-donar-necesidad]').forEach((btn) => btn.addEventListener('click', () => abrirOfrecerInsumo(btn.dataset)));
       renderPresupuestos(); // el buscador de esta vista filtra también los presupuestos
     }
 
@@ -400,6 +402,52 @@
       $$('[data-donar-dinero]').forEach((btn) => btn.addEventListener('click', () => {
         const pr = (estado.presupuestos || []).find((x) => x.token === btn.dataset.donarDinero);
         if (pr) abrirDonarDinero(pr);
+      }));
+    }
+
+    // ── Ofertas: donantes que YA TIENEN el insumo, localizadas para recoger ──
+    let cargandoOfertas = false;
+    async function cargarOfertas() {
+      if (cargandoOfertas || !$('#grid-ofertas')) return;
+      cargandoOfertas = true;
+      try {
+        const r = await window.SheetsService.post({ accion: 'listar_ofertas' });
+        estado.ofertas = r.ofertas || [];
+      } catch (err) { /* se reintenta en la próxima recarga */ }
+      cargandoOfertas = false;
+      renderOfertas();
+    }
+
+    function renderOfertas() {
+      const cont = $('#grid-ofertas');
+      if (!cont) return;
+      const lista = estado.ofertas || [];
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty-state">${e(t('offer.empty'))}</div>`;
+        return;
+      }
+      cont.innerHTML = lista.map((of) => `<article class="card centro-card" data-centro-card data-oferta-card>
+          <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
+            <span class="centro-resumen">
+              <span class="badge-row"><span class="badge green">${e(t('offer.badge'))}</span><span class="badge gray">${e(numero(of.cantidad))} ${e(mostrarUnidad(of.unidad))}</span></span>
+              <span class="centro-nombre">${e(mostrarInsumo(of.insumo))}</span>
+              <span class="meta">${e(of.ubicacion)}</span>
+            </span>
+            <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="centro-more" hidden>
+            <p class="meta"><strong>${e(t('offer.whereLabel'))}</strong> ${e(of.ubicacion)}</p>
+            ${of.centro ? `<p class="meta"><strong>${e(t('offer.suggestedCenter'))}</strong> ${e(of.centro)}</p>` : ''}
+            <div class="card-actions">
+              ${soloDigitos(of.telefono) ? `<a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${waHref(of.telefono)}">${e(t('common.whatsapp'))}</a>` : ''}
+              <button class="btn btn-primary btn-small" type="button" data-recoger-oferta="${e(of.token)}">${e(t('offer.pickupCta'))}</button>
+            </div>
+          </div>
+        </article>`).join('');
+      bindTarjetasColapsables('#grid-ofertas');
+      $$('[data-recoger-oferta]').forEach((btn) => btn.addEventListener('click', () => {
+        const of = (estado.ofertas || []).find((x) => x.token === btn.dataset.recogerOferta);
+        if (of) abrirRecogerOferta(of);
       }));
     }
 
