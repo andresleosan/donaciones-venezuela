@@ -880,6 +880,7 @@
 
       $('#edit-assistant-cancel').addEventListener('click', () => {
         pop.style.display = 'none';
+        if (inspectMode) setInspectMode(false);
       });
 
       $('#edit-assistant-copy').addEventListener('click', () => {
@@ -900,7 +901,10 @@
 
     function editAssistantDisponible() {
       if (new URLSearchParams(location.search).get('edit') === '0') return false;
-      return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname) || location.protocol === 'file:';
+      // El editor asistido forma parte de la herramienta de revisión de la app.
+      // Se mantiene disponible también en producción, como en el commit original;
+      // `?edit=0` permite ocultarlo cuando se necesite una vista limpia.
+      return true;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
