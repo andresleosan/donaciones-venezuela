@@ -150,7 +150,8 @@
     "various": "Divers",
     "other": "Autre",
     "others": "Autres",
-    "pending": "À confirmer"
+    "pending": "À confirmer",
+    "email": "E-mail"
   },
   "centers": {
     "title": "Centres d'aide",
@@ -197,8 +198,6 @@
     "needsShort": "Besoin : {items}"
   },
   "volunteers": {
-    "title": "Inscription des bénévoles",
-    "copy": "Inscription rapide, recherche et coordination des personnes disponibles pour l'aide locale.",
     "formTitle": "Données du bénévole",
     "formCopy": "Les informations sont stockées en toute sécurité dans la base de données de la plateforme.",
     "cityPlaceholder": "Caraballeda",
@@ -207,18 +206,9 @@
     "transport": "Moyen de transport",
     "observationsPlaceholder": "Zone, ressources, restrictions",
     "save": "Enregistrer le bénévole",
-    "summaryTitle": "Résumé des bénévoles",
     "registered": "inscrits",
     "zones": "zones",
     "withTransport": "avec transport",
-    "summaryCopy": "Priorisez les profils avec téléphone, ville et disponibilité confirmée.",
-    "listTitle": "Bénévoles inscrits",
-    "listCopy": "Filtrez par nom, emplacement ou profession pour une coordination directe.",
-    "searchLabel": "Rechercher un bénévole",
-    "searchPlaceholder": "Nom, ville, téléphone",
-    "stateFilterPlaceholder": "Filtrer par État",
-    "count": "Affichage de {shown} sur {total} bénévoles",
-    "empty": "Aucun bénévole ne correspond à ces filtres.",
     "defaultName": "Bénévole"
   },
   "rescuers": {
@@ -366,7 +356,8 @@
     "driverSaved": "Transporteur enregistré.",
     "driverPhotosMissing": "Photos manquantes : prends la plaque, le vehicule et ta carte d'identite.",
     "driverUploading": "Envoi des photos et enregistrement...",
-    "driverPhotoError": "Impossible d'envoyer les photos. Reessaie."
+    "driverPhotoError": "Impossible d'envoyer les photos. Reessaie.",
+    "volunteerPhotoMissing": "La photo de la pièce d’identité manque"
   },
   "validation": {
     "fieldFallback": "Ce champ",
@@ -386,7 +377,8 @@
       "Hospital": "Hôpital",
       "Refugio": "Refuge",
       "Punto de ayuda": "Point d'aide",
-      "Centro de acopio": "Centre de collecte"
+      "Centro de acopio": "Centre de collecte",
+      "Zona de derrumbe": "Zone d’effondrement"
     },
     "categories": {
       "Agua potable": "Eau potable",
@@ -856,7 +848,24 @@
     "budgetPresentationPh": "Boîte de 20 comprimés de 250 mg",
     "budgetPrice": "Prix total",
     "budgetCreate": "Créer le devis",
-    "budgetCreated": "Devis créé. Il est maintenant visible pour les donateurs."
+    "budgetCreated": "Devis créé. Il est maintenant visible pour les donateurs.",
+    "vacancyTitle": "Postes de bénévolat",
+    "vacancyIntro": "Publiez quels bénévoles sont nécessaires et où ; ils apparaissent aussitôt dans la section publique.",
+    "vacancyPlace": "Nom du lieu",
+    "vacancyPlacePh": "Hôpital central de San Cristóbal",
+    "vacancyRole": "Rôle recherché",
+    "vacancyRolePh": "Médecin généraliste, logistique, cuisine…",
+    "vacancyQty": "Personnes nécessaires",
+    "vacancyShift": "Horaire",
+    "vacancyShiftPh": "Jour 7h–15h",
+    "vacancyDescPh": "Exigences, quoi apporter, à qui se présenter…",
+    "vacancyCreate": "Publier le poste",
+    "vacancyCreated": "Poste publié.",
+    "vacancyList": "Postes publiés",
+    "vacancyCovered": "Pourvus",
+    "vacancySave": "Enregistrer",
+    "vacancyClose": "Fermer le poste",
+    "vacancyNone": "Pas encore de postes."
   },
   "lugar": {},
   "home": {
@@ -899,7 +908,7 @@
     "donateTitle": "Donner des fournitures",
     "donateCopy": "Vois ce qui manque et où le livrer",
     "volunteerTitle": "Être bénévole",
-    "volunteerCopy": "Inscris-toi avec ta zone et ta disponibilité",
+    "volunteerCopy": "Voyez où on a besoin de vous et quel profil est recherché.",
     "rescuerCta": "Je suis secouriste ou équipe de secours",
     "reportSummary": "Signaler une info obsolète ou un centre",
     "offerTitle": "J'ai une fourniture à donner",
@@ -971,7 +980,29 @@
     "centerTitle": "Centre ou équipe",
     "centerCopy": "Entrez dans votre panneau avec jeton + PIN, ou enregistrez un nouveau centre.",
     "centerCta": "Entrer dans le panneau",
-    "centerCreateCta": "Enregistrer un nouveau centre"
+    "centerCreateCta": "Enregistrer un nouveau centre",
+    "loginTitle": "J’ai déjà un compte",
+    "loginCopy": "Saisissez votre e-mail et nous vous envoyons un code à 6 chiffres pour entrer. Valable pour transporteurs, bénévoles et centres.",
+    "sendCode": "Envoyer le code",
+    "codeLabel": "Code à 6 chiffres",
+    "enter": "Entrer",
+    "changeEmail": "Utiliser un autre e-mail",
+    "loginCta": "J’ai un compte : entrer",
+    "centerRecoverCta": "Récupérer mon accès par e-mail",
+    "sending": "Envoi du code vers votre e-mail…",
+    "codeSent": "Code envoyé à {email}. Vérifiez votre boîte (et le spam) et collez-le ici.",
+    "sendError": "Impossible d’envoyer le code. Réessayez dans une minute.",
+    "verifying": "Vérification du code…",
+    "verifyError": "Code incorrect ou expiré. Demandez-en un nouveau après 60 minutes.",
+    "codeFormat": "Le code comporte 6 chiffres, tel qu’il est arrivé dans votre e-mail.",
+    "noRoles": "Cet e-mail n’a aucun enregistrement. Inscrivez-vous d’abord comme transporteur, bénévole ou centre.",
+    "welcome": "Identité vérifiée. Voici votre profil :",
+    "signedInAs": "Session vérifiée : {email}",
+    "signOut": "Fermer la session",
+    "signedOut": "Session fermée.",
+    "goDriver": "Voir les transferts et collectes",
+    "goVolunteer": "Voir les bénévoles",
+    "goCenter": "Ouvrir mon panneau"
   },
   "money": {
     "modalTitle": "Donner de l'argent",
@@ -1040,5 +1071,23 @@
     "destPh": "Nom du centre qui en a besoin",
     "pickupSave": "Confirmer le retrait",
     "pickupSaved": "Retrait enregistré. Merci pour le transport !"
+  },
+  "vacancies": {
+    "title": "Bénévoles recherchés",
+    "copy": "Chaque carte est un poste réel demandé par un centre, un hôpital, un refuge ou une zone d’effondrement. Voyez où on a le plus besoin de vous et inscrivez-vous.",
+    "kpiMissing": "places à pourvoir",
+    "kpiUrgent": "postes urgents",
+    "kpiPlaces": "lieux demandent de l’aide",
+    "searchLabel": "Rechercher",
+    "searchPlaceholder": "Rôle, lieu ou zone…",
+    "placeTypeLabel": "Type de lieu",
+    "registerSummary": "Prêt à aider ? Inscrivez-vous comme bénévole",
+    "count": "{shown} sur {total} postes",
+    "empty": "Aucun poste publié pour le moment. Revenez bientôt.",
+    "noMatch": "Aucun poste ne correspond aux filtres.",
+    "slotsMissing": "Il manque {count}",
+    "slotsOf": "{covered} sur {total} pourvus",
+    "shiftLabel": "Horaire",
+    "applyCta": "Je m’inscris"
   }
 }

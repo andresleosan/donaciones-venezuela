@@ -52,7 +52,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=13">
+  <link rel="stylesheet" href="css/app.css?v=14">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -229,7 +229,7 @@
             <svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 20c.6-3.6 3.2-5.6 6.5-5.6s5.9 2 6.5 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </span>
           <span class="help-title" id="help-voluntario-title">Ser voluntario</span>
-          <span class="help-copy" id="help-voluntario-copy">Regístrate con tu zona y disponibilidad</span>
+          <span class="help-copy" id="help-voluntario-copy">Mira dónde te necesitan y qué perfil hace falta</span>
         </button>
         <button type="button" class="help-card" id="btn-tengo-insumo">
           <span class="door-icon" aria-hidden="true">
@@ -312,16 +312,40 @@
         </div>
       </div>
 
+      <div class="gate-card" id="acceso-login-card">
+        <h3 id="acceso-login-title">Ya estoy registrado</h3>
+        <p class="section-copy" id="acceso-login-copy">Escribe tu correo y te enviamos un código de 6 dígitos para entrar. Sirve para transportistas, voluntarios y centros.</p>
+        <form id="acceso-email-form" novalidate>
+          <div class="form-grid">
+            <div class="field"><label for="acceso-email">Correo electrónico</label><input id="acceso-email" type="email" required autocomplete="email" placeholder="tu@correo.com" /></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit" id="acceso-enviar-btn">Enviarme el código</button></div>
+        </form>
+        <form id="acceso-codigo-form" hidden>
+          <div class="form-grid">
+            <div class="field"><label for="acceso-codigo">Código de 6 dígitos</label><input id="acceso-codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="123456" /></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit" id="acceso-entrar-btn">Entrar</button>
+            <button class="btn btn-ghost" type="button" id="acceso-otro-correo">Usar otro correo</button>
+          </div>
+        </form>
+        <div id="acceso-msg" class="form-message" role="status" aria-live="polite"></div>
+        <div id="acceso-perfil" hidden></div>
+      </div>
+
       <div class="gate-card">
         <h3 id="acceso-transportista-title">Transportista</h3>
         <p class="section-copy" id="acceso-transportista-copy">Registra tu vehículo y tu zona para mover insumos entre centros.</p>
         <button type="button" class="btn btn-primary" id="btn-acceso-transportista">Registrarme como transportista</button>
+        <button type="button" class="btn btn-ghost js-acceso-entrar" id="btn-acceso-entrar-transportista">Ya tengo cuenta: entrar</button>
       </div>
 
       <div class="gate-card">
         <h3 id="acceso-voluntario-title">Voluntario</h3>
         <p class="section-copy" id="acceso-voluntario-copy">Regístrate con tu zona, profesión y disponibilidad.</p>
         <button type="button" class="btn btn-primary" data-view-link="voluntarios" id="btn-acceso-voluntario">Registrarme como voluntario</button>
+        <button type="button" class="btn btn-ghost js-acceso-entrar" id="btn-acceso-entrar-voluntario">Ya tengo cuenta: entrar</button>
       </div>
 
       <div class="gate-card">
@@ -329,6 +353,7 @@
         <p class="section-copy" id="acceso-centro-copy">Entra a tu panel con token + PIN, o registra un centro nuevo.</p>
         <button type="button" class="btn btn-primary" id="btn-acceso-panel">Entrar al panel</button>
         <button type="button" class="btn btn-ghost" id="btn-acceso-crear-centro">Registrar centro nuevo</button>
+        <button type="button" class="btn btn-ghost js-acceso-entrar" id="btn-acceso-entrar-centro">Recuperar mi acceso por correo</button>
       </div>
     </section>
 
@@ -421,13 +446,27 @@
     <section id="view-voluntarios" class="view" data-view="voluntarios" aria-labelledby="voluntarios-title">
       <div class="section-header">
         <div>
-          <h2 id="voluntarios-title" class="section-title">Registro de Voluntarios</h2>
-          <p class="section-copy">Alta rápida, búsqueda y coordinación de personas disponibles para apoyo local.</p>
+          <h2 id="voluntarios-title" class="section-title">Voluntarios que se necesitan</h2>
+          <p class="section-copy">Centros, hospitales, refugios y zonas de derrumbe piden estos perfiles. Mira dónde haces más falta y coordina directo.</p>
         </div>
       </div>
 
-      <div class="registry-shell volunteer-shell">
-        <section class="form-panel" aria-labelledby="vol-form-title">
+      <div class="vac-resumen" id="vac-resumen" hidden aria-live="polite">
+        <span class="vac-kpi"><strong id="vac-kpi-cupos">0</strong> <span id="vac-kpi-cupos-lbl">voluntarios faltan</span></span>
+        <span class="vac-kpi vac-kpi-alta"><strong id="vac-kpi-urgentes">0</strong> <span id="vac-kpi-urgentes-lbl">con urgencia alta</span></span>
+        <span class="vac-kpi"><strong id="vac-kpi-lugares">0</strong> <span id="vac-kpi-lugares-lbl">lugares piden ayuda</span></span>
+      </div>
+
+      <div class="filters" role="search" aria-label="Filtros de vacantes de voluntariado">
+        <div class="field"><label for="filtro-vac-q">Buscar</label><input id="filtro-vac-q" type="search" placeholder="Rol, lugar o zona" autocomplete="off" /></div>
+        <div class="field"><label for="filtro-vac-tipo">Tipo de lugar</label><select id="filtro-vac-tipo"><option value="">Todos</option><option>Centro</option><option>Hospital</option><option>Refugio</option><option>Zona de derrumbe</option></select></div>
+        <div class="field"><label for="filtro-vac-urgencia">Urgencia</label><select id="filtro-vac-urgencia"><option value="">Todas</option><option>Alta</option><option>Normal</option><option>Baja</option></select></div>
+      </div>
+      <p class="meta" id="conteo-vacantes" aria-live="polite"></p>
+      <div id="grid-vacantes" class="grid" aria-live="polite"><div class="loading-grid"><div class="skeleton"></div><div class="skeleton"></div></div></div>
+
+      <details class="form-panel vol-registro" id="vol-registro-details">
+        <summary id="vol-registro-summary">¿Listo para ayudar? Regístrate como voluntario</summary>
           <h3 id="vol-form-title">Datos del voluntario</h3>
           <p class="section-copy">La información se envía al registro de voluntarios de la plataforma.</p>
           <form id="voluntario-form" novalidate>
@@ -435,45 +474,21 @@
               <div class="field"><label for="vol-nombre">Nombre</label><input id="vol-nombre" required autocomplete="given-name" /></div>
               <div class="field"><label for="vol-apellido">Apellido</label><input id="vol-apellido" autocomplete="family-name" /></div>
               <div class="field"><label for="vol-telefono">Teléfono</label><input id="vol-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+              <div class="field"><label for="vol-email">Correo electrónico</label><input id="vol-email" type="email" required autocomplete="email" placeholder="tu@correo.com" /></div>
               <div class="field"><label for="vol-ciudad">Ciudad</label><input id="vol-ciudad" autocomplete="address-level2" placeholder="Caraballeda" /></div>
               <div class="field"><label for="vol-estado">Estado</label><input id="vol-estado" autocomplete="address-level1" placeholder="La Guaira" /></div>
               <div class="field"><label for="vol-profesion">Profesión</label><select id="vol-profesion"><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
               <div class="field"><label for="vol-disponibilidad">Disponibilidad</label><input id="vol-disponibilidad" placeholder="Hoy, mañana, fines de semana" /></div>
               <div class="field"><label for="vol-transporte">Medio de transporte</label><select id="vol-transporte"><option value="">Por confirmar</option><option>A pie</option><option>Bicicleta</option><option>Moto</option><option>Carro</option><option>Camioneta</option><option>Transporte público</option><option>Ambulancia o unidad médica</option><option>Otro</option></select></div>
               <div class="field full"><label for="vol-observaciones">Observaciones</label><textarea id="vol-observaciones" placeholder="Zona, recursos, restricciones"></textarea></div>
+              <div class="field full foto-field"><label for="vol-cedula">Foto de tu cédula</label>
+                <input id="vol-cedula" type="file" accept="image/*" capture="environment" required />
+                <img id="vol-cedula-prev" class="foto-prev" alt="" hidden /></div>
             </div>
             <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar voluntario</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
             <div id="vol-message" class="form-message" role="status" aria-live="polite"></div>
           </form>
-        </section>
-
-        <aside class="registry-side" aria-labelledby="vol-summary-title">
-          <h3 id="vol-summary-title">Resumen de voluntarios</h3>
-          <div class="meta-grid">
-            <span><strong id="vol-resumen-total">0</strong> registrados</span>
-            <span><strong id="vol-resumen-zonas">0</strong> zonas</span>
-            <span><strong id="vol-resumen-transporte">0</strong> con transporte</span>
-            <span><strong id="vol-resumen-actualizado">sin fecha</strong></span>
-          </div>
-          <p class="meta">Prioriza perfiles con teléfono, ciudad y disponibilidad confirmada.</p>
-        </aside>
-      </div>
-
-      <section class="section" aria-labelledby="vol-list-title">
-        <div class="section-header">
-          <div>
-            <h3 id="vol-list-title" class="section-title">Voluntarios registrados</h3>
-            <p class="section-copy">Filtra por nombre, ubicación o profesión para coordinación directa.</p>
-          </div>
-        </div>
-        <div class="filters" role="search" aria-label="Filtros de voluntarios">
-          <div class="field"><label for="filtro-vol-q">Buscar voluntario</label><input id="filtro-vol-q" type="search" placeholder="Nombre, ciudad, teléfono" /></div>
-          <div class="field"><label for="filtro-vol-profesion">Profesión</label><select id="filtro-vol-profesion"><option value="">Todos</option><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
-          <div class="field"><label for="filtro-vol-estado">Estado</label><input id="filtro-vol-estado" placeholder="Filtrar por estado" /></div>
-        </div>
-        <p class="meta" id="conteo-voluntarios" aria-live="polite"></p>
-        <div id="grid-voluntarios" class="grid" aria-live="polite"></div>
-      </section>
+      </details>
     </section>
 
     <section id="view-rescatistas" class="view" data-view="rescatistas" aria-labelledby="rescatistas-title">
@@ -691,10 +706,10 @@
   <div id="modal-root"></div>
 
   <script src="services/leaflet/leaflet.js"></script>
-  <script src="services/api.js?v=5"></script>
-  <script src="js/core.js?v=26"></script>
-  <script src="js/vistas.js?v=26"></script>
-  <script src="js/panel.js?v=26"></script>
-  <script src="js/admin.js?v=26"></script>
+  <script src="services/api.js?v=7"></script>
+  <script src="js/core.js?v=28"></script>
+  <script src="js/vistas.js?v=28"></script>
+  <script src="js/panel.js?v=28"></script>
+  <script src="js/admin.js?v=28"></script>
 </body>
 </html>

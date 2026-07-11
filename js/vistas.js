@@ -132,11 +132,78 @@
       });
     }
 
-    function renderVoluntarios() {
+    // ── Tablero de vacantes: qué voluntarios se necesitan y dónde ──
+    // Ordena por urgencia y cupos faltantes: quien quiere ayudar ve primero
+    // dónde hace más falta. Los datos llegan de la vista vacantes_public.
+    function renderVacantes() {
+      const cont = $('#grid-vacantes');
+      if (!cont) return;
       const f = estado.filtros;
-      const lista = filtrarLista(estado.voluntarios, f.volQ, f.volEstado, f.volProfesion, 'profesion');
-      $('#conteo-voluntarios').textContent = t('volunteers.count', { shown: lista.length, total: estado.voluntarios.length });
-      $('#grid-voluntarios').innerHTML = lista.length ? lista.map((v) => personaCard(v, 'voluntario')).join('') : `<div class="empty-state">${e(t('volunteers.empty'))}</div>`;
+      const q = normalizar(f.vacQ);
+      const peso = { Alta: 0, Normal: 1, Baja: 2 };
+      const lista = (estado.vacantes || []).filter((v) => {
+        if (q && !normalizar([v.rol, v.lugar_nombre, v.ubicacion, v.descripcion].join(' ')).includes(q)) return false;
+        if (f.vacTipo && v.lugar_tipo !== f.vacTipo) return false;
+        if (f.vacUrgencia && v.urgencia !== f.vacUrgencia) return false;
+        return true;
+      }).sort((a, b) => (peso[a.urgencia] ?? 1) - (peso[b.urgencia] ?? 1) || numero(b.cupos_faltantes) - numero(a.cupos_faltantes));
+
+      // KPIs sobre TODAS las vacantes abiertas (no cambian al filtrar)
+      const todas = estado.vacantes || [];
+      const resumen = $('#vac-resumen');
+      if (resumen) {
+        resumen.hidden = !todas.length;
+        $('#vac-kpi-cupos').textContent = todas.reduce((s2, v) => s2 + numero(v.cupos_faltantes), 0);
+        $('#vac-kpi-urgentes').textContent = todas.filter((v) => v.urgencia === 'Alta').length;
+        $('#vac-kpi-lugares').textContent = contarUnicos(todas, 'lugar_nombre');
+      }
+
+      $('#conteo-vacantes').textContent = todas.length
+        ? t('vacancies.count', { shown: lista.length, total: todas.length }) : '';
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty-state">${e(t(todas.length ? 'vacancies.noMatch' : 'vacancies.empty'))}</div>`;
+        return;
+      }
+      cont.innerHTML = lista.map((v) => {
+        const faltan = numero(v.cupos_faltantes);
+        const total = numero(v.cantidad_necesaria);
+        const pct = total > 0 ? Math.max(0, Math.min(100, Math.round(100 * numero(v.cantidad_cubierta) / total))) : 0;
+        const esDerrumbe = v.lugar_tipo === 'Zona de derrumbe';
+        return `<article class="card vac-card${v.urgencia === 'Alta' ? ' vac-alta' : ''}">
+          <div class="badge-row">
+            <span class="badge ${v.urgencia === 'Alta' ? 'red' : v.urgencia === 'Baja' ? 'gray' : 'yellow'}">${e(mostrarUrgencia(v.urgencia))}</span>
+            <span class="badge ${esDerrumbe ? 'rescue' : 'gray'}">${e(tValue('types', v.lugar_tipo) || v.lugar_tipo)}</span>
+          </div>
+          <h4 class="vac-rol">${e(mostrarProfesion(v.rol))}</h4>
+          <p class="vac-lugar"><strong>${e(v.lugar_nombre)}</strong>${v.ubicacion ? ` · ${e(v.ubicacion)}` : ''}</p>
+          <div class="vac-cupos">
+            <div class="supply-line"><span class="vac-faltan">${e(t('vacancies.slotsMissing', { count: faltan }))}</span><span class="meta">${e(t('vacancies.slotsOf', { covered: numero(v.cantidad_cubierta), total }))}</span></div>
+            <div class="progress" role="progressbar" aria-label="${e(t('vacancies.slotsOf', { covered: numero(v.cantidad_cubierta), total }))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${e(pct)}"><span style="--value:${e(pct)}%"></span></div>
+          </div>
+          ${v.turno ? `<p class="meta"><strong>${e(t('vacancies.shiftLabel'))}</strong> ${e(v.turno)}</p>` : ''}
+          ${v.descripcion ? `<p class="meta">${e(v.descripcion)}</p>` : ''}
+          <div class="card-actions">
+            ${soloDigitos(v.telefono) ? `<a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${waHref(v.telefono)}">${e(t('common.whatsapp'))}</a>` : ''}
+            <button class="btn btn-primary btn-small" type="button" data-vac-postular="${e(v.rol)}">${e(t('vacancies.applyCta'))}</button>
+          </div>
+        </article>`;
+      }).join('');
+      // «Me registro»: abre el formulario plegado, pre-llena la profesión si
+      // coincide con una opción y lleva el foco al primer campo.
+      $$('[data-vac-postular]').forEach((btn) => btn.addEventListener('click', () => {
+        const det = $('#vol-registro-details');
+        if (!det) return;
+        det.open = true;
+        const sel = $('#vol-profesion');
+        if (sel) {
+          const rol = normalizar(btn.dataset.vacPostular);
+          const opcion = Array.from(sel.options).find((o) => o.value !== 'Otro' && rol.indexOf(normalizar(o.value)) === 0);
+          sel.value = opcion ? opcion.value : 'Otro';
+        }
+        det.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const nombre = $('#vol-nombre');
+        if (nombre) nombre.focus({ preventScroll: true });
+      }));
     }
 
     function renderRescatistas() {

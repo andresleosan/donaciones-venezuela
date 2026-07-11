@@ -17,6 +17,13 @@ const CORS = {
 const s = (v: unknown, max = 300) => String(v ?? '').trim().slice(0, max);
 const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
 
+// Correo normalizado (minúsculas) o '' si no es válido. Se guarda normalizado
+// para que la búsqueda por igualdad en acceso_perfil siempre coincida.
+function emailNorm(v: unknown): string {
+  const x = s(v, 254).toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(x) ? x : '';
+}
+
 function ipDe(req: Request): string {
   return s(req.headers.get('x-forwarded-for')?.split(',')[0] || 'desconocida', 64);
 }
@@ -253,7 +260,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
   const esAdmin = accion.startsWith('admin_');
   // Las lecturas públicas no gastan el cupo de escrituras (30/h): navegar los
   // presupuestos o la lista de recogidas no debe bloquear el poder donar.
-  const esLectura = ['listar_presupuestos', 'listar_comprados', 'listar_ofertas'].includes(accion);
+  const esLectura = ['listar_presupuestos', 'listar_comprados', 'listar_ofertas', 'acceso_perfil'].includes(accion);
   if (esAdmin) await autenticarAdmin(p, req);
   else if (esLectura) {
     if (!(await rateHit(ipDe(req), 'lectura', 240))) throw new Error('Demasiadas solicitudes, intenta en una hora');
@@ -277,8 +284,14 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
     }
     case 'registrar_voluntario': {
       if (!s(p.nombre)) throw new Error('nombre requerido');
+      const email = emailNorm(p.email);
+      if (!email) throw new Error('correo electrónico válido requerido');
+      if (s(p.telefono, 40).replace(/[^0-9]/g, '').length < 7) throw new Error('teléfono requerido');
+      if (!p.fotoCedula) throw new Error('Falta la foto de la cédula');
+      const id = s(p.id, 40) || 'VOL' + crypto.randomUUID().slice(0, 8);
+      const foto_cedula = await guardarFoto(p.fotoCedula, `voluntarios/${id}`, 'cedula');
       const { error } = await supa.from('voluntarios').insert({
-        id: s(p.id, 40) || 'VOL' + crypto.randomUUID().slice(0, 8),
+        id, email, foto_cedula,
         nombre: s(p.nombre, 120), apellido: s(p.apellido, 120), telefono: s(p.telefono, 40),
         estado: s(p.estado, 60), ciudad: s(p.ciudad, 80), profesion: s(p.profesion, 80),
         disponibilidad: s(p.disponibilidad, 120),
@@ -302,6 +315,9 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
     }
     case 'registrar_motorizado': {
       if (!s(p.nombre)) throw new Error('nombre requerido');
+      const email = emailNorm(p.email);
+      if (!email) throw new Error('correo electrónico válido requerido');
+      if (s(p.telefono, 40).replace(/[^0-9]/g, '').length < 7) throw new Error('teléfono requerido');
       if (!p.fotoPlaca || !p.fotoVehiculo || !p.fotoCedula) {
         throw new Error('Faltan fotos: placa, vehículo y cédula son obligatorias');
       }
@@ -310,7 +326,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const foto_vehiculo = await guardarFoto(p.fotoVehiculo, id, 'vehiculo');
       const foto_cedula = await guardarFoto(p.fotoCedula, id, 'cedula');
       const { error } = await supa.from('motorizados').insert({
-        id, nombre: s(p.nombre, 120), tipo_vehiculo: s(p.tipoVehiculo ?? p.tipo_vehiculo, 40) || 'Moto',
+        id, email, nombre: s(p.nombre, 120), tipo_vehiculo: s(p.tipoVehiculo ?? p.tipo_vehiculo, 40) || 'Moto',
         telefono: s(p.telefono, 40), zona_operacion: s(p.zonaOperacion ?? p.operaEn, 120),
         placa: s(p.placa, 20), foto_placa, foto_vehiculo, foto_cedula });
       if (error) throw error;
@@ -513,6 +529,29 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       await historial(centroDestino, String(m.insumo), `Transportista ${nombre} recogió la donación ofrecida (${m.cantidad} ${m.unidad})`, 'publico', n(m.cantidad));
       return { estado: 'Recogida' };
     }
+    // ===== Acceso por correo (OTP de Supabase Auth) =====
+    // El frontend pide el código con /auth/v1/otp y lo canjea con /auth/v1/verify;
+    // aquí llega el access_token resultante. Se valida contra Auth y se devuelven
+    // los roles registrados con ese correo. El token del panel del centro solo se
+    // entrega a quien demostró (vía OTP) controlar el correo del registro; el PIN
+    // sigue siendo obligatorio para actuar.
+    case 'acceso_perfil': {
+      const jwt = s(p.accessToken, 4000);
+      if (!jwt) throw new Error('sesión requerida');
+      const { data: udata, error: eU } = await supa.auth.getUser(jwt);
+      const email = udata?.user?.email?.toLowerCase() || '';
+      if (eU || !email) throw new Error('Sesión inválida o vencida, vuelve a pedir un código');
+      const roles: Record<string, unknown>[] = [];
+      const { data: mots } = await supa.from('motorizados').select('nombre').eq('email', email);
+      for (const m of mots || []) roles.push({ tipo: 'transportista', nombre: m.nombre });
+      const { data: vols } = await supa.from('voluntarios').select('nombre, apellido').eq('email', email);
+      for (const v of vols || []) roles.push({ tipo: 'voluntario', nombre: `${v.nombre} ${v.apellido || ''}`.trim() });
+      const { data: pans } = await supa.from('centros_panel').select('token_centro, lugares(nombre)').eq('email', email);
+      for (const c of pans || []) {
+        roles.push({ tipo: 'centro', nombre: (c as { lugares?: { nombre?: string } }).lugares?.nombre || 'Centro', token: c.token_centro });
+      }
+      return { email, roles };
+    }
     case 'reportar_persona': {
       if (!s(p.nombre)) throw new Error('nombre requerido');
       const { error } = await supa.from('personas').insert({
@@ -529,6 +568,10 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (!/^[0-9]{4,8}$/.test(pin)) throw new Error('El PIN debe tener de 4 a 8 dígitos');
       const nombre = s(p.nombre, 120);
       if (!nombre) throw new Error('nombre requerido');
+      const email = emailNorm(p.email);
+      if (!email) throw new Error('correo electrónico válido requerido');
+      if (s(p.telefono, 40).replace(/[^0-9]/g, '').length < 7) throw new Error('teléfono requerido');
+      if (!p.fotoCedula) throw new Error('Falta la foto de la cédula de la persona responsable');
       // SEGURIDAD: solo se puede auto-crear el panel de un centro NUEVO. Reclamar de
       // forma anonima el panel de un centro ya listado permitiria secuestrar un
       // hospital conocido y sabotear sus necesidades. Para un centro existente, el
@@ -538,10 +581,12 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         throw new Error('Este centro ya está registrado. Pide al administrador que genere el acceso del panel.');
       }
       const lugar = await obtenerOCrearLugar(p); // crea el centro nuevo
+      const foto_cedula = await guardarFoto(p.fotoCedula, `centros/${lugar.id}`, 'cedula');
       const token = tokenAlfa('CTR');
       const salt = crypto.randomUUID();
       const { error: e2 } = await supa.from('centros_panel').insert({
-        lugar_id: lugar.id, token_centro: token, pin_hash: await sha256Hex(salt + pin), pin_salt: salt });
+        lugar_id: lugar.id, token_centro: token, pin_hash: await sha256Hex(salt + pin), pin_salt: salt,
+        email, foto_cedula });
       if (e2) throw e2;
       await historial(nombre, '', 'Panel de centro creado', 'panel');
       return { token };
@@ -613,6 +658,45 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (error) throw error;
       await historial('Administración', '', `Factura ${numero} creada: ${objetivo}`, 'admin');
       return { numeroFactura: numero, token };
+    }
+    case 'admin_crear_vacante': {
+      // Vacante de voluntariado: qué perfil se necesita, cuántos y dónde
+      // (centro/hospital/refugio o zona de derrumbe con dirección libre).
+      const lugarTipo = ['Centro', 'Hospital', 'Refugio', 'Zona de derrumbe'].includes(s(p.lugarTipo, 40))
+        ? s(p.lugarTipo, 40) : 'Centro';
+      const lugarNombre = s(p.lugarNombre, 120);
+      const rol = s(p.rol, 80);
+      const cantidad = n(p.cantidad);
+      if (!lugarNombre) throw new Error('nombre del lugar o zona requerido');
+      if (!rol) throw new Error('tipo de voluntario requerido');
+      if (cantidad <= 0 || cantidad > 10_000) throw new Error('cantidad inválida');
+      const { data: fila, error } = await supa.from('vacantes_voluntarios').insert({
+        lugar_tipo: lugarTipo, lugar_nombre: lugarNombre, ubicacion: s(p.ubicacion, 160),
+        rol, descripcion: s(p.descripcion, 400), cantidad_necesaria: cantidad,
+        urgencia: ['Alta', 'Normal', 'Baja'].includes(s(p.urgencia, 12)) ? s(p.urgencia, 12) : 'Normal',
+        turno: s(p.turno, 80), telefono: s(p.telefono, 40) }).select('id').single();
+      if (error) throw error;
+      await historial(lugarNombre, '', `Vacante de voluntariado: ${cantidad} × ${rol} (${lugarTipo})`, 'admin', cantidad);
+      return { id: fila.id };
+    }
+    case 'admin_actualizar_vacante': {
+      // Actualiza cupos cubiertos y/o estado de una vacante existente.
+      const id = n(p.id);
+      if (id <= 0) throw new Error('id requerido');
+      const campos: Record<string, unknown> = { actualizado: new Date().toISOString() };
+      if (p.cantidadCubierta != null) campos.cantidad_cubierta = Math.max(0, n(p.cantidadCubierta));
+      if (['Abierta', 'Cubierta', 'Cerrada'].includes(s(p.estado, 20))) campos.estado = s(p.estado, 20);
+      const { data: fila, error } = await supa.from('vacantes_voluntarios')
+        .update(campos).eq('id', id).select('id, lugar_nombre, rol, estado, cantidad_cubierta').single();
+      if (error) throw error;
+      await historial(fila.lugar_nombre, '', `Vacante ${fila.rol}: ${fila.estado}, ${fila.cantidad_cubierta} cubiertos`, 'admin');
+      return {};
+    }
+    case 'admin_listar_vacantes': {
+      const { data } = await supa.from('vacantes_voluntarios')
+        .select('id, lugar_tipo, lugar_nombre, ubicacion, rol, cantidad_necesaria, cantidad_cubierta, urgencia, turno, estado')
+        .order('fecha_creacion', { ascending: false }).limit(100);
+      return { vacantes: data || [] };
     }
     case 'admin_crear_presupuesto': {
       // Cotización de un insumo necesitado en una tienda concreta. Puede haber

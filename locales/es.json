@@ -150,7 +150,8 @@
     "various": "Varios",
     "other": "Otro",
     "others": "Otros",
-    "pending": "Por confirmar"
+    "pending": "Por confirmar",
+    "email": "Correo electrónico"
   },
   "centers": {
     "title": "Centros de ayuda",
@@ -197,8 +198,6 @@
     "needsShort": "Necesita: {items}"
   },
   "volunteers": {
-    "title": "Registro de Voluntarios",
-    "copy": "Alta rápida, búsqueda y coordinación de personas disponibles para apoyo local.",
     "formTitle": "Datos del voluntario",
     "formCopy": "La información se guarda de forma segura en la base de datos de la plataforma.",
     "cityPlaceholder": "Caraballeda",
@@ -207,18 +206,9 @@
     "transport": "Medio de transporte",
     "observationsPlaceholder": "Zona, recursos, restricciones",
     "save": "Guardar voluntario",
-    "summaryTitle": "Resumen de voluntarios",
     "registered": "registrados",
     "zones": "zonas",
     "withTransport": "con transporte",
-    "summaryCopy": "Prioriza perfiles con teléfono, ciudad y disponibilidad confirmada.",
-    "listTitle": "Voluntarios registrados",
-    "listCopy": "Filtra por nombre, ubicación o profesión para coordinación directa.",
-    "searchLabel": "Buscar voluntario",
-    "searchPlaceholder": "Nombre, ciudad, teléfono",
-    "stateFilterPlaceholder": "Filtrar por estado",
-    "count": "Mostrando {shown} de {total} voluntarios",
-    "empty": "No hay voluntarios con esos filtros.",
     "defaultName": "Voluntario"
   },
   "rescuers": {
@@ -366,7 +356,8 @@
     "driverSaved": "Transportista registrado.",
     "driverPhotosMissing": "Faltan fotos: toma la placa, el vehiculo y tu cedula.",
     "driverUploading": "Subiendo fotos y guardando registro...",
-    "driverPhotoError": "No se pudieron subir las fotos. Intenta de nuevo."
+    "driverPhotoError": "No se pudieron subir las fotos. Intenta de nuevo.",
+    "volunteerPhotoMissing": "Falta la foto de la cédula"
   },
   "validation": {
     "fieldFallback": "Este campo",
@@ -386,7 +377,8 @@
       "Hospital": "Hospital",
       "Refugio": "Refugio",
       "Punto de ayuda": "Punto de ayuda",
-      "Centro de acopio": "Centro de acopio"
+      "Centro de acopio": "Centro de acopio",
+      "Zona de derrumbe": "Zona de derrumbe"
     },
     "categories": {
       "Agua potable": "Agua potable",
@@ -856,7 +848,24 @@
     "budgetPresentationPh": "Caja de 20 pastillas de 250 mg",
     "budgetPrice": "Precio total",
     "budgetCreate": "Crear presupuesto",
-    "budgetCreated": "Presupuesto creado. Ya es visible para los donantes."
+    "budgetCreated": "Presupuesto creado. Ya es visible para los donantes.",
+    "vacancyTitle": "Vacantes de voluntariado",
+    "vacancyIntro": "Publica qué voluntarios se necesitan y dónde; aparecen al instante en la sección pública.",
+    "vacancyPlace": "Nombre del lugar",
+    "vacancyPlacePh": "Hospital Central de San Cristóbal",
+    "vacancyRole": "Rol que se necesita",
+    "vacancyRolePh": "Médico general, logística, cocina…",
+    "vacancyQty": "Personas necesarias",
+    "vacancyShift": "Turno u horario",
+    "vacancyShiftPh": "Diurno 7am–3pm",
+    "vacancyDescPh": "Requisitos, qué llevar, a quién presentarse…",
+    "vacancyCreate": "Publicar vacante",
+    "vacancyCreated": "Vacante publicada.",
+    "vacancyList": "Vacantes publicadas",
+    "vacancyCovered": "Cubiertos",
+    "vacancySave": "Guardar",
+    "vacancyClose": "Cerrar vacante",
+    "vacancyNone": "Sin vacantes todavía."
   },
   "lugar": {},
   "home": {
@@ -899,7 +908,7 @@
     "donateTitle": "Donar insumos",
     "donateCopy": "Ve qué falta y en qué centro entregarlo",
     "volunteerTitle": "Ser voluntario",
-    "volunteerCopy": "Regístrate con tu zona y disponibilidad",
+    "volunteerCopy": "Mira dónde te necesitan y qué perfil hace falta.",
     "rescuerCta": "Soy rescatista o equipo de rescate",
     "reportSummary": "Reportar un dato desactualizado o un centro",
     "offerTitle": "Tengo un insumo para donar",
@@ -971,7 +980,29 @@
     "centerTitle": "Centro o equipo",
     "centerCopy": "Entra a tu panel con token + PIN, o registra un centro nuevo.",
     "centerCta": "Entrar al panel",
-    "centerCreateCta": "Registrar centro nuevo"
+    "centerCreateCta": "Registrar centro nuevo",
+    "loginTitle": "Ya estoy registrado",
+    "loginCopy": "Escribe tu correo y te enviamos un código de 6 dígitos para entrar. Sirve para transportistas, voluntarios y centros.",
+    "sendCode": "Enviarme el código",
+    "codeLabel": "Código de 6 dígitos",
+    "enter": "Entrar",
+    "changeEmail": "Usar otro correo",
+    "loginCta": "Ya tengo cuenta: entrar",
+    "centerRecoverCta": "Recuperar mi acceso por correo",
+    "sending": "Enviando el código a tu correo…",
+    "codeSent": "Código enviado a {email}. Revisa tu bandeja (y el spam) y pégalo aquí.",
+    "sendError": "No se pudo enviar el código. Intenta de nuevo en un minuto.",
+    "verifying": "Verificando el código…",
+    "verifyError": "Código incorrecto o vencido. Pide uno nuevo si pasaron más de 60 minutos.",
+    "codeFormat": "El código son 6 dígitos, tal como llegó a tu correo.",
+    "noRoles": "Este correo no tiene registros. Regístrate primero como transportista, voluntario o centro.",
+    "welcome": "Identidad verificada. Este es tu perfil:",
+    "signedInAs": "Sesión verificada como {email}",
+    "signOut": "Cerrar sesión",
+    "signedOut": "Sesión cerrada.",
+    "goDriver": "Ver traslados y recogidas",
+    "goVolunteer": "Ver voluntarios",
+    "goCenter": "Entrar a mi panel"
   },
   "money": {
     "modalTitle": "Donar dinero",
@@ -1040,5 +1071,23 @@
     "destPh": "Nombre del centro que lo necesita",
     "pickupSave": "Confirmar recogida",
     "pickupSaved": "Recogida registrada. ¡Gracias por el traslado!"
+  },
+  "vacancies": {
+    "title": "Voluntarios que se necesitan",
+    "copy": "Cada tarjeta es un puesto real que un centro, hospital, refugio o zona de derrumbe pidió cubrir. Mira dónde hace más falta y regístrate.",
+    "kpiMissing": "cupos por cubrir",
+    "kpiUrgent": "vacantes urgentes",
+    "kpiPlaces": "lugares piden ayuda",
+    "searchLabel": "Buscar",
+    "searchPlaceholder": "Rol, lugar o zona…",
+    "placeTypeLabel": "Tipo de lugar",
+    "registerSummary": "¿Listo para ayudar? Regístrate como voluntario",
+    "count": "{shown} de {total} vacantes",
+    "empty": "Aún no hay vacantes publicadas. Vuelve pronto.",
+    "noMatch": "Ninguna vacante coincide con los filtros.",
+    "slotsMissing": "Faltan {count}",
+    "slotsOf": "{covered} de {total} cubiertos",
+    "shiftLabel": "Turno",
+    "applyCta": "Me registro"
   }
 }

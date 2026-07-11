@@ -32,6 +32,7 @@
       historial: [],
       facturas: [],
       donacionesHumanitarias: [],
+      vacantes: [],
       estadisticas: {}
     };
   }
@@ -88,14 +89,15 @@
 
   async function getAll() {
     try {
-      const [lugares, voluntarios, rescatistas, motorizados, estadisticas, traslados] = await Promise.all([
+      const [lugares, voluntarios, rescatistas, motorizados, estadisticas, traslados, vacantes] = await Promise.all([
         rest('lugares_directorio', '?order=nombre'),
         rest('voluntarios_public', '?order=fecha_registro.desc'),
         rest('rescatistas_public', '?order=fecha_registro.desc'),
         rest('motorizados_public', '?order=fecha_registro.desc'),
         rpc('estadisticas'),
         // catch propio: si la vista falta, el resto de la app sigue viva
-        rest('traslados_sugeridos', '?order=actualizado.desc&limit=30').catch(() => [])
+        rest('traslados_sugeridos', '?order=actualizado.desc&limit=30').catch(() => []),
+        rest('vacantes_public', '?order=fecha_creacion.desc&limit=100').catch(() => [])
       ]);
       const data = Object.assign(emptyAll(), {
         lugares: lugares || [],
@@ -104,7 +106,8 @@
         rescatistas: (rescatistas || []).map(rescatistaUI),
         motorizados: (motorizados || []).map(motorizadoUI),
         estadisticas: estadisticas || {},
-        traslados: traslados || []
+        traslados: traslados || [],
+        vacantes: vacantes || []
       });
       return { data, source: 'live' };
     } catch (err) {
@@ -140,6 +143,30 @@
     }
   }
 
+  // ── Acceso por correo: OTP de Supabase Auth (código de 6 dígitos) ──
+  async function authPost(path, body) {
+    assertConfigured();
+    const resp = await fetch(config.supabaseUrl + '/auth/v1/' + path, {
+      method: 'POST',
+      headers: { apikey: config.supabaseKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) {
+      throw new Error((data && (data.msg || data.error_description || data.message)) || 'HTTP ' + resp.status);
+    }
+    return data;
+  }
+
+  function solicitarCodigo(email) {
+    return authPost('otp', { email: email, create_user: true });
+  }
+
+  // Devuelve la sesión de Supabase Auth ({ access_token, user, … }).
+  function verificarCodigo(email, codigo) {
+    return authPost('verify', { type: 'email', email: email, token: codigo });
+  }
+
   async function post(payload) {
     // 45s: los registros con fotos (transportistas) suben ~1-2MB en móvil
     const data = await fetchJson('/functions/v1/api', {
@@ -166,6 +193,8 @@
       '?order=fecha.desc' + (lugar ? '&lugar=eq.' + encodeURIComponent(lugar) : '')),
     getFamiliares,
     getSeguimiento,
+    solicitarCodigo,
+    verificarCodigo,
     post
   };
 })(window);

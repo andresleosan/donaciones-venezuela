@@ -150,7 +150,8 @@
     "various": "Various",
     "other": "Other",
     "others": "Other",
-    "pending": "To confirm"
+    "pending": "To confirm",
+    "email": "Email"
   },
   "centers": {
     "title": "Aid centers",
@@ -197,8 +198,6 @@
     "needsShort": "Needs: {items}"
   },
   "volunteers": {
-    "title": "Volunteer Registration",
-    "copy": "Fast intake, search, and coordination for people available for local support.",
     "formTitle": "Volunteer details",
     "formCopy": "The information is stored securely in the platform database.",
     "cityPlaceholder": "Caraballeda",
@@ -207,18 +206,9 @@
     "transport": "Transport method",
     "observationsPlaceholder": "Area, resources, restrictions",
     "save": "Save volunteer",
-    "summaryTitle": "Volunteer summary",
     "registered": "registered",
     "zones": "zones",
     "withTransport": "with transport",
-    "summaryCopy": "Prioritize profiles with phone, city, and confirmed availability.",
-    "listTitle": "Registered volunteers",
-    "listCopy": "Filter by name, location, or profession for direct coordination.",
-    "searchLabel": "Search volunteer",
-    "searchPlaceholder": "Name, city, phone",
-    "stateFilterPlaceholder": "Filter by state",
-    "count": "Showing {shown} of {total} volunteers",
-    "empty": "No volunteers match those filters.",
     "defaultName": "Volunteer"
   },
   "rescuers": {
@@ -366,7 +356,8 @@
     "driverSaved": "Transporter registered.",
     "driverPhotosMissing": "Photos missing: take the plate, the vehicle and your ID card.",
     "driverUploading": "Uploading photos and saving...",
-    "driverPhotoError": "The photos could not be uploaded. Try again."
+    "driverPhotoError": "The photos could not be uploaded. Try again.",
+    "volunteerPhotoMissing": "The ID photo is missing"
   },
   "validation": {
     "fieldFallback": "This field",
@@ -386,7 +377,8 @@
       "Hospital": "Hospital",
       "Refugio": "Shelter",
       "Punto de ayuda": "Aid point",
-      "Centro de acopio": "Collection center"
+      "Centro de acopio": "Collection center",
+      "Zona de derrumbe": "Collapse zone"
     },
     "categories": {
       "Agua potable": "Drinking water",
@@ -856,7 +848,24 @@
     "budgetPresentationPh": "Box of 20 pills, 250 mg each",
     "budgetPrice": "Total price",
     "budgetCreate": "Create budget",
-    "budgetCreated": "Budget created. It is now visible to donors."
+    "budgetCreated": "Budget created. It is now visible to donors.",
+    "vacancyTitle": "Volunteer postings",
+    "vacancyIntro": "Publish which volunteers are needed and where; they appear instantly in the public section.",
+    "vacancyPlace": "Place name",
+    "vacancyPlacePh": "San Cristóbal Central Hospital",
+    "vacancyRole": "Role needed",
+    "vacancyRolePh": "General physician, logistics, cooking…",
+    "vacancyQty": "People needed",
+    "vacancyShift": "Shift or schedule",
+    "vacancyShiftPh": "Day shift 7am–3pm",
+    "vacancyDescPh": "Requirements, what to bring, who to report to…",
+    "vacancyCreate": "Publish posting",
+    "vacancyCreated": "Posting published.",
+    "vacancyList": "Published postings",
+    "vacancyCovered": "Filled",
+    "vacancySave": "Save",
+    "vacancyClose": "Close posting",
+    "vacancyNone": "No postings yet."
   },
   "lugar": {},
   "home": {
@@ -899,7 +908,7 @@
     "donateTitle": "Donate supplies",
     "donateCopy": "See what's missing and where to deliver it",
     "volunteerTitle": "Volunteer",
-    "volunteerCopy": "Sign up with your area and availability",
+    "volunteerCopy": "See where you are needed and what profile is required.",
     "rescuerCta": "I'm a rescuer or rescue team",
     "reportSummary": "Report outdated info or a center",
     "offerTitle": "I have a supply to donate",
@@ -971,7 +980,29 @@
     "centerTitle": "Center or team",
     "centerCopy": "Enter your panel with token + PIN, or register a new center.",
     "centerCta": "Enter the panel",
-    "centerCreateCta": "Register a new center"
+    "centerCreateCta": "Register a new center",
+    "loginTitle": "I already have an account",
+    "loginCopy": "Enter your email and we will send you a 6-digit code to sign in. Works for drivers, volunteers and centers.",
+    "sendCode": "Send me the code",
+    "codeLabel": "6-digit code",
+    "enter": "Sign in",
+    "changeEmail": "Use another email",
+    "loginCta": "I have an account: sign in",
+    "centerRecoverCta": "Recover my access by email",
+    "sending": "Sending the code to your email…",
+    "codeSent": "Code sent to {email}. Check your inbox (and spam) and paste it here.",
+    "sendError": "Could not send the code. Try again in a minute.",
+    "verifying": "Verifying the code…",
+    "verifyError": "Wrong or expired code. Request a new one if more than 60 minutes have passed.",
+    "codeFormat": "The code is 6 digits, exactly as it arrived in your email.",
+    "noRoles": "This email has no registrations. Register first as a driver, volunteer or center.",
+    "welcome": "Identity verified. This is your profile:",
+    "signedInAs": "Signed in as {email}",
+    "signOut": "Sign out",
+    "signedOut": "Signed out.",
+    "goDriver": "See transfers and pickups",
+    "goVolunteer": "See volunteers",
+    "goCenter": "Open my panel"
   },
   "money": {
     "modalTitle": "Donate money",
@@ -1040,5 +1071,23 @@
     "destPh": "Name of the center that needs it",
     "pickupSave": "Confirm pickup",
     "pickupSaved": "Pickup registered. Thanks for the transport!"
+  },
+  "vacancies": {
+    "title": "Volunteers needed",
+    "copy": "Each card is a real post that a center, hospital, shelter or collapse zone asked to fill. See where you are needed most and sign up.",
+    "kpiMissing": "open slots",
+    "kpiUrgent": "urgent postings",
+    "kpiPlaces": "places asking for help",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Role, place or area…",
+    "placeTypeLabel": "Place type",
+    "registerSummary": "Ready to help? Sign up as a volunteer",
+    "count": "{shown} of {total} postings",
+    "empty": "No postings published yet. Check back soon.",
+    "noMatch": "No posting matches the filters.",
+    "slotsMissing": "{count} needed",
+    "slotsOf": "{covered} of {total} filled",
+    "shiftLabel": "Shift",
+    "applyCta": "Sign me up"
   }
 }

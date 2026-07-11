@@ -244,15 +244,30 @@
             <div class="field"><label for="pc-nombre">${e(t('panel.nameLabel'))}</label><input id="pc-nombre" required /></div>
             <div class="field"><label for="pc-tipo">${e(t('panel.typeLabel'))}</label><select id="pc-tipo"><option value="Centro">${e(tValue('types', 'Centro') || 'Centro')}</option><option value="Hospital">${e(tValue('types', 'Hospital') || 'Hospital')}</option><option value="Refugio">${e(tValue('types', 'Refugio') || 'Refugio')}</option></select></div>
             <div class="field"><label for="pc-ubicacion">${e(t('panel.locationLabel'))}</label><input id="pc-ubicacion" /></div>
-            <div class="field"><label for="pc-telefono">${e(t('panel.phoneLabel'))}</label><input id="pc-telefono" type="tel" /></div>
+            <div class="field"><label for="pc-telefono">${e(t('panel.phoneLabel'))}</label><input id="pc-telefono" type="tel" required /></div>
+            <div class="field"><label for="pc-email">${e(t('common.email'))}</label><input id="pc-email" type="email" required autocomplete="email" /></div>
             <div class="field"><label for="pc-pin">${e(t('panel.pinNewLabel'))}</label><input id="pc-pin" type="password" inputmode="numeric" required minlength="4" maxlength="8" /></div>
+            ${campoFoto('pc-cedula', 'modal.photoId')}
           </div>
           <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('panel.create'))}</button></div>
           <div id="panel-crear-msg" class="form-message"></div>
         </form>`);
+      $('#pc-cedula').addEventListener('change', (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        const prev = $('#pc-cedula-prev');
+        if (!file) { prev.hidden = true; return; }
+        prev.src = URL.createObjectURL(file);
+        prev.hidden = false;
+      });
       $('#panel-crear-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const msg = $('#panel-crear-msg');
+        const archivoCedula = $('#pc-cedula').files && $('#pc-cedula').files[0];
+        if (!archivoCedula) {
+          msg.className = 'form-message visible error';
+          msg.textContent = t('messages.volunteerPhotoMissing');
+          return;
+        }
         msg.className = 'form-message visible info';
         msg.textContent = t('panel.creating');
         try {
@@ -262,6 +277,8 @@
             tipo: $('#pc-tipo').value,
             ubicacion: $('#pc-ubicacion').value.trim(),
             telefono: $('#pc-telefono').value.trim(),
+            email: $('#pc-email').value.trim(),
+            fotoCedula: await comprimirFoto(archivoCedula),
             pin: $('#pc-pin').value.trim()
           });
           $('#panel-crear-form').innerHTML = `

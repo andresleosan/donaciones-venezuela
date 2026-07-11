@@ -57,6 +57,10 @@
       try {
         personas = (await postAdmin({ accion: 'admin_listar_personas' })).personas || [];
       } catch (err) { /* la lista de personas no bloquea el módulo */ }
+      let vacantes = [];
+      try {
+        vacantes = (await postAdmin({ accion: 'admin_listar_vacantes' })).vacantes || [];
+      } catch (err) { /* la lista de vacantes no bloquea el módulo */ }
       const filaFactura = (f) => `
         <div class="supply-item"><div class="supply-line">
           <strong>${e(f.numero_factura)}</strong>
@@ -84,6 +88,34 @@
           </div>
           <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="adm-crear">${e(t('admin.create'))}</button></div>
         </div>
+        <h3>${e(t('admin.vacancyTitle'))}</h3>
+        <p class="meta">${e(t('admin.vacancyIntro'))}</p>
+        <div class="panel-insumo">
+          <div class="form-grid">
+            <div class="field"><label>${e(t('vacancies.placeTypeLabel'))}</label><select id="vac-tipo"><option>Centro</option><option>Hospital</option><option>Refugio</option><option>Zona de derrumbe</option></select></div>
+            <div class="field"><label>${e(t('admin.vacancyPlace'))}</label><input id="vac-lugar" placeholder="${e(t('admin.vacancyPlacePh'))}" /></div>
+            <div class="field"><label>${e(t('panel.locationLabel'))}</label><input id="vac-ubicacion" /></div>
+            <div class="field"><label>${e(t('admin.vacancyRole'))}</label><input id="vac-rol" placeholder="${e(t('admin.vacancyRolePh'))}" /></div>
+            <div class="field"><label>${e(t('admin.vacancyQty'))}</label><input id="vac-cantidad" type="number" min="1" /></div>
+            <div class="field"><label>${e(t('panel.urgency'))}</label><select id="vac-urgencia"><option value="Alta">${e(tValue('urgency', 'Alta'))}</option><option value="Normal" selected>${e(tValue('urgency', 'Normal'))}</option><option value="Baja">${e(tValue('urgency', 'Baja'))}</option></select></div>
+            <div class="field"><label>${e(t('admin.vacancyShift'))}</label><input id="vac-turno" placeholder="${e(t('admin.vacancyShiftPh'))}" /></div>
+            <div class="field"><label>${e(t('common.phone'))}</label><input id="vac-telefono" type="tel" /></div>
+            <div class="field full"><label>${e(t('admin.description'))}</label><input id="vac-descripcion" placeholder="${e(t('admin.vacancyDescPh'))}" /></div>
+          </div>
+          <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="vac-crear">${e(t('admin.vacancyCreate'))}</button></div>
+        </div>
+        <h3>${e(t('admin.vacancyList'))} (${vacantes.length})</h3>
+        ${vacantes.map((v) => `
+        <div class="supply-item"><div class="supply-line">
+          <strong>${e(v.rol)} · ${e(v.lugar_nombre)}</strong>
+          <span class="badge ${v.estado === 'Abierta' ? 'green' : 'gray'}">${e(v.estado)}</span></div>
+          <p class="meta">${e(tValue('types', v.lugar_tipo) || v.lugar_tipo)} · ${e(mostrarUrgencia(v.urgencia))} · ${e(String(v.cantidad_cubierta))} / ${e(String(v.cantidad_necesaria))}${v.turno ? ' · ' + e(v.turno) : ''}</p>
+          <div class="inline-actions">
+            <label class="field-mini"><span>${e(t('admin.vacancyCovered'))}</span><input type="number" min="0" value="${e(v.cantidad_cubierta)}" data-vac-cubiertos="${e(String(v.id))}" /></label>
+            <button class="btn btn-soft btn-small" type="button" data-vac-guardar="${e(String(v.id))}">${e(t('admin.vacancySave'))}</button>
+            ${v.estado === 'Abierta' ? `<button class="btn btn-ghost btn-small" type="button" data-vac-cerrar="${e(String(v.id))}">${e(t('admin.vacancyClose'))}</button>` : ''}
+          </div>
+        </div>`).join('') || `<p class="meta">${e(t('admin.vacancyNone'))}</p>`}
         <h3>${e(t('admin.budgetTitle'))}</h3>
         <p class="meta">${e(t('admin.budgetIntro'))}</p>
         <div class="panel-insumo">
@@ -158,6 +190,30 @@
           $('#adm-factura-sel').textContent = r.numeroFactura + ' · ' + r.token;
         } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
       });
+      $('#vac-crear').addEventListener('click', async () => {
+        try {
+          await postAdmin({ accion: 'admin_crear_vacante',
+            lugarTipo: $('#vac-tipo').value, lugarNombre: $('#vac-lugar').value.trim(),
+            ubicacion: $('#vac-ubicacion').value.trim(), rol: $('#vac-rol').value.trim(),
+            cantidad: $('#vac-cantidad').value, urgencia: $('#vac-urgencia').value,
+            turno: $('#vac-turno').value.trim(), telefono: $('#vac-telefono').value.trim(),
+            descripcion: $('#vac-descripcion').value.trim() });
+          await refrescarAdmin(`<div class="notice success visible">${e(t('admin.vacancyCreated'))}</div>`);
+        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      });
+      $$('#admin-body [data-vac-guardar]').forEach((btn) => btn.addEventListener('click', async () => {
+        try {
+          await postAdmin({ accion: 'admin_actualizar_vacante', id: btn.dataset.vacGuardar,
+            cantidadCubierta: $(`[data-vac-cubiertos="${btn.dataset.vacGuardar}"]`).value });
+          await refrescarAdmin();
+        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      }));
+      $$('#admin-body [data-vac-cerrar]').forEach((btn) => btn.addEventListener('click', async () => {
+        try {
+          await postAdmin({ accion: 'admin_actualizar_vacante', id: btn.dataset.vacCerrar, estado: 'Cerrada' });
+          await refrescarAdmin();
+        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      }));
       $('#pre-crear').addEventListener('click', async () => {
         try {
           const r = await postAdmin({ accion: 'admin_crear_presupuesto',
@@ -558,7 +614,7 @@
     }
 
     function abrirRegistrarMotorizado() {
-      abrirModal(t('modal.driverTitle'), `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><select id="mot-tipo"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div><div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><input id="mot-telefono" type="tel" /></div><div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><input id="mot-placa" /></div></div><p class="meta">${e(t('modal.photosIntro'))}</p><div class="form-grid">${campoFoto('mot-foto-placa', 'modal.photoPlate')}${campoFoto('mot-foto-vehiculo', 'modal.photoVehicle')}${campoFoto('mot-foto-cedula', 'modal.photoId')}</div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div><div id="mot-message" class="form-message" role="status" aria-live="polite"></div></form>`);
+      abrirModal(t('modal.driverTitle'), `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><select id="mot-tipo"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div><div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><input id="mot-telefono" type="tel" required /></div><div class="field"><label for="mot-email">${e(t('common.email'))}</label><input id="mot-email" type="email" required autocomplete="email" /></div><div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><input id="mot-placa" /></div></div><p class="meta">${e(t('modal.photosIntro'))}</p><div class="form-grid">${campoFoto('mot-foto-placa', 'modal.photoPlate')}${campoFoto('mot-foto-vehiculo', 'modal.photoVehicle')}${campoFoto('mot-foto-cedula', 'modal.photoId')}</div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div><div id="mot-message" class="form-message" role="status" aria-live="polite"></div></form>`);
       ['mot-foto-placa', 'mot-foto-vehiculo', 'mot-foto-cedula'].forEach((id) => {
         $('#' + id).addEventListener('change', (ev) => {
           const file = ev.target.files && ev.target.files[0];
@@ -581,7 +637,7 @@
         mostrarMensaje('#mot-message', 'info', t('messages.driverUploading'));
         try {
           const [fotoPlaca, fotoVehiculo, fotoCedula] = await Promise.all(archivos.map(comprimirFoto));
-          const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), fotoPlaca, fotoVehiculo, fotoCedula };
+          const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), email: $('#mot-email').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), fotoPlaca, fotoVehiculo, fotoCedula };
           await window.SheetsService.post(Object.assign({ accion: 'registrar_motorizado' }, nuevo));
           await cargarTodo();
           $('#modal-root dialog').close();
@@ -591,6 +647,106 @@
           mostrarMensaje('#mot-message', 'error', String(err && err.message || t('messages.driverPhotoError')));
         }
       });
+    }
+
+    // ── Acceso por correo: código de 6 dígitos (Supabase Auth OTP) ──
+    // La sesión vive en sessionStorage (solo esta pestaña): { email, roles }.
+    const ACCESO_SS = 'dv-acceso';
+
+    function sesionAcceso() {
+      try { return JSON.parse(window.sessionStorage.getItem(ACCESO_SS) || 'null'); } catch (err) { return null; }
+    }
+
+    function pintarPerfilAcceso() {
+      const cont = $('#acceso-perfil');
+      if (!cont) return;
+      const ses = sesionAcceso();
+      const formEmail = $('#acceso-email-form');
+      const formCodigo = $('#acceso-codigo-form');
+      if (!ses) { cont.hidden = true; cont.innerHTML = ''; formCodigo.hidden = true; formEmail.hidden = false; return; }
+      formEmail.hidden = true;
+      formCodigo.hidden = true;
+      const filas = (ses.roles || []).map((r) => {
+        if (r.tipo === 'transportista') {
+          return `<li><strong>${e(t('access.driverTitle'))}</strong> · ${e(r.nombre)} — <a href="#transporte">${e(t('access.goDriver'))}</a></li>`;
+        }
+        if (r.tipo === 'voluntario') {
+          return `<li><strong>${e(t('access.volunteerTitle'))}</strong> · ${e(r.nombre)} — <a href="#voluntarios">${e(t('access.goVolunteer'))}</a></li>`;
+        }
+        return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="/panel-centro?token=${e(encodeURIComponent(r.token || ''))}">${e(t('access.goCenter'))}</a></li>`;
+      }).join('');
+      cont.innerHTML = `
+        <p class="meta">${e(t('access.signedInAs', { email: ses.email }))}</p>
+        <ul class="acceso-roles">${filas}</ul>
+        <div class="form-actions"><button class="btn btn-ghost" type="button" id="acceso-salir">${e(t('access.signOut'))}</button></div>`;
+      cont.hidden = false;
+      $('#acceso-salir').addEventListener('click', () => {
+        try { window.sessionStorage.removeItem(ACCESO_SS); } catch (err) { /* modo privado */ }
+        mostrarMensaje('#acceso-msg', 'info', t('access.signedOut'));
+        pintarPerfilAcceso();
+      });
+    }
+
+    function bindAcceso() {
+      const formEmail = $('#acceso-email-form');
+      if (!formEmail) return; // la página-ventana no tiene la vista acceso
+      const formCodigo = $('#acceso-codigo-form');
+      let correo = '';
+      formEmail.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        if (!validarFormulario(formEmail, '#acceso-msg')) return;
+        correo = $('#acceso-email').value.trim().toLowerCase();
+        const boton = $('#acceso-enviar-btn');
+        boton.disabled = true;
+        mostrarMensaje('#acceso-msg', 'info', t('access.sending'));
+        try {
+          await window.SheetsService.solicitarCodigo(correo);
+          formEmail.hidden = true;
+          formCodigo.hidden = false;
+          $('#acceso-codigo').focus();
+          mostrarMensaje('#acceso-msg', 'success', t('access.codeSent', { email: correo }));
+        } catch (err) {
+          mostrarMensaje('#acceso-msg', 'error', String(err && err.message || t('access.sendError')));
+        } finally { boton.disabled = false; }
+      });
+      $('#acceso-otro-correo').addEventListener('click', () => {
+        formCodigo.hidden = true;
+        formEmail.hidden = false;
+        $('#acceso-email').focus();
+      });
+      formCodigo.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const codigo = $('#acceso-codigo').value.trim();
+        if (!/^[0-9]{6}$/.test(codigo)) {
+          mostrarMensaje('#acceso-msg', 'error', t('access.codeFormat'));
+          return;
+        }
+        const boton = $('#acceso-entrar-btn');
+        boton.disabled = true;
+        mostrarMensaje('#acceso-msg', 'info', t('access.verifying'));
+        try {
+          const sesion = await window.SheetsService.verificarCodigo(correo, codigo);
+          const data = await window.SheetsService.post({ accion: 'acceso_perfil', accessToken: sesion.access_token });
+          if (!data.roles || !data.roles.length) {
+            mostrarMensaje('#acceso-msg', 'error', t('access.noRoles'));
+            return;
+          }
+          try { window.sessionStorage.setItem(ACCESO_SS, JSON.stringify({ email: data.email, roles: data.roles })); } catch (err) { /* modo privado */ }
+          $('#acceso-codigo').value = '';
+          mostrarMensaje('#acceso-msg', 'success', t('access.welcome'));
+          pintarPerfilAcceso();
+        } catch (err) {
+          const crudo = String(err && err.message || '');
+          // GoTrue responde en inglés; el caso típico (código malo o vencido) se traduce.
+          const amigable = /expired|invalid|not found/i.test(crudo) || !crudo ? t('access.verifyError') : crudo;
+          mostrarMensaje('#acceso-msg', 'error', amigable);
+        } finally { boton.disabled = false; }
+      });
+      $$('.js-acceso-entrar').forEach((btn) => btn.addEventListener('click', () => {
+        document.getElementById('acceso-login-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        $('#acceso-email').focus();
+      }));
+      pintarPerfilAcceso();
     }
 
     function bindForms() {
@@ -612,15 +768,30 @@
         }
       });
 
+      const volCedula = $('#vol-cedula');
+      if (volCedula) volCedula.addEventListener('change', (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        const prev = $('#vol-cedula-prev');
+        if (!file) { prev.hidden = true; return; }
+        prev.src = URL.createObjectURL(file);
+        prev.hidden = false;
+      });
+
       $('#voluntario-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
         if (!validarFormulario(form, '#vol-message')) return;
+        const archivoCedula = $('#vol-cedula').files && $('#vol-cedula').files[0];
+        if (!archivoCedula) {
+          mostrarMensaje('#vol-message', 'error', t('messages.volunteerPhotoMissing'));
+          return;
+        }
         const nuevo = {
           id: 'VOL' + String(Date.now()).slice(-4),
           nombre: $('#vol-nombre').value.trim(),
           apellido: $('#vol-apellido').value.trim(),
           telefono: $('#vol-telefono').value.trim(),
+          email: $('#vol-email').value.trim(),
           estado: $('#vol-estado').value.trim(),
           ciudad: $('#vol-ciudad').value.trim(),
           profesion: $('#vol-profesion').value,
@@ -632,6 +803,7 @@
         };
         mostrarMensaje('#vol-message', 'info', t('messages.savingVolunteer'));
         try {
+          nuevo.fotoCedula = await comprimirFoto(archivoCedula);
           await window.SheetsService.post(Object.assign({ accion: 'registrar_voluntario' }, nuevo));
           await cargarTodo();
           mostrarMensaje('#vol-message', 'success', t('messages.volunteerSaved'));
@@ -852,8 +1024,8 @@
     }
 
     function bindFiltros() {
-      [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-necesidad-q', 'necesidadQ', renderNecesidades], ['#filtro-vol-q', 'volQ', renderVoluntarios], ['#filtro-vol-estado', 'volEstado', renderVoluntarios], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados], ['#filtro-donacion-ciudad', 'donacionCiudad', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
-      [['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares], ['#filtro-vol-profesion', 'volProfesion', renderVoluntarios], ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados], ['#filtro-donacion-tipo', 'donacionTipo', renderDonations], ['#filtro-donacion-estado', 'donacionEstado', renderDonations], ['#filtro-donacion-urgencia', 'donacionUrgencia', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-necesidad-q', 'necesidadQ', renderNecesidades], ['#filtro-vac-q', 'vacQ', renderVacantes], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados], ['#filtro-donacion-ciudad', 'donacionCiudad', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      [['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares], ['#filtro-vac-tipo', 'vacTipo', renderVacantes], ['#filtro-vac-urgencia', 'vacUrgencia', renderVacantes], ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados], ['#filtro-donacion-tipo', 'donacionTipo', renderDonations], ['#filtro-donacion-estado', 'donacionEstado', renderDonations], ['#filtro-donacion-urgencia', 'donacionUrgencia', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
       [['#filtro-donacion-reciente', 'donacionReciente'], ['#filtro-donacion-verificado', 'donacionVerificado']].forEach(([id, key]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.checked; renderDonations(); }));
       $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); window.location.hash = el.dataset.viewLink; }));
       $$('[data-scroll-target]').forEach((el) => el.addEventListener('click', () => document.getElementById(el.dataset.scrollTarget).scrollIntoView({ behavior: 'smooth', block: 'start' })));
@@ -861,7 +1033,7 @@
     }
 
     function renderAll() {
-      renderRegistrySummaries(); poblarCategorias(); renderLugares(); renderNecesidades(); renderVoluntarios(); renderRescatistas(); renderMotorizados(); renderTraslados(); renderDonations();
+      renderRegistrySummaries(); poblarCategorias(); renderLugares(); renderNecesidades(); renderVacantes(); renderRescatistas(); renderMotorizados(); renderTraslados(); renderDonations();
       cargarPresupuestos(); cargarComprados(); cargarOfertas(); // asíncronos: pintan sus grillas al llegar
     }
 
@@ -873,6 +1045,7 @@
       estado.rescatistas = data.rescatistas || [];
       estado.motorizados = data.motorizados || [];
       estado.traslados = data.traslados || [];
+      estado.vacantes = data.vacantes || [];
       estado.donacionesHumanitarias = data.donacionesHumanitarias || data.donaciones_humanitarias || data.donations || [];
       estado.estadisticas = data.estadisticas || data.stats || {};
       setStatus(result.source);
@@ -883,6 +1056,7 @@
       await initI18n();
       bindFiltros();
       bindForms();
+      bindAcceso();
       renderDonations();
       [['#btn-panel-centro', '/panel-centro'], ['#btn-acceso-panel', '/panel-centro'],
        ['#btn-crear-centro', '/crear-centro'], ['#btn-acceso-crear-centro', '/crear-centro'],

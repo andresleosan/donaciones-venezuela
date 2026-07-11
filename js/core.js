@@ -184,6 +184,16 @@
       setText('#acceso-centro-copy', 'access.centerCopy');
       setText('#btn-acceso-panel', 'access.centerCta');
       setText('#btn-acceso-crear-centro', 'access.centerCreateCta');
+      setText('#acceso-login-title', 'access.loginTitle');
+      setText('#acceso-login-copy', 'access.loginCopy');
+      setText('label[for="acceso-email"]', 'common.email');
+      setText('#acceso-enviar-btn', 'access.sendCode');
+      setText('label[for="acceso-codigo"]', 'access.codeLabel');
+      setText('#acceso-entrar-btn', 'access.enter');
+      setText('#acceso-otro-correo', 'access.changeEmail');
+      setText('#btn-acceso-entrar-transportista', 'access.loginCta');
+      setText('#btn-acceso-entrar-voluntario', 'access.loginCta');
+      setText('#btn-acceso-entrar-centro', 'access.centerRecoverCta');
 
       // Puerta 3 · Transportistas
       setText('#transporte-title', 'transportHub.title');
@@ -228,13 +238,34 @@
       setText('#lugar-form button[type="submit"]', 'centers.saveReport');
       setText('#lugar-form button[type="reset"]', 'common.clear');
 
-      setText('#voluntarios-title', 'volunteers.title');
-      setText('#voluntarios-title + .section-copy', 'volunteers.copy');
+      setText('#voluntarios-title', 'vacancies.title');
+      setText('#voluntarios-title + .section-copy', 'vacancies.copy');
+      setText('#vac-kpi-cupos-lbl', 'vacancies.kpiMissing');
+      setText('#vac-kpi-urgentes-lbl', 'vacancies.kpiUrgent');
+      setText('#vac-kpi-lugares-lbl', 'vacancies.kpiPlaces');
+      setText('label[for="filtro-vac-q"]', 'vacancies.searchLabel');
+      setPlaceholder('#filtro-vac-q', 'vacancies.searchPlaceholder');
+      setText('label[for="filtro-vac-tipo"]', 'vacancies.placeTypeLabel');
+      setText('label[for="filtro-vac-urgencia"]', 'panel.urgency');
+      aplicarOpciones('#filtro-vac-tipo', {
+        'Centro': ['types', 'Centro'],
+        'Hospital': ['types', 'Hospital'],
+        'Refugio': ['types', 'Refugio'],
+        'Zona de derrumbe': ['types', 'Zona de derrumbe']
+      });
+      aplicarOpciones('#filtro-vac-urgencia', {
+        'Alta': ['urgency', 'Alta'],
+        'Normal': ['urgency', 'Normal'],
+        'Baja': ['urgency', 'Baja']
+      });
+      setText('#vol-registro-summary', 'vacancies.registerSummary');
       setText('#vol-form-title', 'volunteers.formTitle');
       setText('#vol-form-title + .section-copy', 'volunteers.formCopy');
       setText('label[for="vol-nombre"]', 'common.name');
       setText('label[for="vol-apellido"]', 'common.lastName');
       setText('label[for="vol-telefono"]', 'common.phone');
+      setText('label[for="vol-email"]', 'common.email');
+      setText('label[for="vol-cedula"]', 'modal.photoId');
       setText('label[for="vol-ciudad"]', 'common.city');
       setPlaceholder('#vol-ciudad', 'volunteers.cityPlaceholder');
       setText('label[for="vol-estado"]', 'common.state');
@@ -247,16 +278,7 @@
       setPlaceholder('#vol-observaciones', 'volunteers.observationsPlaceholder');
       setText('#voluntario-form button[type="submit"]', 'volunteers.save');
       setText('#voluntario-form button[type="reset"]', 'common.clear');
-      setText('#vol-summary-title', 'volunteers.summaryTitle');
-      setText('.volunteer-shell .registry-side > .meta', 'volunteers.summaryCopy');
-      setText('#vol-list-title', 'volunteers.listTitle');
-      setText('#vol-list-title + .section-copy', 'volunteers.listCopy');
       setAttr('#view-voluntarios .filters', 'aria-label', 'a11y.volunteerFilters');
-      setText('label[for="filtro-vol-q"]', 'volunteers.searchLabel');
-      setPlaceholder('#filtro-vol-q', 'volunteers.searchPlaceholder');
-      setText('label[for="filtro-vol-profesion"]', 'common.profession');
-      setText('label[for="filtro-vol-estado"]', 'common.state');
-      setPlaceholder('#filtro-vol-estado', 'volunteers.stateFilterPlaceholder');
 
       setText('#rescatistas-title', 'rescuers.title');
       setText('#rescatistas-title + .section-copy', 'rescuers.copy');
@@ -452,10 +474,10 @@
 
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
-      presupuestos: [], comprados: [], ofertas: [],
+      presupuestos: [], comprados: [], ofertas: [], vacantes: [],
       filtros: {
         lugarQ: '', lugarTipo: 'todos', lugarCategoria: '', necesidadQ: '',
-        volQ: '', volProfesion: '', volEstado: '',
+        vacQ: '', vacTipo: '', vacUrgencia: '',
         resQ: '', resEspecialidad: '', resEstado: '',
         motQ: '', motTipo: '',
         donacionTipo: '', donacionEstado: '', donacionCiudad: '', donacionUrgencia: '',

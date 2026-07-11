@@ -702,6 +702,43 @@
     .form-message.visible { display: block; }
     .form-message.success { background: #E9F8EF; color: #0F6B34; border: 1px solid #BDEACD; }
     .form-message.error { background: #FFF0F0; color: #8F1A12; border: 1px solid #F7C2BD; }
+
+    /* Tablero de vacantes de voluntariado */
+    .vac-resumen {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 28px;
+      margin-bottom: 14px;
+      padding: 13px 16px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow-soft);
+    }
+    .vac-kpi { display: flex; align-items: baseline; gap: 7px; color: var(--muted); font-size: 0.86rem; font-weight: 700; }
+    .vac-kpi strong { font-size: 1.4rem; font-weight: 860; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .vac-kpi-alta strong { color: var(--critical); }
+    .vac-card { gap: 9px; }
+    .vac-card.vac-alta { border: 1px solid #EFC4D1; background: #FFFBFC; }
+    .vac-rol { margin: 0; font-size: 1.12rem; font-weight: 830; color: var(--ink); }
+    .vac-lugar { margin: 0; color: var(--text); font-size: 0.92rem; }
+    .vac-cupos { display: grid; gap: 7px; }
+    .vac-faltan { font-weight: 800; color: var(--ink); font-size: 0.9rem; }
+    .vol-registro { margin-top: 22px; }
+    .vol-registro > summary {
+      list-style: none;
+      cursor: pointer;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 830;
+      color: var(--volunteer);
+    }
+    .vol-registro > summary::-webkit-details-marker { display: none; }
+    .vol-registro > summary::before { content: '+'; font-size: 1.25rem; line-height: 1; font-weight: 760; }
+    .vol-registro[open] > summary::before { content: '\2212'; }
+    .vol-registro[open] > summary { margin-bottom: 10px; }
     .form-message.info { background: var(--primary-soft); color: var(--primary-dark); border: 1px solid var(--primary-border); }
 
     .help-grid, .urgent-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
