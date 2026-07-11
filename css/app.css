@@ -121,6 +121,7 @@
       scroll-margin-top: calc(var(--header-height) + 22px);
       scroll-margin-bottom: 92px;
     }
+    main:focus-visible { outline: none; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -1177,8 +1178,42 @@
     .btn-volver:hover { color: var(--ink); border-color: var(--border-strong); }
     .btn-volver[hidden] { display: none; } /* hidden debe ganar al display de la clase */
 
-    /* Puerta 1: acciones de cercanía y lista colapsable */
-    .cerca-acciones { display: grid; gap: 10px; max-width: 640px; margin-bottom: 8px; }
+    /* Puerta 1: localizador calmado, una sola tarea y detalle progresivo */
+    .centers-view-inner {
+      width: min(840px, 100%);
+      margin: 0 auto;
+      padding: 14px 0 30px;
+    }
+    .centers-header { margin-bottom: 8px; }
+    .centers-header .section-copy { max-width: 62ch; margin-top: 8px; color: #52657A; }
+    .centers-related {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 2px 6px;
+      margin: 0 0 18px;
+      color: #52657A;
+      font-size: 0.9rem;
+    }
+    .centers-related .link-btn {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      justify-self: auto;
+      padding: 6px 4px;
+    }
+    .centers-related-divider { color: #8A98A8; }
+    .center-finder {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: 0 1px 2px rgba(10, 37, 64, 0.04);
+    }
+    .cerca-acciones { display: grid; gap: 12px; }
     .btn-block { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .link-btn {
       background: none;
@@ -1191,47 +1226,216 @@
       justify-self: center;
     }
     .link-btn:hover { text-decoration: underline; }
-    .filtros-extra { margin: 4px 0 10px; }
-    .filtros-extra summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; font-weight: 600; padding: 6px 0; }
-    .lista-centros { display: grid; gap: 12px; max-width: 720px; }
-    .centro-card { padding: 0; overflow: hidden; }
-    .centro-toggle {
+    .center-search-input { position: relative; }
+    .center-search-input svg {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      z-index: 1;
+      transform: translateY(-50%);
+      color: #52657A;
+      pointer-events: none;
+    }
+    .center-search-input input { padding-left: 42px; }
+    .filtros-extra { margin: 0; }
+    .filtros-extra > summary {
+      width: fit-content;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      list-style: none;
+      cursor: pointer;
+      color: var(--primary-dark);
+      font-size: 0.88rem;
+      font-weight: 760;
+      padding: 4px 2px;
+    }
+    .filtros-extra > summary::-webkit-details-marker { display: none; }
+    .filtros-extra > summary::after {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: translateY(-2px) rotate(45deg);
+      transition: transform 0.15s ease;
+    }
+    .filtros-extra[open] > summary::after { transform: translateY(2px) rotate(225deg); }
+    .center-category-field { max-width: 330px; padding-top: 4px; }
+    .center-geo-status {
+      margin: -2px 0 0;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: var(--primary-soft);
+      color: #3832A8;
+      font-size: 0.86rem;
+      font-weight: 720;
+    }
+    .center-geo-status[hidden] { display: none; }
+    .center-geo-status.is-error { background: #FFF1F3; color: #8F2342; }
+    .center-trust-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      margin: 0;
+      padding-top: 13px;
+      border-top: 1px solid var(--border);
+      color: #52657A;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .center-trust-note svg { flex: none; margin-top: 1px; color: var(--ink); }
+    .center-results-toolbar {
+      min-height: 64px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 22px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .center-results-toolbar > div { min-width: 0; display: grid; gap: 2px; }
+    .center-results-count { margin: 0; color: var(--ink); font-size: 0.95rem; font-weight: 820; }
+    .center-results-order,
+    .center-map-coverage { margin: 0; color: #52657A; font-size: 0.78rem; }
+    .center-results-toolbar .btn { flex: none; }
+    .center-results-toolbar .btn:disabled { cursor: not-allowed; opacity: 0.52; box-shadow: none; }
+    .centers-results { display: grid; gap: 12px; }
+    .centers-view #mapa-centros {
+      height: 360px;
+      margin: 12px 0 16px;
+      border-radius: var(--radius-lg);
+      box-shadow: none;
+      contain: paint;
+    }
+    .lista-centros { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .centro-card {
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .centro-card:hover { border-color: var(--border-strong); }
+    .centro-card.open { border-color: #B7C4D4; box-shadow: 0 4px 16px rgba(10, 37, 64, 0.07); }
+    .centro-toggle {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 14px;
       width: 100%;
       text-align: left;
       background: none;
       border: 0;
-      padding: 16px 18px;
+      padding: 17px 18px;
       color: var(--text);
+      transition: background 0.15s ease;
     }
-    .centro-resumen { flex: 1; min-width: 0; display: grid; gap: 4px; }
-    .centro-nombre { font-size: 1.05rem; font-weight: 800; color: var(--ink); }
+    .centro-toggle:hover { background: #FAFCFE; }
+    .centro-resumen { min-width: 0; display: grid; gap: 6px; }
+    .centro-nombre { font-size: 1.05rem; font-weight: 820; color: var(--ink); line-height: 1.3; }
+    .centro-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; color: #52657A; font-size: 0.84rem; }
+    .centro-meta span + span::before { content: "·"; margin-right: 10px; color: #8A98A8; }
     .centro-dist { flex: none; color: var(--primary); font-weight: 800; font-size: 0.9rem; }
+    .centro-toggle-side { display: flex; align-items: center; justify-content: flex-end; gap: 8px; align-self: center; }
+    .centro-toggle-label { color: var(--primary-dark); font-size: 0.8rem; font-weight: 760; white-space: nowrap; }
     .centro-chevron { flex: none; color: var(--muted); transition: transform 0.15s ease; }
     .centro-card.open .centro-chevron { transform: rotate(180deg); }
-    .centro-more { border-top: 1px solid var(--border); padding: 14px 18px; background: var(--surface-muted); display: grid; gap: 10px; }
+    .centro-more { border-top: 1px solid var(--border); padding: 6px 18px 17px; background: #FBFCFE; display: grid; gap: 12px; }
     .centro-more[hidden] { display: none; } /* hidden debe ganar al display de la clase */
     .pill-necesita {
+      position: relative;
       justify-self: start;
-      background: #FDECEA;
-      color: #C0392B;
+      background: transparent;
+      color: #8F2342;
       font-size: 0.82rem;
       font-weight: 700;
-      border-radius: 999px;
-      padding: 2px 10px;
+      padding-left: 12px;
     }
+    .pill-necesita::before,
+    .pill-ok::before,
+    .pill-pending::before { content: ""; position: absolute; left: 0; top: 0.58em; width: 6px; height: 6px; border-radius: 50%; transform: translateY(-50%); background: currentColor; }
     .pill-ok {
+      position: relative;
       justify-self: start;
-      background: #E6F6EF;
       color: #0B6B4A;
       font-size: 0.82rem;
       font-weight: 600;
-      border-radius: 999px;
-      padding: 2px 10px;
+      padding-left: 12px;
     }
-    .ayuda-extra { margin-top: 18px; max-width: 640px; }
+    .pill-pending {
+      position: relative;
+      justify-self: start;
+      color: #52657A;
+      font-size: 0.82rem;
+      font-weight: 650;
+      padding-left: 12px;
+    }
+    .centers-view .badge.red { background: #FFF1F3; color: #9B2546; }
+    .centers-view .supply-list { gap: 0; }
+    .centers-view .supply-item {
+      padding: 12px 0;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      border-radius: 0;
+      background: transparent;
+    }
+    .centers-view .supply-item:last-child { border-bottom: 0; }
+    .centro-detail-heading {
+      margin: 4px 0 -4px;
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 820;
+    }
+    .centers-view .supply-item .supply-line strong {
+      color: var(--ink);
+      font-size: 0.98rem;
+      line-height: 1.3;
+    }
+    .center-actions { display: grid; gap: 10px; padding-top: 4px; }
+    .center-phone-pending { margin: 0; color: #52657A; font-size: 0.84rem; font-weight: 720; }
+    .center-primary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .center-primary-actions .btn { flex: 0 1 auto; }
+    .center-more-actions > summary {
+      width: fit-content;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      list-style: none;
+      cursor: pointer;
+      color: #52657A;
+      font-size: 0.84rem;
+      font-weight: 760;
+    }
+    .center-more-actions > summary::-webkit-details-marker { display: none; }
+    .center-more-actions > summary svg { transition: transform 0.15s ease; }
+    .center-more-actions[open] > summary svg { transform: rotate(180deg); }
+    .center-secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; }
+
+    @media (max-width: 560px) {
+      .centro-meta { display: grid; gap: 0; }
+      .centro-meta span + span::before { content: none; }
+      .center-results-toolbar { align-items: flex-start; }
+      .centers-related-divider { display: none; }
+    }
+    @media (max-width: 360px) {
+      .centro-toggle-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .centro-toggle-side { gap: 3px; }
+    }
 
     /* Puerta 2: tres tarjetas de acción */
     .help3 { display: grid; gap: 12px; max-width: 720px; }
@@ -1457,19 +1661,31 @@
       .door-copy { font-size: 0.95rem; }
       .home-foot { margin-top: 34px; }
 
-      /* Puerta 1: barra de acciones en una fila + centros a 2 columnas */
+      /* Puerta 1: localizador en una fila y lista estable de una columna */
       .cerca-acciones {
-        max-width: none;
-        grid-template-columns: auto minmax(260px, 420px) auto;
-        align-items: center;
-        justify-content: start;
-        gap: 14px;
+        grid-template-columns: auto minmax(280px, 1fr) minmax(165px, 0.42fr);
+        align-items: end;
       }
       .cerca-acciones .btn-block { width: auto; }
       .cerca-acciones .field { margin: 0; }
-      .lista-centros { max-width: none; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-      .ayuda-extra { max-width: 420px; }
-      #mapa-centros { height: 420px; }
+      .center-finder { padding: 20px; }
+      .lista-centros { grid-template-columns: 1fr; }
+      .centers-view #mapa-centros { height: 420px; }
+      .centers-view.map-open .centers-view-inner { width: min(1080px, 100%); }
+      .centers-view.map-open .centers-results {
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.82fr);
+        align-items: start;
+        gap: 16px;
+      }
+      .centers-view.map-open #grid-lugares { grid-column: 1; grid-row: 1; }
+      .centers-view.map-open #mapa-centros {
+        grid-column: 2;
+        grid-row: 1;
+        position: sticky !important;
+        top: calc(var(--header-height) + 16px);
+        height: min(620px, calc(100vh - var(--header-height) - 32px));
+        margin: 0;
+      }
 
       /* Puerta 2: tarjetas de ayuda más generosas */
       .help3 { max-width: none; gap: 16px; }

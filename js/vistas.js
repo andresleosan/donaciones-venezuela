@@ -1,5 +1,12 @@
 // Modulo generado por modularizacion (build-loop S7). Scope global compartido.
 'use strict';
+    function establecerModoCentros(modo) {
+      window.centrosModoActual = modo === 'donar' ? 'donar' : 'ayuda';
+      if (typeof aplicarTraduccionesEstaticas === 'function') aplicarTraduccionesEstaticas();
+      if (typeof estado !== 'undefined' && estado.lugares) renderLugares();
+    }
+    window.establecerModoCentros = establecerModoCentros;
+
     function renderLugares() {
       const f = estado.filtros;
       const q = normalizar(f.lugarQ);
@@ -11,43 +18,88 @@
         if (f.lugarCategoria && !items.some((i) => normalizar(i.categoria) === normalizar(f.lugarCategoria))) return false;
         return true;
       });
-      let orden = filtered;
+      let orden = filtered.slice().sort((a, b) => {
+        const fechaA = new Date(a.actualizado || 0).getTime() || 0;
+        const fechaB = new Date(b.actualizado || 0).getTime() || 0;
+        return fechaB - fechaA;
+      });
       if (ubicacionUsuario) {
         orden = filtered.slice().map((l) => ({ l, d: distanciaKm(l) }))
           .sort((a, b) => (a.d == null ? Infinity : a.d) - (b.d == null ? Infinity : b.d))
           .map((x) => x.l);
       }
       $('#conteo-lugares').textContent = t('centers.count', { shown: filtered.length, total: estado.lugares.length });
+      const ordenLabel = $('#orden-lugares');
+      if (ordenLabel) ordenLabel.textContent = t(ubicacionUsuario ? 'centers.sortedNearby' : 'centers.sortedRecent');
       $('#grid-lugares').innerHTML = orden.length ? orden.map(renderLugarCard).join('') : `<div class="empty-state">${e(t('centers.empty'))}</div>`;
       $$('[data-historial]').forEach((btn) => btn.addEventListener('click', () => irAVentana('historial', { nombre: btn.dataset.historial })));
-      bindTarjetasColapsables('#grid-lugares');
+      bindTarjetasColapsables('#grid-lugares', true);
+      actualizarEstadoMapa(filtered);
       renderMapa(filtered);
     }
 
     // Progressive disclosure: las tarjetas nacen cerradas y se expanden al tocar
-    function bindTarjetasColapsables(rootSel) {
+    function bindTarjetasColapsables(rootSel, exclusiva) {
+      const aplicarEstado = (card, abierto) => {
+        if (!card) return;
+        card.classList.toggle('open', abierto);
+        const toggle = card.querySelector('[data-centro-toggle]');
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+          const texto = toggle.querySelector('[data-centro-toggle-text]');
+          if (texto) texto.textContent = t(abierto ? 'centers.hideDetails' : 'centers.viewDetails');
+        }
+        const cuerpo = card.querySelector('.centro-more');
+        if (cuerpo) cuerpo.hidden = !abierto;
+      };
+
       $$(rootSel + ' [data-centro-toggle]').forEach((btn) => btn.addEventListener('click', () => {
         const card = btn.closest('[data-centro-card], [data-traslado]');
         if (!card) return;
-        const abierto = card.classList.toggle('open');
-        btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
-        const cuerpo = card.querySelector('.centro-more');
-        if (cuerpo) cuerpo.hidden = !abierto;
+        const abrir = !card.classList.contains('open');
+        if (exclusiva && abrir) {
+          $$(rootSel + ' [data-centro-card].open, ' + rootSel + ' [data-traslado].open')
+            .forEach((otra) => { if (otra !== card) aplicarEstado(otra, false); });
+        }
+        aplicarEstado(card, abrir);
       }));
     }
 
     function alternarMapa() {
       const cont = $('#mapa-centros');
       if (!cont) return;
-      cont.hidden = !cont.hidden;
       const btn = $('#btn-mapa-toggle');
-      if (btn) btn.textContent = t(cont.hidden ? 'centers.mapToggle' : 'centers.mapToggleHide');
-      if (!cont.hidden) renderLugares();
+      if (btn && btn.disabled) return;
+      cont.hidden = !cont.hidden;
+      const vista = $('#view-donaciones');
+      if (vista) vista.classList.toggle('map-open', !cont.hidden);
+      if (btn) {
+        btn.textContent = t(cont.hidden ? 'centers.mapToggle' : 'centers.mapToggleHide');
+        btn.setAttribute('aria-expanded', cont.hidden ? 'false' : 'true');
+      }
+      if (!cont.hidden) renderMapa(lugaresMapaActuales);
     }
 
     // ── Geo: mapa Leaflet + cerca de mí ──
     let ubicacionUsuario = null;
+    let lugaresMapaActuales = [];
     let mapaLeaflet = null;
+
+    function actualizarEstadoMapa(lugares) {
+      lugaresMapaActuales = lugares.slice();
+      const conUbicacion = lugares.filter((l) => l.lat != null && l.lng != null).length;
+      const cobertura = $('#mapa-cobertura');
+      if (cobertura) cobertura.textContent = t('centers.mapCoverage', { count: conUbicacion, total: lugares.length });
+      const btn = $('#btn-mapa-toggle');
+      const cont = $('#mapa-centros');
+      if (!btn || !cont) return;
+      btn.disabled = conUbicacion === 0;
+      if (!conUbicacion) cont.hidden = true;
+      const vista = $('#view-donaciones');
+      if (vista) vista.classList.toggle('map-open', !cont.hidden && conUbicacion > 0);
+      btn.textContent = t(cont.hidden ? 'centers.mapToggle' : 'centers.mapToggleHide');
+      btn.setAttribute('aria-expanded', cont.hidden ? 'false' : 'true');
+    }
 
     function distanciaKm(lugar) {
       if (!ubicacionUsuario || lugar.lat == null || lugar.lng == null) return null;
@@ -71,6 +123,10 @@
         }).addTo(mapaLeaflet);
       }
       if (mapaLeaflet._capaMarcadores) mapaLeaflet.removeLayer(mapaLeaflet._capaMarcadores);
+      if (!conGeo.length && !ubicacionUsuario) {
+        mapaLeaflet._capaMarcadores = null;
+        return;
+      }
       const grupo = window.L.layerGroup();
       const puntos = [];
       conGeo.forEach((l) => {
@@ -90,17 +146,43 @@
     }
 
     function activarCercaDeMi() {
-      if (!navigator.geolocation) { toast(t('panel.geoUnavailable')); return; }
       const btn = $('#btn-cerca');
-      if (btn) btn.disabled = true;
+      const status = $('#centros-geo-status');
+      const mostrarEstado = (key, error) => {
+        if (!status) return;
+        status.dataset.i18nKey = key;
+        status.textContent = t(key);
+        status.hidden = !key;
+        status.classList.toggle('is-error', !!error);
+      };
+      if (!navigator.geolocation) {
+        mostrarEstado('centers.geoUnavailable', true);
+        return;
+      }
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+      }
+      mostrarEstado('centers.locating', false);
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           ubicacionUsuario = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          if (btn) btn.disabled = false;
+          if (btn) {
+            btn.disabled = false;
+            btn.setAttribute('aria-busy', 'false');
+            btn.focus({ preventScroll: true });
+          }
           renderLugares();
-          toast(t('centers.nearbyOn'));
+          mostrarEstado('centers.nearbyOn', false);
         },
-        () => { if (btn) btn.disabled = false; toast(t('panel.geoDenied')); },
+        () => {
+          if (btn) {
+            btn.disabled = false;
+            btn.setAttribute('aria-busy', 'false');
+            btn.focus({ preventScroll: true });
+          }
+          mostrarEstado('centers.geoDenied', true);
+        },
         { timeout: 8000 }
       );
     }
@@ -579,4 +661,3 @@
       dialog.addEventListener('close', () => { $('#modal-root').innerHTML = ''; });
       dialog.showModal();
     }
-

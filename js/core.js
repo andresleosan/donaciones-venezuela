@@ -15,6 +15,7 @@
     let fuenteDatosActual = 'loading';
     let ultimosFamiliares = null;
     let ultimoSeguimiento = null;
+    window.centrosModoActual = window.centrosModoActual || 'ayuda';
 
     function normalizarIdioma(lang) {
       const code = String(lang || '').toLowerCase().slice(0, 2);
@@ -214,16 +215,31 @@
       setText('#btn-crear-centro', 'centerHub.createCta');
       setText('#centro-admin-note', 'centerHub.adminNote');
 
-      // Puerta 1 · Centros cerca
-      setText('#donaciones-title', 'centers.nearTitle');
-      setText('#donaciones-copy', 'centers.nearCopy');
+      // Puerta 1 · Centros cerca. #donaciones queda como alias histórico;
+      // #ayuda y #donar expresan la intención de la persona.
+      const modoCentros = window.centrosModoActual === 'donar' ? 'donar' : 'ayuda';
+      setText('#donaciones-title', `centers.${modoCentros}Title`);
+      setText('#donaciones-copy', `centers.${modoCentros}Copy`);
+      setText('#buscar-familiar-prompt', 'centers.findFamilyPrompt');
       setText('#btn-mapa-toggle', 'centers.mapToggle');
       setText('#filtros-extra-summary', 'centers.filtersSummary');
       setText('#btn-buscar-familiar-texto', 'centers.findFamilyCta');
-      setAttr('#view-donaciones .filters', 'aria-label', 'a11y.centerFilters');
+      const modeLink = $('#centers-mode-link');
+      if (modeLink) {
+        const siguienteModo = modoCentros === 'donar' ? 'ayuda' : 'donar';
+        modeLink.href = '#' + siguienteModo;
+        modeLink.dataset.viewLink = siguienteModo;
+        setText('#centers-mode-link-text', `centers.switchTo${modoCentros === 'donar' ? 'Help' : 'Donate'}`);
+      }
+      setText('#centers-search-label', 'centers.searchLabel');
+      setText('#centers-trust-note-text', 'centers.confirmBeforeGoing');
+      const geoStatus = $('#centros-geo-status');
+      if (geoStatus && geoStatus.dataset.i18nKey) geoStatus.textContent = t(geoStatus.dataset.i18nKey);
+      setAttr('#center-filter-controls', 'aria-label', 'a11y.centerFilters');
+      setAttr('#mapa-centros', 'aria-label', 'centers.mapAria');
       setAttr('#filtro-lugar-q', 'aria-label', 'common.search');
       setPlaceholder('#filtro-lugar-q', 'centers.searchPlaceholder');
-      setText('label[for="filtro-lugar-tipo"]', 'common.type');
+      setText('label[for="filtro-lugar-tipo"]', 'centers.typeFilterLabel');
       setText('label[for="filtro-lugar-categoria"]', 'common.category');
       setText('label[for="lugar-tipo"]', 'centers.typeLabel');
       setText('label[for="lugar-nombre"]', 'common.name');
@@ -490,7 +506,7 @@
     const e = (str) => String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     const normalizar = (txt) => String(txt == null ? '' : txt).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     const soloDigitos = (tel) => String(tel || '').replace(/[^0-9]/g, '');
-    const waHref = (tel) => `https://wa.me/${soloDigitos(tel)}?text=${encodeURIComponent(t('messages.whatsappText'))}`;
+    const waHref = (tel, messageKey) => `https://wa.me/${soloDigitos(tel)}?text=${encodeURIComponent(t(messageKey || 'messages.whatsappText'))}`;
     const telHref = (tel) => `tel:${String(tel || '').replace(/[^0-9+]/g, '')}`;
     const numero = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
     const formatearMonto = (value) => new Intl.NumberFormat(localeActual(), { maximumFractionDigits: 2 }).format(numero(value));
@@ -568,10 +584,15 @@
     }
 
     function cambiarVista(view) {
-      const target = $(`.view[data-view="${view}"]`) ? view : 'inicio';
+      const aliasCentros = { ayuda: 'donaciones', donar: 'donaciones' };
+      const vistaReal = aliasCentros[view] || view;
+      const target = $(`.view[data-view="${vistaReal}"]`) ? vistaReal : 'inicio';
+      if (aliasCentros[view] && typeof window.establecerModoCentros === 'function') {
+        window.establecerModoCentros(view === 'donar' ? 'donar' : 'ayuda');
+      }
       $$('.view').forEach((panel) => panel.classList.toggle('active', panel.dataset.view === target));
       $$('[data-view-link]').forEach((btn) => {
-        const active = btn.dataset.viewLink === target;
+        const active = btn.dataset.viewLink === view || btn.dataset.viewLink === target;
         if (btn.tagName === 'BUTTON') btn.setAttribute('aria-current', active ? 'page' : 'false');
       });
       const volver = $('#btn-volver');
@@ -877,7 +898,14 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', initEditAssistant);
+    function editAssistantDisponible() {
+      if (new URLSearchParams(location.search).get('edit') === '0') return false;
+      return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname) || location.protocol === 'file:';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (editAssistantDisponible()) initEditAssistant();
+    });
 
     function prioridadCanonica(value) {
       const n = normalizar(value);
@@ -1340,19 +1368,49 @@
       return `<a class="btn btn-soft btn-small" href="${telHref(telefono)}" aria-label="${e(t('a11y.call', { target }))}">${e(t('common.call'))}</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(telefono)}" aria-label="${e(t('a11y.whatsapp', { target }))}">${e(t('common.whatsapp'))}</a>`;
     }
 
-    function accionesNavegacion(ubicacion) {
-      const q = String(ubicacion || '').trim();
-      if (!q) return '';
-      const destino = encodeURIComponent(/venezuela/i.test(q) ? q : q + ', Venezuela');
-      return `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${destino}">Maps</a><a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="https://waze.com/ul?q=${destino}&navigate=yes">Waze</a>`;
+    function accionesCentro(lugar) {
+      const modoDonar = window.centrosModoActual === 'donar';
+      const telefonoValido = soloDigitos(lugar.telefono);
+      const ubicacion = String(lugar.ubicacion || '').trim();
+      const destino = ubicacion ? encodeURIComponent(/venezuela/i.test(ubicacion) ? ubicacion : ubicacion + ', Venezuela') : '';
+      const target = lugar.nombre ? (idiomaActual === 'es' ? ` a ${lugar.nombre}` : ` ${lugar.nombre}`) : '';
+      const principales = [];
+      const secundarias = [];
+
+      if (telefonoValido) {
+        if (modoDonar) {
+          principales.push(`<a class="btn btn-primary btn-small" target="_blank" rel="noopener" href="${waHref(lugar.telefono, 'centers.whatsappText')}" aria-label="${e(t('a11y.whatsapp', { target }))}">${e(t('centers.coordinateDonation'))}</a>`);
+          secundarias.push(`<a class="btn btn-ghost btn-small" href="${telHref(lugar.telefono)}" aria-label="${e(t('a11y.call', { target }))}">${e(t('common.call'))}</a>`);
+        } else {
+          principales.push(`<a class="btn btn-primary btn-small" href="${telHref(lugar.telefono)}" aria-label="${e(t('a11y.call', { target }))}">${e(t('centers.callCenter'))}</a>`);
+          secundarias.push(`<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(lugar.telefono, 'centers.whatsappText')}" aria-label="${e(t('a11y.whatsapp', { target }))}">${e(t('common.whatsapp'))}</a>`);
+        }
+      }
+      if (destino) {
+        principales.push(`<a class="btn ${telefonoValido ? 'btn-ghost' : 'btn-primary'} btn-small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${destino}" aria-label="${e(t('centers.directionsTo', { center: lugar.nombre }))}">${e(t('centers.directions'))}</a>`);
+        secundarias.push(`<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="https://waze.com/ul?q=${destino}&navigate=yes">Waze</a>`);
+      }
+      secundarias.push(`<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button>`);
+
+      return `<div class="center-actions" role="group" aria-label="${e(t('centers.actionsFor', { center: lugar.nombre }))}">
+        ${telefonoValido ? '' : `<p class="center-phone-pending">${e(t('centers.phonePending'))}</p>`}
+        ${principales.length ? `<div class="center-primary-actions">${principales.join('')}</div>` : ''}
+        <details class="center-more-actions">
+          <summary>${e(t('centers.moreOptions'))}<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+          <div class="center-secondary-actions">${secundarias.join('')}</div>
+        </details>
+      </div>`;
     }
 
     // Tarjeta de centro con progressive disclosure: cerrada = resumen en una línea
     // (tipo, nombre, zona, 1-2 necesidades urgentes, distancia); abierta = detalle
     // completo con contacto, navegación e historial.
-    function renderLugarCard(lugar) {
+    function renderLugarCard(lugar, index) {
+      const modoDonar = window.centrosModoActual === 'donar';
       const tipoNormal = normalizar(lugar.tipo);
       const claseLugar = tipoNormal.indexOf('hospital') === 0 ? 'hospital' : tipoNormal.indexOf('refugio') === 0 ? 'refugio' : 'centro';
+      const detalleId = `centro-detalle-${index}`;
+      const nombreId = `centro-nombre-${index}`;
       const necesidades = (lugar.necesita || []).map((item) => {
         const c = itemCantidad(item);
         const matches = item.coincidencias || [];
@@ -1368,27 +1426,40 @@
       const urgentesResumen = (lugar.necesita || []).slice()
         .sort((a, b) => (pesoUrgencia[normalizar(a.urgencia)] ?? 2) - (pesoUrgencia[normalizar(b.urgencia)] ?? 2))
         .slice(0, 2).map((i) => mostrarInsumo(i.nombre));
-      const resumenNecesita = urgentesResumen.length
-        ? `<span class="pill-necesita">${e(t('centers.needsShort', { items: urgentesResumen.join(', ') }))}</span>`
-        : `<span class="pill-ok">${e(t('centers.noActiveNeeds'))}</span>`;
+      const disponiblesResumen = (lugar.tiene_disponible || []).slice(0, 2).map((i) => mostrarInsumo(i.nombre));
+      const resumenOperacion = modoDonar
+        ? (urgentesResumen.length
+          ? `<span class="pill-necesita">${e(t('centers.needsShort', { items: urgentesResumen.join(', ') }))}</span>`
+          : `<span class="pill-ok">${e(t('centers.noActiveNeeds'))}</span>`)
+        : (disponiblesResumen.length
+          ? `<span class="pill-ok">${e(t('centers.availableShort', { items: disponiblesResumen.join(', ') }))}</span>`
+          : `<span class="pill-pending">${e(t('centers.noAvailability'))}</span>`);
+      const disponibilidadBlock = disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : '';
+      const necesidadesBlock = necesidades ? `<ul class="supply-list">${necesidades}</ul>` : '';
+      const disponibilidadHeading = disponibilidadBlock ? `<p class="centro-detail-heading">${e(t('centers.availabilityHeading'))}</p>` : '';
+      const necesidadesHeading = necesidadesBlock ? `<p class="centro-detail-heading">${e(t('centers.needsHeading'))}</p>` : '';
+      const detalleOperativo = modoDonar
+        ? `${necesidadesHeading}${necesidadesBlock}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}${disponibilidadHeading}${disponibilidadBlock}`
+        : `${disponibilidadHeading}${disponibilidadBlock}${necesidadesHeading}${necesidadesBlock}${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}`;
       const d = distanciaKm(lugar);
       const distancia = d != null ? `<span class="centro-dist">${d.toFixed(1)} km</span>` : '';
-      return `<article class="card centro-card ${claseLugar}" data-centro-card>
-        <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
+      return `<article class="card centro-card ${claseLugar}" data-centro-card aria-labelledby="${nombreId}">
+        <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false" aria-controls="${detalleId}">
           <span class="centro-resumen">
             <span class="badge-row"><span class="badge ${tipoBadge}">${e(mostrarTipo(lugar.tipo || 'Centro'))}</span>${lugar.gestionado ? `<span class="badge green">${e(t('centers.managedBadge'))}</span>` : ''}</span>
-            <span class="centro-nombre">${e(lugar.nombre)}</span>
-            <span class="meta">${e(lugar.ubicacion || t('centers.locationPending'))} · ${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</span>
-            ${resumenNecesita}
+            <span class="centro-nombre" id="${nombreId}">${e(lugar.nombre)}</span>
+            <span class="centro-meta"><span>${e(lugar.ubicacion || t('centers.locationPending'))}</span><span>${e(t('centers.updated', { date: fechaRelativa(lugar.actualizado) }))}</span></span>
+            ${resumenOperacion}
           </span>
-          ${distancia}
-          <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="centro-toggle-side">
+            ${distancia}
+            <span class="centro-toggle-label" data-centro-toggle-text>${e(t('centers.viewDetails'))}</span>
+            <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
         </button>
-        <div class="centro-more" hidden>
-          ${necesidades ? `<ul class="supply-list">${necesidades}</ul>` : ''}
-          ${cubiertos ? `<div class="badge-row">${cubiertos}</div>` : ''}
-          ${disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : ''}
-          <div class="card-actions">${accionesContacto(lugar.telefono, lugar.nombre)}${accionesNavegacion(lugar.ubicacion)}<button class="btn btn-ghost btn-small" type="button" data-historial="${e(lugar.nombre)}">${e(t('common.history'))}</button></div>
+        <div class="centro-more" id="${detalleId}" hidden>
+          ${detalleOperativo}
+          ${accionesCentro(lugar)}
         </div>
       </article>`;
     }
