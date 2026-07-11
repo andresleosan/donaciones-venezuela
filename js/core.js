@@ -1406,6 +1406,32 @@
       </div>`;
     }
 
+    function supplyChipUrgencyClass(value) {
+      const n = normalizar(value);
+      if (n.startsWith('critico')) return 'red';
+      if (n.startsWith('moderado') || n.startsWith('alto')) return 'yellow';
+      return 'neutral';
+    }
+
+    function renderSupplyPreview(items, mode) {
+      const list = Array.isArray(items) ? items.filter(Boolean) : [];
+      const needs = mode === 'needs';
+      const labelKey = needs ? 'centers.needsHeading' : 'centers.availabilityHeading';
+      const emptyKey = needs ? 'centers.noActiveNeeds' : 'centers.noAvailability';
+      if (!list.length) {
+        return `<span class="centro-supply-empty ${needs ? 'is-needs' : 'is-available'}">${e(t(emptyKey))}</span>`;
+      }
+      const chips = list.map((item) => {
+        const itemName = mostrarInsumo(item.nombre);
+        const urgency = needs ? ` supply-chip-${supplyChipUrgencyClass(item.urgencia)}` : ' supply-chip-available';
+        const meta = needs
+          ? `<span class="supply-chip-meta">${e(t('centers.missing', { count: itemCantidad(item).faltan, unit: mostrarUnidad(item.unidad) }))}</span>`
+          : '';
+        return `<span class="supply-chip${urgency}" role="listitem" aria-label="${e([itemName, needs ? t('centers.missing', { count: itemCantidad(item).faltan, unit: mostrarUnidad(item.unidad) }) : ''].filter(Boolean).join(', '))}"><span class="supply-chip-name">${e(itemName)}</span>${meta}</span>`;
+      }).join('');
+      return `<div class="centro-supply-preview" aria-label="${e(t(labelKey))}"><span class="centro-supply-preview-label">${e(t(labelKey))}</span><div class="centro-supply-chips" role="list">${chips}</div></div>`;
+    }
+
     // Tarjeta de centro con progressive disclosure: cerrada = resumen en una línea
     // (tipo, nombre, zona, 1-2 necesidades urgentes, distancia); abierta = detalle
     // completo con contacto, navegación e historial.
@@ -1426,18 +1452,9 @@
       const disponibles = (lugar.tiene_disponible || []).map((i) => `<span class="badge green">${e(mostrarInsumo(i.nombre))}</span>`).join('');
       const cubiertos = (lugar.cubiertos || []).map((i) => `<span class="badge green">${e(t('centers.covered', { item: mostrarInsumo(i.nombre) }))}</span>`).join('');
       const tipoBadge = tipoNormal.indexOf('hospital') === 0 ? 'red' : tipoNormal.indexOf('refugio') === 0 ? 'green' : '';
-      const pesoUrgencia = { critico: 0, moderado: 1 };
-      const urgentesResumen = (lugar.necesita || []).slice()
-        .sort((a, b) => (pesoUrgencia[normalizar(a.urgencia)] ?? 2) - (pesoUrgencia[normalizar(b.urgencia)] ?? 2))
-        .slice(0, 2).map((i) => mostrarInsumo(i.nombre));
-      const disponiblesResumen = (lugar.tiene_disponible || []).slice(0, 2).map((i) => mostrarInsumo(i.nombre));
       const resumenOperacion = modoDonar
-        ? (urgentesResumen.length
-          ? `<span class="pill-necesita">${e(t('centers.needsShort', { items: urgentesResumen.join(', ') }))}</span>`
-          : `<span class="pill-ok">${e(t('centers.noActiveNeeds'))}</span>`)
-        : (disponiblesResumen.length
-          ? `<span class="pill-ok">${e(t('centers.availableShort', { items: disponiblesResumen.join(', ') }))}</span>`
-          : `<span class="pill-pending">${e(t('centers.noAvailability'))}</span>`);
+        ? renderSupplyPreview(lugar.necesita || [], 'needs')
+        : renderSupplyPreview(lugar.tiene_disponible || [], 'available');
       const disponibilidadBlock = disponibles ? `<div><p class="meta"><strong>${e(t('centers.hasAvailable'))}</strong></p><div class="badge-row">${disponibles}</div></div>` : '';
       const necesidadesBlock = necesidades ? `<ul class="supply-list">${necesidades}</ul>` : '';
       const disponibilidadHeading = disponibilidadBlock ? `<p class="centro-detail-heading">${e(t('centers.availabilityHeading'))}</p>` : '';

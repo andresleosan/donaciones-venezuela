@@ -1346,6 +1346,57 @@
     .centro-card.open .centro-chevron { transform: rotate(180deg); }
     .centro-more { border-top: 1px solid var(--border); padding: 6px 18px 17px; background: #FBFCFE; display: grid; gap: 12px; }
     .centro-more[hidden] { display: none; } /* hidden debe ganar al display de la clase */
+    .centro-supply-preview {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+      margin-top: 1px;
+    }
+    .centro-supply-preview-label {
+      color: #52657A;
+      font-size: 0.68rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+    .centro-supply-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .supply-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      max-width: 100%;
+      padding: 4px 9px;
+      border: 1px solid #D9E2EF;
+      border-radius: 8px;
+      background: #F8FAFC;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .supply-chip-name { overflow: hidden; text-overflow: ellipsis; font-size: 0.78rem; font-weight: 820; }
+    .supply-chip-meta { color: #52657A; font-size: 0.7rem; font-weight: 760; white-space: nowrap; }
+    .supply-chip-red { border-color: #F0C4CF; background: #FFF4F6; color: #8F2342; }
+    .supply-chip-red .supply-chip-meta { color: #8F2342; }
+    .supply-chip-yellow { border-color: #F0D59C; background: #FFF9EB; color: #8A5A00; }
+    .supply-chip-yellow .supply-chip-meta { color: #8A5A00; }
+    .supply-chip-green { border-color: #B8E2D2; background: #F0FBF6; color: #0B6B4A; }
+    .supply-chip-green .supply-chip-meta { color: #0B6B4A; }
+    .supply-chip-neutral { border-color: #C9D7E8; background: #F3F7FC; color: #244A72; }
+    .supply-chip-neutral .supply-chip-meta { color: #52657A; }
+    .supply-chip-available { border-color: #B8E2D2; background: #F0FBF6; color: #0B6B4A; }
+    .centro-supply-empty {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 28px;
+      padding: 4px 9px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 760;
+    }
+    .centro-supply-empty.is-needs { background: #F4F7FA; color: #52657A; }
+    .centro-supply-empty.is-available { background: #F4F8F6; color: #0B6B4A; }
     .pill-necesita {
       position: relative;
       justify-self: start;
