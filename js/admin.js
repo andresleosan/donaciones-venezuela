@@ -1,41 +1,21 @@
 // Modulo generado por modularizacion (build-loop S7). Scope global compartido.
 'use strict';
-    // ===== Módulo admin de trazabilidad (#admin) =====
+
+    // ===== Consola de administración (página /admin) =====
+    // Rediseño (2026-07): en vez de formularios apilados en un modal, una consola
+    // de pantalla completa. Las tareas de creación son ASISTENTES POR PASOS con
+    // barra de progreso superior (un grupo de datos a la vez, confirmación y
+    // estado de éxito); la gestión son paneles de revisión. Ninguna acción admin
+    // se pierde. Toda interpolación pasa por e(); cada acción lleva adminKey.
+
     let facturaActiva = null;
+    let adminData = { facturas: [], personas: [], vacantes: [], rescatistas: [] };
+    let wiz = null;
 
     function claveAdmin() { return window.sessionStorage.getItem('adminKey') || ''; }
-
     async function postAdmin(payload) {
       return window.SheetsService.post(Object.assign({ adminKey: claveAdmin() }, payload));
     }
-
-    function abrirAdmin() {
-      facturaActiva = null;
-      abrirModal(t('admin.title'), `
-        <form id="admin-auth-form">
-          <p class="meta">${e(t('admin.intro'))}</p>
-          <div class="form-grid">
-            <div class="field full"><label for="admin-key">${e(t('admin.keyLabel'))}</label><input id="admin-key" type="password" autocomplete="off" value="${e(claveAdmin())}" /></div>
-          </div>
-          <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('admin.enter'))}</button></div>
-          <div id="admin-msg" class="form-message"></div>
-        </form>
-        <div id="admin-body"></div>`);
-      $('#admin-auth-form').addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        window.sessionStorage.setItem('adminKey', $('#admin-key').value.trim());
-        mensajeAdmin('#admin-msg', 'info', t('admin.checking'));
-        try {
-          const data = await postAdmin({ accion: 'admin_listar_facturas' });
-          $('#admin-auth-form').hidden = true;
-          renderAdmin(data.facturas || []);
-        } catch (err) {
-          window.sessionStorage.removeItem('adminKey');
-          mensajeAdmin('#admin-msg', 'error', String(err && err.message || t('admin.authError')));
-        }
-      });
-    }
-
     function mensajeAdmin(sel, tipo, texto) {
       const el = $(sel);
       if (!el) return;
@@ -43,236 +23,474 @@
       el.textContent = texto;
     }
 
-    async function refrescarAdmin(avisoHTML) {
+    function abrirAdmin() {
+      facturaActiva = null;
+      abrirModal(t('admin.title'), `
+        <div class="admin-shell">
+          <section class="admin-auth" id="admin-auth">
+            <div class="admin-auth-card">
+              <span class="admin-auth-badge" aria-hidden="true">🔐</span>
+              <h2>${e(t('admin.title'))}</h2>
+              <p class="section-copy">${e(t('admin.intro'))}</p>
+              <form id="admin-auth-form" novalidate>
+                <div class="field"><label for="admin-key">${e(t('admin.keyLabel'))}</label><input id="admin-key" type="password" autocomplete="off" value="${e(claveAdmin())}" /></div>
+                <div class="form-actions"><button class="btn btn-primary btn-block" type="submit">${e(t('admin.enter'))}</button></div>
+                <div id="admin-msg" class="form-message" role="status" aria-live="polite"></div>
+              </form>
+            </div>
+          </section>
+          <div id="admin-console" hidden></div>
+        </div>`);
+      $('#admin-auth-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        window.sessionStorage.setItem('adminKey', ($('#admin-key').value || '').trim());
+        mensajeAdmin('#admin-msg', 'info', t('admin.checking'));
+        try {
+          await cargarAdminData();
+          $('#admin-auth').hidden = true;
+          $('#admin-console').hidden = false;
+          irAMenu();
+        } catch (err) {
+          window.sessionStorage.removeItem('adminKey');
+          mensajeAdmin('#admin-msg', 'error', String((err && err.message) || t('admin.authError')));
+        }
+      });
+    }
+
+    async function cargarAdminData() {
+      // La lista de facturas valida la clave: si es incorrecta, propaga y no entra.
+      adminData.facturas = (await postAdmin({ accion: 'admin_listar_facturas' })).facturas || [];
+      const opcional = async (accion, campo) => {
+        try { return (await postAdmin({ accion }))[campo] || []; } catch (err) { return []; }
+      };
+      adminData.personas = await opcional('admin_listar_personas', 'personas');
+      adminData.vacantes = await opcional('admin_listar_vacantes', 'vacantes');
+      adminData.rescatistas = await opcional('admin_listar_rescatistas', 'rescatistas');
+    }
+
+    async function refrescarAdminData() {
+      try { await cargarAdminData(); } catch (err) { /* conserva lo previo si algo falla */ }
+    }
+
+    function cerrarSesionAdmin() {
+      window.sessionStorage.removeItem('adminKey');
+      facturaActiva = null; wiz = null;
+      const dialog = $('#modal-root dialog');
+      if (dialog) dialog.close();
+    }
+
+    // ---- Menú (lanzador de tareas) ----
+    function irAMenu() {
+      wiz = null; facturaActiva = null;
+      const crear = [
+        { id: 'donacion', icon: '💛', titulo: t('admin.taskDonation'), desc: t('admin.taskDonationDesc') },
+        { id: 'presupuesto', icon: '🧾', titulo: t('admin.taskBudget'), desc: t('admin.taskBudgetDesc') },
+        { id: 'vacante', icon: '🙋', titulo: t('admin.taskVacancy'), desc: t('admin.taskVacancyDesc') }
+      ];
+      const gestion = [
+        { id: 'facturas', icon: '📁', titulo: t('admin.manageInvoices'), count: adminData.facturas.length },
+        { id: 'vacantes', icon: '📋', titulo: t('admin.manageVacancies'), count: adminData.vacantes.length },
+        { id: 'personas', icon: '🔎', titulo: t('admin.managePeople'), count: adminData.personas.length },
+        { id: 'rescatistas', icon: '🚑', titulo: t('admin.manageRescuers'), count: adminData.rescatistas.length },
+        { id: 'regenerar', icon: '🔑', titulo: t('admin.manageRegen'), count: null }
+      ];
+      const crearCards = crear.map((tk) => `
+        <button class="admin-launch-card" type="button" data-admin-tarea="${e(tk.id)}">
+          <span class="admin-launch-icon" aria-hidden="true">${tk.icon}</span>
+          <span class="admin-launch-text"><strong>${e(tk.titulo)}</strong><span class="meta">${e(tk.desc)}</span></span>
+          <span class="admin-launch-go" aria-hidden="true">→</span>
+        </button>`).join('');
+      const gestionRows = gestion.map((g) => `
+        <button class="admin-manage-row" type="button" data-admin-gestion="${e(g.id)}">
+          <span class="admin-manage-icon" aria-hidden="true">${g.icon}</span>
+          <span class="admin-manage-title">${e(g.titulo)}</span>
+          ${g.count != null ? `<span class="badge gray">${e(String(g.count))}</span>` : ''}
+          <span class="admin-launch-go" aria-hidden="true">→</span>
+        </button>`).join('');
+      $('#admin-console').innerHTML = `
+        <div class="admin-console-head">
+          <div><h2>${e(t('admin.consoleTitle'))}</h2><p class="meta">${e(t('admin.consoleSubtitle'))}</p></div>
+          <button class="btn btn-ghost btn-small" type="button" id="admin-salir">${e(t('admin.signOut'))}</button>
+        </div>
+        <section class="admin-group">
+          <h3 class="admin-group-title">${e(t('admin.groupCreate'))}</h3>
+          <div class="admin-launcher">${crearCards}</div>
+        </section>
+        <section class="admin-group">
+          <h3 class="admin-group-title">${e(t('admin.groupManage'))}</h3>
+          <div class="admin-manage-list">${gestionRows}</div>
+        </section>`;
+      $$('#admin-console [data-admin-tarea]').forEach((b) => b.addEventListener('click', () => abrirAsistente(b.dataset.adminTarea)));
+      $$('#admin-console [data-admin-gestion]').forEach((b) => b.addEventListener('click', () => abrirGestion(b.dataset.adminGestion)));
+      $('#admin-salir').addEventListener('click', cerrarSesionAdmin);
+    }
+
+    // ---- Definición declarativa de los asistentes ----
+    function defAsistente(id) {
+      const A = {
+        donacion: {
+          titulo: t('admin.taskDonation'),
+          pasos: [
+            { titulo: t('admin.stepObjective'), campos: [
+              { id: 'objetivo', label: t('admin.objective'), requerido: true, placeholder: t('admin.objectivePh'), full: true },
+              { id: 'descripcion', label: t('admin.description'), full: true },
+              { id: 'meta', label: t('admin.requiredAmount'), tipo: 'number', requerido: true }
+            ] },
+            { titulo: t('admin.stepDonation'), campos: [
+              { id: 'donante', label: t('admin.donor'), placeholder: t('needs.donorPlaceholder') },
+              { id: 'monto', label: t('admin.amount'), tipo: 'number', requerido: true },
+              { id: 'referencia', label: t('admin.reference') },
+              { id: 'estado', label: t('admin.status'), tipo: 'select', opciones: [
+                { value: 'Registrada', label: t('admin.stateRegistered') },
+                { value: 'Confirmada', label: t('admin.stateConfirmed') }
+              ] }
+            ] }
+          ],
+          enviar: async (d) => {
+            const f = await postAdmin({ accion: 'admin_crear_factura', objetivo: d.objetivo, descripcion: d.descripcion || '', montoRequerido: d.meta });
+            await postAdmin({ accion: 'admin_registrar_donacion', token: f.token, nombreDonante: d.donante || 'Anónimo', monto: d.monto, referencia: d.referencia || '', estado: d.estado || 'Registrada' });
+            return { numeroFactura: f.numeroFactura, token: f.token };
+          },
+          exitoTitulo: () => t('admin.donationDone'),
+          exitoCuerpo: (r) => reciboTokens([[t('admin.invoiceLabel'), r.numeroFactura], [t('needs.tokenLabel'), r.token]], r.token),
+          onExito: (r) => { facturaActiva = r.token; }
+        },
+        presupuesto: {
+          titulo: t('admin.taskBudget'),
+          pasos: [
+            { titulo: t('admin.stepCenterSupply'), campos: [
+              { id: 'centro', label: t('admin.centerName'), requerido: true },
+              { id: 'insumo', label: t('admin.budgetSupply'), requerido: true, placeholder: t('admin.budgetSupplyPh') }
+            ] },
+            { titulo: t('admin.stepStore'), campos: [
+              { id: 'tienda', label: t('admin.budgetStore'), requerido: true, placeholder: t('admin.budgetStorePh') },
+              { id: 'direccion', label: t('admin.budgetAddress'), full: true }
+            ] },
+            { titulo: t('admin.stepQtyPrice'), campos: [
+              { id: 'cantidad', label: t('admin.budgetQty'), tipo: 'number', requerido: true },
+              { id: 'presentacion', label: t('admin.budgetPresentation'), placeholder: t('admin.budgetPresentationPh') },
+              { id: 'precio', label: t('admin.budgetPrice'), tipo: 'number', requerido: true }
+            ] }
+          ],
+          enviar: async (d) => postAdmin({ accion: 'admin_crear_presupuesto', centro: d.centro, insumo: d.insumo, tienda: d.tienda, direccion: d.direccion || '', cantidad: d.cantidad, presentacion: d.presentacion || '', precio: d.precio }),
+          exitoTitulo: () => t('admin.budgetCreated'),
+          exitoCuerpo: (r) => reciboTokens([[t('admin.invoiceLabel'), r.numeroFactura], [t('needs.tokenLabel'), r.token]], r.token)
+        },
+        vacante: {
+          titulo: t('admin.taskVacancy'),
+          pasos: [
+            { titulo: t('admin.stepPlace'), campos: [
+              { id: 'lugarTipo', label: t('vacancies.placeTypeLabel'), tipo: 'select', opciones: ['Centro', 'Hospital', 'Refugio', 'Zona de derrumbe'].map((v) => ({ value: v, label: tValue('types', v) })) },
+              { id: 'lugarNombre', label: t('admin.vacancyPlace'), requerido: true, placeholder: t('admin.vacancyPlacePh'), full: true },
+              { id: 'ubicacion', label: t('panel.locationLabel'), full: true }
+            ] },
+            { titulo: t('admin.stepProfile'), campos: [
+              { id: 'rol', label: t('admin.vacancyRole'), requerido: true, placeholder: t('admin.vacancyRolePh') },
+              { id: 'cantidad', label: t('admin.vacancyQty'), tipo: 'number', requerido: true },
+              { id: 'urgencia', label: t('panel.urgency'), tipo: 'select', opciones: ['Alta', 'Normal', 'Baja'].map((v) => ({ value: v, label: tValue('urgency', v) })) }
+            ] },
+            { titulo: t('admin.stepDetails'), campos: [
+              { id: 'turno', label: t('admin.vacancyShift'), placeholder: t('admin.vacancyShiftPh') },
+              { id: 'telefono', label: t('common.phone'), tipo: 'tel' },
+              { id: 'descripcion', label: t('admin.description'), full: true, placeholder: t('admin.vacancyDescPh') }
+            ] }
+          ],
+          enviar: async (d) => postAdmin({ accion: 'admin_crear_vacante', lugarTipo: d.lugarTipo, lugarNombre: d.lugarNombre, ubicacion: d.ubicacion || '', rol: d.rol, cantidad: d.cantidad, urgencia: d.urgencia, turno: d.turno || '', telefono: d.telefono || '', descripcion: d.descripcion || '' }),
+          exitoTitulo: () => t('admin.vacancyCreated'),
+          exitoCuerpo: () => `<p class="section-copy">${e(t('admin.vacancyLive'))}</p>`
+        }
+      };
+      return A[id];
+    }
+
+    // ---- Motor de asistentes (stepper + un paso a la vez + confirmar + éxito) ----
+    function abrirAsistente(id) {
+      const def = defAsistente(id);
+      if (!def) return;
+      wiz = { id, def, paso: 0, datos: {} };
+      renderAsistente();
+    }
+
+    function campoWizHtml(c, datos) {
+      const val = datos[c.id] != null ? datos[c.id] : (c.default || '');
+      const cls = 'field' + (c.full ? ' full' : '');
+      const req = c.requerido ? ` <span class="req" aria-hidden="true">*</span>` : '';
+      const lab = `<label for="wz-${c.id}">${e(c.label)}${req}</label>`;
+      if (c.tipo === 'select') {
+        const ops = c.opciones.map((o) => `<option value="${e(o.value)}"${String(val) === String(o.value) ? ' selected' : ''}>${e(o.label)}</option>`).join('');
+        return `<div class="${cls}">${lab}<select id="wz-${c.id}">${ops}</select></div>`;
+      }
+      const type = c.tipo === 'number' ? 'number' : (c.tipo === 'tel' ? 'tel' : 'text');
+      const extra = c.tipo === 'number' ? ' min="1" step="1"' : (c.tipo === 'tel' ? ' inputmode="tel"' : '');
+      return `<div class="${cls}">${lab}<input id="wz-${c.id}" type="${type}"${extra} value="${e(val)}" placeholder="${e(c.placeholder || '')}" /></div>`;
+    }
+
+    function renderAsistente() {
+      const { def, paso } = wiz;
+      const total = def.pasos.length;
+      const esConfirm = paso === total;
+      const nodos = def.pasos.map((p) => p.titulo).concat([t('wizard.confirm')]);
+      const fill = nodos.length > 1 ? Math.round((paso / (nodos.length - 1)) * 100) : 100;
+      const stepper = nodos.map((label, i) => {
+        const est = i < paso ? 'is-done' : (i === paso ? 'is-current' : '');
+        const marca = i < paso ? '✓' : String(i + 1);
+        return `<li class="wizard-step-node ${est}"${i === paso ? ' aria-current="step"' : ''}><span class="wizard-step-dot">${marca}</span><span class="wizard-step-label">${e(label)}</span></li>`;
+      }).join('');
+      let cuerpo;
+      if (esConfirm) {
+        cuerpo = resumenHtml(def, wiz.datos);
+      } else {
+        const p = def.pasos[paso];
+        cuerpo = `<h3 class="wizard-step-title">${e(p.titulo)}</h3><p class="wizard-step-count">${e(t('wizard.stepOf', { current: paso + 1, total: nodos.length }))}</p><div class="form-grid">${p.campos.map((c) => campoWizHtml(c, wiz.datos)).join('')}</div>`;
+      }
+      $('#admin-console').innerHTML = `
+        <div class="wizard">
+          <div class="admin-console-head">
+            <button class="link-btn" type="button" id="wiz-menu">← ${e(t('wizard.menu'))}</button>
+            <h2>${e(def.titulo)}</h2>
+          </div>
+          <div class="wizard-progress" role="presentation"><div class="wizard-progress-fill" style="width:${fill}%"></div></div>
+          <ol class="wizard-steps">${stepper}</ol>
+          <div class="wizard-panel" id="wiz-panel">${cuerpo}</div>
+          <div id="wiz-msg" class="form-message" role="status" aria-live="polite"></div>
+          <div class="wizard-foot">
+            <button class="btn btn-ghost" type="button" id="wiz-back"${paso === 0 ? ' disabled' : ''}>${e(t('wizard.back'))}</button>
+            <button class="btn btn-primary" type="button" id="wiz-next">${esConfirm ? e(t('wizard.submit')) : e(t('wizard.next'))}</button>
+          </div>
+        </div>`;
+      $('#wiz-menu').addEventListener('click', irAMenu);
+      $('#wiz-back').addEventListener('click', wizAtras);
+      $('#wiz-next').addEventListener('click', wizSiguiente);
+      const primero = $('#wiz-panel input, #wiz-panel select');
+      if (primero) primero.focus();
+    }
+
+    function leerPasoActual() {
+      const p = wiz.def.pasos[wiz.paso];
+      if (!p) return;
+      p.campos.forEach((c) => { const el = $('#wz-' + c.id); if (el) wiz.datos[c.id] = el.value.trim(); });
+    }
+
+    function validarPasoActual() {
+      const p = wiz.def.pasos[wiz.paso];
+      for (const c of p.campos) {
+        const v = wiz.datos[c.id];
+        if (c.requerido && !v) return t('wizard.requiredField', { field: c.label });
+        if (c.tipo === 'number' && c.requerido && !(numero(v) > 0)) return t('wizard.positiveField', { field: c.label });
+      }
+      return null;
+    }
+
+    function wizAtras() {
+      leerPasoActual();
+      if (wiz.paso > 0) { wiz.paso -= 1; renderAsistente(); }
+    }
+
+    async function wizSiguiente() {
+      const esConfirm = wiz.paso === wiz.def.pasos.length;
+      if (!esConfirm) {
+        leerPasoActual();
+        const err = validarPasoActual();
+        if (err) { mensajeAdmin('#wiz-msg', 'error', err); return; }
+        wiz.paso += 1; renderAsistente(); return;
+      }
+      const btn = $('#wiz-next');
+      btn.disabled = true;
+      mensajeAdmin('#wiz-msg', 'info', t('wizard.sending'));
       try {
-        const data = await postAdmin({ accion: 'admin_listar_facturas' });
-        renderAdmin(data.facturas || [], avisoHTML);
+        const res = (await wiz.def.enviar(wiz.datos)) || {};
+        if (wiz.def.onExito) wiz.def.onExito(res);
+        await refrescarAdminData();
+        exitoAsistente(wiz.def, res);
       } catch (err) {
-        mensajeAdmin('#admin-msg2', 'error', String(err && err.message || ''));
+        btn.disabled = false;
+        mensajeAdmin('#wiz-msg', 'error', String((err && err.message) || t('needs.error')));
       }
     }
 
-    async function renderAdmin(facturas, avisoHTML) {
-      let personas = [];
-      try {
-        personas = (await postAdmin({ accion: 'admin_listar_personas' })).personas || [];
-      } catch (err) { /* la lista de personas no bloquea el módulo */ }
-      let vacantes = [];
-      try {
-        vacantes = (await postAdmin({ accion: 'admin_listar_vacantes' })).vacantes || [];
-      } catch (err) { /* la lista de vacantes no bloquea el módulo */ }
-      const filaFactura = (f) => `
-        <div class="supply-item"><div class="supply-line">
-          <strong>${e(f.numero_factura)}</strong>
-          <span class="badge ${f.estado === 'Cerrada' ? 'gray' : 'green'}">${e(f.estado)}</span></div>
-          <p class="meta">${e(f.objetivo)} · ${e(String(f.monto_recaudado))} / ${e(String(f.monto_requerido))}</p>
-          <p class="meta tracking-code">${e(f.token_publico)}</p>
-          <div class="inline-actions">
-            <button class="btn btn-soft btn-small" type="button" data-admin-usar="${e(f.token_publico)}">${e(t('admin.useInvoice'))}</button>
+    function resumenHtml(def, datos) {
+      const disp = (c) => {
+        const v = datos[c.id];
+        if (!v) return null;
+        if (c.tipo === 'select' && c.opciones) { const o = c.opciones.find((op) => String(op.value) === String(v)); return o ? o.label : v; }
+        return v;
+      };
+      const filas = def.pasos.flatMap((p) => p.campos).map((c) => ({ c, v: disp(c) })).filter((x) => x.v)
+        .map(({ c, v }) => `<div class="wizard-sum-row"><dt>${e(c.label)}</dt><dd>${e(v)}</dd></div>`).join('');
+      return `<h3 class="wizard-step-title">${e(t('wizard.confirm'))}</h3><p class="section-copy">${e(t('wizard.reviewCopy'))}</p><dl class="wizard-summary">${filas}</dl>`;
+    }
+
+    function reciboTokens(pares, copyValue) {
+      const filas = pares.map(([lab, val]) => `<div class="recibo-row"><span class="meta">${e(lab)}</span><span class="token-value"><strong>${e(val)}</strong></span></div>`).join('');
+      const copyBtn = copyValue ? `<button class="btn btn-soft btn-small" type="button" id="wiz-copiar" data-copy="${e(copyValue)}">${e(t('needs.copyCta'))}</button>` : '';
+      return `<div class="recibo">${filas}<p class="meta">${e(t('admin.tokenHint'))}</p>${copyBtn}</div>`;
+    }
+
+    function exitoAsistente(def, res) {
+      $('#admin-console').innerHTML = `
+        <div class="wizard-success">
+          <span class="wizard-success-icon" aria-hidden="true">✓</span>
+          <h2>${e(def.exitoTitulo(res))}</h2>
+          ${def.exitoCuerpo(res)}
+          <div class="wizard-success-actions">
+            <button class="btn btn-primary" type="button" id="wiz-otra">${e(t('wizard.another'))}</button>
+            <button class="btn btn-ghost" type="button" id="wiz-menu2">${e(t('wizard.toMenu'))}</button>
           </div>
         </div>`;
-      const filaPersona = (p) => `
-        <div class="supply-item"><div class="supply-line"><strong>${e(p.nombre)}</strong><span class="badge yellow">${e(t('family.unverifiedBadge'))}</span></div>
-          <p class="meta">${e(p.cedula || '')} · ${e(p.estado || '')} · ${e(p.ubicacion || '')} · ${e(p.fuente || '')}</p>
-          <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" data-admin-verificar="${e(String(p.id))}">${e(t('admin.verify'))}</button></div>
+      const copiar = $('#wiz-copiar');
+      if (copiar) copiar.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(copiar.dataset.copy || ''); toast(t('needs.copied')); }
+        catch (err) { toast(copiar.dataset.copy || ''); }
+      });
+      const idActual = wiz && wiz.id;
+      $('#wiz-otra').addEventListener('click', () => abrirAsistente(idActual));
+      $('#wiz-menu2').addEventListener('click', irAMenu);
+    }
+
+    // ---- Paneles de gestión ----
+    function abrirGestion(cual) {
+      const panels = { facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, regenerar: panelRegenerar };
+      const fn = panels[cual];
+      if (fn) fn();
+    }
+
+    function marcoGestion(titulo, cuerpo) {
+      return `
+        <div class="admin-console-head">
+          <button class="link-btn" type="button" id="gest-menu">← ${e(t('wizard.menu'))}</button>
+          <h2>${e(titulo)}</h2>
+        </div>
+        <div id="gest-msg" class="form-message" role="status" aria-live="polite"></div>
+        <div class="admin-manage-body">${cuerpo}</div>`;
+    }
+
+    function bindGestMenu() { $('#gest-menu').addEventListener('click', irAMenu); }
+
+    function panelFacturas() {
+      const filas = adminData.facturas.map((f) => `
+        <button class="admin-record" type="button" data-fac="${e(f.token_publico)}">
+          <span class="admin-record-main"><strong>${e(f.numero_factura)}</strong><span class="meta">${e(f.objetivo)}</span></span>
+          <span class="admin-record-side"><span class="badge ${f.estado === 'Cerrada' ? 'gray' : 'green'}">${e(f.estado)}</span><span class="meta">${e(String(f.monto_recaudado))} / ${e(String(f.monto_requerido))}</span></span>
+        </button>`).join('') || `<p class="empty-state">${e(t('admin.noInvoices'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.manageInvoices'), `
+        <div class="admin-records">${filas}</div>
+        <div id="fac-ops" hidden></div>`);
+      bindGestMenu();
+      $$('#admin-console [data-fac]').forEach((b) => b.addEventListener('click', () => operarFactura(b.dataset.fac)));
+      if (facturaActiva) operarFactura(facturaActiva);
+    }
+
+    function operarFactura(token) {
+      facturaActiva = token;
+      const f = adminData.facturas.find((x) => x.token_publico === token);
+      const cont = $('#fac-ops');
+      if (!cont) return;
+      cont.hidden = false;
+      cont.innerHTML = `
+        <div class="admin-ops">
+          <h3>${e(t('admin.opsOn'))} <span class="tracking-code">${e(f ? f.numero_factura : token)}</span></h3>
+          <div class="admin-ops-grid">
+            <div class="admin-ops-card">
+              <h4>${e(t('admin.donation'))}</h4>
+              <div class="field"><label for="op-don-nombre">${e(t('admin.donor'))}</label><input id="op-don-nombre" /></div>
+              <div class="field"><label for="op-don-monto">${e(t('admin.amount'))}</label><input id="op-don-monto" type="number" min="1" /></div>
+              <div class="field"><label for="op-don-ref">${e(t('admin.reference'))}</label><input id="op-don-ref" /></div>
+              <div class="field"><label for="op-don-estado">${e(t('admin.status'))}</label><select id="op-don-estado"><option value="Registrada">${e(t('admin.stateRegistered'))}</option><option value="Confirmada">${e(t('admin.stateConfirmed'))}</option></select></div>
+              <button class="btn btn-soft btn-small" type="button" id="op-don-guardar">${e(t('admin.saveDonation'))}</button>
+            </div>
+            <div class="admin-ops-card">
+              <h4>${e(t('admin.movement'))}</h4>
+              <div class="field"><label for="op-mov-tipo">${e(t('admin.type'))}</label><select id="op-mov-tipo"><option>Ingreso</option><option>Egreso</option><option>Compra</option><option>Entrega</option></select></div>
+              <div class="field"><label for="op-mov-desc">${e(t('admin.description'))}</label><input id="op-mov-desc" /></div>
+              <div class="field"><label for="op-mov-monto">${e(t('admin.amount'))}</label><input id="op-mov-monto" type="number" min="0" /></div>
+              <button class="btn btn-soft btn-small" type="button" id="op-mov-guardar">${e(t('admin.saveMovement'))}</button>
+            </div>
+            <div class="admin-ops-card">
+              <h4>${e(t('admin.evidence'))}</h4>
+              <div class="field"><label for="op-evi-url">URL (https)</label><input id="op-evi-url" placeholder="https://…" /></div>
+              <div class="field"><label for="op-evi-desc">${e(t('admin.description'))}</label><input id="op-evi-desc" /></div>
+              <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" id="op-evi-guardar">${e(t('admin.saveEvidence'))}</button><button class="btn btn-ghost btn-small" type="button" id="op-cerrar">${e(t('admin.closeInvoice'))}</button></div>
+            </div>
+          </div>
         </div>`;
-      $('#admin-body').innerHTML = `
-        <div id="admin-msg2" class="form-message"></div>
-        ${avisoHTML || ''}
-        <h3>${e(t('admin.createInvoice'))}</h3>
-        <div class="panel-insumo">
-          <div class="form-grid">
-            <div class="field"><label>${e(t('admin.objective'))}</label><input id="adm-objetivo" /></div>
-            <div class="field"><label>${e(t('admin.description'))}</label><input id="adm-descripcion" /></div>
-            <div class="field"><label>${e(t('admin.requiredAmount'))}</label><input id="adm-monto" type="number" min="1" /></div>
-          </div>
-          <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="adm-crear">${e(t('admin.create'))}</button></div>
-        </div>
-        <h3>${e(t('admin.vacancyTitle'))}</h3>
-        <p class="meta">${e(t('admin.vacancyIntro'))}</p>
-        <div class="panel-insumo">
-          <div class="form-grid">
-            <div class="field"><label>${e(t('vacancies.placeTypeLabel'))}</label><select id="vac-tipo"><option>Centro</option><option>Hospital</option><option>Refugio</option><option>Zona de derrumbe</option></select></div>
-            <div class="field"><label>${e(t('admin.vacancyPlace'))}</label><input id="vac-lugar" placeholder="${e(t('admin.vacancyPlacePh'))}" /></div>
-            <div class="field"><label>${e(t('panel.locationLabel'))}</label><input id="vac-ubicacion" /></div>
-            <div class="field"><label>${e(t('admin.vacancyRole'))}</label><input id="vac-rol" placeholder="${e(t('admin.vacancyRolePh'))}" /></div>
-            <div class="field"><label>${e(t('admin.vacancyQty'))}</label><input id="vac-cantidad" type="number" min="1" /></div>
-            <div class="field"><label>${e(t('panel.urgency'))}</label><select id="vac-urgencia"><option value="Alta">${e(tValue('urgency', 'Alta'))}</option><option value="Normal" selected>${e(tValue('urgency', 'Normal'))}</option><option value="Baja">${e(tValue('urgency', 'Baja'))}</option></select></div>
-            <div class="field"><label>${e(t('admin.vacancyShift'))}</label><input id="vac-turno" placeholder="${e(t('admin.vacancyShiftPh'))}" /></div>
-            <div class="field"><label>${e(t('common.phone'))}</label><input id="vac-telefono" type="tel" /></div>
-            <div class="field full"><label>${e(t('admin.description'))}</label><input id="vac-descripcion" placeholder="${e(t('admin.vacancyDescPh'))}" /></div>
-          </div>
-          <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="vac-crear">${e(t('admin.vacancyCreate'))}</button></div>
-        </div>
-        <h3>${e(t('admin.vacancyList'))} (${vacantes.length})</h3>
-        ${vacantes.map((v) => `
-        <div class="supply-item"><div class="supply-line">
-          <strong>${e(v.rol)} · ${e(v.lugar_nombre)}</strong>
-          <span class="badge ${v.estado === 'Abierta' ? 'green' : 'gray'}">${e(v.estado)}</span></div>
-          <p class="meta">${e(tValue('types', v.lugar_tipo) || v.lugar_tipo)} · ${e(mostrarUrgencia(v.urgencia))} · ${e(String(v.cantidad_cubierta))} / ${e(String(v.cantidad_necesaria))}${v.turno ? ' · ' + e(v.turno) : ''}</p>
-          <div class="inline-actions">
-            <label class="field-mini"><span>${e(t('admin.vacancyCovered'))}</span><input type="number" min="0" value="${e(v.cantidad_cubierta)}" data-vac-cubiertos="${e(String(v.id))}" /></label>
+      cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const conFactura = (fn) => async () => {
+        try { await fn(); mensajeAdmin('#gest-msg', 'success', t('panel.saved')); await refrescarAdminData(); }
+        catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || '')); }
+      };
+      $('#op-don-guardar').addEventListener('click', conFactura(() => postAdmin({ accion: 'admin_registrar_donacion', token: facturaActiva, nombreDonante: $('#op-don-nombre').value.trim(), monto: $('#op-don-monto').value, referencia: $('#op-don-ref').value.trim(), estado: $('#op-don-estado').value })));
+      $('#op-mov-guardar').addEventListener('click', conFactura(() => postAdmin({ accion: 'admin_registrar_movimiento', token: facturaActiva, tipo: $('#op-mov-tipo').value, descripcion: $('#op-mov-desc').value.trim(), monto: $('#op-mov-monto').value })));
+      $('#op-evi-guardar').addEventListener('click', conFactura(() => postAdmin({ accion: 'admin_registrar_evidencia', token: facturaActiva, archivo: $('#op-evi-url').value.trim(), descripcion: $('#op-evi-desc').value.trim() })));
+      $('#op-cerrar').addEventListener('click', conFactura(() => postAdmin({ accion: 'admin_cerrar_factura', token: facturaActiva })));
+    }
+
+    function panelVacantes() {
+      const filas = adminData.vacantes.map((v) => `
+        <div class="admin-record-static">
+          <div class="admin-record-main"><strong>${e(v.rol)} · ${e(v.lugar_nombre)}</strong><span class="meta">${e(tValue('types', v.lugar_tipo) || v.lugar_tipo)} · ${e(mostrarUrgencia(v.urgencia))} · ${e(String(v.cantidad_cubierta))}/${e(String(v.cantidad_necesaria))}${v.turno ? ' · ' + e(v.turno) : ''}</span></div>
+          <div class="admin-record-actions">
+            <span class="badge ${v.estado === 'Abierta' ? 'green' : 'gray'}">${e(v.estado)}</span>
+            <label class="field-mini"><span>${e(t('admin.vacancyCovered'))}</span><input type="number" min="0" value="${e(String(v.cantidad_cubierta))}" data-vac-cubiertos="${e(String(v.id))}" /></label>
             <button class="btn btn-soft btn-small" type="button" data-vac-guardar="${e(String(v.id))}">${e(t('admin.vacancySave'))}</button>
             ${v.estado === 'Abierta' ? `<button class="btn btn-ghost btn-small" type="button" data-vac-cerrar="${e(String(v.id))}">${e(t('admin.vacancyClose'))}</button>` : ''}
           </div>
-        </div>`).join('') || `<p class="meta">${e(t('admin.vacancyNone'))}</p>`}
-        <h3>${e(t('admin.budgetTitle'))}</h3>
-        <p class="meta">${e(t('admin.budgetIntro'))}</p>
-        <div class="panel-insumo">
-          <div class="form-grid">
-            <div class="field"><label>${e(t('admin.centerName'))}</label><input id="pre-centro" /></div>
-            <div class="field"><label>${e(t('admin.budgetSupply'))}</label><input id="pre-insumo" placeholder="${e(t('admin.budgetSupplyPh'))}" /></div>
-            <div class="field"><label>${e(t('admin.budgetStore'))}</label><input id="pre-tienda" placeholder="${e(t('admin.budgetStorePh'))}" /></div>
-            <div class="field"><label>${e(t('admin.budgetAddress'))}</label><input id="pre-direccion" /></div>
-            <div class="field"><label>${e(t('admin.budgetQty'))}</label><input id="pre-cantidad" type="number" min="1" /></div>
-            <div class="field"><label>${e(t('admin.budgetPresentation'))}</label><input id="pre-presentacion" placeholder="${e(t('admin.budgetPresentationPh'))}" /></div>
-            <div class="field"><label>${e(t('admin.budgetPrice'))}</label><input id="pre-precio" type="number" min="1" /></div>
-          </div>
-          <div class="inline-actions"><button class="btn btn-primary btn-small" type="button" id="pre-crear">${e(t('admin.budgetCreate'))}</button></div>
-        </div>
-        <h3>${e(t('admin.invoices'))} (${facturas.length})</h3>
-        ${facturas.map(filaFactura).join('') || `<p class="meta">${e(t('admin.noInvoices'))}</p>`}
-        <div id="admin-factura-ops" hidden>
-          <h3>${e(t('admin.opsOn'))} <span id="adm-factura-sel" class="tracking-code"></span></h3>
-          <div class="panel-insumo">
-            <p class="meta"><strong>${e(t('admin.donation'))}</strong></p>
-            <div class="form-grid">
-              <div class="field"><label>${e(t('admin.donor'))}</label><input id="adm-don-nombre" /></div>
-              <div class="field"><label>${e(t('admin.amount'))}</label><input id="adm-don-monto" type="number" min="1" /></div>
-              <div class="field"><label>${e(t('admin.reference'))}</label><input id="adm-don-ref" /></div>
-              <div class="field"><label>${e(t('admin.status'))}</label><select id="adm-don-estado"><option value="Registrada">${e(t('admin.stateRegistered'))}</option><option value="Confirmada">${e(t('admin.stateConfirmed'))}</option></select></div>
-            </div>
-            <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" id="adm-don-guardar">${e(t('admin.saveDonation'))}</button></div>
-          </div>
-          <div class="panel-insumo">
-            <p class="meta"><strong>${e(t('admin.movement'))}</strong></p>
-            <div class="form-grid">
-              <div class="field"><label>${e(t('admin.type'))}</label><select id="adm-mov-tipo"><option>Ingreso</option><option>Egreso</option><option>Compra</option><option>Entrega</option></select></div>
-              <div class="field"><label>${e(t('admin.description'))}</label><input id="adm-mov-desc" /></div>
-              <div class="field"><label>${e(t('admin.amount'))}</label><input id="adm-mov-monto" type="number" min="0" /></div>
-            </div>
-            <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" id="adm-mov-guardar">${e(t('admin.saveMovement'))}</button></div>
-          </div>
-          <div class="panel-insumo">
-            <p class="meta"><strong>${e(t('admin.evidence'))}</strong></p>
-            <div class="form-grid">
-              <div class="field"><label>URL (https)</label><input id="adm-evi-url" placeholder="https://…" /></div>
-              <div class="field"><label>${e(t('admin.description'))}</label><input id="adm-evi-desc" /></div>
-            </div>
-            <div class="inline-actions">
-              <button class="btn btn-soft btn-small" type="button" id="adm-evi-guardar">${e(t('admin.saveEvidence'))}</button>
-              <button class="btn btn-ghost btn-small" type="button" id="adm-cerrar-factura">${e(t('admin.closeInvoice'))}</button>
-            </div>
-          </div>
-        </div>
-        <h3>${e(t('admin.pendingPeople'))} (${personas.length})</h3>
-        ${personas.map(filaPersona).join('') || `<p class="meta">${e(t('admin.noPendingPeople'))}</p>`}
-        <h3>${e(t('admin.regeneratePanel'))}</h3>
-        <div class="panel-insumo">
-          <div class="form-grid">
-            <div class="field"><label>${e(t('admin.centerName'))}</label><input id="adm-regen-nombre" /></div>
-          </div>
-          <div class="inline-actions"><button class="btn btn-soft btn-small" type="button" id="adm-regen">${e(t('admin.regenerate'))}</button></div>
-          <div id="adm-regen-out"></div>
-        </div>
-        <div class="form-actions"><button class="btn btn-ghost btn-small" type="button" id="adm-salir">${e(t('admin.signOut'))}</button></div>`;
-
-      $('#adm-crear').addEventListener('click', async () => {
-        try {
-          const r = await postAdmin({ accion: 'admin_crear_factura', objetivo: $('#adm-objetivo').value.trim(),
-            descripcion: $('#adm-descripcion').value.trim(), montoRequerido: $('#adm-monto').value });
-          const aviso = `<div class="notice success visible">${e(t('admin.invoiceCreated'))}</div><p class="tracking-code">${e(r.numeroFactura)} · ${e(r.token)}</p><p class="meta">${e(t('admin.tokenHint'))}</p>`;
-          await refrescarAdmin(aviso);
-          // Auto-seleccionar la factura recién creada para operarla ya (evita la
-          // carrera read-after-write del listado tras el insert).
-          facturaActiva = r.token;
-          $('#admin-factura-ops').hidden = false;
-          $('#adm-factura-sel').textContent = r.numeroFactura + ' · ' + r.token;
-        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
-      });
-      $('#vac-crear').addEventListener('click', async () => {
-        try {
-          await postAdmin({ accion: 'admin_crear_vacante',
-            lugarTipo: $('#vac-tipo').value, lugarNombre: $('#vac-lugar').value.trim(),
-            ubicacion: $('#vac-ubicacion').value.trim(), rol: $('#vac-rol').value.trim(),
-            cantidad: $('#vac-cantidad').value, urgencia: $('#vac-urgencia').value,
-            turno: $('#vac-turno').value.trim(), telefono: $('#vac-telefono').value.trim(),
-            descripcion: $('#vac-descripcion').value.trim() });
-          await refrescarAdmin(`<div class="notice success visible">${e(t('admin.vacancyCreated'))}</div>`);
-        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
-      });
-      $$('#admin-body [data-vac-guardar]').forEach((btn) => btn.addEventListener('click', async () => {
-        try {
-          await postAdmin({ accion: 'admin_actualizar_vacante', id: btn.dataset.vacGuardar,
-            cantidadCubierta: $(`[data-vac-cubiertos="${btn.dataset.vacGuardar}"]`).value });
-          await refrescarAdmin();
-        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+        </div>`).join('') || `<p class="empty-state">${e(t('admin.vacancyNone'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.manageVacancies'), `<div class="admin-records">${filas}</div>`);
+      bindGestMenu();
+      const recargar = async () => { await refrescarAdminData(); panelVacantes(); };
+      $$('#admin-console [data-vac-guardar]').forEach((b) => b.addEventListener('click', async () => {
+        try { await postAdmin({ accion: 'admin_actualizar_vacante', id: b.dataset.vacGuardar, cantidadCubierta: $(`[data-vac-cubiertos="${b.dataset.vacGuardar}"]`).value }); await recargar(); }
+        catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || '')); }
       }));
-      $$('#admin-body [data-vac-cerrar]').forEach((btn) => btn.addEventListener('click', async () => {
-        try {
-          await postAdmin({ accion: 'admin_actualizar_vacante', id: btn.dataset.vacCerrar, estado: 'Cerrada' });
-          await refrescarAdmin();
-        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
+      $$('#admin-console [data-vac-cerrar]').forEach((b) => b.addEventListener('click', async () => {
+        try { await postAdmin({ accion: 'admin_actualizar_vacante', id: b.dataset.vacCerrar, estado: 'Cerrada' }); await recargar(); }
+        catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || '')); }
       }));
-      $('#pre-crear').addEventListener('click', async () => {
-        try {
-          const r = await postAdmin({ accion: 'admin_crear_presupuesto',
-            centro: $('#pre-centro').value.trim(), insumo: $('#pre-insumo').value.trim(),
-            tienda: $('#pre-tienda').value.trim(), direccion: $('#pre-direccion').value.trim(),
-            cantidad: $('#pre-cantidad').value, presentacion: $('#pre-presentacion').value.trim(),
-            precio: $('#pre-precio').value });
-          const aviso = `<div class="notice success visible">${e(t('admin.budgetCreated'))}</div><p class="tracking-code">${e(r.numeroFactura)} · ${e(r.token)}</p>`;
-          await refrescarAdmin(aviso);
-        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
-      });
-      $$('#admin-body [data-admin-usar]').forEach((btn) => btn.addEventListener('click', () => {
-        facturaActiva = btn.dataset.adminUsar;
-        $('#admin-factura-ops').hidden = false;
-        $('#adm-factura-sel').textContent = facturaActiva;
-        $('#admin-factura-ops').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }));
-      $$('#admin-body [data-admin-verificar]').forEach((btn) => btn.addEventListener('click', async () => {
-        try {
-          await postAdmin({ accion: 'admin_verificar_persona', id: btn.dataset.adminVerificar });
-          await refrescarAdmin();
-        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
-      }));
-      const conFactura = (fn) => async () => {
-        if (!facturaActiva) { mensajeAdmin('#admin-msg2', 'error', t('admin.pickInvoice')); return; }
-        try { await fn(); mensajeAdmin('#admin-msg2', 'success', t('panel.saved')); await refrescarAdmin(); }
-        catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
-      };
-      $('#adm-don-guardar').addEventListener('click', conFactura(() => postAdmin({
-        accion: 'admin_registrar_donacion', token: facturaActiva,
-        nombreDonante: $('#adm-don-nombre').value.trim(), monto: $('#adm-don-monto').value,
-        referencia: $('#adm-don-ref').value.trim(), estado: $('#adm-don-estado').value })));
-      $('#adm-mov-guardar').addEventListener('click', conFactura(() => postAdmin({
-        accion: 'admin_registrar_movimiento', token: facturaActiva,
-        tipo: $('#adm-mov-tipo').value, descripcion: $('#adm-mov-desc').value.trim(), monto: $('#adm-mov-monto').value })));
-      $('#adm-evi-guardar').addEventListener('click', conFactura(() => postAdmin({
-        accion: 'admin_registrar_evidencia', token: facturaActiva,
-        archivo: $('#adm-evi-url').value.trim(), descripcion: $('#adm-evi-desc').value.trim() })));
-      $('#adm-cerrar-factura').addEventListener('click', conFactura(() => postAdmin({
-        accion: 'admin_cerrar_factura', token: facturaActiva })));
-      $('#adm-regen').addEventListener('click', async () => {
-        try {
-          const r = await postAdmin({ accion: 'admin_regenerar_panel', nombre: $('#adm-regen-nombre').value.trim() });
-          $('#adm-regen-out').innerHTML = `<div class="notice success visible">${e(t('admin.panelRegenerated'))}</div><p class="tracking-code">${e(r.token)} · PIN ${e(r.pin)}</p><p class="meta">${e(t('admin.tokenHint'))}</p>`;
-        } catch (err) { mensajeAdmin('#admin-msg2', 'error', String(err && err.message || '')); }
-      });
-      $('#adm-salir').addEventListener('click', () => {
-        window.sessionStorage.removeItem('adminKey');
-        facturaActiva = null;
-        const dialog = $('#modal-root dialog');
-        if (dialog) dialog.close();
-      });
-      // Preservar la factura en operación tras cada re-render
-      if (facturaActiva && facturas.some((f) => f.token_publico === facturaActiva)) {
-        const f = facturas.find((x) => x.token_publico === facturaActiva);
-        $('#admin-factura-ops').hidden = false;
-        $('#adm-factura-sel').textContent = f.numero_factura + ' · ' + f.token_publico;
-      }
     }
+
+    function panelPersonas() {
+      const filas = adminData.personas.map((p) => `
+        <div class="admin-record-static">
+          <div class="admin-record-main"><strong>${e(p.nombre)}</strong><span class="meta">${e([p.cedula, p.estado, p.ubicacion, p.fuente].filter(Boolean).join(' · '))}</span></div>
+          <div class="admin-record-actions"><span class="badge yellow">${e(t('family.unverifiedBadge'))}</span><button class="btn btn-soft btn-small" type="button" data-verificar="${e(String(p.id))}">${e(t('admin.verify'))}</button></div>
+        </div>`).join('') || `<p class="empty-state">${e(t('admin.noPendingPeople'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.managePeople'), `<div class="admin-records">${filas}</div>`);
+      bindGestMenu();
+      $$('#admin-console [data-verificar]').forEach((b) => b.addEventListener('click', async () => {
+        try { await postAdmin({ accion: 'admin_verificar_persona', id: b.dataset.verificar }); await refrescarAdminData(); panelPersonas(); }
+        catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || '')); }
+      }));
+    }
+
+    function panelRescatistas() {
+      const filas = adminData.rescatistas.map((r) => `
+        <article class="admin-private-card">
+          <div class="supply-line"><strong>${e(r.nombre || t('rescuers.defaultName'))}</strong><span class="badge rescue">${e(r.especialidad || t('common.pending'))}</span></div>
+          <p class="meta">${e(r.organizacion || t('common.pending'))} · ${e(r.ciudad || '')}${r.estado ? `, ${e(r.estado)}` : ''}</p>
+          <div class="badge-row"><span class="badge gray">${e(r.capacidad_operativa || t('common.pending'))}</span><span class="badge green">${e(r.disponibilidad || t('common.pending'))}</span></div>
+          <details class="admin-private-details"><summary>${e(t('admin.viewSensitiveDetails'))}</summary><div class="meta-grid"><span><strong>${e(t('common.phone'))}</strong> ${e(r.telefono || t('common.pending'))}</span><span><strong>${e(t('rescuers.equipmentLabel'))}</strong> ${e(r.equipo_disponible || t('common.pending'))}</span><span><strong>${e(t('rescuers.notesLabel'))}</strong> ${e(r.observaciones || t('common.pending'))}</span><span><strong>${e(t('common.updated'))}</strong> ${e(fechaRelativa(r.fecha_registro))}</span></div></details>
+        </article>`).join('') || `<p class="empty-state">${e(t('admin.rescuersNone'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.manageRescuers'), `<p class="meta">${e(t('admin.rescuersIntro'))}</p><div class="admin-private-list">${filas}</div>`);
+      bindGestMenu();
+    }
+
+    function panelRegenerar() {
+      $('#admin-console').innerHTML = marcoGestion(t('admin.manageRegen'), `
+        <div class="admin-form-card">
+          <p class="section-copy">${e(t('admin.regenIntro'))}</p>
+          <div class="field"><label for="regen-nombre">${e(t('admin.centerName'))}</label><input id="regen-nombre" /></div>
+          <div class="form-actions"><button class="btn btn-primary" type="button" id="regen-btn">${e(t('admin.regenerate'))}</button></div>
+          <div id="regen-out"></div>
+        </div>`);
+      bindGestMenu();
+      $('#regen-btn').addEventListener('click', async () => {
+        try {
+          const r = await postAdmin({ accion: 'admin_regenerar_panel', nombre: $('#regen-nombre').value.trim() });
+          $('#regen-out').innerHTML = `<div class="recibo"><div class="recibo-row"><span class="meta">${e(t('access.centerTitle'))}</span><span class="token-value"><strong>${e(r.token)}</strong></span></div><div class="recibo-row"><span class="meta">PIN</span><span class="token-value"><strong>${e(r.pin)}</strong></span></div><p class="meta">${e(t('admin.tokenHint'))}</p></div>`;
+        } catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || '')); }
+      });
+    }
+
 
     async function abrirHistorial(nombre) {
       abrirModal(t('modal.historyTitle'), `<div id="modal-list" class="empty-state">${e(t('modal.loadingHistory'))}</div>`);
@@ -322,46 +540,138 @@
     // un centro. Devuelve un token para seguir la donación.
     function abrirOfrecerInsumo(datos) {
       const pre = datos || {};
-      abrirModal(t('offer.modalTitle'), `<form id="ofrecer-form" novalidate>
+      abrirModal(t('offer.modalTitle'), `<form id="ofrecer-form" class="offer-wizard" novalidate>
+        <div class="offer-wizard-head"><span class="badge" id="of-step-count">1 / 4</span><strong id="of-step-title">${e(t('offer.supplyLabel'))}</strong></div>
         <p class="section-copy">${e(pre.centro ? t('offer.modalCopyCentro', { insumo: mostrarInsumo(pre.insumo), centro: pre.centro }) : t('offer.modalCopy'))}</p>
-        <div class="form-grid">
-          <div class="field"><label for="of-insumo">${e(t('offer.supplyLabel'))}</label><input id="of-insumo" required value="${e(pre.insumo || '')}" placeholder="${e(t('offer.supplyPh'))}" /></div>
-          <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
-          <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
-          <div class="field"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
-          <div class="field"><label for="of-telefono">${e(t('common.phone'))}</label><input id="of-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
-          <div class="field"><label for="of-nombre">${e(t('needs.donorLabel'))}</label><input id="of-nombre" autocomplete="name" placeholder="${e(t('needs.donorPlaceholder'))}" /></div>
-        </div>
-        <p class="meta">${e(t('offer.privacyNote'))}</p>
-        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.submit'))}</button></div>
-        <div id="of-message" class="form-message" role="status" aria-live="polite"></div>
+        <div id="of-wizard-message" class="form-message" role="status" aria-live="polite"></div>
+        <section data-offer-step="1">
+          <div class="form-grid">
+            <div class="field full"><label for="of-insumo">${e(t('offer.supplyLabel'))}</label><input id="of-insumo" required value="${e(pre.insumo || '')}" placeholder="${e(t('offer.supplyPh'))}" /></div>
+            <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
+            <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="button" id="of-next-1">${e(t('offer.stepNext'))}</button></div>
+        </section>
+        <section data-offer-step="2" hidden>
+          <div class="form-grid">
+            <div class="field full"><label for="of-nombre">${e(t('offer.contactNameLabel'))}</label><input id="of-nombre" required autocomplete="name" placeholder="${e(t('offer.contactNamePh'))}" /></div>
+            <div class="field"><label for="of-telefono">${e(t('common.phone'))}</label><input id="of-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+            <div class="field"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
+          </div>
+          <p class="meta">${e(t('offer.privacyNote'))}</p>
+          <div class="form-actions"><button class="btn btn-ghost" type="button" data-offer-back="1">${e(t('offer.stepBack'))}</button><button class="btn btn-primary" type="button" id="of-next-2">${e(t('offer.stepNext'))}</button></div>
+        </section>
+        <section data-offer-step="3" hidden>
+          <h4>${e(t('offer.cameraStepTitle'))}</h4>
+          <p class="section-copy">${e(t('offer.cameraStepCopy'))}</p>
+          <div class="offer-camera" id="of-camera-shell">
+            <video id="of-camera" autoplay playsinline muted hidden></video>
+            <canvas id="of-camera-canvas" hidden></canvas>
+            <img id="of-photo-preview" alt="" hidden />
+            <div id="of-camera-placeholder" class="offer-camera-placeholder">${e(t('offer.openCamera'))}</div>
+          </div>
+          <div id="of-camera-message" class="form-message" role="status" aria-live="polite"></div>
+          <div class="form-actions"><button class="btn btn-soft" type="button" id="of-open-camera">${e(t('offer.openCamera'))}</button><button class="btn btn-primary" type="button" id="of-capture" hidden>${e(t('offer.takePhoto'))}</button><button class="btn btn-ghost" type="button" id="of-retake" hidden>${e(t('offer.retakePhoto'))}</button></div>
+          <div class="form-actions"><button class="btn btn-ghost" type="button" data-offer-back="2">${e(t('offer.stepBack'))}</button><button class="btn btn-primary" type="button" id="of-next-3">${e(t('offer.stepNext'))}</button></div>
+        </section>
+        <section data-offer-step="4" hidden>
+          <h4>${e(t('offer.reviewTitle'))}</h4>
+          <p class="section-copy">${e(t('offer.reviewCopy'))}</p>
+          <dl class="offer-review" id="of-review"></dl>
+          <div class="form-actions"><button class="btn btn-ghost" type="button" data-offer-back="3">${e(t('offer.stepBack'))}</button><button class="btn btn-primary" type="submit">${e(t('offer.submit'))}</button></div>
+          <div id="of-message" class="form-message" role="status" aria-live="polite"></div>
+        </section>
       </form>`);
-      $('#ofrecer-form').addEventListener('submit', async (ev) => {
+      const form = $('#ofrecer-form');
+      const dialog = $('#modal-root dialog');
+      const steps = $$('[data-offer-step]');
+      const stepTitles = [t('offer.supplyLabel'), t('offer.contactLabel'), t('offer.cameraStepTitle'), t('offer.reviewTitle')];
+      let paso = 1;
+      let fotoInsumo = '';
+      let stream = null;
+      const stopCamera = () => { if (stream) stream.getTracks().forEach((track) => track.stop()); stream = null; };
+      const cameraMessage = (tipo, texto) => { const box = $('#of-camera-message'); if (!box) return; box.className = `form-message visible ${tipo}`; box.textContent = texto; };
+      const setStep = (next) => {
+        paso = Math.max(1, Math.min(4, next));
+        steps.forEach((section) => { section.hidden = Number(section.dataset.offerStep) !== paso; });
+        $('#of-step-count').textContent = `${paso} / 4`;
+        $('#of-step-title').textContent = stepTitles[paso - 1];
+        if (paso === 3 && !fotoInsumo) iniciarCamara();
+        if (paso !== 3) stopCamera();
+        if (paso === 4) pintarRevision();
+      };
+      const validarCampos = (ids) => {
+        for (const id of ids) {
+          const field = $('#' + id);
+          if (!field || !field.value.trim()) { field?.focus(); mostrarMensaje('#of-wizard-message', 'error', t('validation.reviewFields', { count: 1, plural: '' })); return false; }
+          field.removeAttribute('aria-invalid');
+        }
+        return true;
+      };
+      async function iniciarCamara() {
+        const video = $('#of-camera');
+        if (!video) return;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { cameraMessage('error', t('offer.cameraUnsupported')); return; }
+        try {
+          stopCamera();
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+          video.srcObject = stream;
+          video.hidden = false;
+          $('#of-camera-placeholder').hidden = true;
+          $('#of-open-camera').hidden = true;
+          $('#of-capture').hidden = false;
+          cameraMessage('info', t('offer.cameraStepCopy'));
+        } catch (err) { cameraMessage('error', t('offer.cameraUnavailable')); }
+      }
+      function capturarFoto() {
+        const video = $('#of-camera');
+        const canvas = $('#of-camera-canvas');
+        if (!video || !canvas || !video.videoWidth) { cameraMessage('error', t('offer.cameraUnavailable')); return; }
+        const maxWidth = 1280;
+        const ratio = Math.min(1, maxWidth / video.videoWidth);
+        canvas.width = Math.round(video.videoWidth * ratio);
+        canvas.height = Math.round(video.videoHeight * ratio);
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        fotoInsumo = canvas.toDataURL('image/jpeg', 0.8);
+        $('#of-photo-preview').src = fotoInsumo;
+        $('#of-photo-preview').hidden = false;
+        video.hidden = true;
+        $('#of-capture').hidden = true;
+        $('#of-retake').hidden = false;
+        stopCamera();
+        cameraMessage('success', t('offer.takePhoto'));
+      }
+      function pintarRevision() {
+        const review = $('#of-review');
+        if (!review) return;
+        const fila = (label, value) => `<div><dt>${e(label)}</dt><dd>${e(value || t('common.pending'))}</dd></div>`;
+        review.innerHTML = fila(t('offer.supplyLabel'), $('#of-insumo').value.trim()) + fila(t('offer.qtyLabel'), `${$('#of-cantidad').value.trim()} ${$('#of-unidad').value.trim() || t('offer.unitLabel')}`) + fila(t('offer.contactNameLabel'), $('#of-nombre').value.trim()) + fila(t('common.phone'), $('#of-telefono').value.trim()) + fila(t('offer.locationLabel'), $('#of-ubicacion').value.trim()) + fila(t('offer.cameraStepTitle'), fotoInsumo ? t('offer.takePhoto') : t('offer.cameraRequired'));
+      }
+      $('#of-open-camera').addEventListener('click', iniciarCamara);
+      $('#of-capture').addEventListener('click', capturarFoto);
+      $('#of-retake').addEventListener('click', () => { fotoInsumo = ''; $('#of-photo-preview').hidden = true; $('#of-retake').hidden = true; iniciarCamara(); });
+      $('#of-next-1').addEventListener('click', () => { if (validarCampos(['of-insumo', 'of-cantidad'])) setStep(2); });
+      $('#of-next-2').addEventListener('click', () => { if (validarCampos(['of-nombre', 'of-telefono', 'of-ubicacion'])) setStep(3); });
+      $('#of-next-3').addEventListener('click', () => { if (!fotoInsumo) { cameraMessage('error', t('offer.cameraRequired')); return; } setStep(4); });
+      $$('[data-offer-back]').forEach((btn) => btn.addEventListener('click', () => setStep(Number(btn.dataset.offerBack))));
+      form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const form = ev.currentTarget;
-        if (!validarFormulario(form, '#of-message')) return;
+        if (!validarCampos(['of-insumo', 'of-cantidad', 'of-nombre', 'of-telefono', 'of-ubicacion'])) return;
+        if (!fotoInsumo) { setStep(3); cameraMessage('error', t('offer.cameraRequired')); return; }
         const cantidad = numero($('#of-cantidad').value);
         if (cantidad <= 0) { mostrarMensaje('#of-message', 'error', t('needs.invalidAmount')); return; }
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
         mostrarMensaje('#of-message', 'info', t('offer.saving'));
         try {
-          const res = await window.SheetsService.post({
-            accion: 'ofrecer_insumo',
-            insumo: $('#of-insumo').value.trim(), cantidad,
-            unidad: $('#of-unidad').value.trim(),
-            ubicacion: $('#of-ubicacion').value.trim(),
-            telefono: $('#of-telefono').value.trim(),
-            nombreDonante: $('#of-nombre').value.trim(),
-            centro: pre.centro || ''
-          });
+          const res = await window.SheetsService.post({ accion: 'ofrecer_insumo', insumo: $('#of-insumo').value.trim(), cantidad, unidad: $('#of-unidad').value.trim(), ubicacion: $('#of-ubicacion').value.trim(), telefono: $('#of-telefono').value.trim(), nombreDonante: $('#of-nombre').value.trim(), fotoInsumo, centro: pre.centro || '' });
+          stopCamera();
           mostrarTokenOferta(res.token);
           cargarOfertas();
-        } catch (err) {
-          boton.disabled = false;
-          mostrarMensaje('#of-message', 'error', String(err && err.message || t('needs.error')));
-        }
+        } catch (err) { boton.disabled = false; mostrarMensaje('#of-message', 'error', String(err && err.message || t('needs.error'))); }
       });
+      dialog.addEventListener('close', stopCamera, { once: true });
+      setStep(1);
     }
 
     // Reemplaza el formulario por el token: el donante debe poder copiarlo, así
@@ -1024,12 +1334,27 @@
     }
 
     function bindFiltros() {
-      [['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-necesidad-q', 'necesidadQ', renderNecesidades], ['#filtro-vac-q', 'vacQ', renderVacantes], ['#filtro-res-q', 'resQ', renderRescatistas], ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados], ['#filtro-donacion-ciudad', 'donacionCiudad', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
-      [['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares], ['#filtro-vac-tipo', 'vacTipo', renderVacantes], ['#filtro-vac-urgencia', 'vacUrgencia', renderVacantes], ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados], ['#filtro-donacion-tipo', 'donacionTipo', renderDonations], ['#filtro-donacion-estado', 'donacionEstado', renderDonations], ['#filtro-donacion-urgencia', 'donacionUrgencia', renderDonations]].forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
-      [['#filtro-donacion-reciente', 'donacionReciente'], ['#filtro-donacion-verificado', 'donacionVerificado']].forEach(([id, key]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.checked; renderDonations(); }));
+      const inputFilters = [
+        ['#filtro-lugar-q', 'lugarQ', renderLugares], ['#filtro-necesidad-q', 'necesidadQ', renderNecesidades],
+        ['#filtro-vac-q', 'vacQ', renderVacantes], ['#filtro-res-q', 'resQ', renderRescatistas],
+        ['#filtro-res-estado', 'resEstado', renderRescatistas], ['#filtro-mot-q', 'motQ', renderMotorizados],
+        ['#filtro-donacion-ciudad', 'donacionCiudad', renderDonations]
+      ];
+      inputFilters.filter(([id]) => $(id)).forEach(([id, key, fn]) => $(id).addEventListener('input', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      const selectFilters = [
+        ['#filtro-lugar-tipo', 'lugarTipo', renderLugares], ['#filtro-lugar-categoria', 'lugarCategoria', renderLugares],
+        ['#filtro-vac-tipo', 'vacTipo', renderVacantes], ['#filtro-vac-urgencia', 'vacUrgencia', renderVacantes],
+        ['#filtro-res-especialidad', 'resEspecialidad', renderRescatistas], ['#filtro-mot-tipo', 'motTipo', renderMotorizados],
+        ['#filtro-donacion-tipo', 'donacionTipo', renderDonations], ['#filtro-donacion-estado', 'donacionEstado', renderDonations],
+        ['#filtro-donacion-urgencia', 'donacionUrgencia', renderDonations]
+      ];
+      selectFilters.filter(([id]) => $(id)).forEach(([id, key, fn]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.value; fn(); }));
+      [['#filtro-donacion-reciente', 'donacionReciente'], ['#filtro-donacion-verificado', 'donacionVerificado']]
+        .filter(([id]) => $(id)).forEach(([id, key]) => $(id).addEventListener('change', (ev) => { estado.filtros[key] = ev.target.checked; renderDonations(); }));
       $$('[data-view-link]').forEach((el) => el.addEventListener('click', (ev) => { ev.preventDefault(); window.location.hash = el.dataset.viewLink; }));
       $$('[data-scroll-target]').forEach((el) => el.addEventListener('click', () => document.getElementById(el.dataset.scrollTarget).scrollIntoView({ behavior: 'smooth', block: 'start' })));
-      $('#btn-motorizado').addEventListener('click', () => { window.location.href = '/registrar-transportista'; });
+      const motorizado = $('#btn-motorizado');
+      if (motorizado) motorizado.addEventListener('click', () => { window.location.href = '/registrar-transportista'; });
     }
 
     function renderAll() {
@@ -1066,6 +1391,8 @@
       });
       const btnTengoInsumo = $('#btn-tengo-insumo');
       if (btnTengoInsumo) btnTengoInsumo.addEventListener('click', () => abrirOfrecerInsumo());
+      const btnRescatistaAdmin = $('#btn-rescatista-admin');
+      if (btnRescatistaAdmin) btnRescatistaAdmin.addEventListener('click', () => { window.location.href = '/admin'; });
       const btnCerca = $('#btn-cerca');
       if (btnCerca) btnCerca.addEventListener('click', activarCercaDeMi);
       const btnMapaToggle = $('#btn-mapa-toggle');
@@ -1098,4 +1425,3 @@
         navigator.serviceWorker.register('sw.js').catch(() => { /* origen sin soporte (http plano) */ });
       });
     }
-

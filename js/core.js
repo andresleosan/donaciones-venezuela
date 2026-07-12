@@ -298,6 +298,11 @@
 
       setText('#rescatistas-title', 'rescuers.title');
       setText('#rescatistas-title + .section-copy', 'rescuers.copy');
+      setText('#res-list-title', 'rescuers.privateTitle');
+      setText('#res-list-title + .section-copy', 'rescuers.privateCopy');
+      setText('#res-private-title', 'rescuers.privateAdminTitle');
+      setText('#res-private-copy', 'rescuers.privateAdminCopy');
+      setText('#btn-rescatista-admin', 'rescuers.privateAdminCta');
       setText('#res-form-title', 'rescuers.formTitle');
       setText('#res-form-title + .section-copy', 'rescuers.formCopy');
       setText('label[for="res-nombre"]', 'common.name');

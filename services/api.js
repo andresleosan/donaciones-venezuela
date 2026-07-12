@@ -89,10 +89,9 @@
 
   async function getAll() {
     try {
-      const [lugares, voluntarios, rescatistas, motorizados, estadisticas, traslados, vacantes] = await Promise.all([
+      const [lugares, voluntarios, motorizados, estadisticas, traslados, vacantes] = await Promise.all([
         rest('lugares_directorio', '?order=nombre'),
         rest('voluntarios_public', '?order=fecha_registro.desc'),
-        rest('rescatistas_public', '?order=fecha_registro.desc'),
         rest('motorizados_public', '?order=fecha_registro.desc'),
         rpc('estadisticas'),
         // catch propio: si la vista falta, el resto de la app sigue viva
@@ -103,7 +102,9 @@
         lugares: lugares || [],
         centros: lugares || [],
         voluntarios: (voluntarios || []).map(voluntarioUI),
-        rescatistas: (rescatistas || []).map(rescatistaUI),
+        // Los perfiles de rescatistas son información operativa sensible.
+        // Solo se cargan mediante admin_listar_rescatistas con la clave admin.
+        rescatistas: [],
         motorizados: (motorizados || []).map(motorizadoUI),
         estadisticas: estadisticas || {},
         traslados: traslados || [],
@@ -185,7 +186,7 @@
     getAll,
     getLugares: () => getList('lugares_directorio', '?order=nombre'),
     getVoluntarios: () => getList('voluntarios_public', '?order=fecha_registro.desc', voluntarioUI),
-    getRescatistas: () => getList('rescatistas_public', '?order=fecha_registro.desc', rescatistaUI),
+    getRescatistas: () => Promise.resolve({ data: [], source: 'restricted' }),
     getMotorizados: () => getList('motorizados_public', '?order=fecha_registro.desc', motorizadoUI),
     getTrayectos: (motorizadoId) => getList('trayectos_public',
       '?order=fecha.desc' + (motorizadoId ? '&motorizado_id=eq.' + encodeURIComponent(motorizadoId) : '')),

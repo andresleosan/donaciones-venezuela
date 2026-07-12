@@ -225,7 +225,7 @@ function ofertaUI(f: Record<string, unknown>) {
   return {
     token: f.token_publico, estado: f.estado,
     insumo: m.insumo, cantidad: m.cantidad, unidad: m.unidad,
-    ubicacion: m.ubicacion, telefono: m.telefono, centro: m.centro,
+    ubicacion: m.ubicacion, telefono: m.telefono, nombreDonante: m.nombreDonante, centro: m.centro,
   };
 }
 
@@ -483,19 +483,24 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const unidad = s(p.unidad, 30) || 'unidades';
       const ubicacion = s(p.ubicacion, 160);
       const telefono = s(p.telefono, 40);
+      const nombreDonante = s(p.nombreDonante, 120);
+      const fotoInsumo = s(p.fotoInsumo, 2_500_000);
       const centro = s(p.centro, 120); // destino sugerido (opcional)
       if (!insumo) throw new Error('insumo requerido');
       if (cantidad <= 0 || cantidad > 1_000_000) throw new Error('cantidad inválida');
       if (!ubicacion) throw new Error('ubicación requerida: el transportista debe saber dónde recogerlo');
       if (telefono.replace(/[^0-9]/g, '').length < 7) throw new Error('teléfono requerido para coordinar la recogida');
+      if (!nombreDonante) throw new Error('nombre de contacto requerido');
+      if (!fotoInsumo) throw new Error('foto del insumo requerida');
       const { data: seq3, error: eSeq3 } = await supa.rpc('factura_numero_siguiente');
       if (eSeq3) throw eSeq3;
       const numero = `FAC-${new Date().getFullYear()}-${String(seq3).padStart(6, '0')}`;
       const token = tokenAlfa('DV');
+      const fotoRuta = await guardarFoto(fotoInsumo, `ofertas/${token}`, 'insumo');
       const { data: fila, error } = await supa.from('facturas').insert({
         numero_factura: numero, token_publico: token,
         objetivo: s(`Oferta: ${insumo} (${ubicacion})`, 200),
-        descripcion: JSON.stringify({ k: 'oferta', insumo, cantidad, unidad, ubicacion, telefono, centro }),
+        descripcion: JSON.stringify({ k: 'oferta', insumo, cantidad, unidad, ubicacion, telefono, nombreDonante, fotoInsumo: fotoRuta, centro }),
         monto_requerido: cantidad, estado: 'Ofrecida' }).select('id').single();
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: fila.id, tipo: 'Oferta',
@@ -697,6 +702,13 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         .select('id, lugar_tipo, lugar_nombre, ubicacion, rol, cantidad_necesaria, cantidad_cubierta, urgencia, turno, estado')
         .order('fecha_creacion', { ascending: false }).limit(100);
       return { vacantes: data || [] };
+    }
+    case 'admin_listar_rescatistas': {
+      const { data, error } = await supa.from('rescatistas')
+        .select('id, nombre, organizacion, telefono, especialidad, estado, ciudad, disponibilidad, equipo_disponible, capacidad_operativa, observaciones, fecha_registro')
+        .order('fecha_registro', { ascending: false }).limit(100);
+      if (error) throw error;
+      return { rescatistas: data || [] };
     }
     case 'admin_crear_presupuesto': {
       // Cotización de un insumo necesitado en una tienda concreta. Puede haber

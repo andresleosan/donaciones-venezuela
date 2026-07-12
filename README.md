@@ -8,7 +8,7 @@ Aplicación estática (sin dependencias ni bundler) para coordinar centros de ay
 
 **Supabase** (Postgres + PostgREST + Edge Functions). Proyecto: `zryfwbjvlacorryzdaod`.
 
-- **Lecturas**: PostgREST sobre vistas públicas sin PII ni tokens (`lugares_directorio`, `voluntarios_public`, `rescatistas_public`, `motorizados_public`, `trayectos_public`, `historial_public`, `facturas_public`, `donaciones_motorizados_public`) y RPCs `estadisticas`, `buscar_familiar`, `seguimiento_factura`.
+- **Lecturas**: PostgREST sobre vistas públicas sin PII ni tokens (`lugares_directorio`, `voluntarios_public`, `motorizados_public`, `trayectos_public`, `historial_public`, `facturas_public`, `donaciones_motorizados_public`) y RPCs `estadisticas`, `buscar_familiar`, `seguimiento_factura`. Los perfiles de rescatistas son privados y solo se consultan con la acción admin `admin_listar_rescatistas`.
 - **Escrituras**: edge function `api` (`/functions/v1/api`) con validación estricta por acción y rate-limit por IP (30/hora). Las tablas tienen RLS cerrado: la anon key no puede escribir nada directamente.
 - La clave usada en el cliente es la **publishable** (pública por diseño).
 

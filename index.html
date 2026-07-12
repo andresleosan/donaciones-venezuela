@@ -52,7 +52,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=25">
+  <link rel="stylesheet" href="css/app.css?v=28">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -569,17 +569,15 @@
       <section class="section" aria-labelledby="res-list-title">
         <div class="section-header">
           <div>
-            <h3 id="res-list-title" class="section-title">Rescatistas registrados</h3>
-            <p class="section-copy">Filtra por especialidad, organización o ubicación para activar equipos.</p>
+            <h3 id="res-list-title" class="section-title">Directorio reservado</h3>
+            <p class="section-copy">Los perfiles de rescatistas contienen datos de contacto, ubicación y capacidad operativa.</p>
           </div>
         </div>
-        <div class="filters" role="search" aria-label="Filtros de rescatistas">
-          <div class="field"><label for="filtro-res-q">Buscar rescatista</label><input id="filtro-res-q" type="search" placeholder="Nombre, organización, ciudad" /></div>
-          <div class="field"><label for="filtro-res-especialidad">Especialidad</label><select id="filtro-res-especialidad"><option value="">Todas</option><option>Bombero</option><option>Paramédico</option><option>Protección Civil</option><option>Rescate Urbano</option><option>Rescate Acuático</option><option>Rescate Canino</option><option>Defensa Civil</option><option>Otro</option></select></div>
-          <div class="field"><label for="filtro-res-estado">Estado</label><input id="filtro-res-estado" placeholder="Filtrar por estado" /></div>
+        <div class="private-data-notice" role="note">
+          <strong id="res-private-title">Solo administradores</strong>
+          <p id="res-private-copy">El listado completo no se muestra públicamente. El equipo administrador puede consultarlo después de validar su clave.</p>
+          <button class="btn btn-primary btn-small" type="button" id="btn-rescatista-admin">Abrir acceso administrativo</button>
         </div>
-        <p class="meta" id="conteo-rescatistas" aria-live="polite"></p>
-        <div id="grid-rescatistas" class="grid" aria-live="polite"></div>
       </section>
     </section>
 
@@ -740,9 +738,9 @@
 
   <script src="services/leaflet/leaflet.js"></script>
   <script src="services/api.js?v=7"></script>
-  <script src="js/core.js?v=41"></script>
-  <script src="js/vistas.js?v=41"></script>
-  <script src="js/panel.js?v=41"></script>
-  <script src="js/admin.js?v=41"></script>
+  <script src="js/core.js?v=44"></script>
+  <script src="js/vistas.js?v=44"></script>
+  <script src="js/panel.js?v=44"></script>
+  <script src="js/admin.js?v=44"></script>
 </body>
 </html>

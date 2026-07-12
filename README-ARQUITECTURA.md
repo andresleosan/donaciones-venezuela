@@ -11,7 +11,7 @@
 
 ### Lecturas (PostgREST, anon key publishable)
 
-- Vistas públicas sin PII ni tokens: `lugares_directorio` (con `necesita` / `tiene_disponible` / `cubiertos` agregados en la misma forma que consumía el frontend), `voluntarios_public`, `rescatistas_public`, `motorizados_public`, `trayectos_public`, `historial_public`, `facturas_public` (sin `token_publico`), `donaciones_motorizados_public`.
+- Vistas públicas sin PII ni tokens: `lugares_directorio` (con `necesita` / `tiene_disponible` / `cubiertos` agregados en la misma forma que consumía el frontend), `voluntarios_public`, `motorizados_public`, `trayectos_public`, `historial_public`, `facturas_public` (sin `token_publico`), `donaciones_motorizados_public`. Los perfiles de rescatistas quedan fuera del Data API público y se sirven únicamente mediante la acción admin `admin_listar_rescatistas`.
 - RPCs `security definer`: `estadisticas()`, `buscar_familiar(q)` (mínimo 3 caracteres, máximo 25 resultados), `seguimiento_factura(tok)` (solo datos públicos).
 
 ### Escrituras (edge function `api`, service role)

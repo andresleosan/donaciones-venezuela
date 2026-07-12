@@ -289,10 +289,13 @@
     }
 
     function renderRescatistas() {
+      const count = $('#conteo-rescatistas');
+      const grid = $('#grid-rescatistas');
+      if (!count || !grid) return;
       const f = estado.filtros;
       const lista = filtrarLista(estado.rescatistas, f.resQ, f.resEstado, f.resEspecialidad, 'especialidad');
-      $('#conteo-rescatistas').textContent = t('rescuers.count', { shown: lista.length, total: estado.rescatistas.length });
-      $('#grid-rescatistas').innerHTML = lista.length ? lista.map((r) => personaCard(r, 'rescatista')).join('') : `<div class="empty-state">${e(t('rescuers.empty'))}</div>`;
+      count.textContent = t('rescuers.count', { shown: lista.length, total: estado.rescatistas.length });
+      grid.innerHTML = lista.length ? lista.map((r) => personaCard(r, 'rescatista')).join('') : `<div class="empty-state">${e(t('rescuers.empty'))}</div>`;
     }
 
     function renderMotorizados() {
@@ -585,6 +588,7 @@
             <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div class="centro-more" hidden>
+            ${of.nombreDonante ? `<p class="meta"><strong>${e(t('offer.contactNameLabel'))}</strong> ${e(of.nombreDonante)}</p>` : ''}
             <p class="meta"><strong>${e(t('offer.whereLabel'))}</strong> ${e(of.ubicacion)}</p>
             ${of.centro ? `<p class="meta"><strong>${e(t('offer.suggestedCenter'))}</strong> ${e(of.centro)}</p>` : ''}
             <div class="card-actions">
