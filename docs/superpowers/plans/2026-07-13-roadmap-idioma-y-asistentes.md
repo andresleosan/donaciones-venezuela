@@ -199,10 +199,15 @@ git add scripts/verificar-idioma.py && git commit -m "chore: verificador de pari
 > por `tValue('movementTypes'|'invoiceState', …)`. Las filas anteriores (texto
 > plano) se siguen mostrando tal cual. Verificado en los dos idiomas.
 >
-> ⚠️ **Pendiente**: desplegar `supabase/functions/api` (sería la v18). El código
-> del cliente ya está en producción y es compatible hacia atrás, pero hasta que
-> la función se despliegue los movimientos NUEVOS se seguirán guardando como
-> frase en español. Requiere autorización explícita de Luis.
+> **Edge function desplegada**: `api` v18 ACTIVE (2026-07-13, autorizado por
+> Luis). Verificado en producción: tipos y estados traducen (`Offer`/`Offered`),
+> y las filas antiguas siguen mostrándose en texto plano sin romperse.
+>
+> **Queda una decisión abierta**: los movimientos GUARDADOS ANTES del cambio
+> siguen siendo frases en español y se verán así para siempre, también en inglés.
+> Son pocos (la app es reciente). Para traducirlos habría que migrar esas filas
+> de `movimientos_factura` a formato código+datos (`UPDATE` sobre producción,
+> reversible con respaldo previo). Preguntar a Luis si quiere hacerlo.
 
 
 En la base se guarda `Anónimo` (correcto). Pero un donante que navega en inglés
