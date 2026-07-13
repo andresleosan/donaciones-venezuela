@@ -659,6 +659,9 @@
     }
 
     function abrirModal(titulo, contenido) {
+      // Cada modal declara luego cómo reconstruirse (recordarModal). Mientras no
+      // lo haga, cambiar de idioma lo cierra, como antes.
+      recordarModal(null);
       $('#modal-root').innerHTML = `<dialog><div class="modal-head"><h3>${e(titulo)}</h3><button class="modal-close" type="button" aria-label="${e(t('a11y.close'))}">×</button></div><div class="modal-body">${contenido}</div></dialog>`;
       const dialog = $('#modal-root dialog');
       dialog.querySelector('.modal-close').addEventListener('click', () => dialog.close());

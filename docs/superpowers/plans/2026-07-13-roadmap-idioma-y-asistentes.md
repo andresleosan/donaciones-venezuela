@@ -384,7 +384,29 @@ navigator.mediaDevices.getUserMedia = async () => c.captureStream(30);
 
 ---
 
-## Tarea 6: Cambiar de idioma con un modal abierto no puede borrar lo escrito
+## Tarea 6: Cambiar de idioma con un modal abierto no puede borrar lo escrito — HECHA (v57)
+
+> 2026-07-13. `cambiarIdioma()` hacía `modalAbierto.close()`: quien llevaba medio
+> formulario escrito y tocaba el selector lo perdía todo sin aviso. Ahora el
+> modal se **reconstruye** en el idioma nuevo y se le devuelve su estado:
+> valores de los campos, **fotos ya tomadas** y **paso del asistente**.
+>
+> Mecanismo: cada modal declara cómo volver a abrirse (`recordarModal(fn)`, 7
+> formularios); `guardarEstadoModal()` / `restaurarEstadoModal()` en `js/core.js`;
+> las cámaras exponen sus fotos en `raiz.__camara` y los asistentes su paso en
+> `form.__wiz`. Un modal que no declare reconstructor se cierra como antes.
+>
+> **Pitfall que costó una vuelta**: `dialog.close()` emite su evento `close` de
+> forma ASÍNCRONA, y ese manejador vacía `#modal-root` — llegaba *después* de la
+> reconstrucción y borraba el modal nuevo. Solución: no cerrar el diálogo viejo,
+> reemplazarlo, apagando antes sus cámaras a mano (de eso se encargaba el
+> manejador de cierre).
+>
+> Verificado: registro de transportista a medias (5 campos + foto de la placa, en
+> el paso 8 de 11) → cambio a inglés → modal abierto, traducido, mismo paso 8 de
+> 11, datos y foto intactos; un solo diálogo, ninguna cámara siguió grabando, y
+> el modal de historial (sin reconstructor) se sigue cerrando.
+
 
 Hoy `cambiarIdioma()` hace `modalAbierto.close()`: si el usuario llevaba medio
 formulario escrito en un modal y toca el selector, pierde todo sin aviso.

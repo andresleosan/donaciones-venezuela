@@ -511,6 +511,7 @@
     function abrirRegistrarTrayecto(mot) {
       if (!mot) return;
       abrirModal(t('modal.routeTitle'), `<form id="trayecto-form"><div class="form-grid"><div class="field"><label for="tray-origen">${e(t('modal.origin'))}</label><input id="tray-origen" required /></div><div class="field"><label for="tray-destino">${e(t('modal.destination'))}</label><input id="tray-destino" required /></div><div class="field"><label for="tray-km">${e(t('modal.km'))}</label><input id="tray-km" type="number" min="0.1" step="0.1" required /></div><div class="field"><label for="tray-insumo">${e(t('modal.supply'))}</label><input id="tray-insumo" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveRoute'))}</button></div></form>`);
+      recordarModal(() => abrirRegistrarTrayecto(mot));
       wizPublico('trayecto-form');
       $('#trayecto-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -526,6 +527,7 @@
       const mot = estado.motorizados.find((m) => String(m.id) === String(id));
       if (!mot) return;
       abrirModal(t('modal.supportTitle'), `<form id="donar-mot-form"><div class="form-grid"><div class="field"><label for="don-monto">${e(t('modal.amount'))}</label><input id="don-monto" type="number" min="1" required /></div><div class="field"><label for="don-tipo">${e(t('modal.supportType'))}</label><select id="don-tipo"><option value="Pago móvil">${e(tValue('supportTypes', 'Pago móvil'))}</option><option value="Efectivo">${e(tValue('supportTypes', 'Efectivo'))}</option><option value="Combustible">${e(tValue('supportTypes', 'Combustible'))}</option><option value="Repuesto">${e(tValue('supportTypes', 'Repuesto'))}</option><option value="Otro">${e(tValue('supportTypes', 'Otro'))}</option></select></div><div class="field"><label for="don-nombre">${e(t('modal.donor'))}</label><input id="don-nombre" /></div><div class="field"><label for="don-ciudad">${e(t('common.city'))}</label><input id="don-ciudad" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveSupport'))}</button></div></form>`);
+      recordarModal(() => abrirDonarMotorizado(id));
       wizPublico('donar-mot-form');
       $('#donar-mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -621,6 +623,9 @@
       btnCerrar.addEventListener('click', parar);
       btnRehacer.addEventListener('click', rehacer);
       pintar();
+      // Expuesto para poder salvar y devolver las fotos si hay que reconstruir
+      // la vista (p. ej. al cambiar de idioma con el formulario a medias).
+      raiz.__camara = { fotos, pintar, parar };
       return { parar, tieneFoto: () => fotos.length > 0 };
     }
 
@@ -863,6 +868,7 @@
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.pickupSave'))}</button></div>
         <div id="rof-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
+      recordarModal(() => abrirRecogerOferta(of));
       wizPublico('recoger-oferta-form');
       $('#recoger-oferta-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -903,6 +909,7 @@
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('money.submit'))}</button></div>
         <div id="din-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
+      recordarModal(() => abrirDonarDinero(pr));
       wizPublico('donar-dinero-form');
       $('#donar-dinero-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -983,6 +990,7 @@
         <div id="rec-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
       bindPreviewsFoto(['rec-foto-sitio', 'rec-foto-insumo']);
+      recordarModal(() => abrirRegistrarRecogida(pr));
       wizPublico('recogida-form');
       $('#recogida-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -1023,6 +1031,7 @@
         <div id="ent-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
       bindPreviewsFoto(['ent-foto']);
+      recordarModal(() => abrirRegistrarEntrega(pr));
       wizPublico('entrega-form');
       $('#entrega-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -1104,6 +1113,7 @@
         [$('#mot-cedula-foto-field'), camCedula]
       ]);
       const pararCamaras = (actual) => fotoPorPaso.forEach((cam, paso) => { if (paso !== actual) cam.parar(); });
+      recordarModal(() => abrirRegistrarMotorizado());
       wizPublico('mot-form', {
         alEntrar: (paso) => pararCamaras(paso),
         validar: (paso) => {

@@ -139,7 +139,12 @@
     }
 
     pintar();
-    const instancia = { form, retraducir, irA: (i) => { actual = Math.max(0, Math.min(pasos.length, i)); pintar(); } };
+    const instancia = {
+      form, retraducir,
+      pasoActual: () => actual,
+      irA: (i) => { actual = Math.max(0, Math.min(pasos.length, i)); pintar(); }
+    };
+    form.__wiz = instancia; // para restaurar el paso tras reconstruir el formulario
     WIZ_VIVOS.push(instancia);
     return instancia;
   }

@@ -457,6 +457,44 @@
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
     }
 
+    // Cambiar de idioma no puede costarle al usuario lo que ya escribió. Los
+    // modales se pintan con innerHTML, así que hay que reconstruirlos en el
+    // idioma nuevo y devolverles su estado: valores, fotos y paso del asistente.
+    let reabrirModal = null;
+    function recordarModal(fn) { reabrirModal = fn; }
+
+    function guardarEstadoModal(dialog) {
+      const valores = {};
+      dialog.querySelectorAll('input, select, textarea').forEach((c) => {
+        if (c.id && c.type !== 'file') valores[c.id] = c.value;
+      });
+      const fotos = {};
+      dialog.querySelectorAll('.of-cam').forEach((cam) => {
+        if (cam.id && cam.__camara) fotos[cam.id] = cam.__camara.fotos.slice();
+      });
+      const form = dialog.querySelector('form');
+      const paso = form && form.__wiz ? form.__wiz.pasoActual() : null;
+      return { valores, fotos, paso };
+    }
+
+    function restaurarEstadoModal(estado) {
+      const dialog = $('#modal-root dialog');
+      if (!dialog || !estado) return;
+      Object.keys(estado.valores).forEach((id) => {
+        const control = document.getElementById(id);
+        if (control) control.value = estado.valores[id];
+      });
+      Object.keys(estado.fotos).forEach((id) => {
+        const cam = document.getElementById(id);
+        if (cam && cam.__camara && estado.fotos[id].length) {
+          cam.__camara.fotos.push.apply(cam.__camara.fotos, estado.fotos[id]);
+          cam.__camara.pintar();
+        }
+      });
+      const form = dialog.querySelector('form');
+      if (form && form.__wiz && estado.paso != null) form.__wiz.irA(estado.paso);
+    }
+
     async function cambiarIdioma(lang, options) {
       const nextLang = normalizarIdioma(lang);
       const shouldPersist = !options || options.persist !== false;
@@ -464,7 +502,20 @@
       idiomaActual = nextLang;
       traducciones = await cargarTraducciones(nextLang);
       const modalAbierto = $('#modal-root dialog');
-      if (modalAbierto) modalAbierto.close();
+      // Si el modal sabe reconstruirse, se salva lo que el usuario llevaba dentro.
+      const estadoModal = modalAbierto && reabrirModal ? guardarEstadoModal(modalAbierto) : null;
+      const rehacerModal = estadoModal ? reabrirModal : null;
+      if (modalAbierto && rehacerModal) {
+        // OJO: dialog.close() emite su evento «close» de forma ASÍNCRONA, y ese
+        // manejador vacía #modal-root — llegaría tarde y borraría el modal ya
+        // reconstruido. Se reemplaza sin cerrarlo, apagando antes las cámaras
+        // (de eso se encargaba el manejador de cierre).
+        modalAbierto.querySelectorAll('.of-cam').forEach((cam) => {
+          if (cam.__camara) cam.__camara.parar();
+        });
+      } else if (modalAbierto) {
+        modalAbierto.close();
+      }
       if (shouldPersist) sincronizarUrlIdioma(nextLang);
       const select = $('#language-select');
       if (select) select.value = nextLang;
@@ -476,6 +527,7 @@
       // Lo pintado con innerHTML no se traduce solo: hay que reconstruirlo.
       if (typeof window.reconstruirOfrecer === 'function') window.reconstruirOfrecer();
       if (typeof wizRetraducirTodos === 'function') wizRetraducirTodos();
+      if (rehacerModal) { rehacerModal(); restaurarEstadoModal(estadoModal); }
       if (ultimosFamiliares) renderFamiliares(ultimosFamiliares.resultados, ultimosFamiliares.encontrado);
       if (ultimoSeguimiento) renderSeguimiento(ultimoSeguimiento);
       window.setTimeout(() => document.body.classList.remove('is-translating'), 180);
