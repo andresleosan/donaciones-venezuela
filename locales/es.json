@@ -1180,7 +1180,7 @@
     "cameraStepCopy": "La foto se captura desde la cámara de esta aplicación. No se aceptan archivos del dispositivo.",
     "openCamera": "Abrir cámara",
     "takePhoto": "Tomar foto",
-    "retakePhoto": "Tomar otra foto",
+    "retakePhoto": "Repetir foto",
     "cameraRequired": "Toma una foto del insumo para continuar.",
     "cameraUnavailable": "No se pudo abrir la cámara. Revisa el permiso del navegador e inténtalo de nuevo.",
     "cameraUnsupported": "Este dispositivo no permite usar la cámara desde el navegador.",

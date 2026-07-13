@@ -551,9 +551,13 @@
       const btnAbrir = raiz.querySelector('[data-cam-abrir]');
       const btnCapturar = raiz.querySelector('[data-cam-capturar]');
       const btnCerrar = raiz.querySelector('[data-cam-cerrar]');
+      const btnRehacer = raiz.querySelector('[data-cam-rehacer]');
       const contador = raiz.querySelector('.of-contador');
       let stream = null;
       const aviso = (tipo, texto) => { msg.className = `form-message of-cam-message visible ${tipo}`; msg.textContent = texto; };
+      // Con una sola foto (cédula, placa, sitio) rehacerla es un toque, no
+      // «quitar y volver a abrir».
+      const unaSola = () => max === 1;
       const parar = () => {
         if (stream) stream.getTracks().forEach((tr) => tr.stop());
         stream = null;
@@ -562,18 +566,25 @@
         btnCapturar.hidden = true;
         btnCerrar.hidden = true;
         btnAbrir.hidden = fotos.length >= max;
+        btnRehacer.hidden = !(unaSola() && fotos.length >= max);
       };
       function pintar() {
         contador.textContent = t('offer.photoCount', { n: fotos.length, max });
-        contador.hidden = max === 1;
+        contador.hidden = unaSola();
         thumbs.innerHTML = fotos.map((f, i) => `<figure class="of-thumb"><img src="${e(f)}" alt="" /><button type="button" class="of-thumb-x" data-quitar="${i}" aria-label="${e(t('offer.removePhoto'))}">✕</button></figure>`).join('');
         thumbs.querySelectorAll('[data-quitar]').forEach((b) => b.addEventListener('click', () => {
           fotos.splice(Number(b.dataset.quitar), 1);
           pintar();
-          if (!stream) btnAbrir.hidden = false;
+          if (!stream) { btnAbrir.hidden = false; btnRehacer.hidden = true; }
         }));
         btnCapturar.disabled = fotos.length >= max;
+        btnRehacer.hidden = !(unaSola() && fotos.length >= max && !stream);
         if (alCambiar) alCambiar();
+      }
+      function rehacer() {
+        fotos.splice(0, fotos.length);
+        pintar();
+        abrir();
       }
       async function abrir() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { aviso('error', t('offer.cameraUnsupported')); return; }
@@ -583,6 +594,7 @@
           video.hidden = false;
           marco.classList.add('is-live');
           btnAbrir.hidden = true;
+          btnRehacer.hidden = true;
           btnCapturar.hidden = false;
           btnCerrar.hidden = false;
           aviso('info', t('offer.cameraReady'));
@@ -591,20 +603,25 @@
       function capturar() {
         if (fotos.length >= max) return;
         if (!video.videoWidth) { aviso('info', t('offer.cameraReady')); return; }
-        const ratio = Math.min(1, 1024 / video.videoWidth);
+        // Un documento (cédula, placa) tiene que LEERSE: menos compresión que
+        // una foto más de un lote de insumos.
+        const anchoMax = unaSola() ? 1280 : 1024;
+        const calidad = unaSola() ? 0.82 : 0.72;
+        const ratio = Math.min(1, anchoMax / video.videoWidth);
         canvas.width = Math.round(video.videoWidth * ratio);
         canvas.height = Math.round(video.videoHeight * ratio);
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        fotos.push(canvas.toDataURL('image/jpeg', 0.72));
+        fotos.push(canvas.toDataURL('image/jpeg', calidad));
         pintar();
-        aviso('success', max === 1 ? t('offer.photoTaken') : t('offer.photoCount', { n: fotos.length, max }));
+        aviso('success', unaSola() ? t('offer.photoTaken') : t('offer.photoCount', { n: fotos.length, max }));
         if (fotos.length >= max) parar();
       }
       btnAbrir.addEventListener('click', abrir);
       btnCapturar.addEventListener('click', capturar);
       btnCerrar.addEventListener('click', parar);
+      btnRehacer.addEventListener('click', rehacer);
       pintar();
-      return { parar };
+      return { parar, tieneFoto: () => fotos.length > 0 };
     }
 
     // Cámara: visor arriba, y JUSTO debajo el botón grande de acción (abrir /
@@ -618,6 +635,7 @@
         </div>
         <button class="btn btn-primary of-cam-shoot" type="button" data-cam-abrir>${e(t('offer.openCamera'))}</button>
         <button class="btn btn-primary of-cam-shoot" type="button" data-cam-capturar hidden>${e(t('offer.takePhoto'))}</button>
+        <button class="btn btn-soft of-cam-shoot" type="button" data-cam-rehacer hidden>${e(t('offer.retakePhoto'))}</button>
         <button class="btn btn-ghost of-cam-close" type="button" data-cam-cerrar hidden>${e(t('offer.closeCamera'))}</button>
         <p class="of-contador meta" aria-live="polite"></p>
         <div class="of-thumbs" aria-live="polite"></div>
@@ -1059,96 +1077,6 @@
         <img id="${id}-prev" class="foto-prev" alt="" hidden /></div>`;
     }
 
-    // Captura de cámara para el registro del transportista. No usamos un
-    // input de archivos: las tres evidencias deben tomarse en el momento y el
-    // navegador controla el permiso de cámara con getUserMedia().
-    function camaraTransportistaHtml(prefijo, tituloKey, ayudaKey) {
-      return `<div data-wiz-step id="${prefijo}-step" class="driver-photo-step">
-        <label class="driver-photo-title" for="${prefijo}-abrir">${e(t(tituloKey))}</label>
-        <p class="field-help" id="${prefijo}-help">${e(t(ayudaKey))}</p>
-        <div class="driver-camera" id="${prefijo}-cam">
-          <div class="offer-camera">
-            <video autoplay playsinline muted hidden></video>
-            <canvas hidden></canvas>
-            <img class="driver-photo-preview" alt="" hidden />
-            <p class="of-cam-hint">${e(t('modal.cameraIdle'))}</p>
-          </div>
-          <button class="btn btn-primary of-cam-shoot" type="button" data-driver-cam-abrir id="${prefijo}-abrir" aria-describedby="${prefijo}-help">${e(t('modal.openCamera'))}</button>
-          <button class="btn btn-primary of-cam-shoot" type="button" data-driver-cam-capturar hidden>${e(t('modal.takePhoto'))}</button>
-          <button class="btn btn-ghost of-cam-close" type="button" data-driver-cam-repetir hidden>${e(t('modal.retakePhoto'))}</button>
-          <button class="btn btn-ghost of-cam-close" type="button" data-driver-cam-cerrar hidden>${e(t('modal.closeCamera'))}</button>
-          <div class="form-message of-cam-message" role="status" aria-live="polite"></div>
-        </div>
-      </div>`;
-    }
-
-    function montarCamaraTransportista(prefijo, foto) {
-      const raiz = document.getElementById(prefijo + '-cam');
-      const video = raiz.querySelector('video');
-      const canvas = raiz.querySelector('canvas');
-      const preview = raiz.querySelector('.driver-photo-preview');
-      const marco = raiz.querySelector('.offer-camera');
-      const msg = raiz.querySelector('.of-cam-message');
-      const btnAbrir = raiz.querySelector('[data-driver-cam-abrir]');
-      const btnCapturar = raiz.querySelector('[data-driver-cam-capturar]');
-      const btnRepetir = raiz.querySelector('[data-driver-cam-repetir]');
-      const btnCerrar = raiz.querySelector('[data-driver-cam-cerrar]');
-      let stream = null;
-      const aviso = (tipo, texto) => { msg.className = `form-message of-cam-message visible ${tipo}`; msg.textContent = texto; };
-      const parar = () => {
-        if (stream) stream.getTracks().forEach((track) => track.stop());
-        stream = null;
-        video.hidden = true;
-        marco.classList.remove('is-live');
-        btnCapturar.hidden = true;
-        btnCerrar.hidden = true;
-        btnAbrir.hidden = Boolean(foto.value);
-        btnRepetir.hidden = !foto.value;
-      };
-      const pintar = () => {
-        preview.hidden = !foto.value;
-        if (foto.value) preview.src = foto.value;
-        btnAbrir.hidden = Boolean(foto.value) || Boolean(stream);
-        btnRepetir.hidden = !foto.value || Boolean(stream);
-      };
-      async function abrir() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { aviso('error', t('modal.cameraUnsupported')); return; }
-        try {
-          parar();
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-          video.srcObject = stream;
-          video.hidden = false;
-          marco.classList.add('is-live');
-          btnAbrir.hidden = true;
-          btnRepetir.hidden = true;
-          btnCapturar.hidden = false;
-          btnCerrar.hidden = false;
-          aviso('info', t('modal.cameraReady'));
-        } catch (err) {
-          parar();
-          aviso('error', err && err.name === 'NotAllowedError' ? t('modal.cameraPermission') : t('modal.cameraUnavailable'));
-        }
-      }
-      function capturar() {
-        if (!video.videoWidth || !video.videoHeight) { aviso('error', t('modal.cameraNotReady')); return; }
-        const ratio = Math.min(1, 1280 / video.videoWidth);
-        canvas.width = Math.round(video.videoWidth * ratio);
-        canvas.height = Math.round(video.videoHeight * ratio);
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        foto.value = canvas.toDataURL('image/jpeg', 0.82);
-        parar();
-        pintar();
-        aviso('success', t('modal.photoTaken'));
-      }
-      function repetir() { foto.value = ''; preview.hidden = true; pintar(); abrir(); }
-      btnAbrir.addEventListener('click', abrir);
-      btnCapturar.addEventListener('click', capturar);
-      btnRepetir.addEventListener('click', repetir);
-      btnCerrar.addEventListener('click', parar);
-      pintar();
-      return { parar, tieneFoto: () => Boolean(foto.value) };
-    }
-
     function abrirRegistrarMotorizado() {
       abrirModal(t('modal.driverTitle'), `<form id="mot-form" data-wiz="motorizado" novalidate>
         <p class="section-copy">${e(t('modal.driverIntro'))}</p>
@@ -1160,20 +1088,20 @@
           <div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><p class="field-help" id="mot-zona-help">${e(t('modal.zoneHelp'))}</p><input id="mot-zona" aria-describedby="mot-zona-help" required /></div>
           <div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><p class="field-help" id="mot-placa-help">${e(t('modal.plateHelp'))}</p><input id="mot-placa" aria-describedby="mot-placa-help" /></div>
         </div>
-        ${camaraTransportistaHtml('mot-placa-foto', 'modal.photoPlate', 'modal.photoPlateHelp')}
-        ${camaraTransportistaHtml('mot-vehiculo-foto', 'modal.photoVehicle', 'modal.photoVehicleHelp')}
-        ${camaraTransportistaHtml('mot-cedula-foto', 'modal.photoId', 'modal.photoIdHelp')}
+        ${pasoCamaraHtml('mot-placa-foto', t('modal.photoPlate'), t('modal.photoPlateHelp'))}
+        ${pasoCamaraHtml('mot-vehiculo-foto', t('modal.photoVehicle'), t('modal.photoVehicleHelp'))}
+        ${pasoCamaraHtml('mot-cedula-foto', t('modal.photoId'), t('modal.photoIdHelp'))}
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div>
         <div id="mot-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
-      const fotoPlaca = { value: '' }, fotoVehiculo = { value: '' }, fotoCedula = { value: '' };
-      const camPlaca = montarCamaraTransportista('mot-placa-foto', fotoPlaca);
-      const camVehiculo = montarCamaraTransportista('mot-vehiculo-foto', fotoVehiculo);
-      const camCedula = montarCamaraTransportista('mot-cedula-foto', fotoCedula);
+      const fotoPlaca = [], fotoVehiculo = [], fotoCedula = [];
+      const camPlaca = montarCamaraOferta('mot-placa-foto', fotoPlaca, 1);
+      const camVehiculo = montarCamaraOferta('mot-vehiculo-foto', fotoVehiculo, 1);
+      const camCedula = montarCamaraOferta('mot-cedula-foto', fotoCedula, 1);
       const fotoPorPaso = new Map([
-        [$('#mot-placa-foto-step'), camPlaca],
-        [$('#mot-vehiculo-foto-step'), camVehiculo],
-        [$('#mot-cedula-foto-step'), camCedula]
+        [$('#mot-placa-foto-field'), camPlaca],
+        [$('#mot-vehiculo-foto-field'), camVehiculo],
+        [$('#mot-cedula-foto-field'), camCedula]
       ]);
       const pararCamaras = (actual) => fotoPorPaso.forEach((cam, paso) => { if (paso !== actual) cam.parar(); });
       wizPublico('mot-form', {
@@ -1190,7 +1118,7 @@
       dialog.addEventListener('close', () => { camPlaca.parar(); camVehiculo.parar(); camCedula.parar(); }, { once: true });
       $('#mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        if (![fotoPlaca, fotoVehiculo, fotoCedula].every((foto) => foto.value)) {
+        if (![fotoPlaca, fotoVehiculo, fotoCedula].every((foto) => foto.length)) {
           mostrarMensaje('#mot-message', 'error', t('messages.driverPhotosMissing'));
           return;
         }
@@ -1198,7 +1126,7 @@
         boton.disabled = true;
         mostrarMensaje('#mot-message', 'info', t('messages.driverUploading'));
         try {
-          const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), email: $('#mot-email').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), fotoPlaca: fotoPlaca.value, fotoVehiculo: fotoVehiculo.value, fotoCedula: fotoCedula.value };
+          const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), email: $('#mot-email').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), fotoPlaca: fotoPlaca[0], fotoVehiculo: fotoVehiculo[0], fotoCedula: fotoCedula[0] };
           await window.SheetsService.post(Object.assign({ accion: 'registrar_motorizado' }, nuevo));
           await cargarTodo();
           $('#modal-root dialog').close();

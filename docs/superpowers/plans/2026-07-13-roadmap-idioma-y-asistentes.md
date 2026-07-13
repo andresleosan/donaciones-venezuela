@@ -309,7 +309,29 @@ git commit -m "feat(transportista): trayecto, recogida y entrega paso a paso"
 
 ---
 
-## Tarea 5: La cámara del transportista, igual que la de #ofrecer
+## Tarea 5: La cámara del transportista, igual que la de #ofrecer — HECHA (v55)
+
+> 2026-07-13. **La premisa del plan era inexacta**: el registro de transportista
+> NO usaba un `input file`, ya tenía su propia cámara en vivo (con la misma
+> pinta, porque compartían el CSS). Lo que sobraba era el **código**: dos motores
+> de cámara casi idénticos.
+>
+> Unificados en `montarCamaraOferta` + `camaraHtml`; borradas las 90 líneas de
+> `montarCamaraTransportista`/`camaraTransportistaHtml`. El motor único se queda
+> con lo mejor de cada uno: hereda el botón **«Repetir foto»** del transportista
+> (que a `#ofrecer` le faltaba: había que quitar la miniatura con la ✕ y reabrir),
+> y los documentos de una sola foto (cédula, placa, sitio) se capturan a 1280px /
+> 0.82 en vez de 1024 / 0.72, porque una cédula tiene que poder leerse.
+>
+> Verificado con cámara simulada: registro de transportista completo (3 fotos,
+> «Repetir» reemplaza la foto, el paso bloquea si falta) y `#ofrecer` sin
+> regresión (el lote de 20 lleva contador y no «Repetir»; la cédula al revés). El
+> payload al backend no cambia.
+>
+> Nota: quedan sin uso las clases CSS `.driver-camera` / `.driver-photo-*` y las
+> claves `modal.retakePhoto`/`modal.camera*`. No las borro en este commit (no
+> estorban y borrarlas es otro cambio).
+
 
 El registro de transportista pide tres fotos (placa, vehículo, cédula) y hoy no
 usa el componente de cámara que construimos para `#ofrecer`. Dos cámaras
