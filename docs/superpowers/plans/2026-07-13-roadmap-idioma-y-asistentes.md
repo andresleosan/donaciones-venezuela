@@ -42,7 +42,13 @@ Leaflet local, Playwright para verificar.
 
 ---
 
-## Tarea 1: El widget de desarrollo no se le sirve al público
+## Tarea 1: El widget de desarrollo no se le sirve al público — HECHA (v50)
+
+> Resuelta el 2026-07-13. La compuerta existía pero al revés (encendido por
+> defecto, se apagaba con `?edit=0`): ahora es opt-in con `?dev=1`, persiste en
+> `sessionStorage` durante la pestaña y se apaga con `?dev=0`. El público no lo
+> ve nunca. Verificado en las cuatro rutas.
+
 
 Hoy, cualquier usuario en producción ve flotando dos botones: "Copiar pantalla"
 y "Seleccionar elemento". Son la herramienta de Luis para pedir cambios; no son

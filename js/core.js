@@ -911,11 +911,18 @@
     }
 
     function editAssistantDisponible() {
-      if (new URLSearchParams(location.search).get('edit') === '0') return false;
-      // El editor asistido forma parte de la herramienta de revisión de la app.
-      // Se mantiene disponible también en producción, como en el commit original;
-      // `?edit=0` permite ocultarlo cuando se necesite una vista limpia.
-      return true;
+      // Herramienta interna para pedir cambios, no parte del producto: el público
+      // no debe verla. Se enciende con ?dev=1 y queda activa el resto de la
+      // pestaña (sessionStorage); ?dev=0 la apaga.
+      const params = new URLSearchParams(location.search);
+      const pedido = params.get('dev');
+      try {
+        if (pedido === '1') sessionStorage.setItem('dv-dev', '1');
+        else if (pedido === '0') sessionStorage.removeItem('dv-dev');
+        return sessionStorage.getItem('dv-dev') === '1';
+      } catch (err) {
+        return pedido === '1'; // sin sessionStorage (modo privado): solo por URL
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
