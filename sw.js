@@ -1,68 +1,88 @@
-// Service worker: cache del cascarón estático para uso offline.
-// Los datos (Supabase) NUNCA se cachean. Los locales van network-first
-// (se actualizan seguido; nunca deben quedar viejos). Una sola VERSION
-// controla el nombre de caché y las URLs versionadas — súbela por release.
-const VERSION = '49';
+// Cascarón PWA y respaldo offline. Los datos privados no se almacenan aquí:
+// las lecturas públicas se guardan en IndexedDB desde services/api.js.
+const VERSION = '50';
 const CACHE = 'ayuda-ve-v' + VERSION;
+const OFFLINE_URL = '/offline.html';
 const ESTATICOS = [
-  '/',
-  '/ventana.html',
-  '/css/app.css?v=48',
-  '/js/core.js?v=' + VERSION,
-  '/js/wiz.js?v=' + VERSION,
-  '/js/vistas.js?v=' + VERSION,
-  '/js/panel.js?v=' + VERSION,
-  '/js/admin.js?v=' + VERSION,
-  '/js/ventana.js?v=' + VERSION,
-  '/services/api.js?v=7',
+  '/', '/index.html', '/ventana.html', OFFLINE_URL, '/manifest.json',
+  '/css/app.css?v=50',
+  '/js/pwa.js?v=50', '/js/core.js?v=50', '/js/wiz.js?v=50',
+  '/js/vistas.js?v=50', '/js/panel.js?v=50', '/js/admin.js?v=50', '/js/ventana.js?v=50',
+  '/services/api.js?v=7', '/services/leaflet/leaflet.css', '/services/leaflet/leaflet.js',
+  '/locales/es.json', '/locales/en.json',
   '/assets/fonts/inter-var.woff2',
-  '/assets/icons/icon-192.png',
-  '/assets/icons/favicon-32x32.png'
+  '/assets/icons/icon-192.png', '/assets/icons/icon-512.png',
+  '/assets/icons/icon-maskable-512.png', '/assets/icons/favicon-32x32.png'
 ];
 
-// Recursos que deben estar siempre frescos: se sirven de red y solo caen
-// a caché si no hay conexión.
-function esFresco(url) {
+function esRecursoFresco(url) {
   return url.pathname.startsWith('/locales/') || url.pathname === '/manifest.json';
 }
 
-self.addEventListener('install', (ev) => {
-  ev.waitUntil(caches.open(CACHE).then((c) => c.addAll(ESTATICOS)).then(() => self.skipWaiting()));
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((cache) => cache.addAll(ESTATICOS))
+      .then(() => self.skipWaiting())
+  );
 });
 
-self.addEventListener('activate', (ev) => {
-  ev.waitUntil(
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', (ev) => {
-  const url = new URL(ev.request.url);
-  if (ev.request.method !== 'GET' || url.origin !== self.location.origin) return; // Supabase y POSTs pasan directo
+async function responderNavegacion(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch (_) {
+    const cache = await caches.open(CACHE);
+    return (await cache.match(request)) || (await cache.match('/')) ||
+      (await cache.match('/index.html')) || (await cache.match(OFFLINE_URL));
+  }
+}
 
-  if (ev.request.mode === 'navigate') {
-    ev.respondWith(fetch(ev.request).catch(() => caches.match('/')));
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(responderNavegacion(event.request));
     return;
   }
-
-  if (esFresco(url)) {
-    // Network-first: locales siempre al día; caché solo como respaldo offline
-    ev.respondWith(
-      fetch(ev.request).then((resp) => {
-        if (resp.ok) { const copia = resp.clone(); caches.open(CACHE).then((c) => c.put(ev.request, copia)); }
-        return resp;
-      }).catch(() => caches.match(ev.request))
+  if (esRecursoFresco(url)) {
+    event.respondWith(
+      fetch(event.request).then(async (response) => {
+        if (response.ok) (await caches.open(CACHE)).put(event.request, response.clone());
+        return response;
+      }).catch(() => caches.match(event.request))
     );
     return;
   }
-
-  // Estáticos versionados: caché primero
-  ev.respondWith(
-    caches.match(ev.request).then((hit) => hit || fetch(ev.request).then((resp) => {
-      if (resp.ok) { const copia = resp.clone(); caches.open(CACHE).then((c) => c.put(ev.request, copia)); }
-      return resp;
+  event.respondWith(
+    caches.match(event.request).then((hit) => hit || fetch(event.request).then(async (response) => {
+      if (response.ok) (await caches.open(CACHE)).put(event.request, response.clone());
+      return response;
     }))
   );
+});
+
+function avisarSincronizacion() {
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then((clients) => clients.forEach((client) => client.postMessage({ type: 'dv-sync' })));
+}
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'dv-outbox') event.waitUntil(avisarSincronizacion());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'flush-queue') event.waitUntil(avisarSincronizacion());
 });

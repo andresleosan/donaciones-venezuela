@@ -10,6 +10,112 @@
     supabaseKey: ''
   };
 
+  // La cola local solo contiene formularios públicos. Nunca guardamos credenciales,
+  // tokens de administración ni sesiones de Supabase en IndexedDB.
+  const OFFLINE_DB = 'donaciones-venezuela-offline-v1';
+  const OFFLINE_DB_VERSION = 1;
+  const OFFLINE_QUEUE = 'outbox';
+  const OFFLINE_CACHE = 'snapshots';
+  const ACCIONES_OFFLINE = new Set([
+    'registrar_lugar', 'registrar_voluntario', 'registrar_rescatista',
+    'registrar_motorizado', 'reportar_persona', 'ofrecer_insumo',
+    'donar_dinero', 'donar_motorizado', 'registrar_trayecto',
+    'registrar_recogida', 'registrar_entrega_final'
+  ]);
+  let dbPromise = null;
+  let flushing = null;
+
+  function tieneIndexedDb() {
+    return typeof window !== 'undefined' && 'indexedDB' in window;
+  }
+
+  function abrirDb() {
+    if (!tieneIndexedDb()) return Promise.resolve(null);
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve) => {
+      const request = window.indexedDB.open(OFFLINE_DB, OFFLINE_DB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(OFFLINE_QUEUE)) {
+          db.createObjectStore(OFFLINE_QUEUE, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(OFFLINE_CACHE)) {
+          db.createObjectStore(OFFLINE_CACHE, { keyPath: 'key' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+      request.onblocked = () => resolve(null);
+    });
+    return dbPromise;
+  }
+
+  function transaccion(store, mode, operation) {
+    return abrirDb().then((db) => new Promise((resolve) => {
+      if (!db) return resolve(null);
+      try {
+        const tx = db.transaction(store, mode);
+        const request = operation(tx.objectStore(store));
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+      } catch (_) { resolve(null); }
+    }));
+  }
+
+  function guardarSnapshot(key, value) {
+    return transaccion(OFFLINE_CACHE, 'readwrite', (store) => store.put({ key, value, savedAt: Date.now() }));
+  }
+
+  function leerSnapshot(key) {
+    return transaccion(OFFLINE_CACHE, 'readonly', (store) => store.get(key)).then((row) => row && row.value);
+  }
+
+  function emitirCambioCola() {
+    return contarCola().then((count) => {
+      window.dispatchEvent(new CustomEvent('dv-offline-change', { detail: { count } }));
+      return count;
+    });
+  }
+
+  function contarCola() {
+    return transaccion(OFFLINE_QUEUE, 'readonly', (store) => store.count()).then((count) => Number(count || 0));
+  }
+
+  function esAccionOffline(payload) {
+    return payload && ACCIONES_OFFLINE.has(String(payload.accion || ''));
+  }
+
+  function esErrorDeRed(err) {
+    if (!err) return false;
+    if (err.name === 'AbortError' || err.name === 'TypeError' || err.name === 'NetworkError') return true;
+    return /failed to fetch|network|offline|load failed|fetch/i.test(String(err.message || err));
+  }
+
+  function registrarSync() {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.ready) return;
+    navigator.serviceWorker.ready.then((registration) => {
+      if (registration.sync && typeof registration.sync.register === 'function') {
+        return registration.sync.register('dv-outbox');
+      }
+      return null;
+    }).catch(() => {});
+  }
+
+  async function encolar(payload, error) {
+    const id = 'offline-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    const row = { id, payload, createdAt: Date.now(), attempts: 0, lastError: error ? String(error.message || error) : '' };
+    const saved = await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.put(row));
+    if (!saved) throw new Error('No se pudo guardar el formulario sin conexión');
+    registrarSync();
+    await emitirCambioCola();
+    return {
+      success: true,
+      queued: true,
+      queueId: id,
+      token: 'PENDIENTE-' + id.slice(-6).toUpperCase()
+    };
+  }
+
   function configure(nextConfig) {
     config = Object.assign({}, config, nextConfig || {});
   }
@@ -49,7 +155,9 @@
       const resp = await fetch(config.supabaseUrl + path, init);
       const data = await resp.json().catch(() => null);
       if (!resp.ok) {
-        throw new Error((data && (data.error || data.message)) || 'HTTP ' + resp.status);
+        const error = new Error((data && (data.error || data.message)) || 'HTTP ' + resp.status);
+        error.status = resp.status;
+        throw error;
       }
       return data;
     } finally {
@@ -88,6 +196,11 @@
   }
 
   async function getAll() {
+    const cacheKey = 'all';
+    if (navigator.onLine === false) {
+      const cached = await leerSnapshot(cacheKey);
+      if (cached) return { data: cached, source: 'offline-cache' };
+    }
     try {
       const [lugares, voluntarios, motorizados, estadisticas, traslados, vacantes] = await Promise.all([
         rest('lugares_directorio', '?order=nombre'),
@@ -110,37 +223,61 @@
         traslados: traslados || [],
         vacantes: vacantes || []
       });
+      await guardarSnapshot(cacheKey, data);
       return { data, source: 'live' };
     } catch (err) {
-      return { data: emptyAll(), source: 'error', error: err };
+      const cached = await leerSnapshot(cacheKey);
+      return cached ? { data: cached, source: 'offline-cache', error: err } : { data: emptyAll(), source: 'error', error: err };
     }
   }
 
   async function getList(view, query, mapFn) {
+    const cacheKey = 'list:' + view + ':' + (query || '');
+    if (navigator.onLine === false) {
+      const cached = await leerSnapshot(cacheKey);
+      if (cached) return { data: cached, source: 'offline-cache' };
+    }
     try {
       const rows = await rest(view, query);
-      return { data: mapFn ? (rows || []).map(mapFn) : (rows || []), source: 'live' };
+      const data = mapFn ? (rows || []).map(mapFn) : (rows || []);
+      await guardarSnapshot(cacheKey, data);
+      return { data, source: 'live' };
     } catch (err) {
-      return { data: [], source: 'error', error: err };
+      const cached = await leerSnapshot(cacheKey);
+      return cached ? { data: cached, source: 'offline-cache', error: err } : { data: [], source: 'error', error: err };
     }
   }
 
   async function getFamiliares(query) {
+    const cacheKey = 'familiares:' + String(query || '').trim().toLowerCase();
+    if (navigator.onLine === false) {
+      const cached = await leerSnapshot(cacheKey);
+      if (cached) return { data: cached, source: 'offline-cache' };
+    }
     try {
       const data = await rpc('buscar_familiar', { q: String(query || '') });
+      await guardarSnapshot(cacheKey, data || []);
       return { data: data || [], source: 'live' };
     } catch (err) {
-      return { data: [], source: 'error', error: err };
+      const cached = await leerSnapshot(cacheKey);
+      return cached ? { data: cached, source: 'offline-cache', error: err } : { data: [], source: 'error', error: err };
     }
   }
 
   async function getSeguimiento(token) {
+    const cacheKey = 'seguimiento:' + String(token || '').trim().toUpperCase();
+    if (navigator.onLine === false) {
+      const cached = await leerSnapshot(cacheKey);
+      if (cached) return { data: cached, source: 'offline-cache' };
+    }
     try {
       const data = await rpc('seguimiento_factura', { tok: String(token || '') });
       if (!data) return { data: null, source: 'error', error: new Error('Factura no encontrada') };
+      await guardarSnapshot(cacheKey, data);
       return { data, source: 'live' };
     } catch (err) {
-      return { data: null, source: 'error', error: err };
+      const cached = await leerSnapshot(cacheKey);
+      return cached ? { data: cached, source: 'offline-cache', error: err } : { data: null, source: 'error', error: err };
     }
   }
 
@@ -168,7 +305,7 @@
     return authPost('verify', { type: 'email', email: email, token: codigo });
   }
 
-  async function post(payload) {
+  async function requestPost(payload) {
     // 45s: los registros con fotos (transportistas) suben ~1-2MB en móvil
     const data = await fetchJson('/functions/v1/api', {
       method: 'POST',
@@ -181,6 +318,55 @@
       throw new Error((data && data.error) || generico);
     }
     return data;
+  }
+
+  async function post(payload) {
+    const data = payload || {};
+    if (navigator.onLine === false && esAccionOffline(data)) return encolar(data);
+    try {
+      return await requestPost(data);
+    } catch (err) {
+      if (esAccionOffline(data) && esErrorDeRed(err)) return encolar(data, err);
+      throw err;
+    }
+  }
+
+  async function flushQueue() {
+    if (flushing) return flushing;
+    if (navigator.onLine === false) return { sent: 0, pending: await contarCola() };
+    flushing = (async () => {
+      let sent = 0;
+      const db = await abrirDb();
+      if (!db) return { sent, pending: 0 };
+      const rows = await transaccion(OFFLINE_QUEUE, 'readonly', (store) => store.getAll()) || [];
+      rows.sort((a, b) => a.createdAt - b.createdAt);
+      for (const row of rows) {
+        try {
+          await requestPost(row.payload);
+          await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.delete(row.id));
+          sent += 1;
+        } catch (err) {
+          await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.put(Object.assign({}, row, {
+            attempts: Number(row.attempts || 0) + 1,
+            lastError: String(err.message || err)
+          })));
+          if (esErrorDeRed(err)) break;
+        }
+      }
+      const pending = await emitirCambioCola();
+      return { sent, pending };
+    })().finally(() => { flushing = null; });
+    return flushing;
+  }
+
+  function iniciarSincronizacion() {
+    window.addEventListener('online', () => flushQueue());
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'dv-sync') flushQueue();
+      });
+    }
+    window.setTimeout(() => flushQueue(), 1200);
   }
 
   window.SheetsService = {
@@ -198,6 +384,9 @@
     getSeguimiento,
     solicitarCodigo,
     verificarCodigo,
-    post
+    post,
+    flushQueue,
+    getQueueCount: contarCola
   };
+  iniciarSincronizacion();
 })(window);
