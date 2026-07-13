@@ -427,7 +427,8 @@
     "driverUploading": "Uploading photos and saving...",
     "driverPhotoError": "The photos could not be uploaded. Try again.",
     "volunteerPhotoMissing": "The ID photo is missing",
-    "saveError": "We couldn't save. Check your connection and try again."
+    "saveError": "We couldn't save. Check your connection and try again.",
+    "offlineQueueError": "We couldn't save the form offline. Please try again."
   },
   "validation": {
     "fieldFallback": "This field",

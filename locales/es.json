@@ -427,7 +427,8 @@
     "driverUploading": "Subiendo fotos y guardando registro...",
     "driverPhotoError": "No se pudieron subir las fotos. Intenta de nuevo.",
     "volunteerPhotoMissing": "Falta la foto de la cédula",
-    "saveError": "No pudimos guardar. Revisa la conexión e inténtalo de nuevo."
+    "saveError": "No pudimos guardar. Revisa la conexión e inténtalo de nuevo.",
+    "offlineQueueError": "No pudimos guardar el formulario sin conexión. Intenta de nuevo."
   },
   "validation": {
     "fieldFallback": "Este campo",

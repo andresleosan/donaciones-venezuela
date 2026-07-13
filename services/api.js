@@ -5,6 +5,12 @@
   // escrituras por la edge function /functions/v1/api. Mantiene la interfaz
   // window.SheetsService que ya consume js/app.js.
 
+  // Mismo patrón que js/pwa.js: el texto sale del idioma activo; el respaldo
+  // solo se usa si core.js aún no ha cargado las traducciones.
+  function traducir(clave, respaldo) {
+    return typeof window.t === 'function' ? window.t(clave) : respaldo;
+  }
+
   let config = {
     supabaseUrl: '',
     supabaseKey: ''
@@ -105,7 +111,7 @@
     const id = 'offline-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     const row = { id, payload, createdAt: Date.now(), attempts: 0, lastError: error ? String(error.message || error) : '' };
     const saved = await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.put(row));
-    if (!saved) throw new Error('No se pudo guardar el formulario sin conexión');
+    if (!saved) throw new Error(traducir('messages.offlineQueueError', 'No se pudo guardar el formulario sin conexión'));
     registrarSync();
     await emitirCambioCola();
     return {
@@ -313,9 +319,7 @@
       body: JSON.stringify(payload || {})
     }, 45000);
     if (!data || data.success === false) {
-      // Sin clave propia: cae al idioma activo, nunca a un literal en español.
-      const generico = typeof t === 'function' ? t('messages.saveError') : 'No se pudo guardar';
-      throw new Error((data && data.error) || generico);
+      throw new Error((data && data.error) || traducir('messages.saveError', 'No se pudo guardar'));
     }
     return data;
   }

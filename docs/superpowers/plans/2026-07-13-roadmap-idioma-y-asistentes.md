@@ -105,7 +105,17 @@ git add -A && git commit -m "fix: el widget interno de cambios solo aparece con 
 
 ---
 
-## Tarea 2: Guardia automática de idioma (que el bug no vuelva)
+## Tarea 2: Guardia automática de idioma — HECHA (v51)
+
+> Resuelta el 2026-07-13. `scripts/verificar-idioma.py` compara la paridad de
+> claves es/en y busca texto en español cableado en el JS. Se corre con
+> `python3 scripts/verificar-idioma.py` desde la raíz. Probado en negativo (se
+> le introdujo una clave huérfana y un literal en español: los detecta; sin
+> ellos, pasa). Lista blanca explícita para los valores canónicos (R1.5), los
+> respaldos de `tx()/traducir()` y el widget interno. De paso descubrió un error
+> real: `services/api.js` lanzaba dos mensajes de error solo en español, ya
+> traducidos (`messages.saveError`, `messages.offlineQueueError`).
+
 
 Un script que falla si las dos traducciones se desincronizan o si alguien deja
 una cadena en español dentro del JS. Se corre a mano antes de comitear; es la
