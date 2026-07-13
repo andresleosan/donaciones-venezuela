@@ -71,7 +71,8 @@
         const c = control(p);
         if (!label) return '';
         let valor;
-        if (!c) valor = p.dataset.wizDone || '';
+        if (p.dataset.wizDone) valor = p.dataset.wizDone;
+        else if (!c) valor = '';
         else if (c.type === 'file') valor = (c.files && c.files.length) ? t('wizard.confirm') : '—';
         else if (c.tagName === 'SELECT') valor = c.options[c.selectedIndex] ? c.options[c.selectedIndex].textContent : '';
         else valor = c.value.trim();

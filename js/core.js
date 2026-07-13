@@ -155,6 +155,8 @@
       setText('#help-voluntario-copy', 'helpHub.volunteerCopy');
       setText('#help-ofrecer-title', 'helpHub.offerTitle');
       setText('#help-ofrecer-copy', 'helpHub.offerCopy');
+      setText('#ofrecer-title', 'offer.pageTitle');
+      setText('#ofrecer-page-copy', 'offer.pageCopy');
       setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
       setText('#reportar-summary', 'helpHub.reportSummary');
       setText('#form-lugar-copy', 'centers.formCopy');

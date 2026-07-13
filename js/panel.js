@@ -303,7 +303,7 @@
       if (/^#admin$/i.test(hashRaw)) { window.location.href = '/admin'; return; }
       // El token de seguimiento (#seguimiento/DV-…) lo pinta cargarSeguimientoDesdeUrl.
       if (/^#seguimiento\//i.test(hashRaw)) return;
-      const VISTAS = ['inicio', 'donaciones', 'ayuda', 'donar', 'ayudar', 'necesidades', 'acceso', 'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento'];
+      const VISTAS = ['inicio', 'donaciones', 'ayuda', 'donar', 'ayudar', 'necesidades', 'acceso', 'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento', 'ofrecer'];
       const hash = hashRaw.replace(/^#/, '').toLowerCase();
       cambiarVista(VISTAS.indexOf(hash) >= 0 ? hash : 'inicio');
     }

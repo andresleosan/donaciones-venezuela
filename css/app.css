@@ -2036,3 +2036,21 @@
     @media (prefers-reduced-motion: reduce) {
       .wiz-on .field.wiz-active { animation: none; }
     }
+
+    /* ── Página "Tengo un insumo": cámara multi-foto, cédula y mapa ────── */
+    .ofrecer-panel { max-width: 640px; }
+    .of-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin: 10px 0; }
+    .of-thumb { position: relative; margin: 0; }
+    .of-thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border); display: block; }
+    .of-thumb-x {
+      position: absolute; top: -6px; right: -6px; width: 24px; height: 24px;
+      border-radius: 999px; border: none; background: var(--ink); color: #fff;
+      font-size: 0.7rem; line-height: 1; cursor: pointer;
+    }
+    .of-galeria { position: relative; overflow: hidden; }
+    .of-mapa { height: 280px; border-radius: var(--radius); border: 1px solid var(--border); margin: 10px 0; }
+    .of-mapa[hidden] { display: none; }
+    .of-cam-step video { width: 100%; border-radius: var(--radius); }
+    @media (max-width: 560px) {
+      .of-cam-step .card-actions { flex-direction: column; align-items: stretch; }
+    }

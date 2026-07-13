@@ -536,114 +536,223 @@
       });
     }
 
-    // «Tengo el insumo»: el donante ofrece algo que YA TIENE, con cantidad,
-    // ubicación y teléfono, para que un transportista lo recoja y lo lleve a
-    // un centro. Devuelve un token para seguir la donación.
+    // Cámara reutilizable del flujo de oferta: abre la cámara del navegador
+    // (pide permiso), captura hasta `max` fotos y las muestra como miniaturas
+    // con opción de quitar; también acepta subir de la galería. `fotos` es el
+    // array compartido que consume el submit.
+    function montarCamaraOferta(prefijo, fotos, max, alCambiar) {
+      const raiz = document.getElementById(prefijo + '-field');
+      const video = raiz.querySelector('video');
+      const canvas = raiz.querySelector('canvas');
+      const thumbs = raiz.querySelector('.of-thumbs');
+      const msg = raiz.querySelector('.form-message');
+      const btnAbrir = raiz.querySelector('[data-cam-abrir]');
+      const btnCapturar = raiz.querySelector('[data-cam-capturar]');
+      const btnCerrar = raiz.querySelector('[data-cam-cerrar]');
+      const inputGaleria = raiz.querySelector('input[type="file"]');
+      const contador = raiz.querySelector('.of-contador');
+      let stream = null;
+      const aviso = (tipo, texto) => { msg.className = `form-message visible ${tipo}`; msg.textContent = texto; };
+      const parar = () => { if (stream) stream.getTracks().forEach((tr) => tr.stop()); stream = null; video.hidden = true; btnCapturar.hidden = true; btnCerrar.hidden = true; btnAbrir.hidden = false; };
+      function pintar() {
+        contador.textContent = t('offer.photoCount', { n: fotos.length, max });
+        thumbs.innerHTML = fotos.map((f, i) => `<figure class="of-thumb"><img src="${e(f)}" alt="" /><button type="button" class="of-thumb-x" data-quitar="${i}" aria-label="${e(t('offer.removePhoto'))}">✕</button></figure>`).join('');
+        thumbs.querySelectorAll('[data-quitar]').forEach((b) => b.addEventListener('click', () => { fotos.splice(Number(b.dataset.quitar), 1); pintar(); }));
+        btnCapturar.disabled = fotos.length >= max;
+        if (alCambiar) alCambiar();
+      }
+      async function abrir() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { aviso('error', t('offer.cameraUnsupported')); return; }
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+          video.srcObject = stream;
+          video.hidden = false;
+          btnAbrir.hidden = true;
+          btnCapturar.hidden = false;
+          btnCerrar.hidden = false;
+          aviso('info', t('offer.cameraReady'));
+        } catch (err) { aviso('error', t('offer.cameraUnavailable')); }
+      }
+      function capturar() {
+        if (fotos.length >= max) return;
+        if (!video.videoWidth) { aviso('info', t('offer.cameraReady')); return; }
+        const ratio = Math.min(1, 1024 / video.videoWidth);
+        canvas.width = Math.round(video.videoWidth * ratio);
+        canvas.height = Math.round(video.videoHeight * ratio);
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        fotos.push(canvas.toDataURL('image/jpeg', 0.72));
+        pintar();
+        aviso('success', t('offer.photoCount', { n: fotos.length, max }));
+        if (fotos.length >= max) parar();
+      }
+      btnAbrir.addEventListener('click', abrir);
+      btnCapturar.addEventListener('click', capturar);
+      btnCerrar.addEventListener('click', parar);
+      inputGaleria.addEventListener('change', async (ev) => {
+        const archivos = Array.from(ev.target.files || []).slice(0, max - fotos.length);
+        for (const f of archivos) {
+          try { fotos.push(await comprimirFoto(f)); } catch (err) { aviso('error', t('offer.cameraUnavailable')); }
+        }
+        ev.target.value = '';
+        pintar();
+      });
+      pintar();
+      return { parar };
+    }
+
+    function bloqueCamaraHtml(prefijo, titulo, copia, multiple) {
+      return `<div data-wiz-step id="${prefijo}-field" class="of-cam-step">
+        <label>${e(titulo)}</label>
+        <p class="section-copy">${e(copia)}</p>
+        <div class="offer-camera">
+          <video autoplay playsinline muted hidden></video>
+          <canvas hidden></canvas>
+        </div>
+        <p class="of-contador meta" aria-live="polite"></p>
+        <div class="of-thumbs" aria-live="polite"></div>
+        <div class="form-message" role="status" aria-live="polite"></div>
+        <div class="card-actions">
+          <button class="btn btn-primary" type="button" data-cam-abrir>${e(t('offer.openCamera'))}</button>
+          <button class="btn btn-primary" type="button" data-cam-capturar hidden>${e(t('offer.takePhoto'))}</button>
+          <button class="btn btn-ghost" type="button" data-cam-cerrar hidden>${e(t('offer.closeCamera'))}</button>
+          <label class="btn btn-soft of-galeria">${e(t('offer.fromGallery'))}<input type="file" accept="image/*" ${multiple ? 'multiple' : ''} class="visually-hidden" /></label>
+        </div>
+      </div>`;
+    }
+
+    // «Tengo el insumo»: ahora es una PÁGINA propia (#ofrecer) con asistente
+    // paso a paso: datos, hasta 20 fotos del insumo con la cámara, foto de la
+    // cédula, y ubicación con GPS o eligiendo el punto en el mapa.
     function abrirOfrecerInsumo(datos) {
+      const shell = $('#ofrecer-shell');
+      if (!shell) return;
       const pre = datos || {};
-      abrirModal(t('offer.modalTitle'), `<form id="ofrecer-form" class="offer-wizard" data-wiz="ofrecer" novalidate>
+      if (typeof cambiarVista === 'function') cambiarVista('ofrecer');
+      if (!/^#ofrecer$/i.test(window.location.hash)) window.location.hash = '#ofrecer';
+      shell.innerHTML = `<form id="ofrecer-form" class="offer-wizard" data-wiz="ofrecer" novalidate>
         <p class="section-copy">${e(pre.centro ? t('offer.modalCopyCentro', { insumo: mostrarInsumo(pre.insumo), centro: pre.centro }) : t('offer.modalCopy'))}</p>
         <div class="form-grid">
           <div class="field full"><label for="of-insumo">${e(t('offer.supplyLabel'))}</label><input id="of-insumo" required value="${e(pre.insumo || '')}" placeholder="${e(t('offer.supplyPh'))}" /></div>
           <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
           <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
+        </div>
+        ${bloqueCamaraHtml('of-fotos', t('offer.photosTitle'), t('offer.photosCopy'), true)}
+        <div class="form-grid">
           <div class="field full"><label for="of-nombre">${e(t('offer.contactNameLabel'))}</label><input id="of-nombre" required autocomplete="name" placeholder="${e(t('offer.contactNamePh'))}" /></div>
           <div class="field"><label for="of-telefono">${e(t('common.phone'))}</label><input id="of-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
-          <div class="field"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
         </div>
-        <div data-wiz-step id="of-camera-field">
-          <label>${e(t('offer.cameraStepTitle'))}</label>
-          <p class="section-copy">${e(t('offer.cameraStepCopy'))}</p>
-          <div class="offer-camera" id="of-camera-shell">
-            <video id="of-camera" autoplay playsinline muted hidden></video>
-            <canvas id="of-camera-canvas" hidden></canvas>
-            <img id="of-photo-preview" alt="" hidden />
-            <div id="of-camera-placeholder" class="offer-camera-placeholder">${e(t('offer.openCamera'))}</div>
+        ${bloqueCamaraHtml('of-cedula', t('offer.idTitle'), t('offer.idCopy'), false)}
+        <div class="form-grid">
+          <div class="field full"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
+        </div>
+        <div data-wiz-step id="of-geo-field">
+          <label>${e(t('offer.geoTitle'))}</label>
+          <p class="section-copy">${e(t('offer.geoCopy'))}</p>
+          <div class="card-actions">
+            <button class="btn btn-primary" type="button" id="of-gps">${e(t('offer.useGps'))}</button>
+            <button class="btn btn-soft" type="button" id="of-mapa-btn">${e(t('offer.pickOnMap'))}</button>
           </div>
-          <div id="of-camera-message" class="form-message" role="status" aria-live="polite"></div>
-          <div class="card-actions"><button class="btn btn-soft" type="button" id="of-open-camera">${e(t('offer.openCamera'))}</button><button class="btn btn-primary" type="button" id="of-capture" hidden>${e(t('offer.takePhoto'))}</button><button class="btn btn-ghost" type="button" id="of-retake" hidden>${e(t('offer.retakePhoto'))}</button></div>
+          <div id="of-mapa" class="of-mapa" hidden></div>
+          <p class="meta" id="of-coords" aria-live="polite">${e(t('offer.noCoords'))}</p>
+          <div class="form-message" id="of-geo-message" role="status" aria-live="polite"></div>
         </div>
         <p class="meta">${e(t('offer.privacyNote'))}</p>
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.submit'))}</button></div>
         <div id="of-message" class="form-message" role="status" aria-live="polite"></div>
-      </form>`);
+      </form>`;
       const form = $('#ofrecer-form');
-      const dialog = $('#modal-root dialog');
-      let fotoInsumo = '';
-      let stream = null;
-      const stopCamera = () => { if (stream) stream.getTracks().forEach((track) => track.stop()); stream = null; };
-      const cameraMessage = (tipo, texto) => { const box = $('#of-camera-message'); if (!box) return; box.className = `form-message visible ${tipo}`; box.textContent = texto; };
-      async function iniciarCamara() {
-        const video = $('#of-camera');
-        if (!video) return;
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { cameraMessage('error', t('offer.cameraUnsupported')); return; }
-        try {
-          stopCamera();
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-          video.srcObject = stream;
-          video.hidden = false;
-          $('#of-camera-placeholder').hidden = true;
-          $('#of-open-camera').hidden = true;
-          $('#of-capture').hidden = false;
-          cameraMessage('info', t('offer.cameraStepCopy'));
-        } catch (err) { cameraMessage('error', t('offer.cameraUnavailable')); }
-      }
-      function capturarFoto() {
-        const video = $('#of-camera');
-        const canvas = $('#of-camera-canvas');
-        if (!video || !canvas || !video.videoWidth) { cameraMessage('error', t('offer.cameraUnavailable')); return; }
-        const maxWidth = 1280;
-        const ratio = Math.min(1, maxWidth / video.videoWidth);
-        canvas.width = Math.round(video.videoWidth * ratio);
-        canvas.height = Math.round(video.videoHeight * ratio);
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        fotoInsumo = canvas.toDataURL('image/jpeg', 0.8);
-        $('#of-photo-preview').src = fotoInsumo;
-        $('#of-photo-preview').hidden = false;
-        video.hidden = true;
-        $('#of-capture').hidden = true;
-        $('#of-retake').hidden = false;
-        stopCamera();
-        cameraMessage('success', t('offer.takePhoto'));
-      }
-      $('#of-open-camera').addEventListener('click', iniciarCamara);
-      $('#of-capture').addEventListener('click', capturarFoto);
-      $('#of-retake').addEventListener('click', () => { fotoInsumo = ''; $('#of-photo-preview').hidden = true; $('#of-retake').hidden = true; iniciarCamara(); });
-      // Wizard genérico: la foto es su propio paso; se marca hecha en el resumen
-      // y no se puede avanzar sin capturarla.
-      const camara = $('#of-camera-field');
+      const fotos = [];
+      const cedula = [];
+      const coords = { lat: null, lng: null };
+      let mapa = null, marcador = null;
+      const camFotos = montarCamaraOferta('of-fotos', fotos, 20);
+      const camCedula = montarCamaraOferta('of-cedula', cedula, 1);
+      const pasoFotos = $('#of-fotos-field');
+      const pasoCedula = $('#of-cedula-field');
+      const pasoGeo = $('#of-geo-field');
+      const pintarCoords = () => {
+        $('#of-coords').textContent = coords.lat == null ? t('offer.noCoords') : t('offer.coordsSet', { lat: coords.lat.toFixed(5), lng: coords.lng.toFixed(5) });
+      };
+      const fijarCoords = (lat, lng) => { coords.lat = lat; coords.lng = lng; pintarCoords(); };
+      $('#of-gps').addEventListener('click', () => {
+        if (!navigator.geolocation) { mostrarMensaje('#of-geo-message', 'error', t('offer.gpsUnsupported')); return; }
+        mostrarMensaje('#of-geo-message', 'info', t('offer.gpsAsking'));
+        navigator.geolocation.getCurrentPosition(
+          (pos) => { fijarCoords(pos.coords.latitude, pos.coords.longitude); mostrarMensaje('#of-geo-message', 'success', t('offer.gpsOk')); if (mapa) { mapa.setView([coords.lat, coords.lng], 16); marcador.setLatLng([coords.lat, coords.lng]); } },
+          () => mostrarMensaje('#of-geo-message', 'error', t('offer.gpsError')),
+          { enableHighAccuracy: true, timeout: 12000 }
+        );
+      });
+      $('#of-mapa-btn').addEventListener('click', () => {
+        const div = $('#of-mapa');
+        div.hidden = false;
+        if (!mapa && window.L) {
+          const inicio = coords.lat != null ? [coords.lat, coords.lng] : [10.48, -66.9];
+          mapa = L.map('of-mapa').setView(inicio, coords.lat != null ? 16 : 6);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+          marcador = L.marker(inicio, { draggable: true }).addTo(mapa);
+          marcador.on('dragend', () => { const ll = marcador.getLatLng(); fijarCoords(ll.lat, ll.lng); });
+          mapa.on('click', (ev) => { marcador.setLatLng(ev.latlng); fijarCoords(ev.latlng.lat, ev.latlng.lng); });
+          if (coords.lat != null) fijarCoords(coords.lat, coords.lng);
+        }
+        if (mapa) setTimeout(() => mapa.invalidateSize(), 60);
+        mostrarMensaje('#of-geo-message', 'info', t('offer.mapHint'));
+      });
       wizPublico(form, {
-        alEntrar: (paso) => { if (paso === camara) { if (!fotoInsumo) iniciarCamara(); } else { stopCamera(); } },
+        alEntrar: (paso) => {
+          if (paso !== pasoFotos) camFotos.parar();
+          if (paso !== pasoCedula) camCedula.parar();
+          if (paso === pasoGeo && mapa) setTimeout(() => mapa.invalidateSize(), 60);
+        },
         validar: (paso) => {
-          if (paso !== camara) return undefined;
-          if (!fotoInsumo) { cameraMessage('error', t('offer.cameraRequired')); return t('offer.cameraRequired'); }
-          camara.dataset.wizDone = t('offer.takePhoto');
-          stopCamera();
-          return true;
+          if (paso === pasoFotos) {
+            if (!fotos.length) return t('offer.photosRequired');
+            pasoFotos.dataset.wizDone = t('offer.photoCount', { n: fotos.length, max: 20 });
+            camFotos.parar();
+            return true;
+          }
+          if (paso === pasoCedula) {
+            if (!cedula.length) return t('offer.idRequired');
+            pasoCedula.dataset.wizDone = t('wizard.confirm');
+            camCedula.parar();
+            return true;
+          }
+          if (paso === pasoGeo) {
+            if (coords.lat == null) return t('offer.geoRequired');
+            pasoGeo.dataset.wizDone = `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+            return true;
+          }
+          return undefined;
         }
       });
       form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        if (!fotoInsumo) { cameraMessage('error', t('offer.cameraRequired')); return; }
+        if (!fotos.length) { mostrarMensaje('#of-message', 'error', t('offer.photosRequired')); return; }
+        if (!cedula.length) { mostrarMensaje('#of-message', 'error', t('offer.idRequired')); return; }
         const cantidad = numero($('#of-cantidad').value);
         if (cantidad <= 0) { mostrarMensaje('#of-message', 'error', t('needs.invalidAmount')); return; }
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
         mostrarMensaje('#of-message', 'info', t('offer.saving'));
         try {
-          const res = await window.SheetsService.post({ accion: 'ofrecer_insumo', insumo: $('#of-insumo').value.trim(), cantidad, unidad: $('#of-unidad').value.trim(), ubicacion: $('#of-ubicacion').value.trim(), telefono: $('#of-telefono').value.trim(), nombreDonante: $('#of-nombre').value.trim(), fotoInsumo, centro: pre.centro || '' });
-          stopCamera();
+          const res = await window.SheetsService.post({
+            accion: 'ofrecer_insumo', insumo: $('#of-insumo').value.trim(), cantidad,
+            unidad: $('#of-unidad').value.trim(), ubicacion: $('#of-ubicacion').value.trim(),
+            telefono: $('#of-telefono').value.trim(), nombreDonante: $('#of-nombre').value.trim(),
+            fotoInsumo: fotos[0], fotosInsumo: fotos, fotoCedula: cedula[0] || '',
+            lat: coords.lat, lng: coords.lng, centro: pre.centro || ''
+          });
+          camFotos.parar(); camCedula.parar();
           mostrarTokenOferta(res.token);
           cargarOfertas();
         } catch (err) { boton.disabled = false; mostrarMensaje('#of-message', 'error', String(err && err.message || t('needs.error'))); }
       });
-      dialog.addEventListener('close', stopCamera, { once: true });
     }
 
     // Reemplaza el formulario por el token: el donante debe poder copiarlo, así
     // que no vale un toast pasajero.
     function mostrarTokenOferta(token) {
-      const cuerpo = $('#modal-root .modal-body');
+      const cuerpo = $('#ofrecer-shell') || $('#modal-root .modal-body');
       cuerpo.innerHTML = `<div class="token-result">
         <h3>${e(t('offer.thanksTitle'))}</h3>
         <p class="section-copy">${e(t('offer.thanksCopy'))}</p>
@@ -1368,6 +1477,8 @@
       });
       const btnTengoInsumo = $('#btn-tengo-insumo');
       if (btnTengoInsumo) btnTengoInsumo.addEventListener('click', () => abrirOfrecerInsumo());
+      // Carga directa de /#ofrecer: pintar la página del asistente
+      if (/^#ofrecer$/i.test(window.location.hash) && $('#ofrecer-shell')) abrirOfrecerInsumo();
       const btnRescatistaAdmin = $('#btn-rescatista-admin');
       if (btnRescatistaAdmin) btnRescatistaAdmin.addEventListener('click', () => { window.location.href = '/admin'; });
       const btnCerca = $('#btn-cerca');
