@@ -184,7 +184,26 @@ git add scripts/verificar-idioma.py && git commit -m "chore: verificador de pari
 
 ---
 
-## Tarea 3: Los valores canónicos se muestran traducidos
+## Tarea 3: Los valores canónicos se muestran traducidos — HECHA en código (v53); FALTA DESPLEGAR LA EDGE FUNCTION
+
+> 2026-07-13. La tarea apuntaba a `Anónimo`, pero rastreando el dato resultó que
+> **el nombre del donante nunca se muestra en público** (privacidad por diseño:
+> `seguimiento_factura` no lo expone). El hueco real estaba en la **línea de
+> tiempo del seguimiento**: la edge function escribía 9 frases en español
+> (`"Donación registrada: 5 unidades de Agua"`) y los tipos/estados
+> (`Ingreso`, `Entrega`, `Ofrecida`) se pintaban crudos.
+>
+> Arreglado según R1.5: el servidor guarda **código + datos**
+> (`mov('donacionOfrecida', {…})` → `{"k":"mov","c":"…"}`) y el cliente lo
+> redacta con `textoMovimiento()` en el idioma activo; los tipos y estados pasan
+> por `tValue('movementTypes'|'invoiceState', …)`. Las filas anteriores (texto
+> plano) se siguen mostrando tal cual. Verificado en los dos idiomas.
+>
+> ⚠️ **Pendiente**: desplegar `supabase/functions/api` (sería la v18). El código
+> del cliente ya está en producción y es compatible hacia atrás, pero hasta que
+> la función se despliegue los movimientos NUEVOS se seguirán guardando como
+> frase en español. Requiere autorización explícita de Luis.
+
 
 En la base se guarda `Anónimo` (correcto). Pero un donante que navega en inglés
 ve "Anónimo" en la lista de donaciones. La traducción falta en la capa de

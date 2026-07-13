@@ -608,6 +608,26 @@
       "Comprada": "Comprado · por recoger",
       "EnTransito": "En camino al centro",
       "Entregada": "Entregado"
+    },
+    "movementTypes": {
+      "Ingreso": "Ingreso",
+      "Egreso": "Egreso",
+      "Compra": "Compra",
+      "Entrega": "Entrega",
+      "Recogida": "Recogida",
+      "Oferta": "Oferta"
+    },
+    "invoiceState": {
+      "Abierta": "Abierta",
+      "Comprada": "Comprada",
+      "Cerrada": "Cerrada",
+      "Completada": "Completada",
+      "Ofrecida": "Ofrecida",
+      "Recogida": "Recogida",
+      "EnTransito": "En tránsito",
+      "Entregada": "Entregada",
+      "Registrada": "Registrada",
+      "Confirmada": "Confirmada"
     }
   },
   "donations": {
@@ -1253,5 +1273,18 @@
     "requiredField": "Falta: {field}",
     "positiveField": "{field} debe ser mayor que 0",
     "sending": "Enviando…"
+  },
+  "movements": {
+    "recepcionConfirmada": "El centro confirmó la recepción de {delta} {unidad}.",
+    "donacionRegistrada": "Donación registrada: {cantidad} {unidad} de {insumo}.",
+    "dineroRecibido": "Donación de dinero recibida (ref. {referencia}).",
+    "metaAlcanzada": "Meta alcanzada: fondos completos para {insumo} en {tienda}. Un transportista ya puede retirarlo.",
+    "insumoRecogido": "{nombre} recogió el insumo en {tienda} ({direccion}). Fotos del sitio y del insumo registradas.",
+    "insumoRecogidoConNota": "{nombre} recogió el insumo en {tienda} ({direccion}). Fotos del sitio y del insumo registradas. Nota: {notas}",
+    "entregado": "Entregado en {centro}. Recibió: {receptor}. Foto de los insumos registrada.",
+    "entregadoConCargo": "Entregado en {centro}. Recibió: {receptor} ({cargo}). Foto de los insumos registrada.",
+    "donacionOfrecida": "Donación ofrecida: {cantidad} {unidad} de {insumo} en {ubicacion}. Esperando transportista.",
+    "donacionRecogida": "{nombre} recogió la donación en {ubicacion} para llevarla a {centro}.",
+    "necesidadCubierta": "Necesidad cubierta: el centro ya recibió todo lo solicitado."
   }
 }

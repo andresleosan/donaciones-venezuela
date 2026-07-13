@@ -84,6 +84,13 @@ async function guardarFoto(dataUrl: unknown, carpeta: string, nombre: string): P
   return ruta;
 }
 
+// Los movimientos que ve el público NO se guardan como frase en español: se
+// guardan como código + datos y el cliente los redacta en el idioma del usuario
+// (regla R1.5). Las filas viejas siguen siendo texto plano y se muestran tal cual.
+function mov(codigo: string, datos: Record<string, unknown>): string {
+  return JSON.stringify({ k: 'mov', c: codigo, ...datos });
+}
+
 async function historial(lugar: string, insumo: string, descripcion: string, origen: string, cantidad = 0) {
   await supa.from('historial_movimientos').insert({ lugar, insumo, descripcion, origen, cantidad });
 }
@@ -194,11 +201,11 @@ async function registrarEntrega(centro: string, insumo: string, unidad: string,
   if (!f) return;
   if (delta > 0) {
     await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Entrega',
-      descripcion: `El centro confirmó la recepción de ${delta} ${unidad}`, monto: delta });
+      descripcion: mov('recepcionConfirmada', { delta, unidad }), monto: delta });
   }
   if (necesaria > 0 && recibida >= necesaria) {
     await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Entrega',
-      descripcion: 'Necesidad cubierta: el centro ya recibió todo lo solicitado', monto: 0 });
+      descripcion: mov('necesidadCubierta', {}), monto: 0 });
     await supa.from('facturas').update({ estado: 'Cerrada', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
   }
 }
@@ -372,7 +379,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         monto: cantidad, referencia_pago: s(p.referencia, 80), estado: 'Registrada' });
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Ingreso',
-        descripcion: `Donación registrada: ${cantidad} ${unidad} de ${item.nombre}`, monto: cantidad });
+        descripcion: mov('donacionRegistrada', { cantidad, unidad, insumo: item.nombre }), monto: cantidad });
       await historial(lugar.nombre, item.nombre, `Donación registrada: ${cantidad} ${unidad}`, 'publico', cantidad);
       return { token: f.token_publico, numeroFactura: f.numero_factura, objetivo };
     }
@@ -412,7 +419,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         monto, referencia_pago: referencia, estado: 'Confirmada' }); // Confirmada: el trigger suma al recaudado en vivo
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Ingreso',
-        descripcion: `Donación de dinero recibida (ref ${referencia})`, monto });
+        descripcion: mov('dineroRecibido', { referencia }), monto });
       // ¿Se completó la meta? → el insumo queda Comprado y entra al ciclo logístico.
       const { data: tras } = await supa.from('facturas')
         .select('monto_recaudado, monto_requerido, estado').eq('id', f.id).single();
@@ -421,7 +428,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         estadoFinal = 'Comprada';
         await supa.from('facturas').update({ estado: 'Comprada' }).eq('id', f.id);
         await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Compra',
-          descripcion: `Meta alcanzada: fondos completos para ${m.insumo} en ${m.tienda}. Un transportista ya puede retirarlo.`, monto: 0 });
+          descripcion: mov('metaAlcanzada', { insumo: m.insumo, tienda: m.tienda }), monto: 0 });
       }
       await historial(String(m.centro), String(m.insumo), `Donación en dinero de ${monto} (ref ${referencia})`, 'publico', monto);
       return { referencia, token: f.token_publico, numeroFactura: f.numero_factura,
@@ -448,7 +455,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         { factura_id: f.id, archivo: fotoInsumo, descripcion: 'Foto del insumo comprado', publica: false }]);
       const notas = s(p.notas, 300);
       const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Recogida',
-        descripcion: `${nombre} recogió el insumo en ${m.tienda} (${m.direccion}). Fotos del sitio y del insumo registradas.${notas ? ' Nota: ' + notas : ''}`, monto: 0 });
+        descripcion: mov(notas ? 'insumoRecogidoConNota' : 'insumoRecogido', { nombre, tienda: m.tienda, direccion: m.direccion, notas }), monto: 0 });
       if (error) throw error;
       await supa.from('facturas').update({ estado: 'EnTransito' }).eq('id', f.id);
       await historial(String(m.centro), String(m.insumo), `Transportista ${nombre} recogió el insumo comprado en ${m.tienda}`, 'publico');
@@ -471,7 +478,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         factura_id: f.id, archivo: foto, descripcion: `Foto de los insumos entregados en ${m.centro}`, publica: false });
       const cargo = s(p.cargoReceptor, 80);
       const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Entrega',
-        descripcion: `Entregado en ${m.centro}. Recibió: ${receptor}${cargo ? ' (' + cargo + ')' : ''}. Foto de los insumos registrada.`, monto: 0 });
+        descripcion: mov(cargo ? 'entregadoConCargo' : 'entregado', { centro: m.centro, receptor, cargo }), monto: 0 });
       if (error) throw error;
       await supa.from('facturas').update({ estado: 'Entregada', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
       await historial(String(m.centro), String(m.insumo), `Insumo comprado entregado en el centro. Recibió ${receptor}`, 'publico');
@@ -524,7 +531,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         monto_requerido: cantidad, estado: 'Ofrecida' }).select('id').single();
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: fila.id, tipo: 'Oferta',
-        descripcion: `Donación ofrecida: ${cantidad} ${unidad} de ${insumo} en ${ubicacion}. Esperando transportista.`, monto: cantidad });
+        descripcion: mov('donacionOfrecida', { cantidad, unidad, insumo, ubicacion }), monto: cantidad });
       await historial(centro || 'Donaciones ofrecidas', insumo, `Oferta de ${cantidad} ${unidad} en ${ubicacion}`, 'publico', cantidad);
       return { token, numeroFactura: numero };
     }
@@ -548,7 +555,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (!f || !m) throw new Error('Oferta no encontrada');
       if (f.estado !== 'Ofrecida') throw new Error('Esta donación ya fue recogida');
       const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Recogida',
-        descripcion: `${nombre} recogió la donación en ${m.ubicacion} para llevarla a ${centroDestino}.`, monto: 0 });
+        descripcion: mov('donacionRecogida', { nombre, ubicacion: m.ubicacion, centro: centroDestino }), monto: 0 });
       if (error) throw error;
       await supa.from('facturas').update({ estado: 'Recogida', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
       await historial(centroDestino, String(m.insumo), `Transportista ${nombre} recogió la donación ofrecida (${m.cantidad} ${m.unidad})`, 'publico', n(m.cantidad));

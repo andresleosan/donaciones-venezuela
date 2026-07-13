@@ -1519,6 +1519,25 @@
       }
     }
 
+    // El servidor guarda cada movimiento como código + datos ({k:'mov'}): aquí se
+    // redacta en el idioma activo. Las filas anteriores al cambio son texto plano
+    // en español y se muestran tal cual.
+    function textoMovimiento(descripcion) {
+      const crudo = String(descripcion || '');
+      if (!crudo) return '';
+      try {
+        const m = JSON.parse(crudo);
+        if (m && m.k === 'mov' && m.c) {
+          // El insumo y la unidad son valores canónicos: también se traducen.
+          const datos = Object.assign({}, m);
+          if (datos.insumo) datos.insumo = mostrarInsumo(datos.insumo);
+          if (datos.unidad) datos.unidad = mostrarUnidad(datos.unidad);
+          return t('movements.' + m.c, datos);
+        }
+      } catch (err) { /* fila antigua: texto plano */ }
+      return crudo;
+    }
+
     function renderSeguimiento(data) {
       if (!data || !data.factura) {
         $('#seguimiento-resultados').innerHTML = '';
@@ -1544,7 +1563,7 @@
       const historial = data.historial || data.movimientos || [];
       const evidencias = data.evidencias || [];
       const estadoClase = normalizar(factura.estado).indexOf('complet') === 0 || normalizar(factura.estado).indexOf('cerrad') === 0 ? 'green' : 'yellow';
-      const historialHtml = historial.length ? `<ul class="timeline-list">${historial.map((mov) => `<li class="timeline-item"><div class="supply-line"><strong>${e(mov.tipo || t('tracking.movement'))}</strong><span class="tracking-code">${e(formatearMonto(mov.monto))}</span></div>${mov.descripcion ? `<p class="meta">${e(mov.descripcion)}</p>` : ''}<p class="meta">${e(fechaPublica(mov.fecha))}</p></li>`).join('')}</ul>` : `<div class="empty-state">${e(t('tracking.noHistory'))}</div>`;
+      const historialHtml = historial.length ? `<ul class="timeline-list">${historial.map((mov) => `<li class="timeline-item"><div class="supply-line"><strong>${e(tValue('movementTypes', mov.tipo) || t('tracking.movement'))}</strong><span class="tracking-code">${e(formatearMonto(mov.monto))}</span></div>${textoMovimiento(mov.descripcion) ? `<p class="meta">${e(textoMovimiento(mov.descripcion))}</p>` : ''}<p class="meta">${e(fechaPublica(mov.fecha))}</p></li>`).join('')}</ul>` : `<div class="empty-state">${e(t('tracking.noHistory'))}</div>`;
       const evidenciasHtml = evidencias.length ? `<div class="evidence-list">${evidencias.map((ev) => {
         const archivo = String(ev.archivo || '').trim();
         const esUrl = /^https?:\/\//i.test(archivo);
@@ -1556,7 +1575,7 @@
         <article class="tracking-summary">
           <div class="tracking-head">
             <div>
-              <span class="badge ${estadoClase}">${e(factura.estado || t('common.pending'))}</span>
+              <span class="badge ${estadoClase}">${e(tValue('invoiceState', factura.estado) || t('common.pending'))}</span>
               <h3>${e(factura.objetivo || t('tracking.invoice'))}</h3>
               ${descripcionVisible ? `<p class="meta">${e(descripcionVisible)}</p>` : ''}
             </div>

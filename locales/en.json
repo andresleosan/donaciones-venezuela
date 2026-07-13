@@ -608,6 +608,26 @@
       "Comprada": "Purchased · awaiting pickup",
       "EnTransito": "On its way to the center",
       "Entregada": "Delivered"
+    },
+    "movementTypes": {
+      "Ingreso": "Income",
+      "Egreso": "Expense",
+      "Compra": "Purchase",
+      "Entrega": "Delivery",
+      "Recogida": "Pickup",
+      "Oferta": "Offer"
+    },
+    "invoiceState": {
+      "Abierta": "Open",
+      "Comprada": "Purchased",
+      "Cerrada": "Closed",
+      "Completada": "Completed",
+      "Ofrecida": "Offered",
+      "Recogida": "Picked up",
+      "EnTransito": "In transit",
+      "Entregada": "Delivered",
+      "Registrada": "Recorded",
+      "Confirmada": "Confirmed"
     }
   },
   "donations": {
@@ -1253,5 +1273,18 @@
     "requiredField": "Missing: {field}",
     "positiveField": "{field} must be greater than 0",
     "sending": "Sending…"
+  },
+  "movements": {
+    "recepcionConfirmada": "The center confirmed receipt of {delta} {unidad}.",
+    "donacionRegistrada": "Donation recorded: {cantidad} {unidad} of {insumo}.",
+    "dineroRecibido": "Money donation received (ref. {referencia}).",
+    "metaAlcanzada": "Goal reached: {insumo} at {tienda} is fully funded. A driver can now pick it up.",
+    "insumoRecogido": "{nombre} picked up the supply at {tienda} ({direccion}). Photos of the place and the supply were recorded.",
+    "insumoRecogidoConNota": "{nombre} picked up the supply at {tienda} ({direccion}). Photos of the place and the supply were recorded. Note: {notas}",
+    "entregado": "Delivered at {centro}. Received by: {receptor}. Photo of the supplies was recorded.",
+    "entregadoConCargo": "Delivered at {centro}. Received by: {receptor} ({cargo}). Photo of the supplies was recorded.",
+    "donacionOfrecida": "Donation offered: {cantidad} {unidad} of {insumo} at {ubicacion}. Waiting for a driver.",
+    "donacionRecogida": "{nombre} picked up the donation at {ubicacion} to take it to {centro}.",
+    "necesidadCubierta": "Need covered: the center has received everything it asked for."
   }
 }
