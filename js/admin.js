@@ -537,27 +537,40 @@
     }
 
     // Cámara reutilizable del flujo de oferta: abre la cámara del navegador
-    // (pide permiso), captura hasta `max` fotos y las muestra como miniaturas
-    // con opción de quitar; también acepta subir de la galería. `fotos` es el
-    // array compartido que consume el submit.
+    // (pide permiso) y captura hasta `max` fotos, que se listan como miniaturas
+    // con opción de quitar. Solo cámara en vivo: no hay subida desde la galería,
+    // la foto debe tomarse en el sitio. `fotos` es el array que consume el submit.
     function montarCamaraOferta(prefijo, fotos, max, alCambiar) {
-      const raiz = document.getElementById(prefijo + '-field');
+      const raiz = document.getElementById(prefijo + '-cam');
       const video = raiz.querySelector('video');
       const canvas = raiz.querySelector('canvas');
+      const marco = raiz.querySelector('.offer-camera');
       const thumbs = raiz.querySelector('.of-thumbs');
-      const msg = raiz.querySelector('.form-message');
+      const msg = raiz.querySelector('.of-cam-message');
       const btnAbrir = raiz.querySelector('[data-cam-abrir]');
       const btnCapturar = raiz.querySelector('[data-cam-capturar]');
       const btnCerrar = raiz.querySelector('[data-cam-cerrar]');
-      const inputGaleria = raiz.querySelector('input[type="file"]');
       const contador = raiz.querySelector('.of-contador');
       let stream = null;
-      const aviso = (tipo, texto) => { msg.className = `form-message visible ${tipo}`; msg.textContent = texto; };
-      const parar = () => { if (stream) stream.getTracks().forEach((tr) => tr.stop()); stream = null; video.hidden = true; btnCapturar.hidden = true; btnCerrar.hidden = true; btnAbrir.hidden = false; };
+      const aviso = (tipo, texto) => { msg.className = `form-message of-cam-message visible ${tipo}`; msg.textContent = texto; };
+      const parar = () => {
+        if (stream) stream.getTracks().forEach((tr) => tr.stop());
+        stream = null;
+        video.hidden = true;
+        marco.classList.remove('is-live');
+        btnCapturar.hidden = true;
+        btnCerrar.hidden = true;
+        btnAbrir.hidden = fotos.length >= max;
+      };
       function pintar() {
         contador.textContent = t('offer.photoCount', { n: fotos.length, max });
+        contador.hidden = max === 1;
         thumbs.innerHTML = fotos.map((f, i) => `<figure class="of-thumb"><img src="${e(f)}" alt="" /><button type="button" class="of-thumb-x" data-quitar="${i}" aria-label="${e(t('offer.removePhoto'))}">✕</button></figure>`).join('');
-        thumbs.querySelectorAll('[data-quitar]').forEach((b) => b.addEventListener('click', () => { fotos.splice(Number(b.dataset.quitar), 1); pintar(); }));
+        thumbs.querySelectorAll('[data-quitar]').forEach((b) => b.addEventListener('click', () => {
+          fotos.splice(Number(b.dataset.quitar), 1);
+          pintar();
+          if (!stream) btnAbrir.hidden = false;
+        }));
         btnCapturar.disabled = fotos.length >= max;
         if (alCambiar) alCambiar();
       }
@@ -567,6 +580,7 @@
           stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
           video.srcObject = stream;
           video.hidden = false;
+          marco.classList.add('is-live');
           btnAbrir.hidden = true;
           btnCapturar.hidden = false;
           btnCerrar.hidden = false;
@@ -582,41 +596,39 @@
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         fotos.push(canvas.toDataURL('image/jpeg', 0.72));
         pintar();
-        aviso('success', t('offer.photoCount', { n: fotos.length, max }));
+        aviso('success', max === 1 ? t('offer.photoTaken') : t('offer.photoCount', { n: fotos.length, max }));
         if (fotos.length >= max) parar();
       }
       btnAbrir.addEventListener('click', abrir);
       btnCapturar.addEventListener('click', capturar);
       btnCerrar.addEventListener('click', parar);
-      inputGaleria.addEventListener('change', async (ev) => {
-        const archivos = Array.from(ev.target.files || []).slice(0, max - fotos.length);
-        for (const f of archivos) {
-          try { fotos.push(await comprimirFoto(f)); } catch (err) { aviso('error', t('offer.cameraUnavailable')); }
-        }
-        ev.target.value = '';
-        pintar();
-      });
       pintar();
       return { parar };
     }
 
-    function bloqueCamaraHtml(prefijo, titulo, copia, multiple) {
-      return `<div data-wiz-step id="${prefijo}-field" class="of-cam-step">
-        <label>${e(titulo)}</label>
-        <p class="section-copy">${e(copia)}</p>
+    // Cámara: visor arriba, y JUSTO debajo el botón grande de acción (abrir /
+    // tomar foto, nunca los dos a la vez). Nada compite con ese botón.
+    function camaraHtml(prefijo) {
+      return `<div class="of-cam" id="${prefijo}-cam">
         <div class="offer-camera">
           <video autoplay playsinline muted hidden></video>
           <canvas hidden></canvas>
+          <p class="of-cam-hint">${e(t('offer.cameraIdle'))}</p>
         </div>
+        <button class="btn btn-primary of-cam-shoot" type="button" data-cam-abrir>${e(t('offer.openCamera'))}</button>
+        <button class="btn btn-primary of-cam-shoot" type="button" data-cam-capturar hidden>${e(t('offer.takePhoto'))}</button>
+        <button class="btn btn-ghost of-cam-close" type="button" data-cam-cerrar hidden>${e(t('offer.closeCamera'))}</button>
         <p class="of-contador meta" aria-live="polite"></p>
         <div class="of-thumbs" aria-live="polite"></div>
-        <div class="form-message" role="status" aria-live="polite"></div>
-        <div class="card-actions">
-          <button class="btn btn-primary" type="button" data-cam-abrir>${e(t('offer.openCamera'))}</button>
-          <button class="btn btn-primary" type="button" data-cam-capturar hidden>${e(t('offer.takePhoto'))}</button>
-          <button class="btn btn-ghost" type="button" data-cam-cerrar hidden>${e(t('offer.closeCamera'))}</button>
-          <label class="btn btn-soft of-galeria">${e(t('offer.fromGallery'))}<input type="file" accept="image/*" ${multiple ? 'multiple' : ''} class="visually-hidden" /></label>
-        </div>
+        <div class="form-message of-cam-message" role="status" aria-live="polite"></div>
+      </div>`;
+    }
+
+    function pasoCamaraHtml(prefijo, titulo, copia) {
+      return `<div data-wiz-step id="${prefijo}-field" class="of-cam-step">
+        <label>${e(titulo)}</label>
+        <p class="section-copy">${e(copia)}</p>
+        ${camaraHtml(prefijo)}
       </div>`;
     }
 
@@ -636,25 +648,38 @@
           <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
           <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
         </div>
-        ${bloqueCamaraHtml('of-fotos', t('offer.photosTitle'), t('offer.photosCopy'), true)}
+        ${pasoCamaraHtml('of-fotos', t('offer.photosTitle'), t('offer.photosCopy'))}
         <div class="form-grid">
           <div class="field full"><label for="of-nombre">${e(t('offer.contactNameLabel'))}</label><input id="of-nombre" required autocomplete="name" placeholder="${e(t('offer.contactNamePh'))}" /></div>
           <div class="field"><label for="of-telefono">${e(t('common.phone'))}</label><input id="of-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
         </div>
-        ${bloqueCamaraHtml('of-cedula', t('offer.idTitle'), t('offer.idCopy'), false)}
-        <div class="form-grid">
-          <div class="field full"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
-        </div>
-        <div data-wiz-step id="of-geo-field">
-          <label>${e(t('offer.geoTitle'))}</label>
-          <p class="section-copy">${e(t('offer.geoCopy'))}</p>
-          <div class="card-actions">
-            <button class="btn btn-primary" type="button" id="of-gps">${e(t('offer.useGps'))}</button>
-            <button class="btn btn-soft" type="button" id="of-mapa-btn">${e(t('offer.pickOnMap'))}</button>
+        ${pasoCamaraHtml('of-cedula', t('offer.idTitle'), t('offer.idCopy'))}
+        <div data-wiz-step id="of-lugar-field" class="of-lugar-step">
+          <label>${e(t('offer.placeTitle'))}</label>
+          <p class="section-copy">${e(t('offer.placeCopy'))}</p>
+
+          <div class="of-bloque">
+            <h4 class="of-sub">${e(t('offer.placeMapTitle'))}</h4>
+            <div class="of-geo-actions">
+              <button class="btn btn-primary" type="button" id="of-gps">${e(t('offer.useGps'))}</button>
+              <button class="btn btn-soft" type="button" id="of-mapa-btn">${e(t('offer.pickOnMap'))}</button>
+            </div>
+            <div id="of-mapa" class="of-mapa" hidden></div>
+            <p class="meta of-coords" id="of-coords" aria-live="polite">${e(t('offer.noCoords'))}</p>
+            <div class="form-message" id="of-geo-message" role="status" aria-live="polite"></div>
           </div>
-          <div id="of-mapa" class="of-mapa" hidden></div>
-          <p class="meta" id="of-coords" aria-live="polite">${e(t('offer.noCoords'))}</p>
-          <div class="form-message" id="of-geo-message" role="status" aria-live="polite"></div>
+
+          <div class="of-bloque">
+            <h4 class="of-sub"><label for="of-referencia">${e(t('offer.refLabel'))}</label></h4>
+            <input id="of-referencia" class="of-ref-input" required maxlength="120" placeholder="${e(t('offer.refPh'))}" />
+            <p class="meta">${e(t('offer.refHelp'))}</p>
+          </div>
+
+          <div class="of-bloque">
+            <h4 class="of-sub">${e(t('offer.placePhotoTitle'))}</h4>
+            <p class="meta">${e(t('offer.placePhotoCopy'))}</p>
+            ${camaraHtml('of-lugar')}
+          </div>
         </div>
         <p class="meta">${e(t('offer.privacyNote'))}</p>
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.submit'))}</button></div>
@@ -663,13 +688,15 @@
       const form = $('#ofrecer-form');
       const fotos = [];
       const cedula = [];
+      const fotoLugar = [];
       const coords = { lat: null, lng: null };
       let mapa = null, marcador = null;
       const camFotos = montarCamaraOferta('of-fotos', fotos, 20);
       const camCedula = montarCamaraOferta('of-cedula', cedula, 1);
+      const camLugar = montarCamaraOferta('of-lugar', fotoLugar, 1);
       const pasoFotos = $('#of-fotos-field');
       const pasoCedula = $('#of-cedula-field');
-      const pasoGeo = $('#of-geo-field');
+      const pasoLugar = $('#of-lugar-field');
       const pintarCoords = () => {
         $('#of-coords').textContent = coords.lat == null ? t('offer.noCoords') : t('offer.coordsSet', { lat: coords.lat.toFixed(5), lng: coords.lng.toFixed(5) });
       };
@@ -702,7 +729,8 @@
         alEntrar: (paso) => {
           if (paso !== pasoFotos) camFotos.parar();
           if (paso !== pasoCedula) camCedula.parar();
-          if (paso === pasoGeo && mapa) setTimeout(() => mapa.invalidateSize(), 60);
+          if (paso !== pasoLugar) camLugar.parar();
+          if (paso === pasoLugar && mapa) setTimeout(() => mapa.invalidateSize(), 60);
         },
         validar: (paso) => {
           if (paso === pasoFotos) {
@@ -713,13 +741,17 @@
           }
           if (paso === pasoCedula) {
             if (!cedula.length) return t('offer.idRequired');
-            pasoCedula.dataset.wizDone = t('wizard.confirm');
+            pasoCedula.dataset.wizDone = t('offer.photoTaken');
             camCedula.parar();
             return true;
           }
-          if (paso === pasoGeo) {
+          if (paso === pasoLugar) {
+            // Un solo paso: punto exacto + nombre de referencia + foto del sitio.
             if (coords.lat == null) return t('offer.geoRequired');
-            pasoGeo.dataset.wizDone = `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+            if (!$('#of-referencia').value.trim()) return t('offer.refRequired');
+            if (!fotoLugar.length) return t('offer.placePhotoRequired');
+            pasoLugar.dataset.wizDone = `${$('#of-referencia').value.trim()} · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+            camLugar.parar();
             return true;
           }
           return undefined;
@@ -729,6 +761,10 @@
         ev.preventDefault();
         if (!fotos.length) { mostrarMensaje('#of-message', 'error', t('offer.photosRequired')); return; }
         if (!cedula.length) { mostrarMensaje('#of-message', 'error', t('offer.idRequired')); return; }
+        if (coords.lat == null) { mostrarMensaje('#of-message', 'error', t('offer.geoRequired')); return; }
+        if (!fotoLugar.length) { mostrarMensaje('#of-message', 'error', t('offer.placePhotoRequired')); return; }
+        const referencia = $('#of-referencia').value.trim();
+        if (!referencia) { mostrarMensaje('#of-message', 'error', t('offer.refRequired')); return; }
         const cantidad = numero($('#of-cantidad').value);
         if (cantidad <= 0) { mostrarMensaje('#of-message', 'error', t('needs.invalidAmount')); return; }
         const boton = form.querySelector('button[type="submit"]');
@@ -737,12 +773,13 @@
         try {
           const res = await window.SheetsService.post({
             accion: 'ofrecer_insumo', insumo: $('#of-insumo').value.trim(), cantidad,
-            unidad: $('#of-unidad').value.trim(), ubicacion: $('#of-ubicacion').value.trim(),
+            unidad: $('#of-unidad').value.trim(), ubicacion: referencia,
             telefono: $('#of-telefono').value.trim(), nombreDonante: $('#of-nombre').value.trim(),
             fotoInsumo: fotos[0], fotosInsumo: fotos, fotoCedula: cedula[0] || '',
+            fotoLugar: fotoLugar[0] || '',
             lat: coords.lat, lng: coords.lng, centro: pre.centro || ''
           });
-          camFotos.parar(); camCedula.parar();
+          camFotos.parar(); camCedula.parar(); camLugar.parar();
           mostrarTokenOferta(res.token);
           cargarOfertas();
         } catch (err) { boton.disabled = false; mostrarMensaje('#of-message', 'error', String(err && err.message || t('needs.error'))); }
@@ -1000,23 +1037,138 @@
         <img id="${id}-prev" class="foto-prev" alt="" hidden /></div>`;
     }
 
+    // Captura de cámara para el registro del transportista. No usamos un
+    // input de archivos: las tres evidencias deben tomarse en el momento y el
+    // navegador controla el permiso de cámara con getUserMedia().
+    function camaraTransportistaHtml(prefijo, tituloKey, ayudaKey) {
+      return `<div data-wiz-step id="${prefijo}-step" class="driver-photo-step">
+        <label class="driver-photo-title" for="${prefijo}-abrir">${e(t(tituloKey))}</label>
+        <p class="field-help" id="${prefijo}-help">${e(t(ayudaKey))}</p>
+        <div class="driver-camera" id="${prefijo}-cam">
+          <div class="offer-camera">
+            <video autoplay playsinline muted hidden></video>
+            <canvas hidden></canvas>
+            <img class="driver-photo-preview" alt="" hidden />
+            <p class="of-cam-hint">${e(t('modal.cameraIdle'))}</p>
+          </div>
+          <button class="btn btn-primary of-cam-shoot" type="button" data-driver-cam-abrir id="${prefijo}-abrir" aria-describedby="${prefijo}-help">${e(t('modal.openCamera'))}</button>
+          <button class="btn btn-primary of-cam-shoot" type="button" data-driver-cam-capturar hidden>${e(t('modal.takePhoto'))}</button>
+          <button class="btn btn-ghost of-cam-close" type="button" data-driver-cam-repetir hidden>${e(t('modal.retakePhoto'))}</button>
+          <button class="btn btn-ghost of-cam-close" type="button" data-driver-cam-cerrar hidden>${e(t('modal.closeCamera'))}</button>
+          <div class="form-message of-cam-message" role="status" aria-live="polite"></div>
+        </div>
+      </div>`;
+    }
+
+    function montarCamaraTransportista(prefijo, foto) {
+      const raiz = document.getElementById(prefijo + '-cam');
+      const video = raiz.querySelector('video');
+      const canvas = raiz.querySelector('canvas');
+      const preview = raiz.querySelector('.driver-photo-preview');
+      const marco = raiz.querySelector('.offer-camera');
+      const msg = raiz.querySelector('.of-cam-message');
+      const btnAbrir = raiz.querySelector('[data-driver-cam-abrir]');
+      const btnCapturar = raiz.querySelector('[data-driver-cam-capturar]');
+      const btnRepetir = raiz.querySelector('[data-driver-cam-repetir]');
+      const btnCerrar = raiz.querySelector('[data-driver-cam-cerrar]');
+      let stream = null;
+      const aviso = (tipo, texto) => { msg.className = `form-message of-cam-message visible ${tipo}`; msg.textContent = texto; };
+      const parar = () => {
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+        stream = null;
+        video.hidden = true;
+        marco.classList.remove('is-live');
+        btnCapturar.hidden = true;
+        btnCerrar.hidden = true;
+        btnAbrir.hidden = Boolean(foto.value);
+        btnRepetir.hidden = !foto.value;
+      };
+      const pintar = () => {
+        preview.hidden = !foto.value;
+        if (foto.value) preview.src = foto.value;
+        btnAbrir.hidden = Boolean(foto.value) || Boolean(stream);
+        btnRepetir.hidden = !foto.value || Boolean(stream);
+      };
+      async function abrir() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { aviso('error', t('modal.cameraUnsupported')); return; }
+        try {
+          parar();
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+          video.srcObject = stream;
+          video.hidden = false;
+          marco.classList.add('is-live');
+          btnAbrir.hidden = true;
+          btnRepetir.hidden = true;
+          btnCapturar.hidden = false;
+          btnCerrar.hidden = false;
+          aviso('info', t('modal.cameraReady'));
+        } catch (err) {
+          parar();
+          aviso('error', err && err.name === 'NotAllowedError' ? t('modal.cameraPermission') : t('modal.cameraUnavailable'));
+        }
+      }
+      function capturar() {
+        if (!video.videoWidth || !video.videoHeight) { aviso('error', t('modal.cameraNotReady')); return; }
+        const ratio = Math.min(1, 1280 / video.videoWidth);
+        canvas.width = Math.round(video.videoWidth * ratio);
+        canvas.height = Math.round(video.videoHeight * ratio);
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        foto.value = canvas.toDataURL('image/jpeg', 0.82);
+        parar();
+        pintar();
+        aviso('success', t('modal.photoTaken'));
+      }
+      function repetir() { foto.value = ''; preview.hidden = true; pintar(); abrir(); }
+      btnAbrir.addEventListener('click', abrir);
+      btnCapturar.addEventListener('click', capturar);
+      btnRepetir.addEventListener('click', repetir);
+      btnCerrar.addEventListener('click', parar);
+      pintar();
+      return { parar, tieneFoto: () => Boolean(foto.value) };
+    }
+
     function abrirRegistrarMotorizado() {
-      abrirModal(t('modal.driverTitle'), `<form id="mot-form" data-wiz="motorizado"><div class="form-grid"><div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><select id="mot-tipo"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div><div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><input id="mot-telefono" type="tel" required /></div><div class="field"><label for="mot-email">${e(t('common.email'))}</label><input id="mot-email" type="email" required autocomplete="email" /></div><div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><input id="mot-placa" /></div></div><p class="meta">${e(t('modal.photosIntro'))}</p><div class="form-grid">${campoFoto('mot-foto-placa', 'modal.photoPlate')}${campoFoto('mot-foto-vehiculo', 'modal.photoVehicle')}${campoFoto('mot-foto-cedula', 'modal.photoId')}</div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div><div id="mot-message" class="form-message" role="status" aria-live="polite"></div></form>`);
-      ['mot-foto-placa', 'mot-foto-vehiculo', 'mot-foto-cedula'].forEach((id) => {
-        $('#' + id).addEventListener('change', (ev) => {
-          const file = ev.target.files && ev.target.files[0];
-          const prev = $('#' + id + '-prev');
-          if (!file) { prev.hidden = true; return; }
-          prev.src = URL.createObjectURL(file);
-          prev.hidden = false;
-        });
+      abrirModal(t('modal.driverTitle'), `<form id="mot-form" data-wiz="motorizado" novalidate>
+        <p class="section-copy">${e(t('modal.driverIntro'))}</p>
+        <div class="form-grid">
+          <div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><p class="field-help" id="mot-nombre-help">${e(t('modal.nameHelp'))}</p><input id="mot-nombre" aria-describedby="mot-nombre-help" required /></div>
+          <div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><p class="field-help" id="mot-tipo-help">${e(t('modal.vehicleHelp'))}</p><select id="mot-tipo" aria-describedby="mot-tipo-help"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div>
+          <div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><p class="field-help" id="mot-telefono-help">${e(t('modal.phoneHelp'))}</p><input id="mot-telefono" aria-describedby="mot-telefono-help" type="tel" required /></div>
+          <div class="field"><label for="mot-email">${e(t('common.email'))}</label><p class="field-help" id="mot-email-help">${e(t('modal.emailHelp'))}</p><input id="mot-email" aria-describedby="mot-email-help" type="email" required autocomplete="email" /></div>
+          <div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><p class="field-help" id="mot-zona-help">${e(t('modal.zoneHelp'))}</p><input id="mot-zona" aria-describedby="mot-zona-help" required /></div>
+          <div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><p class="field-help" id="mot-placa-help">${e(t('modal.plateHelp'))}</p><input id="mot-placa" aria-describedby="mot-placa-help" /></div>
+        </div>
+        ${camaraTransportistaHtml('mot-placa-foto', 'modal.photoPlate', 'modal.photoPlateHelp')}
+        ${camaraTransportistaHtml('mot-vehiculo-foto', 'modal.photoVehicle', 'modal.photoVehicleHelp')}
+        ${camaraTransportistaHtml('mot-cedula-foto', 'modal.photoId', 'modal.photoIdHelp')}
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div>
+        <div id="mot-message" class="form-message" role="status" aria-live="polite"></div>
+      </form>`);
+      const fotoPlaca = { value: '' }, fotoVehiculo = { value: '' }, fotoCedula = { value: '' };
+      const camPlaca = montarCamaraTransportista('mot-placa-foto', fotoPlaca);
+      const camVehiculo = montarCamaraTransportista('mot-vehiculo-foto', fotoVehiculo);
+      const camCedula = montarCamaraTransportista('mot-cedula-foto', fotoCedula);
+      const fotoPorPaso = new Map([
+        [$('#mot-placa-foto-step'), camPlaca],
+        [$('#mot-vehiculo-foto-step'), camVehiculo],
+        [$('#mot-cedula-foto-step'), camCedula]
+      ]);
+      const pararCamaras = (actual) => fotoPorPaso.forEach((cam, paso) => { if (paso !== actual) cam.parar(); });
+      wizPublico('mot-form', {
+        alEntrar: (paso) => pararCamaras(paso),
+        validar: (paso) => {
+          const cam = fotoPorPaso.get(paso);
+          if (!cam) return undefined;
+          if (!cam.tieneFoto()) return t('modal.photoRequired');
+          paso.dataset.wizDone = t('modal.photoTaken');
+          return true;
+        }
       });
-      wizPublico('mot-form');
+      const dialog = $('#modal-root dialog');
+      dialog.addEventListener('close', () => { camPlaca.parar(); camVehiculo.parar(); camCedula.parar(); }, { once: true });
       $('#mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const archivos = ['mot-foto-placa', 'mot-foto-vehiculo', 'mot-foto-cedula']
-          .map((id) => $('#' + id).files && $('#' + id).files[0]);
-        if (archivos.some((f) => !f)) {
+        if (![fotoPlaca, fotoVehiculo, fotoCedula].every((foto) => foto.value)) {
           mostrarMensaje('#mot-message', 'error', t('messages.driverPhotosMissing'));
           return;
         }
@@ -1024,8 +1176,7 @@
         boton.disabled = true;
         mostrarMensaje('#mot-message', 'info', t('messages.driverUploading'));
         try {
-          const [fotoPlaca, fotoVehiculo, fotoCedula] = await Promise.all(archivos.map(comprimirFoto));
-          const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), email: $('#mot-email').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), fotoPlaca, fotoVehiculo, fotoCedula };
+          const nuevo = { nombre: $('#mot-nombre').value.trim(), tipoVehiculo: $('#mot-tipo').value, telefono: $('#mot-telefono').value.trim(), email: $('#mot-email').value.trim(), zonaOperacion: $('#mot-zona').value.trim(), operaEn: $('#mot-zona').value.trim(), placa: $('#mot-placa').value.trim(), fotoPlaca: fotoPlaca.value, fotoVehiculo: fotoVehiculo.value, fotoCedula: fotoCedula.value };
           await window.SheetsService.post(Object.assign({ accion: 'registrar_motorizado' }, nuevo));
           await cargarTodo();
           $('#modal-root dialog').close();

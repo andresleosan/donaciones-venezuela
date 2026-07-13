@@ -226,6 +226,7 @@ function ofertaUI(f: Record<string, unknown>) {
     token: f.token_publico, estado: f.estado,
     insumo: m.insumo, cantidad: m.cantidad, unidad: m.unidad,
     ubicacion: m.ubicacion, telefono: m.telefono, nombreDonante: m.nombreDonante, centro: m.centro,
+    coords: m.coords ?? null,
   };
 }
 
@@ -481,6 +482,8 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const insumo = s(p.insumo, 120);
       const cantidad = n(p.cantidad);
       const unidad = s(p.unidad, 30) || 'unidades';
+      // `ubicacion` es el NOMBRE DE REFERENCIA del sitio (portón azul, casa 12):
+      // la dirección exacta la dan las coordenadas del mapa, no texto libre.
       const ubicacion = s(p.ubicacion, 160);
       const telefono = s(p.telefono, 40);
       const nombreDonante = s(p.nombreDonante, 120);
@@ -488,12 +491,13 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       // Hasta 20 fotos del insumo (array); fotoInsumo suelto queda por compatibilidad
       const fotosCrudas = Array.isArray(p.fotosInsumo) ? p.fotosInsumo.slice(0, 20) : [];
       const fotoCedula = s(p.fotoCedula, 2_500_000);
+      const fotoLugar = s(p.fotoLugar, 2_500_000); // foto del sitio exacto de recogida
       const lat = Number(p.lat), lng = Number(p.lng);
       const coordsOk = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
       const centro = s(p.centro, 120); // destino sugerido (opcional)
       if (!insumo) throw new Error('insumo requerido');
       if (cantidad <= 0 || cantidad > 1_000_000) throw new Error('cantidad inválida');
-      if (!ubicacion) throw new Error('ubicación requerida: el transportista debe saber dónde recogerlo');
+      if (!ubicacion) throw new Error('nombre de referencia del sitio requerido');
       if (telefono.replace(/[^0-9]/g, '').length < 7) throw new Error('teléfono requerido para coordinar la recogida');
       if (!nombreDonante) throw new Error('nombre de contacto requerido');
       if (!fotoInsumo && !fotosCrudas.length) throw new Error('foto del insumo requerida');
@@ -510,11 +514,12 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         rutas.push(await guardarFoto(fotoInsumo, `ofertas/${token}`, 'insumo'));
       }
       const rutaCedula = fotoCedula ? await guardarFoto(fotoCedula, `ofertas/${token}`, 'cedula') : '';
+      const rutaLugar = fotoLugar ? await guardarFoto(fotoLugar, `ofertas/${token}`, 'lugar') : '';
       const { data: fila, error } = await supa.from('facturas').insert({
         numero_factura: numero, token_publico: token,
         objetivo: s(`Oferta: ${insumo} (${ubicacion})`, 200),
         descripcion: JSON.stringify({ k: 'oferta', insumo, cantidad, unidad, ubicacion, telefono, nombreDonante,
-          fotoInsumo: rutas[0], fotos: rutas, fotoCedula: rutaCedula,
+          fotoInsumo: rutas[0], fotos: rutas, fotoCedula: rutaCedula, fotoLugar: rutaLugar,
           coords: coordsOk ? { lat, lng } : null, centro }),
         monto_requerido: cantidad, estado: 'Ofrecida' }).select('id').single();
       if (error) throw error;

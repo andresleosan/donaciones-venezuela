@@ -2037,20 +2037,112 @@
       .wiz-on .field.wiz-active { animation: none; }
     }
 
-    /* ── Página "Tengo un insumo": cámara multi-foto, cédula y mapa ────── */
+    .field-help {
+      margin: -6px 0 10px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.45;
+      max-width: 62ch;
+    }
+    .driver-photo-step { display: grid; gap: 8px; }
+    .driver-photo-title {
+      display: block;
+      color: var(--ink);
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.25;
+      text-wrap: balance;
+    }
+    .driver-photo-step .field-help { margin: 0 0 8px; }
+    .driver-camera { display: grid; gap: 8px; }
+    .driver-camera .offer-camera { margin-bottom: 4px; }
+    .driver-camera .driver-photo-preview { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .driver-camera .driver-photo-preview[hidden] { display: none; }
+    .driver-camera .of-cam-message:not(.visible) { display: none; }
+    .driver-camera .of-cam-message.visible { margin: 4px 0 0; }
+
+    /* ── Página "Tengo un insumo" ───────────────────────────────────────
+       Cámara: visor, y JUSTO debajo un único botón grande de acción.
+       Ritmo vertical en múltiplos de 4: 8 / 12 / 16 / 24. */
     .ofrecer-panel { max-width: 640px; }
-    .of-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin: 10px 0; }
+
+    .of-cam { display: block; }
+    .offer-camera {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      display: grid;
+      place-items: center;
+      background: var(--surface);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .offer-camera.is-live { border-style: solid; border-color: var(--primary); background: var(--ink); }
+    .offer-camera video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .of-cam-hint {
+      margin: 0;
+      padding: 0 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-wrap: balance;
+    }
+    .offer-camera.is-live .of-cam-hint { display: none; }
+
+    /* El botón de disparo manda: ancho completo, alto de pulgar, pegado al visor. */
+    .of-cam-shoot {
+      display: block;
+      width: 100%;
+      min-height: 52px;
+      font-size: 1.02rem;
+      font-weight: 700;
+    }
+    .of-cam-shoot[hidden] { display: none; }
+    .of-cam-close { display: block; width: 100%; margin-top: 8px; }
+    .of-cam-close[hidden] { display: none; }
+
+    .of-contador { margin: 12px 0 0; font-weight: 600; color: var(--ink); }
+    .of-contador[hidden] { display: none; }
+    .of-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+    .of-thumbs:not(:empty) { margin-top: 12px; }
     .of-thumb { position: relative; margin: 0; }
     .of-thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border); display: block; }
     .of-thumb-x {
-      position: absolute; top: -6px; right: -6px; width: 24px; height: 24px;
-      border-radius: 999px; border: none; background: var(--ink); color: #fff;
-      font-size: 0.7rem; line-height: 1; cursor: pointer;
+      position: absolute; top: -6px; right: -6px;
+      width: 26px; height: 26px;
+      display: grid; place-items: center;
+      border-radius: 999px; border: 2px solid var(--surface);
+      background: var(--ink); color: #fff;
+      font-size: 0.72rem; line-height: 1; cursor: pointer;
     }
-    .of-galeria { position: relative; overflow: hidden; }
-    .of-mapa { height: 280px; border-radius: var(--radius); border: 1px solid var(--border); margin: 10px 0; }
+    .of-cam-message:not(.visible) { display: none; }
+    .of-cam-message.visible { margin-top: 12px; }
+
+    /* Paso fusionado de recogida: mapa + referencia + foto del sitio. */
+    .of-lugar-step .of-bloque { margin-top: 24px; }
+    .of-lugar-step .of-bloque:first-of-type { margin-top: 16px; }
+    .of-sub {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .of-sub label { font: inherit; color: inherit; margin: 0; }
+    .of-geo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .of-geo-actions .btn { flex: 1 1 160px; min-height: 46px; }
+    .of-ref-input { width: 100%; }
+    .of-mapa {
+      height: 280px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-top: 12px;
+    }
     .of-mapa[hidden] { display: none; }
-    .of-cam-step video { width: 100%; border-radius: var(--radius); }
-    @media (max-width: 560px) {
-      .of-cam-step .card-actions { flex-direction: column; align-items: stretch; }
-    }
+    .of-coords { margin: 12px 0 0; font-weight: 600; color: var(--ink); }
+    #of-geo-message:not(.visible) { display: none; }
+    #of-geo-message.visible { margin-top: 12px; }

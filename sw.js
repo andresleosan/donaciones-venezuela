@@ -2,12 +2,12 @@
 // Los datos (Supabase) NUNCA se cachean. Los locales van network-first
 // (se actualizan seguido; nunca deben quedar viejos). Una sola VERSION
 // controla el nombre de caché y las URLs versionadas — súbela por release.
-const VERSION = '47';
+const VERSION = '48';
 const CACHE = 'ayuda-ve-v' + VERSION;
 const ESTATICOS = [
   '/',
   '/ventana.html',
-  '/css/app.css?v=28',
+  '/css/app.css?v=48',
   '/js/core.js?v=' + VERSION,
   '/js/wiz.js?v=' + VERSION,
   '/js/vistas.js?v=' + VERSION,
