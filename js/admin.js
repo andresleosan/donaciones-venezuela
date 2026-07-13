@@ -525,6 +525,7 @@
       const mot = estado.motorizados.find((m) => String(m.id) === String(id));
       if (!mot) return;
       abrirModal(t('modal.supportTitle'), `<form id="donar-mot-form"><div class="form-grid"><div class="field"><label for="don-monto">${e(t('modal.amount'))}</label><input id="don-monto" type="number" min="1" required /></div><div class="field"><label for="don-tipo">${e(t('modal.supportType'))}</label><select id="don-tipo"><option value="Pago móvil">${e(tValue('supportTypes', 'Pago móvil'))}</option><option value="Efectivo">${e(tValue('supportTypes', 'Efectivo'))}</option><option value="Combustible">${e(tValue('supportTypes', 'Combustible'))}</option><option value="Repuesto">${e(tValue('supportTypes', 'Repuesto'))}</option><option value="Otro">${e(tValue('supportTypes', 'Otro'))}</option></select></div><div class="field"><label for="don-nombre">${e(t('modal.donor'))}</label><input id="don-nombre" /></div><div class="field"><label for="don-ciudad">${e(t('common.city'))}</label><input id="don-ciudad" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveSupport'))}</button></div></form>`);
+      wizPublico('donar-mot-form');
       $('#donar-mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const monto = numero($('#don-monto').value);
@@ -540,29 +541,18 @@
     // un centro. Devuelve un token para seguir la donación.
     function abrirOfrecerInsumo(datos) {
       const pre = datos || {};
-      abrirModal(t('offer.modalTitle'), `<form id="ofrecer-form" class="offer-wizard" novalidate>
-        <div class="offer-wizard-head"><span class="badge" id="of-step-count">1 / 4</span><strong id="of-step-title">${e(t('offer.supplyLabel'))}</strong></div>
+      abrirModal(t('offer.modalTitle'), `<form id="ofrecer-form" class="offer-wizard" data-wiz="ofrecer" novalidate>
         <p class="section-copy">${e(pre.centro ? t('offer.modalCopyCentro', { insumo: mostrarInsumo(pre.insumo), centro: pre.centro }) : t('offer.modalCopy'))}</p>
-        <div id="of-wizard-message" class="form-message" role="status" aria-live="polite"></div>
-        <section data-offer-step="1">
-          <div class="form-grid">
-            <div class="field full"><label for="of-insumo">${e(t('offer.supplyLabel'))}</label><input id="of-insumo" required value="${e(pre.insumo || '')}" placeholder="${e(t('offer.supplyPh'))}" /></div>
-            <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
-            <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
-          </div>
-          <div class="form-actions"><button class="btn btn-primary" type="button" id="of-next-1">${e(t('offer.stepNext'))}</button></div>
-        </section>
-        <section data-offer-step="2" hidden>
-          <div class="form-grid">
-            <div class="field full"><label for="of-nombre">${e(t('offer.contactNameLabel'))}</label><input id="of-nombre" required autocomplete="name" placeholder="${e(t('offer.contactNamePh'))}" /></div>
-            <div class="field"><label for="of-telefono">${e(t('common.phone'))}</label><input id="of-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
-            <div class="field"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
-          </div>
-          <p class="meta">${e(t('offer.privacyNote'))}</p>
-          <div class="form-actions"><button class="btn btn-ghost" type="button" data-offer-back="1">${e(t('offer.stepBack'))}</button><button class="btn btn-primary" type="button" id="of-next-2">${e(t('offer.stepNext'))}</button></div>
-        </section>
-        <section data-offer-step="3" hidden>
-          <h4>${e(t('offer.cameraStepTitle'))}</h4>
+        <div class="form-grid">
+          <div class="field full"><label for="of-insumo">${e(t('offer.supplyLabel'))}</label><input id="of-insumo" required value="${e(pre.insumo || '')}" placeholder="${e(t('offer.supplyPh'))}" /></div>
+          <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
+          <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
+          <div class="field full"><label for="of-nombre">${e(t('offer.contactNameLabel'))}</label><input id="of-nombre" required autocomplete="name" placeholder="${e(t('offer.contactNamePh'))}" /></div>
+          <div class="field"><label for="of-telefono">${e(t('common.phone'))}</label><input id="of-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
+          <div class="field"><label for="of-ubicacion">${e(t('offer.locationLabel'))}</label><input id="of-ubicacion" required autocomplete="street-address" placeholder="${e(t('offer.locationPh'))}" /></div>
+        </div>
+        <div data-wiz-step id="of-camera-field">
+          <label>${e(t('offer.cameraStepTitle'))}</label>
           <p class="section-copy">${e(t('offer.cameraStepCopy'))}</p>
           <div class="offer-camera" id="of-camera-shell">
             <video id="of-camera" autoplay playsinline muted hidden></video>
@@ -571,43 +561,18 @@
             <div id="of-camera-placeholder" class="offer-camera-placeholder">${e(t('offer.openCamera'))}</div>
           </div>
           <div id="of-camera-message" class="form-message" role="status" aria-live="polite"></div>
-          <div class="form-actions"><button class="btn btn-soft" type="button" id="of-open-camera">${e(t('offer.openCamera'))}</button><button class="btn btn-primary" type="button" id="of-capture" hidden>${e(t('offer.takePhoto'))}</button><button class="btn btn-ghost" type="button" id="of-retake" hidden>${e(t('offer.retakePhoto'))}</button></div>
-          <div class="form-actions"><button class="btn btn-ghost" type="button" data-offer-back="2">${e(t('offer.stepBack'))}</button><button class="btn btn-primary" type="button" id="of-next-3">${e(t('offer.stepNext'))}</button></div>
-        </section>
-        <section data-offer-step="4" hidden>
-          <h4>${e(t('offer.reviewTitle'))}</h4>
-          <p class="section-copy">${e(t('offer.reviewCopy'))}</p>
-          <dl class="offer-review" id="of-review"></dl>
-          <div class="form-actions"><button class="btn btn-ghost" type="button" data-offer-back="3">${e(t('offer.stepBack'))}</button><button class="btn btn-primary" type="submit">${e(t('offer.submit'))}</button></div>
-          <div id="of-message" class="form-message" role="status" aria-live="polite"></div>
-        </section>
+          <div class="card-actions"><button class="btn btn-soft" type="button" id="of-open-camera">${e(t('offer.openCamera'))}</button><button class="btn btn-primary" type="button" id="of-capture" hidden>${e(t('offer.takePhoto'))}</button><button class="btn btn-ghost" type="button" id="of-retake" hidden>${e(t('offer.retakePhoto'))}</button></div>
+        </div>
+        <p class="meta">${e(t('offer.privacyNote'))}</p>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.submit'))}</button></div>
+        <div id="of-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
       const form = $('#ofrecer-form');
       const dialog = $('#modal-root dialog');
-      const steps = $$('[data-offer-step]');
-      const stepTitles = [t('offer.supplyLabel'), t('offer.contactLabel'), t('offer.cameraStepTitle'), t('offer.reviewTitle')];
-      let paso = 1;
       let fotoInsumo = '';
       let stream = null;
       const stopCamera = () => { if (stream) stream.getTracks().forEach((track) => track.stop()); stream = null; };
       const cameraMessage = (tipo, texto) => { const box = $('#of-camera-message'); if (!box) return; box.className = `form-message visible ${tipo}`; box.textContent = texto; };
-      const setStep = (next) => {
-        paso = Math.max(1, Math.min(4, next));
-        steps.forEach((section) => { section.hidden = Number(section.dataset.offerStep) !== paso; });
-        $('#of-step-count').textContent = `${paso} / 4`;
-        $('#of-step-title').textContent = stepTitles[paso - 1];
-        if (paso === 3 && !fotoInsumo) iniciarCamara();
-        if (paso !== 3) stopCamera();
-        if (paso === 4) pintarRevision();
-      };
-      const validarCampos = (ids) => {
-        for (const id of ids) {
-          const field = $('#' + id);
-          if (!field || !field.value.trim()) { field?.focus(); mostrarMensaje('#of-wizard-message', 'error', t('validation.reviewFields', { count: 1, plural: '' })); return false; }
-          field.removeAttribute('aria-invalid');
-        }
-        return true;
-      };
       async function iniciarCamara() {
         const video = $('#of-camera');
         if (!video) return;
@@ -641,23 +606,25 @@
         stopCamera();
         cameraMessage('success', t('offer.takePhoto'));
       }
-      function pintarRevision() {
-        const review = $('#of-review');
-        if (!review) return;
-        const fila = (label, value) => `<div><dt>${e(label)}</dt><dd>${e(value || t('common.pending'))}</dd></div>`;
-        review.innerHTML = fila(t('offer.supplyLabel'), $('#of-insumo').value.trim()) + fila(t('offer.qtyLabel'), `${$('#of-cantidad').value.trim()} ${$('#of-unidad').value.trim() || t('offer.unitLabel')}`) + fila(t('offer.contactNameLabel'), $('#of-nombre').value.trim()) + fila(t('common.phone'), $('#of-telefono').value.trim()) + fila(t('offer.locationLabel'), $('#of-ubicacion').value.trim()) + fila(t('offer.cameraStepTitle'), fotoInsumo ? t('offer.takePhoto') : t('offer.cameraRequired'));
-      }
       $('#of-open-camera').addEventListener('click', iniciarCamara);
       $('#of-capture').addEventListener('click', capturarFoto);
       $('#of-retake').addEventListener('click', () => { fotoInsumo = ''; $('#of-photo-preview').hidden = true; $('#of-retake').hidden = true; iniciarCamara(); });
-      $('#of-next-1').addEventListener('click', () => { if (validarCampos(['of-insumo', 'of-cantidad'])) setStep(2); });
-      $('#of-next-2').addEventListener('click', () => { if (validarCampos(['of-nombre', 'of-telefono', 'of-ubicacion'])) setStep(3); });
-      $('#of-next-3').addEventListener('click', () => { if (!fotoInsumo) { cameraMessage('error', t('offer.cameraRequired')); return; } setStep(4); });
-      $$('[data-offer-back]').forEach((btn) => btn.addEventListener('click', () => setStep(Number(btn.dataset.offerBack))));
+      // Wizard genérico: la foto es su propio paso; se marca hecha en el resumen
+      // y no se puede avanzar sin capturarla.
+      const camara = $('#of-camera-field');
+      wizPublico(form, {
+        alEntrar: (paso) => { if (paso === camara) { if (!fotoInsumo) iniciarCamara(); } else { stopCamera(); } },
+        validar: (paso) => {
+          if (paso !== camara) return undefined;
+          if (!fotoInsumo) { cameraMessage('error', t('offer.cameraRequired')); return t('offer.cameraRequired'); }
+          camara.dataset.wizDone = t('offer.takePhoto');
+          stopCamera();
+          return true;
+        }
+      });
       form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        if (!validarCampos(['of-insumo', 'of-cantidad', 'of-nombre', 'of-telefono', 'of-ubicacion'])) return;
-        if (!fotoInsumo) { setStep(3); cameraMessage('error', t('offer.cameraRequired')); return; }
+        if (!fotoInsumo) { cameraMessage('error', t('offer.cameraRequired')); return; }
         const cantidad = numero($('#of-cantidad').value);
         if (cantidad <= 0) { mostrarMensaje('#of-message', 'error', t('needs.invalidAmount')); return; }
         const boton = form.querySelector('button[type="submit"]');
@@ -671,7 +638,6 @@
         } catch (err) { boton.disabled = false; mostrarMensaje('#of-message', 'error', String(err && err.message || t('needs.error'))); }
       });
       dialog.addEventListener('close', stopCamera, { once: true });
-      setStep(1);
     }
 
     // Reemplaza el formulario por el token: el donante debe poder copiarlo, así
@@ -704,7 +670,7 @@
 
     // El transportista reclama una oferta: su nombre + centro de destino.
     function abrirRecogerOferta(of) {
-      abrirModal(t('offer.pickupTitle'), `<form id="recoger-oferta-form" novalidate>
+      abrirModal(t('offer.pickupTitle'), `<form id="recoger-oferta-form" data-wiz="recoger" novalidate>
         <p class="section-copy">${e(t('offer.pickupCopy', { cantidad: numero(of.cantidad), unidad: mostrarUnidad(of.unidad), insumo: mostrarInsumo(of.insumo), ubicacion: of.ubicacion }))}</p>
         <div class="form-grid">
           <div class="field"><label for="rof-nombre">${e(t('cycle.driverName'))}</label><input id="rof-nombre" required autocomplete="name" /></div>
@@ -713,6 +679,7 @@
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.pickupSave'))}</button></div>
         <div id="rof-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
+      wizPublico('recoger-oferta-form');
       $('#recoger-oferta-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
@@ -741,7 +708,7 @@
     // referencia vendrá del pago y entrará por este mismo flujo.
     function abrirDonarDinero(pr) {
       const faltan = Math.max(1, numero(pr.precio) - numero(pr.recaudado));
-      abrirModal(t('money.modalTitle'), `<form id="donar-dinero-form" novalidate>
+      abrirModal(t('money.modalTitle'), `<form id="donar-dinero-form" data-wiz="donarDinero" novalidate>
         <p class="section-copy">${e(t('money.modalCopy', { insumo: mostrarInsumo(pr.insumo), tienda: pr.tienda, centro: pr.centro }))}</p>
         <p class="meta">${e(t('needs.missing', { faltan: formatearMonto(faltan) }))}</p>
         <div class="form-grid">
@@ -752,6 +719,7 @@
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('money.submit'))}</button></div>
         <div id="din-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
+      wizPublico('donar-dinero-form');
       $('#donar-dinero-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
@@ -924,7 +892,7 @@
     }
 
     function abrirRegistrarMotorizado() {
-      abrirModal(t('modal.driverTitle'), `<form id="mot-form"><div class="form-grid"><div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><select id="mot-tipo"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div><div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><input id="mot-telefono" type="tel" required /></div><div class="field"><label for="mot-email">${e(t('common.email'))}</label><input id="mot-email" type="email" required autocomplete="email" /></div><div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><input id="mot-placa" /></div></div><p class="meta">${e(t('modal.photosIntro'))}</p><div class="form-grid">${campoFoto('mot-foto-placa', 'modal.photoPlate')}${campoFoto('mot-foto-vehiculo', 'modal.photoVehicle')}${campoFoto('mot-foto-cedula', 'modal.photoId')}</div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div><div id="mot-message" class="form-message" role="status" aria-live="polite"></div></form>`);
+      abrirModal(t('modal.driverTitle'), `<form id="mot-form" data-wiz="motorizado"><div class="form-grid"><div class="field"><label for="mot-nombre">${e(t('common.name'))}</label><input id="mot-nombre" required /></div><div class="field"><label for="mot-tipo">${e(t('common.vehicle'))}</label><select id="mot-tipo"><option value="Moto">${e(mostrarTransporte('Moto'))}</option><option value="Carro">${e(mostrarTransporte('Carro'))}</option><option value="Bicicleta">${e(mostrarTransporte('Bicicleta'))}</option><option value="Camión">${e(mostrarTransporte('Camión'))}</option><option value="Motocarro">${e(mostrarTransporte('Motocarro'))}</option></select></div><div class="field"><label for="mot-telefono">${e(t('common.phone'))}</label><input id="mot-telefono" type="tel" required /></div><div class="field"><label for="mot-email">${e(t('common.email'))}</label><input id="mot-email" type="email" required autocomplete="email" /></div><div class="field"><label for="mot-zona">${e(t('modal.zone'))}</label><input id="mot-zona" required /></div><div class="field"><label for="mot-placa">${e(t('modal.plate'))}</label><input id="mot-placa" /></div></div><p class="meta">${e(t('modal.photosIntro'))}</p><div class="form-grid">${campoFoto('mot-foto-placa', 'modal.photoPlate')}${campoFoto('mot-foto-vehiculo', 'modal.photoVehicle')}${campoFoto('mot-foto-cedula', 'modal.photoId')}</div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveDriver'))}</button></div><div id="mot-message" class="form-message" role="status" aria-live="polite"></div></form>`);
       ['mot-foto-placa', 'mot-foto-vehiculo', 'mot-foto-cedula'].forEach((id) => {
         $('#' + id).addEventListener('change', (ev) => {
           const file = ev.target.files && ev.target.files[0];
@@ -934,6 +902,7 @@
           prev.hidden = false;
         });
       });
+      wizPublico('mot-form');
       $('#mot-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const archivos = ['mot-foto-placa', 'mot-foto-vehiculo', 'mot-foto-cedula']
@@ -1060,6 +1029,14 @@
     }
 
     function bindForms() {
+      // Formularios estáticos como asistente "una casilla a la vez" (wiz.js).
+      // Solo presentación: los ids y handlers de submit no cambian.
+      wizPublico('lugar-form');
+      wizPublico('voluntario-form');
+      wizPublico('rescatista-form');
+      wizPublico('persona-form');
+      wizPublico('familiar-form');
+      wizPublico('seguimiento-form');
       $('#lugar-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
