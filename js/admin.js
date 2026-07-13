@@ -686,10 +686,16 @@
         <div id="of-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`;
       const form = $('#ofrecer-form');
-      const fotos = [];
-      const cedula = [];
-      const fotoLugar = [];
-      const coords = { lat: null, lng: null };
+      // La precarga permite reconstruir el formulario en otro idioma sin que el
+      // donante pierda lo escrito ni las fotos que ya tomó.
+      const fotos = (pre.fotos || []).slice();
+      const cedula = (pre.cedula || []).slice();
+      const fotoLugar = (pre.fotoLugar || []).slice();
+      const coords = { lat: pre.lat != null ? pre.lat : null, lng: pre.lng != null ? pre.lng : null };
+      $('#of-cantidad').value = pre.cantidad || '';
+      $('#of-nombre').value = pre.nombre || '';
+      $('#of-telefono').value = pre.telefono || '';
+      $('#of-referencia').value = pre.referencia || '';
       let mapa = null, marcador = null;
       const camFotos = montarCamaraOferta('of-fotos', fotos, 20);
       const camCedula = montarCamaraOferta('of-cedula', cedula, 1);
@@ -725,6 +731,19 @@
         if (mapa) setTimeout(() => mapa.invalidateSize(), 60);
         mostrarMensaje('#of-geo-message', 'info', t('offer.mapHint'));
       });
+      pintarCoords();
+      // Cambiar de idioma repinta esta página: se guarda el estado vivo y se
+      // vuelve a construir el formulario con los textos del idioma nuevo.
+      window.reconstruirOfrecer = () => {
+        if (!document.body.contains(form)) return;
+        camFotos.parar(); camCedula.parar(); camLugar.parar();
+        abrirOfrecerInsumo({
+          insumo: $('#of-insumo').value, unidad: $('#of-unidad').value, centro: pre.centro || '',
+          cantidad: $('#of-cantidad').value, nombre: $('#of-nombre').value,
+          telefono: $('#of-telefono').value, referencia: $('#of-referencia').value,
+          fotos, cedula, fotoLugar, lat: coords.lat, lng: coords.lng
+        });
+      };
       wizPublico(form, {
         alEntrar: (paso) => {
           if (paso !== pasoFotos) camFotos.parar();

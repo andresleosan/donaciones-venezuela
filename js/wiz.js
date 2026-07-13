@@ -4,6 +4,17 @@
    cambian, así el payload enviado al backend es idéntico al de antes. */
 // Scope global compartido con core.js: usa t() y e() reales.
 
+  // Asistentes vivos: al cambiar de idioma hay que volver a rotular su cromo
+  // (barra, contador, botones), que se pintó con el idioma anterior.
+  const WIZ_VIVOS = [];
+
+  function wizRetraducirTodos() {
+    for (let i = WIZ_VIVOS.length - 1; i >= 0; i -= 1) {
+      if (!document.body.contains(WIZ_VIVOS[i].form)) WIZ_VIVOS.splice(i, 1);
+      else WIZ_VIVOS[i].retraducir();
+    }
+  }
+
   function wizPublico(ref, opts) {
     const form = typeof ref === 'string' ? document.getElementById(ref) : ref;
     if (!form || form.dataset.wizOn) return null;
@@ -121,6 +132,14 @@
     });
     form.addEventListener('reset', () => { actual = 0; setTimeout(pintar, 0); });
 
+    function retraducir() {
+      foot.querySelector('[data-wiz-atras]').textContent = t('wizard.back');
+      foot.querySelector('[data-wiz-sig]').textContent = t('wizard.next');
+      pintar();
+    }
+
     pintar();
-    return { irA: (i) => { actual = Math.max(0, Math.min(pasos.length, i)); pintar(); } };
+    const instancia = { form, retraducir, irA: (i) => { actual = Math.max(0, Math.min(pasos.length, i)); pintar(); } };
+    WIZ_VIVOS.push(instancia);
+    return instancia;
   }

@@ -305,5 +305,8 @@
       if (/^#seguimiento\//i.test(hashRaw)) return;
       const VISTAS = ['inicio', 'donaciones', 'ayuda', 'donar', 'ayudar', 'necesidades', 'acceso', 'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento', 'ofrecer'];
       const hash = hashRaw.replace(/^#/, '').toLowerCase();
+      // #ofrecer se construye al vuelo: sin esto, entrar directo o recargar
+      // dejaba la página vacía (solo el título).
+      if (hash === 'ofrecer' && typeof abrirOfrecerInsumo === 'function') { abrirOfrecerInsumo({}); return; }
       cambiarVista(VISTAS.indexOf(hash) >= 0 ? hash : 'inicio');
     }

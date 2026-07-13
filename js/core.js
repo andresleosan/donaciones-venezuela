@@ -6,8 +6,7 @@
     const I18N_BASE_URL = 'https://donacionesvenezuela.vercel.app/';
     const I18N_LANGUAGES = {
       es: { label: 'Español', hreflang: 'es', locale: 'es_VE' },
-      en: { label: 'English', hreflang: 'en', locale: 'en_US' },
-      fr: { label: 'Français', hreflang: 'fr', locale: 'fr_FR' }
+      en: { label: 'English', hreflang: 'en', locale: 'en_US' }
     };
     const i18nCache = {};
     let idiomaActual = I18N_DEFAULT_LANGUAGE;
@@ -473,6 +472,9 @@
       aplicarTraduccionesEstaticas();
       setStatus(fuenteDatosActual);
       renderAll();
+      // Lo pintado con innerHTML no se traduce solo: hay que reconstruirlo.
+      if (typeof window.reconstruirOfrecer === 'function') window.reconstruirOfrecer();
+      if (typeof wizRetraducirTodos === 'function') wizRetraducirTodos();
       if (ultimosFamiliares) renderFamiliares(ultimosFamiliares.resultados, ultimosFamiliares.encontrado);
       if (ultimoSeguimiento) renderSeguimiento(ultimoSeguimiento);
       window.setTimeout(() => document.body.classList.remove('is-translating'), 180);

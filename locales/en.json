@@ -416,7 +416,8 @@
     "driverPhotosMissing": "Photos missing: take the plate, the vehicle and your ID card.",
     "driverUploading": "Uploading photos and saving...",
     "driverPhotoError": "The photos could not be uploaded. Try again.",
-    "volunteerPhotoMissing": "The ID photo is missing"
+    "volunteerPhotoMissing": "The ID photo is missing",
+    "saveError": "We couldn't save. Check your connection and try again."
   },
   "validation": {
     "fieldFallback": "This field",

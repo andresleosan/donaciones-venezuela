@@ -176,7 +176,9 @@
       body: JSON.stringify(payload || {})
     }, 45000);
     if (!data || data.success === false) {
-      throw new Error((data && data.error) || 'No se pudo guardar');
+      // Sin clave propia: cae al idioma activo, nunca a un literal en español.
+      const generico = typeof t === 'function' ? t('messages.saveError') : 'No se pudo guardar';
+      throw new Error((data && data.error) || generico);
     }
     return data;
   }
