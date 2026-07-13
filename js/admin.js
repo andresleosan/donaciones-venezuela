@@ -511,6 +511,7 @@
     function abrirRegistrarTrayecto(mot) {
       if (!mot) return;
       abrirModal(t('modal.routeTitle'), `<form id="trayecto-form"><div class="form-grid"><div class="field"><label for="tray-origen">${e(t('modal.origin'))}</label><input id="tray-origen" required /></div><div class="field"><label for="tray-destino">${e(t('modal.destination'))}</label><input id="tray-destino" required /></div><div class="field"><label for="tray-km">${e(t('modal.km'))}</label><input id="tray-km" type="number" min="0.1" step="0.1" required /></div><div class="field"><label for="tray-insumo">${e(t('modal.supply'))}</label><input id="tray-insumo" /></div></div><div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('modal.saveRoute'))}</button></div></form>`);
+      wizPublico('trayecto-form');
       $('#trayecto-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const km = numero($('#tray-km').value);
@@ -964,6 +965,7 @@
         <div id="rec-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
       bindPreviewsFoto(['rec-foto-sitio', 'rec-foto-insumo']);
+      wizPublico('recogida-form');
       $('#recogida-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
@@ -1003,6 +1005,7 @@
         <div id="ent-message" class="form-message" role="status" aria-live="polite"></div>
       </form>`);
       bindPreviewsFoto(['ent-foto']);
+      wizPublico('entrega-form');
       $('#entrega-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;

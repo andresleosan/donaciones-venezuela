@@ -245,7 +245,17 @@ Playwright en `#donaciones`: en `?lang=en` no puede aparecer la cadena
 
 ---
 
-## Tarea 4: Asistente en los formularios del transportista
+## Tarea 4: Asistente en los formularios del transportista — HECHA (v54)
+
+> 2026-07-13. `wizPublico('trayecto-form' | 'recogida-form' | 'entrega-form')`.
+> Bastó una línea por formulario: los campos ya eran `.field` y las fotos son
+> `input file` con `required`, así que el motor los valida solo. Verificado:
+> trayecto (6 pasos), recogida (6), entrega (5); todos entran en "Paso 2 de N",
+> un campo a la vez; bloquean el paso si falta el dato o la foto; el resumen
+> final lista lo escrito; el payload enviado es idéntico al de antes
+> (interceptado en el navegador, sin escribir en producción). Probado en 390px y
+> en inglés: sin desbordes y sin controles por debajo de 44px.
+
 
 El transportista es público, pero sus tres formularios se quedaron fuera del
 rediseño: se llenan de golpe, con todos los campos a la vez. Rompe la promesa de
