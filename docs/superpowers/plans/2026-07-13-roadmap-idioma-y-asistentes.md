@@ -435,7 +435,24 @@ el modal sigue abierto, en el idioma nuevo, con el monto y el nombre intactos.
 
 ---
 
-## Tarea 7: Guion E2E de idioma, guardado
+## Tarea 7: Guion E2E de idioma, guardado — HECHA (v57)
+
+> 2026-07-13. `scripts/e2e-idioma.js` (se pega en la consola del navegador y se
+> llama con `await pruebaIdioma()`) + `scripts/e2e-idioma.md` con cómo correrlo y
+> cómo leerlo. Recorre las 14 vistas en los dos idiomas, más el cambio de idioma
+> **en caliente** sobre `#ofrecer`. Solo lee: no escribe en la base.
+>
+> **Corrido contra producción a 390px: `ok: true`.** En la primera pasada dio dos
+> hallazgos y los dos resultaron falsos positivos, ya filtrados en el guion: los
+> textos de EJEMPLO (un placeholder en español que coincide con el nombre real de
+> un centro) y las casillas de verificación (el área táctil es la etiqueta de
+> 46px, no el cuadradito de 13px).
+>
+> Hallazgo colateral: mi auditoría manual del 2026-07-13 medía las áreas táctiles
+> con el selector `.view.is-active`, que **no existe** (la clase real es
+> `.view.active`), así que medía sobre un conjunto vacío y por eso salió limpia.
+> El guion no comete ese error.
+
 
 Que la comprobación de hoy no dependa de que alguien se acuerde de hacerla.
 
