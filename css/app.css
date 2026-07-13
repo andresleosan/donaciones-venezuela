@@ -1294,6 +1294,30 @@
     .home-foot { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 24px; }
     .home-foot a { color: var(--primary); font-weight: 700; text-decoration: none; display: inline-block; padding: 12px 4px; }
     .home-foot a:hover { text-decoration: underline; }
+    .pwa-card {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      max-width: 720px;
+      margin: 24px auto 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-soft);
+      text-align: left;
+    }
+    .pwa-card h2 { margin: 8px 0 4px; color: var(--ink); font-size: 1.05rem; }
+    .pwa-card p { margin: 0; max-width: 65ch; }
+    .pwa-card .btn { flex: 0 0 auto; }
+    .pwa-card[data-state="offline"] { border-color: #E8C46A; }
+    .pwa-card[data-state="installed"] { display: none; }
+    .pwa-card[hidden] { display: none; }
+    @media (max-width: 560px) {
+      .pwa-card { display: grid; gap: 12px; }
+      .pwa-card .btn { width: 100%; }
+    }
 
     /* Botón volver del header */
     .btn-volver {

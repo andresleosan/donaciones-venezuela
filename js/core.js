@@ -470,6 +470,7 @@
       if (select) select.value = nextLang;
       actualizarSeo();
       aplicarTraduccionesEstaticas();
+      window.dispatchEvent(new CustomEvent('dv-language-change', { detail: { language: nextLang } }));
       setStatus(fuenteDatosActual);
       renderAll();
       // Lo pintado con innerHTML no se traduce solo: hay que reconstruirlo.
@@ -491,6 +492,7 @@
       }
       actualizarSeo();
       aplicarTraduccionesEstaticas();
+      window.dispatchEvent(new CustomEvent('dv-language-change', { detail: { language: idiomaActual } }));
     }
 
     // ── CONFIGURACIÓN ─────────────────────────────────────────

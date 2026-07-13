@@ -15,6 +15,9 @@
   <link rel="alternate" hreflang="x-default" href="https://donacionesvenezuela.vercel.app/" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#0A2540" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Ayuda VE" />
   <link rel="manifest" href="manifest.json" />
 
   <meta property="og:type" content="website" />
@@ -50,7 +53,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=49">
+  <link rel="stylesheet" href="css/app.css?v=50">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -159,6 +162,17 @@
 
         <p class="home-foot"><span id="home-foot-q">¿Donaste algo?</span> <a href="#seguimiento" id="home-foot-link" data-view-link="seguimiento">Sigue tu donación con tu código</a></p>
         <p class="home-foot"><button class="link-btn" type="button" id="btn-home-admin">Acceso de administración</button></p>
+        <aside class="pwa-card" id="pwa-install-card" aria-labelledby="pwa-card-title">
+          <div>
+            <span class="badge gray" id="pwa-availability-badge">Disponible sin conexión</span>
+            <h2 id="pwa-card-title">Usa la app sin conexión</h2>
+            <p id="pwa-card-copy">Instálala en tu dispositivo. La información pública se guarda para consultarla sin internet y los formularios pendientes se envían al volver la conexión.</p>
+            <p id="pwa-connection-status" class="meta" role="status" aria-live="polite">Comprobando conexión…</p>
+            <p id="pwa-queue-status" class="meta" role="status" aria-live="polite"></p>
+            <p id="pwa-ios-help" class="meta" hidden>En iPhone o iPad: abre Compartir y elige “Añadir a pantalla de inicio”.</p>
+          </div>
+          <button class="btn btn-soft btn-small" id="pwa-install-btn" type="button" hidden>Instalar aplicación</button>
+        </aside>
       </div>
     </section>
 
@@ -745,10 +759,11 @@
 
   <script src="services/leaflet/leaflet.js"></script>
   <script src="services/api.js?v=49"></script>
-  <script src="js/core.js?v=49"></script>
-  <script src="js/wiz.js?v=49"></script>
-  <script src="js/vistas.js?v=49"></script>
-  <script src="js/panel.js?v=49"></script>
-  <script src="js/admin.js?v=49"></script>
+  <script src="js/pwa.js?v=50"></script>
+  <script src="js/core.js?v=50"></script>
+  <script src="js/wiz.js?v=50"></script>
+  <script src="js/vistas.js?v=50"></script>
+  <script src="js/panel.js?v=50"></script>
+  <script src="js/admin.js?v=50"></script>
 </body>
 </html>

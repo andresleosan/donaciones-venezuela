@@ -56,6 +56,16 @@
     "error": "Sin conexión a la base de datos",
     "errorBanner": "No se pudo leer la base de datos. No se muestran datos alternativos."
   },
+  "pwa": {
+    "availability": "Disponible sin conexión",
+    "title": "Usa la app sin conexión",
+    "copy": "La información pública se guarda para consultarla sin internet y los formularios pendientes se envían al volver la conexión.",
+    "online": "Con conexión · tus datos se sincronizan",
+    "offline": "Sin conexión · trabajando con datos guardados",
+    "pendingCount": "{count} formulario(s) pendiente(s) de enviar",
+    "install": "Instalar aplicación",
+    "ios": "En iPhone o iPad: abre Compartir y elige “Añadir a pantalla de inicio”."
+  },
   "hero": {
     "eyebrow": "Coordinación humanitaria activa",
     "title": "Respuesta Humanitaria Venezuela",

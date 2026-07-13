@@ -56,6 +56,16 @@
     "error": "Database unavailable",
     "errorBanner": "The database could not be read. No alternate data is shown."
   },
+  "pwa": {
+    "availability": "Available offline",
+    "title": "Use the app offline",
+    "copy": "Public information is saved for offline viewing and pending forms are sent when the connection returns.",
+    "online": "Connected · your data syncs automatically",
+    "offline": "Offline · working with saved data",
+    "pendingCount": "{count} form(s) waiting to send",
+    "install": "Install app",
+    "ios": "On iPhone or iPad: open Share and choose “Add to Home Screen”."
+  },
   "hero": {
     "eyebrow": "Active humanitarian coordination",
     "title": "Humanitarian Response Venezuela",
