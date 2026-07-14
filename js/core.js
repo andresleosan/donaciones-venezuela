@@ -675,6 +675,105 @@
       return fechas[0] ? fechas[0].toISOString() : '';
     }
 
+    // Editor visual local: permite ajustar textos, placeholders y etiquetas
+    // accesibles sin tocar la lógica de datos. Los cambios se guardan en el
+    // navegador para que también sobrevivan a los rerenders de cada vista.
+    const EDITOR_STORAGE_KEY = 'dv-editor-overrides-v1';
+    let editorApplyingOverrides = false;
+
+    function leerOverridesEditor() {
+      try { return JSON.parse(localStorage.getItem(EDITOR_STORAGE_KEY) || '{}') || {}; }
+      catch (_) { return {}; }
+    }
+
+    function guardarOverridesEditor(overrides) {
+      try { localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(overrides)); return true; }
+      catch (_) { return false; }
+    }
+
+    function textoDirectoEditor(el) {
+      if (!el) return null;
+      return Array.from(el.childNodes || []).find((node) => node.nodeType === Node.TEXT_NODE && String(node.nodeValue || '').trim()) || null;
+    }
+
+    function destinoTextoEditor(el) {
+      if (!el || /^(INPUT|TEXTAREA|SELECT|OPTION)$/.test(el.tagName)) return el;
+      if (textoDirectoEditor(el)) return el;
+      const leaf = Array.from(el.querySelectorAll ? el.querySelectorAll('*') : [])
+        .find((node) => textoDirectoEditor(node) || (!node.children.length && String(node.textContent || '').trim()));
+      return leaf || el;
+    }
+
+    function leerTextoEditor(el) {
+      if (!el) return '';
+      if (/^(INPUT|TEXTAREA)$/.test(el.tagName)) return el.getAttribute('placeholder') || '';
+      const direct = textoDirectoEditor(el);
+      return direct ? String(direct.nodeValue || '').trim() : String(el.textContent || '').trim();
+    }
+
+    function aplicarTextoEditor(el, value) {
+      if (!el) return;
+      if (/^(INPUT|TEXTAREA)$/.test(el.tagName)) {
+        if (value) el.setAttribute('placeholder', value);
+        else el.removeAttribute('placeholder');
+        return;
+      }
+      const direct = textoDirectoEditor(el);
+      if (direct) {
+        const original = String(direct.nodeValue || '');
+        const prefix = (original.match(/^\s*/) || [''])[0];
+        const suffix = (original.match(/\s*$/) || [''])[0];
+        direct.nodeValue = prefix + value + suffix;
+      }
+      else if (!el.children.length) el.textContent = value;
+      else el.textContent = value;
+    }
+
+    function aplicarOverrideEditor(entry) {
+      if (!entry || !entry.selector) return;
+      let el;
+      try { el = document.querySelector(entry.selector); } catch (_) { return; }
+      if (!el) return;
+      let textTarget = el;
+      if (entry.targetSelector) {
+        try { textTarget = document.querySelector(entry.targetSelector) || el; } catch (_) { textTarget = el; }
+      }
+      if (Object.prototype.hasOwnProperty.call(entry, 'text')) aplicarTextoEditor(textTarget, entry.text);
+      if (Object.prototype.hasOwnProperty.call(entry, 'placeholder') && /^(INPUT|TEXTAREA)$/.test(el.tagName)) aplicarTextoEditor(el, entry.placeholder);
+      if (Object.prototype.hasOwnProperty.call(entry, 'ariaLabel')) {
+        if (entry.ariaLabel) el.setAttribute('aria-label', entry.ariaLabel);
+        else el.removeAttribute('aria-label');
+      }
+      if (Object.prototype.hasOwnProperty.call(entry, 'title')) {
+        if (entry.title) el.setAttribute('title', entry.title);
+        else el.removeAttribute('title');
+      }
+    }
+
+    function aplicarOverridesEditor() {
+      if (editorApplyingOverrides) return;
+      editorApplyingOverrides = true;
+      try { Object.values(leerOverridesEditor()).forEach(aplicarOverrideEditor); }
+      finally { window.setTimeout(() => { editorApplyingOverrides = false; }, 0); }
+    }
+
+    function iniciarObservadorEditor() {
+      if (window.__dvEditorObserver || !document.body || !window.MutationObserver) return;
+      window.__dvEditorObserver = new MutationObserver((records) => {
+        if (editorApplyingOverrides || !records.some((record) => record.addedNodes.length)) return;
+        window.clearTimeout(window.__dvEditorApplyTimer);
+        window.__dvEditorApplyTimer = window.setTimeout(aplicarOverridesEditor, 0);
+      });
+      window.__dvEditorObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    window.DVEditor = window.DVEditor || {};
+    window.DVEditor.apply = aplicarOverridesEditor;
+    window.DVEditor.clear = function () {
+      try { localStorage.removeItem(EDITOR_STORAGE_KEY); } catch (_) { /* almacenamiento bloqueado */ }
+    };
+    window.addEventListener('dv-language-change', aplicarOverridesEditor);
+
     function initEditAssistant() {
       if (document.getElementById('edit-assistant')) return;
 
@@ -702,12 +801,19 @@
       pop.className = 'edit-assistant-pop';
       pop.id = 'edit-assistant-pop';
       pop.innerHTML = `
-        <h3>Elemento seleccionado</h3>
+        <h3>Editar elemento</h3>
         <p class="edit-assistant-selector" id="edit-assistant-selector"></p>
         <p class="edit-assistant-preview" id="edit-assistant-preview"></p>
+        <label class="edit-assistant-field">Texto visible o placeholder
+          <input id="edit-assistant-value" type="text" autocomplete="off" />
+        </label>
+        <label class="edit-assistant-field">Etiqueta accesible (opcional)
+          <input id="edit-assistant-aria" type="text" autocomplete="off" placeholder="Cómo debe anunciarse" />
+        </label>
         <textarea id="edit-assistant-note" placeholder="Describe el cambio que quieres hacer aquí..."></textarea>
         <div class="edit-assistant-actions">
           <button class="btn btn-ghost btn-small" type="button" id="edit-assistant-cancel">Cancelar</button>
+          <button class="btn btn-primary btn-small" type="button" id="edit-assistant-save">Guardar cambio</button>
           <button class="btn btn-primary btn-small" type="button" id="edit-assistant-copy">Copiar prompt</button>
         </div>`;
       document.body.appendChild(pop);
@@ -717,10 +823,14 @@
       const tag = $('#edit-assistant-tag');
       const selectorNode = $('#edit-assistant-selector');
       const previewNode = $('#edit-assistant-preview');
+      const valueNode = $('#edit-assistant-value');
+      const ariaNode = $('#edit-assistant-aria');
       const noteNode = $('#edit-assistant-note');
       let inspectMode = false;
       let picked = null;
       let pickedPath = '';
+      let pickedTarget = null;
+      let pickedTargetPath = '';
 
       function editToast(msg) {
         if (typeof toast === 'function') {
@@ -891,7 +1001,7 @@
       function positionPop(ev) {
         const width = Math.min(380, window.innerWidth - 24);
         pop.style.left = Math.max(12, Math.min(ev.clientX, window.innerWidth - width - 12)) + 'px';
-        pop.style.top = Math.max(12, Math.min(ev.clientY + 12, window.innerHeight - 270)) + 'px';
+        pop.style.top = Math.max(12, Math.min(ev.clientY + 12, window.innerHeight - 430)) + 'px';
       }
 
       function onPick(ev) {
@@ -901,13 +1011,42 @@
         ev.stopPropagation();
         picked = el;
         pickedPath = cssPath(el);
+        pickedTarget = destinoTextoEditor(el);
+        pickedTargetPath = pickedTarget && pickedTarget !== picked ? cssPath(pickedTarget) : '';
         selectorNode.textContent = pickedPath;
         const text = compactText(el.innerText || el.textContent || '', 150);
         previewNode.textContent = text ? '“' + text + '”' : '(sin texto visible)';
+        const esSelect = el.tagName === 'SELECT';
+        valueNode.disabled = esSelect;
+        valueNode.value = /^(INPUT|TEXTAREA)$/.test(el.tagName) ? (el.getAttribute('placeholder') || '') : (esSelect ? '' : leerTextoEditor(pickedTarget));
+        ariaNode.value = el.getAttribute('aria-label') || el.getAttribute('title') || '';
         noteNode.value = '';
         pop.style.display = 'block';
         positionPop(ev);
         noteNode.focus();
+      }
+
+      function guardarCambio() {
+        if (!picked) return;
+        const overrides = leerOverridesEditor();
+        const entry = overrides[pickedPath] || { selector: pickedPath };
+        entry.targetSelector = pickedTargetPath;
+        if (/^(INPUT|TEXTAREA)$/.test(picked.tagName)) entry.placeholder = valueNode.value;
+        else if (picked.tagName !== 'SELECT') {
+          entry.text = valueNode.value;
+          if (pickedTarget) aplicarTextoEditor(pickedTarget, valueNode.value);
+        }
+        entry.ariaLabel = ariaNode.value.trim();
+        entry.title = ariaNode.value.trim();
+        overrides[pickedPath] = entry;
+        if (!guardarOverridesEditor(overrides)) {
+          editToast('No se pudo guardar el cambio en este dispositivo.');
+          return;
+        }
+        aplicarOverrideEditor(entry);
+        editToast('Cambio guardado en este dispositivo.');
+        pop.style.display = 'none';
+        if (inspectMode) setInspectMode(false);
       }
 
       function setInspectMode(on) {
@@ -952,6 +1091,8 @@
         pop.style.display = 'none';
       });
 
+      $('#edit-assistant-save').addEventListener('click', guardarCambio);
+
       document.addEventListener('keydown', (ev) => {
         if (ev.key !== 'Escape') return;
         pop.style.display = 'none';
@@ -960,14 +1101,15 @@
         screenBtn.classList.remove('is-active');
         screenBtn.setAttribute('aria-pressed', 'false');
       });
+      iniciarObservadorEditor();
+      aplicarOverridesEditor();
     }
 
     function editAssistantDisponible() {
-      // Herramienta interna para pedir cambios, no parte del producto: el público
-      // no debe verla. Se enciende con ?dev=1 y queda activa el resto de la
-      // pestaña (sessionStorage); ?dev=0 la apaga.
+      // Herramienta interna de edición. ?edit=1 es el acceso explícito y
+      // ?dev=1 se conserva por compatibilidad con el editor anterior.
       const params = new URLSearchParams(location.search);
-      const pedido = params.get('dev');
+      const pedido = params.get('edit') || params.get('dev');
       try {
         if (pedido === '1') sessionStorage.setItem('dv-dev', '1');
         else if (pedido === '0') sessionStorage.removeItem('dv-dev');
@@ -978,6 +1120,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      iniciarObservadorEditor();
+      aplicarOverridesEditor();
       if (editAssistantDisponible()) initEditAssistant();
     });
 

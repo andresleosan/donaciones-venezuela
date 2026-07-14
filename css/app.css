@@ -1850,6 +1850,26 @@
       color: var(--muted);
       font-size: 0.78rem;
     }
+    .edit-assistant-field {
+      display: grid;
+      gap: 5px;
+      margin: 0 0 9px;
+      color: var(--text);
+      font-size: 0.76rem;
+      font-weight: 750;
+    }
+    .edit-assistant-field input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 500;
+    }
+    .edit-assistant-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.16); outline: none; }
     .edit-assistant-pop textarea {
       width: 100%;
       min-height: 92px;
