@@ -7,7 +7,7 @@
     // 1) abrirModal → render de página completa (sin top-layer, sin backdrop).
     //    Mantiene un <dialog open> para que los .close() existentes sigan
     //    funcionando; su evento close vuelve al inicio.
-    abrirModal = function (titulo, contenido) {
+    window.abrirModal = function (titulo, contenido) {
       if (titulo) document.title = titulo;
       const root = document.getElementById('modal-root');
       root.innerHTML = '<dialog open class="ventana-dialog"><div class="modal-body">' + contenido + '</div></dialog>';
@@ -17,13 +17,13 @@
     // 2) toast → se guarda y lo muestra el inicio tras volver (el submit hace
     //    .close() y luego toast(); el evento close se despacha como tarea, así
     //    que el toast se guarda antes de navegar).
-    toast = function (msg) {
+    window.toast = function (msg) {
       try { sessionStorage.setItem('ventana-toast', String(msg == null ? '' : msg)); } catch (e) { /* modo privado */ }
     };
 
     // 3) cargarTodo → no-op aquí: el inicio recarga datos frescos al volver, y
     //    así estas páginas no vuelven a bajar TODO el estado desde Supabase.
-    cargarTodo = async function () {};
+    window.cargarTodo = async function () {};
 
     function volverAlInicio() { window.location.href = '/'; }
 
