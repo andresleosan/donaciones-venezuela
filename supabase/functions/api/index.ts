@@ -604,6 +604,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (!email) throw new Error('correo electrónico válido requerido');
       if (s(p.telefono, 40).replace(/[^0-9]/g, '').length < 7) throw new Error('teléfono requerido');
       if (!p.fotoCedula) throw new Error('Falta la foto de la cédula de la persona responsable');
+      if (!p.fotoSitio) throw new Error('Falta la foto del sitio del centro');
       // SEGURIDAD: solo se puede auto-crear el panel de un centro NUEVO. Reclamar de
       // forma anonima el panel de un centro ya listado permitiria secuestrar un
       // hospital conocido y sabotear sus necesidades. Para un centro existente, el
@@ -614,11 +615,12 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       }
       const lugar = await obtenerOCrearLugar(p); // crea el centro nuevo
       const foto_cedula = await guardarFoto(p.fotoCedula, `centros/${lugar.id}`, 'cedula');
+      const foto_sitio = await guardarFoto(p.fotoSitio, `centros/${lugar.id}`, 'sitio');
       const token = tokenAlfa('CTR');
       const salt = crypto.randomUUID();
       const { error: e2 } = await supa.from('centros_panel').insert({
         lugar_id: lugar.id, token_centro: token, pin_hash: await sha256Hex(salt + pin), pin_salt: salt,
-        email, foto_cedula });
+        email, foto_cedula, foto_sitio });
       if (e2) throw e2;
       await historial(nombre, '', 'Panel de centro creado', 'panel');
       return { token };

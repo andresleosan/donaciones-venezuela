@@ -241,6 +241,7 @@
       // exacta sale del GPS, no de texto libre (R3.1). El formulario es un
       // asistente una-casilla-a-la-vez (R2.x).
       const fotoCedula = [];
+      const fotoSitio = [];
       abrirModal(t('panel.createTitle'), `
         <form id="panel-crear-form">
           <p class="meta">${e(t('panel.createIntro'))}</p>
@@ -249,6 +250,7 @@
             <div class="field"><label for="pc-tipo">${e(t('panel.typeLabel'))}</label><select id="pc-tipo"><option value="Centro">${e(tValue('types', 'Centro') || 'Centro')}</option><option value="Hospital">${e(tValue('types', 'Hospital') || 'Hospital')}</option><option value="Refugio">${e(tValue('types', 'Refugio') || 'Refugio')}</option></select></div>
             <div class="field"><label for="pc-ubicacion">${e(t('panel.locationLabel'))}</label><input id="pc-ubicacion" placeholder="${e(t('panel.refNamePlaceholder'))}" /></div>
             <div class="field"><label for="pc-coords">${e(t('panel.coordsLabel'))}</label><input id="pc-coords" placeholder="10.4806, -66.9036" readonly /><button class="btn btn-ghost btn-small" type="button" id="pc-geo">${e(t('panel.useMyLocation'))}</button></div>
+            ${pasoCamaraHtml('pc-sitio', t('panel.sitePhoto'), t('panel.sitePhotoHelp'))}
             <div class="field"><label for="pc-telefono">${e(t('panel.phoneLabel'))}</label><input id="pc-telefono" type="tel" required /></div>
             <div class="field"><label for="pc-email">${e(t('common.email'))}</label><input id="pc-email" type="email" required autocomplete="email" /></div>
             <div class="field"><label for="pc-pin">${e(t('panel.pinNewLabel'))}</label><input id="pc-pin" type="password" inputmode="numeric" required minlength="4" maxlength="8" /></div>
@@ -260,6 +262,7 @@
       recordarModal(abrirCrearPanel); // sobrevive al cambio de idioma (R1.3/R1.4)
       wizPublico('panel-crear-form');
       montarCamaraOferta('pc-cedula', fotoCedula, 1);
+      montarCamaraOferta('pc-sitio', fotoSitio, 1);
       $('#pc-geo').addEventListener('click', () => capturarUbicacion('#pc-coords'));
       $('#panel-crear-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -267,6 +270,11 @@
         if (!fotoCedula.length) {
           msg.className = 'form-message visible error';
           msg.textContent = t('messages.volunteerPhotoMissing');
+          return;
+        }
+        if (!fotoSitio.length) {
+          msg.className = 'form-message visible error';
+          msg.textContent = t('panel.sitePhotoMissing');
           return;
         }
         msg.className = 'form-message visible info';
@@ -281,6 +289,7 @@
             telefono: $('#pc-telefono').value.trim(),
             email: $('#pc-email').value.trim(),
             fotoCedula: fotoCedula[0],
+            fotoSitio: fotoSitio[0],
             pin: $('#pc-pin').value.trim()
           }, coords));
           $('#panel-crear-form').innerHTML = `
