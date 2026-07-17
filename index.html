@@ -53,7 +53,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=61">
+  <link rel="stylesheet" href="css/app.css?v=62">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -511,7 +511,7 @@
       <div id="grid-vacantes" class="grid" aria-live="polite"><div class="loading-grid"><div class="skeleton"></div><div class="skeleton"></div></div></div>
 
       <details class="form-panel vol-registro" id="vol-registro-details">
-        <summary id="vol-registro-summary">¿Listo para ayudar? Regístrate como voluntario</summary>
+        <summary id="vol-registro-summary">Registrar voluntario</summary>
           <h3 id="vol-form-title">Datos del voluntario</h3>
           <p class="section-copy">La información se envía al registro de voluntarios de la plataforma.</p>
           <form id="voluntario-form" novalidate>
@@ -520,15 +520,13 @@
               <div class="field"><label for="vol-apellido">Apellido</label><input id="vol-apellido" autocomplete="family-name" /></div>
               <div class="field"><label for="vol-telefono">Teléfono</label><input id="vol-telefono" type="tel" inputmode="tel" required autocomplete="tel" placeholder="+58 412 000 0000" /></div>
               <div class="field"><label for="vol-email">Correo electrónico</label><input id="vol-email" type="email" required autocomplete="email" placeholder="tu@correo.com" /></div>
-              <div class="field"><label for="vol-ciudad">Ciudad</label><input id="vol-ciudad" autocomplete="address-level2" placeholder="Caraballeda" /></div>
+              <div class="field"><label for="vol-ciudad">Parroquia</label><input id="vol-ciudad" autocomplete="address-level2" placeholder="Macuto" /></div>
               <div class="field"><label for="vol-estado">Estado</label><input id="vol-estado" autocomplete="address-level1" placeholder="La Guaira" /></div>
               <div class="field"><label for="vol-profesion">Profesión</label><select id="vol-profesion"><option>Voluntario</option><option>Médico</option><option>Enfermero</option><option>Psicólogo</option><option>Logística</option><option>Transportista</option><option>Ingeniero</option><option>Electricista</option><option>Comunicaciones</option><option>Otro</option></select></div>
               <div class="field"><label for="vol-disponibilidad">Disponibilidad</label><input id="vol-disponibilidad" placeholder="Hoy, mañana, fines de semana" /></div>
               <div class="field"><label for="vol-transporte">Medio de transporte</label><select id="vol-transporte"><option value="">Por confirmar</option><option>A pie</option><option>Bicicleta</option><option>Moto</option><option>Carro</option><option>Camioneta</option><option>Transporte público</option><option>Ambulancia o unidad médica</option><option>Otro</option></select></div>
               <div class="field full"><label for="vol-observaciones">Observaciones</label><textarea id="vol-observaciones" placeholder="Zona, recursos, restricciones"></textarea></div>
-              <div class="field full foto-field"><label for="vol-cedula">Foto de tu cédula</label>
-                <input id="vol-cedula" type="file" accept="image/*" capture="environment" required />
-                <img id="vol-cedula-prev" class="foto-prev" alt="" hidden /></div>
+              <div id="vol-cedula-mount"></div>
             </div>
             <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar voluntario</button><button class="btn btn-ghost" type="reset">Limpiar</button></div>
             <div id="vol-message" class="form-message" role="status" aria-live="polite"></div>
@@ -759,12 +757,12 @@
   <div id="modal-root"></div>
 
   <script src="services/leaflet/leaflet.js"></script>
-  <script src="services/api.js?v=61"></script>
-  <script src="js/pwa.js?v=61"></script>
-  <script src="js/core.js?v=61"></script>
-  <script src="js/wiz.js?v=61"></script>
-  <script src="js/vistas.js?v=61"></script>
-  <script src="js/panel.js?v=61"></script>
-  <script src="js/admin.js?v=61"></script>
+  <script src="services/api.js?v=62"></script>
+  <script src="js/pwa.js?v=62"></script>
+  <script src="js/core.js?v=62"></script>
+  <script src="js/wiz.js?v=62"></script>
+  <script src="js/vistas.js?v=62"></script>
+  <script src="js/panel.js?v=62"></script>
+  <script src="js/admin.js?v=62"></script>
 </body>
 </html>

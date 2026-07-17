@@ -282,9 +282,13 @@
       setText('label[for="vol-apellido"]', 'common.lastName');
       setText('label[for="vol-telefono"]', 'common.phone');
       setText('label[for="vol-email"]', 'common.email');
-      setText('label[for="vol-cedula"]', 'modal.photoId');
-      setText('label[for="vol-ciudad"]', 'common.city');
-      setPlaceholder('#vol-ciudad', 'volunteers.cityPlaceholder');
+      // Paso de cámara de la cédula (inyectado por bindForms): sus textos también
+      // se re-rotulan al cambiar de idioma, sin perder la foto tomada (R1.3/R1.4).
+      setText('#vol-cedula-field > label', 'volunteers.idPhoto');
+      setText('#vol-cedula-field > .section-copy', 'volunteers.idPhotoHelp');
+      setText('#vol-cedula-field .cam-guia-texto', 'offer.idGuide');
+      setText('label[for="vol-ciudad"]', 'volunteers.parish');
+      setPlaceholder('#vol-ciudad', 'volunteers.parishPlaceholder');
       setText('label[for="vol-estado"]', 'common.state');
       setPlaceholder('#vol-estado', 'volunteers.statePlaceholder');
       setText('label[for="vol-profesion"]', 'common.profession');

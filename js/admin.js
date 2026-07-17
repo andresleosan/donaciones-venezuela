@@ -631,12 +631,19 @@
 
     // Cámara: visor arriba, y JUSTO debajo el botón grande de acción (abrir /
     // tomar foto, nunca los dos a la vez). Nada compite con ese botón.
-    function camaraHtml(prefijo) {
+    function camaraHtml(prefijo, opts) {
+      // Guía opcional sobre el visor: un marco a proporción de cédula para que
+      // el usuario coloque bien el documento. Solo se ve con la cámara abierta
+      // (CSS: .offer-camera.is-live .cam-guia).
+      const guia = opts && opts.guia
+        ? `<div class="cam-guia cam-guia-${e(opts.guia)}" aria-hidden="true"><div class="cam-guia-marco"></div><p class="cam-guia-texto">${e(t('offer.idGuide'))}</p></div>`
+        : '';
       return `<div class="of-cam" id="${prefijo}-cam">
         <div class="offer-camera">
           <video autoplay playsinline muted hidden></video>
           <canvas hidden></canvas>
           <p class="of-cam-hint">${e(t('offer.cameraIdle'))}</p>
+          ${guia}
         </div>
         <button class="btn btn-primary of-cam-shoot" type="button" data-cam-abrir>${e(t('offer.openCamera'))}</button>
         <button class="btn btn-primary of-cam-shoot" type="button" data-cam-capturar hidden>${e(t('offer.takePhoto'))}</button>
@@ -648,11 +655,11 @@
       </div>`;
     }
 
-    function pasoCamaraHtml(prefijo, titulo, copia) {
+    function pasoCamaraHtml(prefijo, titulo, copia, opts) {
       return `<div data-wiz-step id="${prefijo}-field" class="of-cam-step">
         <label>${e(titulo)}</label>
         <p class="section-copy">${e(copia)}</p>
-        ${camaraHtml(prefijo)}
+        ${camaraHtml(prefijo, opts)}
       </div>`;
     }
 
@@ -1270,12 +1277,19 @@
     function bindForms() {
       // Formularios estáticos como asistente "una casilla a la vez" (wiz.js).
       // Solo presentación: los ids y handlers de submit no cambian.
+      // La cédula del voluntario se toma SOLO con la cámara (R3.2), con guía
+      // visual para encuadrar el documento. Se inyecta el paso ANTES de
+      // wizPublico para que el asistente lo cuente como un paso más.
+      const fotoCedula = [];
+      const cedulaMount = document.getElementById('vol-cedula-mount');
+      if (cedulaMount) cedulaMount.innerHTML = pasoCamaraHtml('vol-cedula', t('volunteers.idPhoto'), t('volunteers.idPhotoHelp'), { guia: 'cedula' });
       wizPublico('lugar-form');
       wizPublico('voluntario-form');
       wizPublico('rescatista-form');
       wizPublico('persona-form');
       wizPublico('familiar-form');
       wizPublico('seguimiento-form');
+      if (cedulaMount) montarCamaraOferta('vol-cedula', fotoCedula, 1);
       $('#lugar-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
@@ -1294,21 +1308,11 @@
         }
       });
 
-      const volCedula = $('#vol-cedula');
-      if (volCedula) volCedula.addEventListener('change', (ev) => {
-        const file = ev.target.files && ev.target.files[0];
-        const prev = $('#vol-cedula-prev');
-        if (!file) { prev.hidden = true; return; }
-        prev.src = URL.createObjectURL(file);
-        prev.hidden = false;
-      });
-
       $('#voluntario-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
         if (!validarFormulario(form, '#vol-message')) return;
-        const archivoCedula = $('#vol-cedula').files && $('#vol-cedula').files[0];
-        if (!archivoCedula) {
+        if (!fotoCedula.length) {
           mostrarMensaje('#vol-message', 'error', t('messages.volunteerPhotoMissing'));
           return;
         }
@@ -1329,10 +1333,13 @@
         };
         mostrarMensaje('#vol-message', 'info', t('messages.savingVolunteer'));
         try {
-          nuevo.fotoCedula = await comprimirFoto(archivoCedula);
+          nuevo.fotoCedula = fotoCedula[0]; // base64 de la cámara (motor unificado)
           await window.SheetsService.post(Object.assign({ accion: 'registrar_voluntario' }, nuevo));
           await cargarTodo();
           mostrarMensaje('#vol-message', 'success', t('messages.volunteerSaved'));
+          fotoCedula.splice(0, fotoCedula.length);
+          const camCedula = document.getElementById('vol-cedula-cam');
+          if (camCedula && camCedula.__camara) camCedula.__camara.pintar();
           limpiarErrores(form);
           form.reset();
         } catch (err) {

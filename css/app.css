@@ -2147,6 +2147,34 @@
       text-wrap: balance;
     }
     .offer-camera.is-live .of-cam-hint { display: none; }
+    /* Guía de encuadre de la cédula: marco a proporción de cédula (85.6:54).
+       Solo visible con la cámara abierta; no intercepta toques. */
+    .cam-guia {
+      position: absolute;
+      inset: 0;
+      display: none;
+      place-items: center;
+      pointer-events: none;
+    }
+    .offer-camera.is-live .cam-guia { display: grid; }
+    .cam-guia-marco {
+      width: 82%;
+      aspect-ratio: 856 / 540;
+      border: 2px dashed #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 0 0 999px rgba(10, 37, 64, 0.45);
+    }
+    .cam-guia-texto {
+      position: absolute;
+      bottom: 12px;
+      margin: 0;
+      padding: 0 16px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-align: center;
+      text-shadow: 0 1px 4px rgba(10, 37, 64, 0.6);
+    }
 
     /* El botón de disparo manda: ancho completo, alto de pulgar, pegado al visor. */
     .of-cam-shoot {
