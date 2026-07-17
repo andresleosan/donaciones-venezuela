@@ -237,33 +237,34 @@
     }
 
     function abrirCrearPanel() {
+      // La cédula se toma SOLO con la cámara (R3.2) con guía visual; la ubicación
+      // exacta sale del GPS, no de texto libre (R3.1). El formulario es un
+      // asistente una-casilla-a-la-vez (R2.x).
+      const fotoCedula = [];
       abrirModal(t('panel.createTitle'), `
         <form id="panel-crear-form">
           <p class="meta">${e(t('panel.createIntro'))}</p>
           <div class="form-grid">
             <div class="field"><label for="pc-nombre">${e(t('panel.nameLabel'))}</label><input id="pc-nombre" required /></div>
             <div class="field"><label for="pc-tipo">${e(t('panel.typeLabel'))}</label><select id="pc-tipo"><option value="Centro">${e(tValue('types', 'Centro') || 'Centro')}</option><option value="Hospital">${e(tValue('types', 'Hospital') || 'Hospital')}</option><option value="Refugio">${e(tValue('types', 'Refugio') || 'Refugio')}</option></select></div>
-            <div class="field"><label for="pc-ubicacion">${e(t('panel.locationLabel'))}</label><input id="pc-ubicacion" /></div>
+            <div class="field"><label for="pc-ubicacion">${e(t('panel.locationLabel'))}</label><input id="pc-ubicacion" placeholder="${e(t('panel.refNamePlaceholder'))}" /></div>
+            <div class="field"><label for="pc-coords">${e(t('panel.coordsLabel'))}</label><input id="pc-coords" placeholder="10.4806, -66.9036" readonly /><button class="btn btn-ghost btn-small" type="button" id="pc-geo">${e(t('panel.useMyLocation'))}</button></div>
             <div class="field"><label for="pc-telefono">${e(t('panel.phoneLabel'))}</label><input id="pc-telefono" type="tel" required /></div>
             <div class="field"><label for="pc-email">${e(t('common.email'))}</label><input id="pc-email" type="email" required autocomplete="email" /></div>
             <div class="field"><label for="pc-pin">${e(t('panel.pinNewLabel'))}</label><input id="pc-pin" type="password" inputmode="numeric" required minlength="4" maxlength="8" /></div>
-            ${campoFoto('pc-cedula', 'modal.photoId')}
+            ${pasoCamaraHtml('pc-cedula', t('modal.photoId'), t('modal.photoIdHelp'), { guia: 'cedula' })}
           </div>
           <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('panel.create'))}</button></div>
           <div id="panel-crear-msg" class="form-message"></div>
         </form>`);
-      $('#pc-cedula').addEventListener('change', (ev) => {
-        const file = ev.target.files && ev.target.files[0];
-        const prev = $('#pc-cedula-prev');
-        if (!file) { prev.hidden = true; return; }
-        prev.src = URL.createObjectURL(file);
-        prev.hidden = false;
-      });
+      recordarModal(abrirCrearPanel); // sobrevive al cambio de idioma (R1.3/R1.4)
+      wizPublico('panel-crear-form');
+      montarCamaraOferta('pc-cedula', fotoCedula, 1);
+      $('#pc-geo').addEventListener('click', () => capturarUbicacion('#pc-coords'));
       $('#panel-crear-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const msg = $('#panel-crear-msg');
-        const archivoCedula = $('#pc-cedula').files && $('#pc-cedula').files[0];
-        if (!archivoCedula) {
+        if (!fotoCedula.length) {
           msg.className = 'form-message visible error';
           msg.textContent = t('messages.volunteerPhotoMissing');
           return;
@@ -271,16 +272,17 @@
         msg.className = 'form-message visible info';
         msg.textContent = t('panel.creating');
         try {
-          const data = await window.SheetsService.post({
+          const coords = parsearCoords($('#pc-coords').value) || {};
+          const data = await window.SheetsService.post(Object.assign({
             accion: 'panel_crear',
             nombre: $('#pc-nombre').value.trim(),
             tipo: $('#pc-tipo').value,
             ubicacion: $('#pc-ubicacion').value.trim(),
             telefono: $('#pc-telefono').value.trim(),
             email: $('#pc-email').value.trim(),
-            fotoCedula: await comprimirFoto(archivoCedula),
+            fotoCedula: fotoCedula[0],
             pin: $('#pc-pin').value.trim()
-          });
+          }, coords));
           $('#panel-crear-form').innerHTML = `
             <div class="notice success visible">${e(t('panel.tokenCreated'))}</div>
             <p class="tracking-code" style="font-size:1.3rem">${e(data.token)}</p>

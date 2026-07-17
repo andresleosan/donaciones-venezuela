@@ -883,6 +883,7 @@
     "placeData": "Center details",
     "coordsLabel": "Coordinates (lat, lng)",
     "useMyLocation": "Use my location",
+    "refNamePlaceholder": "Reference point (blue gate, house 12)",
     "savePlace": "Save center details",
     "geoUnavailable": "Your browser does not support geolocation",
     "geoDenied": "Could not get your location",

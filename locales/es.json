@@ -883,6 +883,7 @@
     "placeData": "Datos del centro",
     "coordsLabel": "Coordenadas (lat, lng)",
     "useMyLocation": "Usar mi ubicación",
+    "refNamePlaceholder": "Punto de referencia (portón azul, casa 12)",
     "savePlace": "Guardar datos del centro",
     "geoUnavailable": "Tu navegador no soporta geolocalización",
     "geoDenied": "No se pudo obtener tu ubicación",
