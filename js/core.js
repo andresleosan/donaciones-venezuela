@@ -505,13 +505,42 @@
     // problemas» no exija pedir otro código en cada recarga. NUNCA se guarda
     // el PIN de un centro ni el código OTP.
     const SESION_KEY = 'dv-sesion';
+    // ¿Servidos desde un dominio propio con subdominios reales? No en localhost, IP
+    // ni *.vercel.app. La raíz registrable = los dos últimos labels del hostname, así
+    // el código se auto-adapta al dominio (el literal solo vive en vercel.json). Se
+    // exportan para que vistas.js y ventana.js reusen la misma lógica (plan 4.1).
+    function raizDominio() { return location.hostname.split('.').slice(-2).join('.'); }
+    function esDominioPropio() {
+      const h = location.hostname;
+      return h.indexOf('.') > -1 && h !== 'localhost' && !/\.vercel\.app$/.test(h) && !/^[0-9.]+$/.test(h);
+    }
+    window.raizDominio = raizDominio;
+    window.esDominioPropio = esDominioPropio;
+    // Cookie de dominio padre para compartir la sesión entre subdominios. Solo bajo
+    // https + dominio propio (ahí los subdominios existen). En dev/preview: solo localStorage.
+    function escribirCookieSesion(datos) {
+      if (location.protocol !== 'https:' || !esDominioPropio()) return;
+      document.cookie = SESION_KEY + '=' + encodeURIComponent(JSON.stringify(datos)) +
+        ';Domain=.' + raizDominio() + ';Path=/;Secure;SameSite=Lax;Max-Age=' + (60 * 60 * 24 * 30);
+    }
+    function leerCookieSesion() {
+      const m = document.cookie.match(/(?:^|;\s*)dv-sesion=([^;]+)/);
+      if (!m) return null;
+      try { return JSON.parse(decodeURIComponent(m[1])); } catch (err) { return null; }
+    }
+    function borrarCookieSesion() {
+      if (location.protocol !== 'https:' || !esDominioPropio()) return;
+      document.cookie = SESION_KEY + '=;Domain=.' + raizDominio() + ';Path=/;Max-Age=0';
+    }
     function guardarSesion(datos) {
       try { localStorage.setItem(SESION_KEY, JSON.stringify(datos)); } catch (err) { /* modo privado */ }
+      escribirCookieSesion(datos); // compartida entre subdominios (dominio propio)
       pintarBotonSesion();
     }
     function sesionActual() {
       let s = null;
       try { s = JSON.parse(localStorage.getItem(SESION_KEY) || 'null'); } catch (err) { return null; }
+      if (!s) s = leerCookieSesion(); // otra pestaña/subdominio: cookie de dominio padre
       return (s && s.access_token) ? s : null;
     }
     async function sesionValida() {
@@ -527,6 +556,7 @@
     }
     function cerrarSesion() {
       try { localStorage.removeItem(SESION_KEY); } catch (err) { /* modo privado */ }
+      borrarCookieSesion(); // borra también la cookie compartida entre subdominios
       pintarBotonSesion();
     }
     function nombreSesion(s) {

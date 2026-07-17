@@ -382,10 +382,22 @@
       setTimeout(() => { $('#toast-root').innerHTML = ''; }, 3400);
     }
 
+    // En el dominio propio, cada ventana vive en su subdominio DNS real; en
+    // dev/preview (localhost, *.vercel.app) se cae a la ruta limpia. Un solo lugar
+    // decide el destino, así los planes 4.3–4.5 no cambian su lógica (plan 4.1 T5).
+    const SUB_DE_RUTA = { 'crear-centro': 'crear-centro', 'ofrecer-insumo': 'ofrecer', 'donar-dinero': 'donar', 'mi-cuenta': 'mi-cuenta' };
+    function urlDeVentana(ruta, params) {
+      const q = new URLSearchParams(params || {}).toString();
+      const sub = SUB_DE_RUTA[ruta];
+      if (sub && window.esDominioPropio && window.esDominioPropio()) {
+        return 'https://' + sub + '.' + window.raizDominio() + '/' + (q ? '?' + q : '');
+      }
+      return '/' + ruta + (q ? '?' + q : ''); // fallback reversible: ruta limpia
+    }
+    window.urlDeVentana = urlDeVentana; // expuesto para verificación (mismo patrón que otros exports)
     // Navega a una página-ventana (antes un modal) con sus parámetros.
     function irAVentana(ruta, params) {
-      const q = new URLSearchParams(params || {}).toString();
-      window.location.href = '/' + ruta + (q ? '?' + q : '');
+      window.location.href = urlDeVentana(ruta, params);
     }
 
     // ── Traslados sugeridos (puerta transportista) ──
