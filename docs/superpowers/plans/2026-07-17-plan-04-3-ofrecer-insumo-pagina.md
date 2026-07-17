@@ -1,7 +1,9 @@
 # Plan 4.2 — «Ofrecer insumo» modal → página `/ofrecer-insumo`
 
 > **Para /build-loop:** materiales = este plan + `REGLAS.md` + roadmap 4.x
-> (sección «Patrón reutilizable»). Frontend puro, sin backend. Orden: 2º del batch.
+> (sección «Patrón reutilizable»). Frontend puro, sin backend. Orden: 3º del batch.
+> El destino de navegación (ruta limpia vs subdominio) lo resuelve el helper
+> `urlDeVentana` de 4.1; este plan no cambia por eso.
 
 **Goal:** que «Ofrecer un insumo» deje de abrir un `<dialog>` flotante en el index
 y sea su propia página `/ofrecer-insumo`, con el formulario 1-a-1, sin cambiar la

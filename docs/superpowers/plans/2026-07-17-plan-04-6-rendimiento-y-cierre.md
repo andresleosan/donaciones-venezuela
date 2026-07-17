@@ -1,7 +1,7 @@
 # Plan 4.5 — Rendimiento de las páginas-ventana + cierre del batch
 
-> **Para /build-loop:** materiales = este plan + `REGLAS.md` + roadmap 4.x + 4.1–4.4
-> ya en verde. Frontend puro. Orden: 5º (último) del batch. Cierra
+> **Para /build-loop:** materiales = este plan + `REGLAS.md` + roadmap 4.x + 4.1–4.5
+> ya en verde. Frontend puro. Orden: 6º (último) del batch. Cierra
 > /web-performance-optimization y la regla «cero ventanas desplegables propias».
 
 **Goal:** que las páginas nuevas (`/ofrecer-insumo`, `/donar-dinero`, `/mi-cuenta`,

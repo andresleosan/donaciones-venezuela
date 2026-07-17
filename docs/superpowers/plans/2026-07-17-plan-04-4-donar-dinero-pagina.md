@@ -1,7 +1,8 @@
 # Plan 4.3 — «Donar dinero» modal → página `/donar-dinero`
 
 > **Para /build-loop:** materiales = este plan + `REGLAS.md` + roadmap 4.x.
-> Frontend puro, sin backend. Orden: 3º del batch. Mismo patrón que 4.2.
+> Frontend puro, sin backend. Orden: 4º del batch. Mismo patrón que 4.3. El destino
+> (ruta limpia vs subdominio) lo resuelve el helper `urlDeVentana` de 4.1.
 
 **Goal:** que «Donar dinero» a un presupuesto deje de abrir un `<dialog>` flotante
 y sea su propia página `/donar-dinero`, formulario 1-a-1, sin cambiar el envío.

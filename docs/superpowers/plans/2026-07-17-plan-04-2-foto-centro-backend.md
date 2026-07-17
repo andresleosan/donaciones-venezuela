@@ -2,7 +2,7 @@
 
 > **Para /build-loop:** materiales = este plan + `REGLAS.md` + plan 04 + el
 > roadmap 4.x. **Toca backend** (migración + edge function `api`) — Luis autorizó
-> el despliegue el 2026-07-17. Orden: 1º del batch.
+> el despliegue el 2026-07-17. Orden: 2º del batch (tras 4.1 subdominios).
 
 **Goal:** que crear-centro tome también una **foto del sitio** (el centro), solo
 con la cámara, en el paso más oportuno, y que la edge function la valide y guarde.
