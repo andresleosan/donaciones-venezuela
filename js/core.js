@@ -495,6 +495,89 @@
       if (form && form.__wiz && estado.paso != null) form.__wiz.irA(estado.paso);
     }
 
+    // -- SESIÓN DE USUARIO (persistente entre pestañas y recargas) ---------
+    // Guarda la sesión OTP de Supabase Auth: tokens + email + nombre + roles.
+    // Se usa localStorage (no sessionStorage) para que «usar la app sin
+    // problemas» no exija pedir otro código en cada recarga. NUNCA se guarda
+    // el PIN de un centro ni el código OTP.
+    const SESION_KEY = 'dv-sesion';
+    function guardarSesion(datos) {
+      try { localStorage.setItem(SESION_KEY, JSON.stringify(datos)); } catch (err) { /* modo privado */ }
+      pintarBotonSesion();
+    }
+    function sesionActual() {
+      let s = null;
+      try { s = JSON.parse(localStorage.getItem(SESION_KEY) || 'null'); } catch (err) { return null; }
+      return (s && s.access_token) ? s : null;
+    }
+    async function sesionValida() {
+      const s = sesionActual();
+      if (!s) return null;
+      if (Date.now() / 1000 < (Number(s.expires_at) || 0) - 60) return s;
+      try {
+        const fresca = await window.SheetsService.refrescarSesion(s.refresh_token);
+        const unida = Object.assign({}, s, fresca);
+        guardarSesion(unida);
+        return unida;
+      } catch (err) { cerrarSesion(); return null; }
+    }
+    function cerrarSesion() {
+      try { localStorage.removeItem(SESION_KEY); } catch (err) { /* modo privado */ }
+      pintarBotonSesion();
+    }
+    function nombreSesion(s) {
+      if (!s) return '';
+      if (s.nombre) return s.nombre;
+      const conNombre = (s.roles || []).find((r) => r.nombre);
+      if (conNombre) return conNombre.nombre;
+      return String(s.email || '').split('@')[0];
+    }
+    function pintarBotonSesion() {
+      const btn = $('#btn-sesion');
+      if (!btn) return;
+      const s = sesionActual();
+      btn.hidden = false;
+      btn.textContent = s ? nombreSesion(s) : t('session.login');
+      btn.setAttribute('aria-haspopup', s ? 'dialog' : 'false');
+    }
+    function filaRolSesion(r) {
+      if (r.tipo === 'transportista') return `<li><strong>${e(t('access.driverTitle'))}</strong> · ${e(r.nombre)} — <a href="#transporte">${e(t('access.goDriver'))}</a></li>`;
+      if (r.tipo === 'voluntario') return `<li><strong>${e(t('access.volunteerTitle'))}</strong> · ${e(r.nombre)} — <a href="#voluntarios">${e(t('access.goVolunteer'))}</a></li>`;
+      return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="/panel-centro?token=${e(encodeURIComponent(r.token || ''))}">${e(t('access.goCenter'))}</a></li>`;
+    }
+    function abrirMenuSesion() {
+      const s = sesionActual();
+      if (!s) { window.location.hash = '#acceso'; return; }
+      const filas = (s.roles || []).map(filaRolSesion).join('');
+      const roles = filas ? `<ul class="acceso-roles">${filas}</ul>` : `<p class="meta">${e(t('session.noRoles'))}</p>`;
+      const html = `
+        <p class="meta">${e(t('access.signedInAs', { email: s.email }))}</p>
+        ${roles}
+        <p class="centro-detail-heading">${e(t('session.registerHeading'))}</p>
+        <ul class="acceso-roles session-register">
+          <li><a href="#voluntarios">${e(t('session.registerVolunteer'))}</a></li>
+          <li><a href="#acceso">${e(t('session.registerDriver'))}</a></li>
+          <li><a href="/crear-centro">${e(t('session.createCenter'))}</a></li>
+          <li><a href="#familiar">${e(t('session.reportPerson'))}</a></li>
+        </ul>
+        <div class="form-actions"><button class="btn btn-ghost" type="button" id="session-logout">${e(t('session.logout'))}</button></div>`;
+      abrirModal(t('session.menuTitle'), html);
+      recordarModal(abrirMenuSesion); // sobrevive al cambio de idioma (R1.3/R1.4)
+      const salir = $('#session-logout');
+      if (salir) salir.addEventListener('click', () => {
+        cerrarSesion();
+        const dlg = $('#modal-root dialog');
+        if (dlg) dlg.close();
+        toast(t('access.signedOut'));
+      });
+    }
+    window.sesionActual = sesionActual;
+    window.sesionValida = sesionValida;
+    window.guardarSesion = guardarSesion;
+    window.cerrarSesion = cerrarSesion;
+    window.pintarBotonSesion = pintarBotonSesion;
+    window.abrirMenuSesion = abrirMenuSesion;
+
     async function cambiarIdioma(lang, options) {
       const nextLang = normalizarIdioma(lang);
       const shouldPersist = !options || options.persist !== false;
@@ -527,6 +610,7 @@
       // Lo pintado con innerHTML no se traduce solo: hay que reconstruirlo.
       if (typeof window.reconstruirOfrecer === 'function') window.reconstruirOfrecer();
       if (typeof wizRetraducirTodos === 'function') wizRetraducirTodos();
+      pintarBotonSesion();
       if (rehacerModal) { rehacerModal(); restaurarEstadoModal(estadoModal); }
       if (ultimosFamiliares) renderFamiliares(ultimosFamiliares.resultados, ultimosFamiliares.encontrado);
       if (ultimoSeguimiento) renderSeguimiento(ultimoSeguimiento);

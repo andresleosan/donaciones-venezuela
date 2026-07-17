@@ -1125,7 +1125,20 @@
     "signedOut": "Sesión cerrada.",
     "goDriver": "Ver traslados y recogidas",
     "goVolunteer": "Ver voluntarios",
-    "goCenter": "Entrar a mi panel"
+    "goCenter": "Entrar a mi panel",
+    "welcomeNoRoles": "Identidad verificada. Aún no tienes registros: elige uno abajo.",
+    "noRolesYet": "Aún no tienes registros en la plataforma. Puedes registrarte:"
+  },
+  "session": {
+    "login": "Iniciar sesión",
+    "menuTitle": "Mi sesión",
+    "noRoles": "Aún no tienes registros en la plataforma.",
+    "registerHeading": "Registrarme como…",
+    "registerVolunteer": "Voluntario",
+    "registerDriver": "Transportista",
+    "createCenter": "Crear un centro",
+    "reportPerson": "Reportar una persona",
+    "logout": "Cerrar sesión"
   },
   "money": {
     "modalTitle": "Donar dinero",

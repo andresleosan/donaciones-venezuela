@@ -1125,7 +1125,20 @@
     "signedOut": "Signed out.",
     "goDriver": "See transfers and pickups",
     "goVolunteer": "See volunteers",
-    "goCenter": "Open my panel"
+    "goCenter": "Open my panel",
+    "welcomeNoRoles": "Identity verified. You have no registrations yet: pick one below.",
+    "noRolesYet": "You have no registrations on the platform yet. You can register:"
+  },
+  "session": {
+    "login": "Log in",
+    "menuTitle": "My session",
+    "noRoles": "You have no registrations on the platform yet.",
+    "registerHeading": "Register as…",
+    "registerVolunteer": "Volunteer",
+    "registerDriver": "Driver",
+    "createCenter": "Create a center",
+    "reportPerson": "Report a person",
+    "logout": "Log out"
   },
   "money": {
     "modalTitle": "Donate money",

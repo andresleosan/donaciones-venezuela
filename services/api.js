@@ -306,9 +306,14 @@
     return authPost('otp', { email: email, create_user: true });
   }
 
-  // Devuelve la sesión de Supabase Auth ({ access_token, user, … }).
+  // Devuelve la sesión de Supabase Auth ({ access_token, refresh_token, expires_at, user, … }).
   function verificarCodigo(email, codigo) {
     return authPost('verify', { type: 'email', email: email, token: codigo });
+  }
+
+  // Renueva la sesión sin pedir otro código (refresh_token de GoTrue).
+  function refrescarSesion(refreshToken) {
+    return authPost('token?grant_type=refresh_token', { refresh_token: refreshToken });
   }
 
   async function requestPost(payload) {
@@ -388,6 +393,7 @@
     getSeguimiento,
     solicitarCodigo,
     verificarCodigo,
+    refrescarSesion,
     post,
     flushQueue,
     getQueueCount: contarCola

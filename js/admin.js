@@ -1159,13 +1159,14 @@
     function pintarPerfilAcceso() {
       const cont = $('#acceso-perfil');
       if (!cont) return;
-      const ses = sesionAcceso();
+      const ses = window.sesionActual ? window.sesionActual() : sesionAcceso();
       const formEmail = $('#acceso-email-form');
       const formCodigo = $('#acceso-codigo-form');
       if (!ses) { cont.hidden = true; cont.innerHTML = ''; formCodigo.hidden = true; formEmail.hidden = false; return; }
       formEmail.hidden = true;
       formCodigo.hidden = true;
-      const filas = (ses.roles || []).map((r) => {
+      const roles = ses.roles || [];
+      const filas = roles.map((r) => {
         if (r.tipo === 'transportista') {
           return `<li><strong>${e(t('access.driverTitle'))}</strong> · ${e(r.nombre)} — <a href="#transporte">${e(t('access.goDriver'))}</a></li>`;
         }
@@ -1174,12 +1175,22 @@
         }
         return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="/panel-centro?token=${e(encodeURIComponent(r.token || ''))}">${e(t('access.goCenter'))}</a></li>`;
       }).join('');
+      // El donante inicia sesión sin ningún rol: en vez de rechazarlo, se le
+      // ofrecen los registros disponibles (problema 2).
+      const cuerpo = filas
+        ? `<ul class="acceso-roles">${filas}</ul>`
+        : `<p class="meta">${e(t('access.noRolesYet'))}</p>
+           <ul class="acceso-roles session-register">
+             <li><a href="#voluntarios">${e(t('session.registerVolunteer'))}</a></li>
+             <li><a href="#familiar">${e(t('session.reportPerson'))}</a></li>
+           </ul>`;
       cont.innerHTML = `
         <p class="meta">${e(t('access.signedInAs', { email: ses.email }))}</p>
-        <ul class="acceso-roles">${filas}</ul>
+        ${cuerpo}
         <div class="form-actions"><button class="btn btn-ghost" type="button" id="acceso-salir">${e(t('access.signOut'))}</button></div>`;
       cont.hidden = false;
       $('#acceso-salir').addEventListener('click', () => {
+        if (window.cerrarSesion) window.cerrarSesion();
         try { window.sessionStorage.removeItem(ACCESO_SS); } catch (err) { /* modo privado */ }
         mostrarMensaje('#acceso-msg', 'info', t('access.signedOut'));
         pintarPerfilAcceso();
@@ -1226,13 +1237,21 @@
         try {
           const sesion = await window.SheetsService.verificarCodigo(correo, codigo);
           const data = await window.SheetsService.post({ accion: 'acceso_perfil', accessToken: sesion.access_token });
-          if (!data.roles || !data.roles.length) {
-            mostrarMensaje('#acceso-msg', 'error', t('access.noRoles'));
-            return;
-          }
-          try { window.sessionStorage.setItem(ACCESO_SS, JSON.stringify({ email: data.email, roles: data.roles })); } catch (err) { /* modo privado */ }
+          const roles = (data && data.roles) || [];
+          const conNombre = roles.find((r) => r.nombre);
+          const email = (data && data.email) || correo;
+          // Se guarda la sesión completa (tokens + nombre + roles) en localStorage
+          // vía el módulo de sesión de core.js. El donante (0 roles) NO se rechaza.
+          window.guardarSesion({
+            access_token: sesion.access_token,
+            refresh_token: sesion.refresh_token,
+            expires_at: sesion.expires_at,
+            email: email,
+            nombre: conNombre ? conNombre.nombre : String(email).split('@')[0],
+            roles: roles
+          });
           $('#acceso-codigo').value = '';
-          mostrarMensaje('#acceso-msg', 'success', t('access.welcome'));
+          mostrarMensaje('#acceso-msg', 'success', roles.length ? t('access.welcome') : t('access.welcomeNoRoles'));
           pintarPerfilAcceso();
         } catch (err) {
           const crudo = String(err && err.message || '');
@@ -1598,6 +1617,14 @@
       bindFiltros();
       bindForms();
       bindAcceso();
+      const btnSesion = $('#btn-sesion');
+      if (btnSesion) btnSesion.addEventListener('click', () => {
+        if (window.sesionActual && window.sesionActual()) { window.abrirMenuSesion(); return; }
+        window.location.hash = '#acceso';
+        const card = document.getElementById('acceso-login-card');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      if (window.pintarBotonSesion) window.pintarBotonSesion();
       renderDonations();
       [['#btn-panel-centro', '/panel-centro'], ['#btn-acceso-panel', '/panel-centro'],
        ['#btn-crear-centro', '/crear-centro'], ['#btn-acceso-crear-centro', '/crear-centro'],

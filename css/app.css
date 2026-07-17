@@ -144,9 +144,19 @@
       margin: 0 auto;
       min-height: var(--header-height);
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 10px;
       align-items: center;
+    }
+    /* Botón de sesión centrado en la barra (problema 2). Con nombre largo se
+       recorta con elipsis para no desbordar en 390px. */
+    #btn-sesion {
+      justify-self: center;
+      min-height: 44px;
+      max-width: min(52vw, 260px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .brand {
       min-width: 0;
