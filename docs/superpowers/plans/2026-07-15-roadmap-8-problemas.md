@@ -25,6 +25,18 @@ ejecutarse con **/build-loop** (uno por corrida, en orden).
 | D3 | Denuncias públicas | Video + **fecha, hora y coordenadas del punto exacto**; la identidad del denunciante solo la ve el admin |
 | D4 | Alerta extravío >2h | **Panel + correo** (cron pg_cron → edge fn → SES) |
 
+> **Revisión 2026-07-17**: los 8 planes fueron profundizados requisito a
+> requisito contra el .txt (cada plan lleva ahora la cita literal del problema
+> y una tabla de trazabilidad requisito→tarea). Descubrimientos que cambiaron
+> los planes: la sesión de `#acceso` ya se guarda pero en `sessionStorage`
+> sin tokens y **rechaza al usuario sin roles** (el donante — lo corrige el
+> plan 02 T3); las ofertas **ya guardan coords y centro sugerido** en su meta
+> (plan 07 aprovecha); `recoger_oferta` hoy cierra la factura de golpe (plan
+> 07 la convierte en ciclo Ofrecida→EnCamino→Recogida→Entregada); el ciclo y
+> los presupuestos viven como meta JSON en `facturas.descripcion` (plan 08
+> extiende ese JSON, cero migraciones de columnas); la tabla nueva `viajes`
+> (plan 06) concentra ETA/GPS/km/alertas.
+
 ## Estado y orden de ejecución
 
 | Orden | Plan | Problema | Estado actual | Depende de |
