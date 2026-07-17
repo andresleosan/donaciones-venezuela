@@ -4,9 +4,11 @@
 > `/build-loop` independiente con sus propias reglas F2. Orden estricto: 4.1 →
 > 4.2 → 4.3 → 4.4 → 4.5 → 4.6. **Todo esto va ANTES del plan 06.**
 >
-> **Actualizado 2026-07-17:** Luis eligió **subdominios DNS literales**. Se
-> insertó **plan 4.1 — subdominios DNS** como fundación y el resto corrió un
-> número (foto→4.2, ofrecer→4.3, donar→4.4, sesión→4.5, rendimiento→4.6).
+> **Actualizado 2026-07-17 (decisión FINAL):** se probó la vía de subdominios DNS
+> (plan 4.1) y Luis reconsideró: **no necesitan ser subdominios, solo que no sean
+> ventanas — páginas aparte, solo Vercel.** Se revirtió la capa de subdominios y
+> quedó **plan 4.1 — páginas con URL limpia (mismo origen)**. Numeración estable
+> (foto=4.2, ofrecer=4.3, donar=4.4, sesión=4.5, rendimiento=4.6).
 
 ## De dónde sale este batch (goal de Luis, 2026-07-17)
 
@@ -20,18 +22,20 @@
 4. **Carga rápida** de esas páginas (/web-performance-optimization).
 5. Construir **solo los planes** ahora; ejecutarlos con `/build-loop` uno a uno.
 
-## Decisión D-SUB · ~~ruta limpia~~ → **subdominios DNS literales** (2026-07-17)
+## Decisión D-SUB · **páginas con URL limpia (mismo origen)** — FINAL (2026-07-17)
 
-**SUPERSEDIDA.** El roadmap original eligió ruta limpia bajo el mismo origen
-(`/ofrecer-insumo`…). Luis pidió explícitamente **subdominios DNS reales**
-(`ofrecer.donacionesvenezuela.net`). La decisión y toda su implementación viven
-ahora en **plan 4.1 — subdominios DNS** (dominio propio + rewrites por Host +
-sesión con cookie de dominio padre + reversibilidad vía fallback de ruta limpia).
+Se recorrió el ciclo completo: (1) ruta limpia → (2) Luis pidió subdominios DNS y
+se construyó/verificó la capa (commit `8e2a3ed`) → (3) Luis reconsideró: **«no
+necesitan ser subdominios; solo que no sean ventanas, que sean páginas aparte, solo
+Vercel»** → se **revirtió** la capa de subdominios. **Decisión final: páginas con
+URL limpia en el mismo origen** (`/ofrecer-insumo`…), servidas por `ventana.html`
+vía rewrite de `vercel.json`. Detalle e historia en **plan 4.1 — páginas con URL
+limpia**.
 
-Los sub-planes 4.3–4.5 **no cambian su lógica**: solo cambia el destino de
-navegación, centralizado en el helper `urlDeVentana` de 4.1. El fallback de ruta
-limpia se mantiene para dev/preview, así que el mecanismo `ventana.html` sigue
-siendo el motor; 4.1 solo añade la capa de subdominio encima.
+Ventajas (por qué es la correcta): cero infraestructura (funciona en
+`*.vercel.app` hoy, sin dominio ni DNS); **mismo origen ⇒ la sesión `localStorage`
+se comparte sola** entre páginas (sin cookies cruzadas); mecanismo ya probado en 7
+rutas. Los sub-planes 4.3–4.5 usan `irAVentana('<ruta>', {params})` → `/<ruta>`.
 
 ## Inventario de «ventanas» (auditado 2026-07-17)
 
@@ -50,11 +54,11 @@ siendo el motor; 4.1 solo añade la capa de subdominio encima.
 | Track/Presupuesto (dentro de admin) | sub-modal en `/admin` | **plan 08** | ⏭️ plan 08 |
 
 **Sub-planes del batch:**
-- **4.1** — subdominios DNS literales (fundación: dominio propio + rewrites por
-  Host + sesión compartida + fallback reversible).
+- **4.1** — páginas con URL limpia mismo origen (fundación; ✅ ya hecho: mecanismo
+  vivo + web-perf, subdominios revertidos).
 - **4.2** — foto del centro (sitio) + backend (migración + edge fn).
 - **4.3/4.4/4.5** — las 3 ventanas «de la app» (ofrecer / donar-dinero / sesión) a
-  su propia página-subdominio.
+  su propia página de URL limpia.
 - **4.6** — rendimiento + auditoría de cierre.
 
 Las ventanas de transportista/admin las construyen 06/07/08 **como páginas
@@ -66,13 +70,10 @@ Un modal se vuelve página con **cambios pequeños**, sin tocar la función `abr
 (que ya llama a `abrirModal`, y en `ventana.html` ese `abrirModal` está
 sobrescrito para pintar página completa — ver `js/ventana.js:10`):
 
-1. **`vercel.json`** → rewrite de ruta limpia (fallback) `{"source":"/<ruta>","destination":"/ventana.html?v=<ruta>"}`
-   **y** el rewrite por Host del subdominio (definido en 4.1).
-2. **`js/ventana.js`** → entrada al mapa `rutas`: `'<ruta>': function () { abrir<X>(<params>); }`
-   (4.1 hace que la ruta también se derive del subdominio).
+1. **`vercel.json`** → rewrite de ruta limpia `{"source":"/<ruta>","destination":"/ventana.html?v=<ruta>"}`.
+2. **`js/ventana.js`** → entrada al mapa `rutas`: `'<ruta>': function () { abrir<X>(<params>); }`.
 3. **Disparador en index** (`js/vistas.js` o `core.js`) → cambiar la llamada
-   directa `abrir<X>(...)` por `irAVentana('<ruta>', {params})`. `irAVentana` ya
-   resuelve subdominio-vs-ruta-limpia vía el helper `urlDeVentana` de 4.1.
+   directa `abrir<X>(...)` por `irAVentana('<ruta>', {params})` (→ navega a `/<ruta>`).
 4. **Deep-links por hash** (si los hay, p.ej. `#ofrecer`) → redirigir a la página.
 5. **Versión** → subir `?v=` en `index.html`, `ventana.html` y `VERSION`+nombre de
    caché en `sw.js` (mismo commit) — si no, el SW sirve JS viejo (R5.4).

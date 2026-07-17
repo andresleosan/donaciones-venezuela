@@ -32,12 +32,7 @@
     function ventanaSolicitada() {
       const params = new URLSearchParams(window.location.search);
       const path = window.location.pathname.replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
-      // Subdominio → ruta (ofrecer.dominio → ofrecer-insumo) cuando no hay path ni ?v=.
-      // El rewrite por Host de Vercel ya sirve ?v=, pero como es rewrite (no redirect)
-      // el JS ve la URL del usuario (/), así que también derivamos del hostname.
-      const sub = (window.esDominioPropio && window.esDominioPropio()) ? location.hostname.split('.')[0] : '';
-      const deSub = { 'crear-centro': 'crear-centro', 'ofrecer': 'ofrecer-insumo', 'donar': 'donar-dinero', 'mi-cuenta': 'mi-cuenta' }[sub] || '';
-      const ruta = (path && path !== 'ventana') ? path : (params.get('v') || deSub);
+      const ruta = (path && path !== 'ventana') ? path : (params.get('v') || '');
       return { ruta: ruta, id: params.get('id') || '', nombre: params.get('nombre') || '', token: params.get('token') || '' };
     }
 

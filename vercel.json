@@ -1,9 +1,5 @@
 {
   "rewrites": [
-    { "source": "/", "has": [{ "type": "host", "value": "crear-centro.donacionesvenezuela.net" }], "destination": "/ventana.html?v=crear-centro" },
-    { "source": "/", "has": [{ "type": "host", "value": "ofrecer.donacionesvenezuela.net" }], "destination": "/ventana.html?v=ofrecer-insumo" },
-    { "source": "/", "has": [{ "type": "host", "value": "donar.donacionesvenezuela.net" }], "destination": "/ventana.html?v=donar-dinero" },
-    { "source": "/", "has": [{ "type": "host", "value": "mi-cuenta.donacionesvenezuela.net" }], "destination": "/ventana.html?v=mi-cuenta" },
     { "source": "/registrar-transportista", "destination": "/ventana.html?v=registrar-transportista" },
     { "source": "/apoyar-transportista", "destination": "/ventana.html?v=apoyar-transportista" },
     { "source": "/trayectos", "destination": "/ventana.html?v=trayectos" },

@@ -2,7 +2,8 @@
 
 > **Para /build-loop:** materiales = este plan + `REGLAS.md` + roadmap 4.x.
 > Frontend puro, sin backend. Orden: 5º del batch. Cierra las ventanas «de la app».
-> La sesión compartida entre subdominios la aporta 4.1 (cookie de dominio padre).
+> Mismo origen: la sesión (`localStorage`, plan 02) ya se comparte entre páginas, sin
+> cookies. Navega a `/mi-cuenta` con `irAVentana`.
 
 **Goal:** que el menú de sesión (que hoy abre un `<dialog>` flotante al tocar el
 nombre del usuario en la barra) sea su propia página `/mi-cuenta`: datos de la
