@@ -1189,7 +1189,9 @@
     "photoSiteHelp": "Take a photo of the place where you pick up the supply.",
     "photoSupplyHelp": "Take a photo of the supply you are carrying.",
     "personPhoto": "Photo of who hands over the supply",
-    "personPhotoHelp": "Take a photo of the person handing you the supply."
+    "personPhotoHelp": "Take a photo of the person handing you the supply.",
+    "receiverPhoto": "Photo of who receives",
+    "receiverPhotoHelp": "Take a photo of the person at the center receiving the supply."
   },
   "offer": {
     "modalTitle": "Offer a supply I already have",
@@ -1338,6 +1340,7 @@
     "started": "Trip started. You arrive in ~{eta} min.",
     "onTheWay": "Trip in progress. Register the supply once you have it.",
     "haveItCta": "I have the supply",
-    "kmSoFar": "You have traveled {km} km so far."
+    "kmSoFar": "You have traveled {km} km so far.",
+    "kmTotal": "Total distance: {km} km."
   }
 }

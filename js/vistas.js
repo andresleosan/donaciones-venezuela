@@ -658,7 +658,9 @@
       }));
       $$('[data-entrega]').forEach((btn) => btn.addEventListener('click', () => {
         const pr = (estado.comprados || []).find((x) => x.token === btn.dataset.entrega);
-        if (pr) abrirRegistrarEntrega(pr);
+        // El insumo ya está en tránsito (recogido): la entrega es el paso 3,
+        // dentro de la pantalla de viaje, no una ventana aparte.
+        if (pr) abrirViaje(pr, { etapa: 2 });
       }));
     }
 

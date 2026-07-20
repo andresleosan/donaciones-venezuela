@@ -80,15 +80,29 @@
           <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('cycle.pickupSave'))}</button></div>
           <div id="rec-message" class="form-message" role="status" aria-live="polite"></div>
         </form>`;
-      } else {
-        // Paso 3 «Entrega en el centro»: por ahora abre el flujo de entrega
-        // existente; el sub-loop 6.3 lo migra a esta misma pantalla.
+      } else if (etapa === 2) {
+        // Paso 3 «Entrega en el centro»: asistente 1-a-1 con DOS cámaras (la
+        // entrega en el centro y la persona que recibe). Sin ventana flotante.
         bloquePaso = `
         ${op.km != null ? `<p class="meta">${e(t('trip.kmSoFar', { km: op.km }))}</p>` : ''}
-        <p class="meta">${e(t('trip.onTheWay'))}</p>
-        <div class="form-actions">
-          <button class="btn btn-primary" type="button" id="viaje-entregar">${e(t('cycle.deliverCta'))}</button>
-        </div>`;
+        <form id="entrega-form" class="offer-wizard" novalidate>
+          <p class="section-copy">${e(t('cycle.deliverCopy', { insumo: mostrarInsumo(pr.insumo), centro: pr.centro }))}</p>
+          <div data-wiz-step class="field full">
+            <label for="ent-receptor">${e(t('cycle.receiverName'))}</label>
+            <input id="ent-receptor" required autocomplete="name" />
+            <label for="ent-cargo">${e(t('cycle.receiverRole'))}</label>
+            <input id="ent-cargo" />
+          </div>
+          ${pasoCamaraHtml('ent-centro', t('cycle.photoDelivered'), t('cycle.photoSiteHelp'))}
+          ${pasoCamaraHtml('ent-encargado', t('cycle.receiverPhoto'), t('cycle.receiverPhotoHelp'))}
+          <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('cycle.deliverSave'))}</button></div>
+          <div id="ent-message" class="form-message" role="status" aria-live="polite"></div>
+        </form>`;
+      } else {
+        // Etapa 3: ciclo cerrado. Se muestra el recorrido total.
+        bloquePaso = `
+        <p class="section-copy">${e(t('cycle.deliverSaved'))}</p>
+        ${op.km != null ? `<p class="meta"><strong>${e(t('trip.kmTotal', { km: op.km }))}</strong></p>` : ''}`;
       }
 
       shell.innerHTML = `
@@ -176,12 +190,57 @@
         return;
       }
 
-      // ── Paso 3: por ahora abre el flujo de entrega existente (6.3 lo migra) ──
-      if (etapa >= 2) {
-        const btnEntregar = $('#viaje-entregar');
-        if (btnEntregar) btnEntregar.addEventListener('click', () => abrirRegistrarEntrega(pr));
+      // ── Paso 3 «Entrega en el centro»: 2 cámaras + GPS ──
+      if (etapa === 2) {
+        const fotoCentro = (op.fotos && op.fotos.centro) || [];
+        const fotoEncargado = (op.fotos && op.fotos.encargado) || [];
+        wizPublico('entrega-form');
+        montarCamaraOferta('ent-centro', fotoCentro, 1);
+        montarCamaraOferta('ent-encargado', fotoEncargado, 1);
+        window.reconstruirViaje = () => {
+          if (!$('#entrega-form')) return;
+          abrirViaje(pr, { etapa: 2, km: op.km, fotos: { centro: fotoCentro, encargado: fotoEncargado } });
+        };
+        $('#entrega-form').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          const receptor = $('#ent-receptor').value.trim();
+          if (!receptor) { mostrarMensaje('#ent-message', 'error', t('cycle.receiverName')); return; }
+          if (!fotoCentro.length || !fotoEncargado.length) {
+            mostrarMensaje('#ent-message', 'error', t('cycle.photosMissing')); return;
+          }
+          if (!navigator.geolocation) { mostrarMensaje('#ent-message', 'error', t('trip.gpsUnsupported')); return; }
+          const boton = $('#entrega-form').querySelector('button[type="submit"]');
+          boton.disabled = true;
+          mostrarMensaje('#ent-message', 'info', t('trip.gpsAsking'));
+          let pos;
+          try {
+            pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
+              resolve, reject, { enableHighAccuracy: true, timeout: 15000 }));
+          } catch (err) {
+            boton.disabled = false;
+            mostrarMensaje('#ent-message', 'error', t('trip.gpsRequired'));
+            return;
+          }
+          mostrarMensaje('#ent-message', 'info', t('messages.driverUploading'));
+          try {
+            const data = await window.SheetsService.post({
+              accion: 'registrar_entrega_final', token: pr.token,
+              nombreReceptor: receptor, cargoReceptor: $('#ent-cargo').value.trim(),
+              fotoCentro: fotoCentro[0], fotoEncargado: fotoEncargado[0],
+              gps: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+            });
+            toast(t('cycle.deliverSaved'));
+            await cargarTodo();
+            abrirViaje(pr, { etapa: 3, km: data && data.km });
+          } catch (err) {
+            boton.disabled = false;
+            mostrarMensaje('#ent-message', 'error', String(err && err.message || t('needs.error')));
+          }
+        });
         return;
       }
+      // Etapa 3: ciclo cerrado, sin cableado (solo muestra el recorrido total).
+      if (etapa >= 3) return;
 
       // ── Selección de ETA ──
       let etaMinutos = 60;

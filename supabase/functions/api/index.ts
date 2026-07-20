@@ -532,27 +532,59 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       return { estado: 'EnTransito', km };
     }
     case 'registrar_entrega_final': {
-      // Cierre del ciclo: el transportista entrega en el centro, registra a la
-      // persona que recibe + foto de los insumos. El donante lo ve en su token.
+      // Cierre del ciclo: el transportista entrega en el centro. Registra a la
+      // persona que recibe + foto de la entrega en el centro + foto de quien
+      // recibe (todas por camara). GPS+hora cierran el paso 3 y el km_tramo2.
       const receptor = s(p.nombreReceptor, 120);
       if (!receptor) throw new Error('nombre de quien recibe requerido');
-      if (!p.fotoEntrega) throw new Error('Falta la foto de los insumos entregados');
+      // fotoCentro es la nueva foto principal; fotoEntrega es el alias viejo (un
+      // cliente cacheado sigue funcionando). fotoEncargado (quien recibe) es la
+      // segunda foto que exige el .txt del ciclo.
+      const fotoCentro = p.fotoCentro ?? p.fotoEntrega;
+      if (!fotoCentro) throw new Error('Falta la foto de la entrega en el centro');
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
         .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
       const m = f && metaPresupuesto(String(f.descripcion));
       if (!f || !m) throw new Error('Presupuesto no encontrado');
       if (f.estado !== 'EnTransito') throw new Error('Este insumo no está en tránsito');
-      const foto = await guardarFoto(p.fotoEntrega, `ciclo/${f.numero_factura}`, `entrega-${crypto.randomUUID().slice(0, 8)}`);
-      await supa.from('evidencias').insert({
-        factura_id: f.id, archivo: foto, descripcion: `Foto de los insumos entregados en ${m.centro}`, publica: false });
+      const carpeta = `ciclo/${f.numero_factura}`;
+      const marca = crypto.randomUUID().slice(0, 8);
+      const foto = await guardarFoto(fotoCentro, carpeta, `entrega-centro-${marca}`);
+      const evidencias = [
+        { factura_id: f.id, archivo: foto, descripcion: `Foto de la entrega en ${m.centro}`, publica: false }];
+      if (p.fotoEncargado) {
+        const fotoEnc = await guardarFoto(p.fotoEncargado, carpeta, `entrega-encargado-${marca}`);
+        evidencias.push({ factura_id: f.id, archivo: fotoEnc, descripcion: `Foto de quien recibe en ${m.centro}`, publica: false });
+      }
+      await supa.from('evidencias').insert(evidencias);
+      // GPS + hora del paso 3: cierran el segundo tramo del viaje. El km total es
+      // km_tramo1 (recogida) + km_tramo2 (entrega). Si no hay viaje vigente se
+      // omite sin fallar (factura anterior al paso 1).
+      let kmTramo2: number | null = null, kmTotal: number | null = null;
+      const gps = geoValida((p.gps ?? {}) as Record<string, unknown>);
+      if (gps.lat !== null && gps.lng !== null) {
+        const viaje = await viajeVigente(f.id);
+        if (viaje) {
+          kmTramo2 = (viaje.paso2_lat !== null && viaje.paso2_lng !== null)
+            ? kmEntre(Number(viaje.paso2_lat), Number(viaje.paso2_lng), gps.lat, gps.lng)
+            : null;
+          await supa.from('viajes').update({
+            paso3_ts: new Date().toISOString(), paso3_lat: gps.lat, paso3_lng: gps.lng,
+            km_tramo2: kmTramo2 }).eq('id', viaje.id);
+          const t1 = viaje.km_tramo1 !== null ? Number(viaje.km_tramo1) : 0;
+          kmTotal = Math.round((t1 + (kmTramo2 ?? 0)) * 10) / 10;
+        }
+      }
       const cargo = s(p.cargoReceptor, 80);
+      const datosMov: Record<string, unknown> = { centro: m.centro, receptor, cargo };
+      if (kmTotal !== null) datosMov.km = kmTotal;
       const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Entrega',
-        descripcion: mov(cargo ? 'entregadoConCargo' : 'entregado', { centro: m.centro, receptor, cargo }), monto: 0 });
+        descripcion: mov(cargo ? 'entregadoConCargo' : 'entregado', datosMov), monto: 0 });
       if (error) throw error;
       await supa.from('facturas').update({ estado: 'Entregada', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
       await historial(String(m.centro), String(m.insumo), `Insumo comprado entregado en el centro. Recibió ${receptor}`, 'publico');
-      return { estado: 'Entregada' };
+      return { estado: 'Entregada', km: kmTotal };
     }
     // ===== Ofertas: un donante YA TIENE el insumo; el transportista lo recoge =====
     case 'ofrecer_insumo': {

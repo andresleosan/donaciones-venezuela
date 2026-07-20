@@ -984,87 +984,10 @@
     }
 
     // ── Ciclo del transportista sobre un insumo comprado ──
-    function bindPreviewsFoto(ids) {
-      ids.forEach((id) => {
-        $('#' + id).addEventListener('change', (ev) => {
-          const file = ev.target.files && ev.target.files[0];
-          const prev = $('#' + id + '-prev');
-          if (!file) { prev.hidden = true; return; }
-          prev.src = URL.createObjectURL(file);
-          prev.hidden = false;
-        });
-      });
-    }
-
-    // El paso 2 «Ya tengo el insumo» (recogida) ahora vive en la pantalla de
-    // viaje (js/viaje.js, etapa 2) con el motor de cámara y GPS. Ya no hay modal.
-
-    function abrirRegistrarEntrega(pr) {
-      abrirModal(t('cycle.deliverTitle'), `<form id="entrega-form" novalidate>
-        <p class="section-copy">${e(t('cycle.deliverCopy', { insumo: mostrarInsumo(pr.insumo), centro: pr.centro }))}</p>
-        <div class="form-grid">
-          <div class="field"><label for="ent-receptor">${e(t('cycle.receiverName'))}</label><input id="ent-receptor" required autocomplete="name" /></div>
-          <div class="field"><label for="ent-cargo">${e(t('cycle.receiverRole'))}</label><input id="ent-cargo" /></div>
-          ${campoFoto('ent-foto', 'cycle.photoDelivered')}
-        </div>
-        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('cycle.deliverSave'))}</button></div>
-        <div id="ent-message" class="form-message" role="status" aria-live="polite"></div>
-      </form>`);
-      bindPreviewsFoto(['ent-foto']);
-      recordarModal(() => abrirRegistrarEntrega(pr));
-      wizPublico('entrega-form');
-      $('#entrega-form').addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const form = ev.currentTarget;
-        if (!validarFormulario(form, '#ent-message')) return;
-        const archivo = $('#ent-foto').files && $('#ent-foto').files[0];
-        if (!archivo) { mostrarMensaje('#ent-message', 'error', t('cycle.photosMissing')); return; }
-        const boton = form.querySelector('button[type="submit"]');
-        boton.disabled = true;
-        mostrarMensaje('#ent-message', 'info', t('messages.driverUploading'));
-        try {
-          const fotoEntrega = await comprimirFoto(archivo);
-          await window.SheetsService.post({
-            accion: 'registrar_entrega_final', token: pr.token,
-            nombreReceptor: $('#ent-receptor').value.trim(),
-            cargoReceptor: $('#ent-cargo').value.trim(), fotoEntrega
-          });
-          $('#modal-root dialog').close();
-          toast(t('cycle.deliverSaved'));
-          cargarComprados();
-          cargarPresupuestos();
-        } catch (err) {
-          boton.disabled = false;
-          mostrarMensaje('#ent-message', 'error', String(err && err.message || t('needs.error')));
-        }
-      });
-    }
-
-    // Comprime una foto del input a JPEG ≤1280px (el backend limita ~1.8MB) y
-    // devuelve un data URL listo para enviar a la edge function.
-    function comprimirFoto(file) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          const escala = Math.min(1, 1280 / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * escala);
-          canvas.height = Math.round(img.height * escala);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(url);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('foto ilegible')); };
-        img.src = url;
-      });
-    }
-
-    function campoFoto(id, labelKey) {
-      return `<div class="field full foto-field"><label for="${id}">${e(t(labelKey))}</label>
-        <input id="${id}" type="file" accept="image/*" capture="environment" required />
-        <img id="${id}-prev" class="foto-prev" alt="" hidden /></div>`;
-    }
+    // Los pasos 2 «Ya tengo el insumo» (recogida) y 3 «Entrega en el centro»
+    // viven ahora en la pantalla de viaje (js/viaje.js, etapas 2 y 3) con el
+    // motor de cámara y GPS. Ya no hay modales ni <input type="file">: con esto
+    // desaparece el último selector de archivo real de la app.
 
     function abrirRegistrarMotorizado() {
       abrirModal(t('modal.driverTitle'), `<form id="mot-form" data-wiz="motorizado" novalidate>
