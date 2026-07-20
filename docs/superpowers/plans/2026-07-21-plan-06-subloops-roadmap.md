@@ -31,7 +31,7 @@ de recogida. Degradación honesta; las coords de tienda las añade el plan 08 T3
 |---|---|---|
 | **6.1** | Paso 1 «Voy a recogerlo»: tabla `viajes` + acción `viaje_iniciar` (GPS+hora+ETA) + pantalla de viaje `#viaje` (3 etapas, mapa Leaflet, chips de ETA) | ✅ **hecho** (v70, edge fn v20) |
 | **6.2** | Paso 2 «Ya tengo el insumo»: migrar `abrirRegistrarRecogida` a cámara, `fotoPersona` (quien entrega), GPS+hora, `km_tramo1` con haversine | ✅ **hecho** (v71, edge fn v21) |
-| **6.3** | Paso 3 «Entrega en el centro»: migrar `abrirRegistrarEntrega` a cámara, `fotoCentro` + `fotoEncargado`, GPS+hora, `km_tramo2` y km totales | pendiente |
+| **6.3** | Paso 3 «Entrega en el centro»: migrar `abrirRegistrarEntrega` a cámara, `fotoCentro` + `fotoEncargado`, GPS+hora, `km_tramo2` y km totales | ✅ **hecho** (v72, edge fn v22) — **plan 06 completo**; murió el último `<input type="file">` real de la app |
 
 ## Notas de arquitectura (heredadas del batch 4.x)
 
