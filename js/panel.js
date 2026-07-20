@@ -319,5 +319,18 @@
       // #ofrecer se construye al vuelo: sin esto, entrar directo o recargar
       // dejaba la página vacía (solo el título).
       if (hash === 'ofrecer' && typeof abrirOfrecerInsumo === 'function') { abrirOfrecerInsumo({}); return; }
+      // Páginas construidas al vuelo: sin esto, fijar su hash dispara este mismo
+      // manejador y las mandaba al inicio (rebote).
+      // «Mi sesión» se reconstruye sola desde la sesión guardada; si no hay
+      // sesión, abrirMenuSesion ya redirige a #acceso.
+      if (hash === 'mi-cuenta' && typeof abrirMenuSesion === 'function') { abrirMenuSesion(); return; }
+      // «Donar dinero» necesita un presupuesto en contexto: si ya está pintada se
+      // conserva; en carga directa o recarga no hay cómo reconstruirla → inicio.
+      if (hash === 'donar-dinero') {
+        const shellDinero = $('#donar-dinero-shell');
+        if (shellDinero && shellDinero.children.length) { cambiarVista('donar-dinero'); return; }
+        cambiarVista('inicio');
+        return;
+      }
       cambiarVista(VISTAS.indexOf(hash) >= 0 ? hash : 'inicio');
     }

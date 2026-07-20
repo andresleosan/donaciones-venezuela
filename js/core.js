@@ -157,6 +157,7 @@
       setText('#ofrecer-title', 'offer.pageTitle');
       setText('#ofrecer-page-copy', 'offer.pageCopy');
       setText('#donar-dinero-title', 'money.modalTitle');
+      setText('#mi-cuenta-title', 'session.menuTitle');
       setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
       setText('#reportar-summary', 'helpHub.reportSummary');
       setText('#form-lugar-copy', 'centers.formCopy');
@@ -543,7 +544,7 @@
       const s = sesionActual();
       btn.hidden = false;
       btn.textContent = s ? nombreSesion(s) : t('session.login');
-      btn.setAttribute('aria-haspopup', s ? 'dialog' : 'false');
+      btn.setAttribute('aria-haspopup', 'false');
     }
     function filaRolSesion(r) {
       if (r.tipo === 'transportista') return `<li><strong>${e(t('access.driverTitle'))}</strong> · ${e(r.nombre)} — <a href="#transporte">${e(t('access.goDriver'))}</a></li>`;
@@ -566,13 +567,23 @@
           <li><a href="#familiar">${e(t('session.reportPerson'))}</a></li>
         </ul>
         <div class="form-actions"><button class="btn btn-ghost" type="button" id="session-logout">${e(t('session.logout'))}</button></div>`;
-      abrirModal(t('session.menuTitle'), html);
-      recordarModal(abrirMenuSesion); // sobrevive al cambio de idioma (R1.3/R1.4)
+      // Página completa (patrón #ofrecer / #donar-dinero), ya no un modal flotante.
+      const shell = $('#mi-cuenta-shell');
+      if (!shell) return;
+      shell.innerHTML = html;
+      cambiarVista('mi-cuenta');
+      if (!/^#mi-cuenta$/i.test(window.location.hash)) window.location.hash = '#mi-cuenta';
+      // Cambiar de idioma repinta esta página (se reconstruye desde la sesión).
+      window.reconstruirMiCuenta = () => {
+        if (!$('#mi-cuenta-shell') || !$('#session-logout')) return;
+        abrirMenuSesion();
+      };
       const salir = $('#session-logout');
       if (salir) salir.addEventListener('click', () => {
         cerrarSesion();
-        const dlg = $('#modal-root dialog');
-        if (dlg) dlg.close();
+        shell.innerHTML = '';
+        window.location.hash = '#inicio';
+        cambiarVista('inicio');
         toast(t('access.signedOut'));
       });
     }
@@ -615,6 +626,7 @@
       // Lo pintado con innerHTML no se traduce solo: hay que reconstruirlo.
       if (typeof window.reconstruirOfrecer === 'function') window.reconstruirOfrecer();
       if (typeof window.reconstruirDonarDinero === 'function') window.reconstruirDonarDinero();
+      if (typeof window.reconstruirMiCuenta === 'function') window.reconstruirMiCuenta();
       if (typeof wizRetraducirTodos === 'function') wizRetraducirTodos();
       pintarBotonSesion();
       if (rehacerModal) { rehacerModal(); restaurarEstadoModal(estadoModal); }
