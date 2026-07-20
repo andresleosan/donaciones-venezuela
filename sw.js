@@ -1,14 +1,21 @@
 // Cascarón PWA y respaldo offline. Los datos privados no se almacenan aquí:
 // las lecturas públicas se guardan en IndexedDB desde services/api.js.
-const VERSION = '68';
+const VERSION = '69';
 const CACHE = 'ayuda-ve-v' + VERSION;
 const OFFLINE_URL = '/offline.html';
+// El sufijo sale de VERSION: antes estaba cableado (?v=60) mientras las páginas
+// ya pedían ?v=68, así que el precache bajaba archivos que nadie usaba.
+const V = '?v=' + VERSION;
+// ponytail: aquí solo van URLs que responden 200. NO añadir /donar-dinero ni
+// /mi-cuenta (son vistas dentro de index.html: dan 404) ni /ofrecer-insumo (es un
+// redirect 307) — un 404 hace que cache.addAll rechace y el install del SW falle
+// entero. Esas tres páginas ya quedan cubiertas offline por '/' e '/index.html'.
 const ESTATICOS = [
   '/', '/index.html', '/ventana.html', OFFLINE_URL, '/manifest.json',
-  '/css/app.css?v=60',
-  '/js/pwa.js?v=60', '/js/core.js?v=60', '/js/wiz.js?v=60',
-  '/js/vistas.js?v=60', '/js/panel.js?v=60', '/js/admin.js?v=60', '/js/ventana.js?v=60',
-  '/services/api.js?v=7', '/services/leaflet/leaflet.css', '/services/leaflet/leaflet.js',
+  '/css/app.css' + V,
+  '/js/pwa.js' + V, '/js/core.js' + V, '/js/wiz.js' + V,
+  '/js/vistas.js' + V, '/js/panel.js' + V, '/js/admin.js' + V, '/js/ventana.js' + V,
+  '/services/api.js' + V, '/services/leaflet/leaflet.css', '/services/leaflet/leaflet.js',
   '/locales/es.json', '/locales/en.json',
   '/assets/fonts/inter-var.woff2',
   '/assets/icons/icon-192.png', '/assets/icons/icon-512.png',
