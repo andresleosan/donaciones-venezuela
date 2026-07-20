@@ -1185,7 +1185,11 @@
     "receiverRole": "Role (optional)",
     "photoDelivered": "Photo of the delivered supplies",
     "deliverSave": "Confirm delivery",
-    "deliverSaved": "Delivery registered. Cycle complete."
+    "deliverSaved": "Delivery registered. Cycle complete.",
+    "photoSiteHelp": "Take a photo of the place where you pick up the supply.",
+    "photoSupplyHelp": "Take a photo of the supply you are carrying.",
+    "personPhoto": "Photo of who hands over the supply",
+    "personPhotoHelp": "Take a photo of the person handing you the supply."
   },
   "offer": {
     "modalTitle": "Offer a supply I already have",
@@ -1328,11 +1332,12 @@
     "nameRequired": "Enter your name to start the trip.",
     "startCta": "I'm going to pick it up",
     "gpsAsking": "Getting your location…",
-    "gpsRequired": "We need your location to start the trip. Turn on GPS and try again.",
+    "gpsRequired": "We need your location to continue. Turn on GPS and try again.",
     "gpsUnsupported": "This device cannot provide a location.",
     "starting": "Starting the trip…",
     "started": "Trip started. You arrive in ~{eta} min.",
     "onTheWay": "Trip in progress. Register the supply once you have it.",
-    "haveItCta": "I have the supply"
+    "haveItCta": "I have the supply",
+    "kmSoFar": "You have traveled {km} km so far."
   }
 }

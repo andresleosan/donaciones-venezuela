@@ -1185,7 +1185,11 @@
     "receiverRole": "Cargo o rol (opcional)",
     "photoDelivered": "Foto de los insumos entregados",
     "deliverSave": "Confirmar entrega",
-    "deliverSaved": "Entrega registrada. Ciclo completado."
+    "deliverSaved": "Entrega registrada. Ciclo completado.",
+    "photoSiteHelp": "Toma una foto del lugar donde recoges el insumo.",
+    "photoSupplyHelp": "Toma una foto del insumo que llevas.",
+    "personPhoto": "Foto de quien entrega el insumo",
+    "personPhotoHelp": "Toma una foto de la persona que te entrega el insumo."
   },
   "offer": {
     "modalTitle": "Ofrecer un insumo que ya tengo",
@@ -1328,11 +1332,12 @@
     "nameRequired": "Escribe tu nombre para iniciar el viaje.",
     "startCta": "Voy a recogerlo",
     "gpsAsking": "Tomando tu ubicación…",
-    "gpsRequired": "Necesitamos tu ubicación para iniciar el viaje. Activa el GPS y vuelve a intentarlo.",
+    "gpsRequired": "Necesitamos tu ubicación para continuar. Activa el GPS y vuelve a intentarlo.",
     "gpsUnsupported": "Este dispositivo no permite tomar la ubicación.",
     "starting": "Iniciando el viaje…",
     "started": "Viaje iniciado. Llegas en ~{eta} min.",
     "onTheWay": "Viaje en curso. Cuando tengas el insumo en la mano, regístralo.",
-    "haveItCta": "Ya tengo el insumo"
+    "haveItCta": "Ya tengo el insumo",
+    "kmSoFar": "Llevas {km} km recorridos."
   }
 }

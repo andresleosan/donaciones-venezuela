@@ -996,47 +996,8 @@
       });
     }
 
-    function abrirRegistrarRecogida(pr) {
-      abrirModal(t('cycle.pickupTitle'), `<form id="recogida-form" novalidate>
-        <p class="section-copy">${e(t('cycle.pickupCopy', { insumo: mostrarInsumo(pr.insumo), tienda: pr.tienda, direccion: pr.direccion || '' }))}</p>
-        <div class="form-grid">
-          <div class="field"><label for="rec-nombre">${e(t('cycle.driverName'))}</label><input id="rec-nombre" required autocomplete="name" /></div>
-          <div class="field full"><label for="rec-notas">${e(t('cycle.notes'))}</label><input id="rec-notas" /></div>
-          ${campoFoto('rec-foto-sitio', 'cycle.photoSite')}
-          ${campoFoto('rec-foto-insumo', 'cycle.photoSupply')}
-        </div>
-        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('cycle.pickupSave'))}</button></div>
-        <div id="rec-message" class="form-message" role="status" aria-live="polite"></div>
-      </form>`);
-      bindPreviewsFoto(['rec-foto-sitio', 'rec-foto-insumo']);
-      recordarModal(() => abrirRegistrarRecogida(pr));
-      wizPublico('recogida-form');
-      $('#recogida-form').addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const form = ev.currentTarget;
-        if (!validarFormulario(form, '#rec-message')) return;
-        const archivos = ['rec-foto-sitio', 'rec-foto-insumo'].map((id) => $('#' + id).files && $('#' + id).files[0]);
-        if (archivos.some((f) => !f)) { mostrarMensaje('#rec-message', 'error', t('cycle.photosMissing')); return; }
-        const boton = form.querySelector('button[type="submit"]');
-        boton.disabled = true;
-        mostrarMensaje('#rec-message', 'info', t('messages.driverUploading'));
-        try {
-          const [fotoSitio, fotoInsumo] = await Promise.all(archivos.map(comprimirFoto));
-          await window.SheetsService.post({
-            accion: 'registrar_recogida', token: pr.token,
-            nombreTransportista: $('#rec-nombre').value.trim(),
-            notas: $('#rec-notas').value.trim(), fotoSitio, fotoInsumo
-          });
-          $('#modal-root dialog').close();
-          toast(t('cycle.pickupSaved'));
-          cargarComprados();
-          cargarPresupuestos();
-        } catch (err) {
-          boton.disabled = false;
-          mostrarMensaje('#rec-message', 'error', String(err && err.message || t('needs.error')));
-        }
-      });
-    }
+    // El paso 2 «Ya tengo el insumo» (recogida) ahora vive en la pantalla de
+    // viaje (js/viaje.js, etapa 2) con el motor de cámara y GPS. Ya no hay modal.
 
     function abrirRegistrarEntrega(pr) {
       abrirModal(t('cycle.deliverTitle'), `<form id="entrega-form" novalidate>

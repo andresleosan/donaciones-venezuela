@@ -39,7 +39,11 @@
       cambiarVista('viaje');
       if (!/^#viaje$/i.test(window.location.hash)) window.location.hash = '#viaje';
 
-      const bloqueEta = etapa === 0 ? `
+      const nombreSesion = (sesion && sesion.nombre) || '';
+      let bloquePaso;
+      if (etapa === 0) {
+        // Paso 1: tiempo estimado + arranque del viaje.
+        bloquePaso = `
         <div class="field full">
           <label id="viaje-eta-label">${e(t('trip.etaQuestion'))}</label>
           <div class="segmented" role="group" aria-labelledby="viaje-eta-label">
@@ -53,15 +57,39 @@
         </div>
         <div class="field full">
           <label for="viaje-nombre">${e(t('cycle.driverName'))}</label>
-          <input id="viaje-nombre" required autocomplete="name" value="${e((sesion && sesion.nombre) || '')}" />
+          <input id="viaje-nombre" required autocomplete="name" value="${e(nombreSesion)}" />
         </div>
         <div class="form-actions">
           <button class="btn btn-primary" type="button" id="viaje-iniciar">${e(t('trip.startCta'))}</button>
-        </div>` : `
+        </div>`;
+      } else if (etapa === 1) {
+        // Paso 2 «Ya tengo el insumo»: asistente 1-a-1 con TRES cámaras (sitio,
+        // insumo, y la persona que entrega). Sin ventana flotante: vive aquí.
+        bloquePaso = `
+        <form id="recogida-form" class="offer-wizard" novalidate>
+          <p class="section-copy">${e(t('cycle.pickupCopy', { insumo: mostrarInsumo(pr.insumo), tienda: pr.tienda, direccion: pr.direccion || '' }))}</p>
+          <div data-wiz-step class="field full">
+            <label for="rec-nombre">${e(t('cycle.driverName'))}</label>
+            <input id="rec-nombre" required autocomplete="name" value="${e(nombreSesion)}" />
+            <label for="rec-notas">${e(t('cycle.notes'))}</label>
+            <input id="rec-notas" />
+          </div>
+          ${pasoCamaraHtml('rec-sitio', t('cycle.photoSite'), t('cycle.photoSiteHelp'))}
+          ${pasoCamaraHtml('rec-insumo', t('cycle.photoSupply'), t('cycle.photoSupplyHelp'))}
+          ${pasoCamaraHtml('rec-persona', t('cycle.personPhoto'), t('cycle.personPhotoHelp'))}
+          <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('cycle.pickupSave'))}</button></div>
+          <div id="rec-message" class="form-message" role="status" aria-live="polite"></div>
+        </form>`;
+      } else {
+        // Paso 3 «Entrega en el centro»: por ahora abre el flujo de entrega
+        // existente; el sub-loop 6.3 lo migra a esta misma pantalla.
+        bloquePaso = `
+        ${op.km != null ? `<p class="meta">${e(t('trip.kmSoFar', { km: op.km }))}</p>` : ''}
         <p class="meta">${e(t('trip.onTheWay'))}</p>
         <div class="form-actions">
-          <button class="btn btn-primary" type="button" id="viaje-tengo">${e(t('trip.haveItCta'))}</button>
+          <button class="btn btn-primary" type="button" id="viaje-entregar">${e(t('cycle.deliverCta'))}</button>
         </div>`;
+      }
 
       shell.innerHTML = `
         ${etapasViaje(etapa)}
@@ -69,7 +97,7 @@
         <p class="meta"><strong>${e(t('cycle.pickupAt'))}</strong> ${e(pr.tienda)}${pr.direccion ? ' · ' + e(pr.direccion) : ''}</p>
         <p class="meta"><strong>${e(t('cycle.deliverTo'))}</strong> ${e(pr.centro)}</p>
         ${destino ? '<div id="viaje-mapa" class="of-mapa"></div>' : `<p class="meta">${e(t('trip.noMap'))}</p>`}
-        ${bloqueEta}
+        ${bloquePaso}
         <div id="viaje-message" class="form-message" role="status" aria-live="polite"></div>`;
 
       // Mapa: destino siempre; el punto del transportista se añade cuando el GPS
@@ -92,12 +120,66 @@
       // Reconstrucción al cambiar de idioma, conservando la etapa.
       window.reconstruirViaje = () => {
         if (!$('#viaje-shell') || !$('#viaje-shell').children.length) return;
-        abrirViaje(pr, { etapa: etapa });
+        abrirViaje(pr, { etapa: etapa, km: op.km });
       };
 
-      if (etapa > 0) {
-        const btnTengo = $('#viaje-tengo');
-        if (btnTengo) btnTengo.addEventListener('click', () => abrirRegistrarRecogida(pr));
+      // ── Paso 2 «Ya tengo el insumo»: 3 cámaras + GPS ──
+      if (etapa === 1) {
+        // Las fotos se conservan si hay que repintar (cambio de idioma).
+        const fotoSitio = (op.fotos && op.fotos.sitio) || [];
+        const fotoInsumo = (op.fotos && op.fotos.insumo) || [];
+        const fotoPersona = (op.fotos && op.fotos.persona) || [];
+        wizPublico('recogida-form');
+        montarCamaraOferta('rec-sitio', fotoSitio, 1);
+        montarCamaraOferta('rec-insumo', fotoInsumo, 1);
+        montarCamaraOferta('rec-persona', fotoPersona, 1);
+        window.reconstruirViaje = () => {
+          if (!$('#recogida-form')) return;
+          abrirViaje(pr, { etapa: 1, fotos: { sitio: fotoSitio, insumo: fotoInsumo, persona: fotoPersona } });
+        };
+        $('#recogida-form').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          const nombre = $('#rec-nombre').value.trim();
+          if (!nombre) { mostrarMensaje('#rec-message', 'error', t('trip.nameRequired')); return; }
+          if (!fotoSitio.length || !fotoInsumo.length || !fotoPersona.length) {
+            mostrarMensaje('#rec-message', 'error', t('cycle.photosMissing')); return;
+          }
+          if (!navigator.geolocation) { mostrarMensaje('#rec-message', 'error', t('trip.gpsUnsupported')); return; }
+          const boton = $('#recogida-form').querySelector('button[type="submit"]');
+          boton.disabled = true;
+          mostrarMensaje('#rec-message', 'info', t('trip.gpsAsking'));
+          let pos;
+          try {
+            pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
+              resolve, reject, { enableHighAccuracy: true, timeout: 15000 }));
+          } catch (err) {
+            boton.disabled = false;
+            mostrarMensaje('#rec-message', 'error', t('trip.gpsRequired'));
+            return;
+          }
+          mostrarMensaje('#rec-message', 'info', t('messages.driverUploading'));
+          try {
+            const data = await window.SheetsService.post({
+              accion: 'registrar_recogida', token: pr.token,
+              nombreTransportista: nombre, notas: $('#rec-notas').value.trim(),
+              fotoSitio: fotoSitio[0], fotoInsumo: fotoInsumo[0], fotoPersona: fotoPersona[0],
+              gps: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+            });
+            toast(t('cycle.pickupSaved'));
+            await cargarTodo();
+            abrirViaje(pr, { etapa: 2, km: data && data.km });
+          } catch (err) {
+            boton.disabled = false;
+            mostrarMensaje('#rec-message', 'error', String(err && err.message || t('needs.error')));
+          }
+        });
+        return;
+      }
+
+      // ── Paso 3: por ahora abre el flujo de entrega existente (6.3 lo migra) ──
+      if (etapa >= 2) {
+        const btnEntregar = $('#viaje-entregar');
+        if (btnEntregar) btnEntregar.addEventListener('click', () => abrirRegistrarEntrega(pr));
         return;
       }
 

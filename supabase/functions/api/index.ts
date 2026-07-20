@@ -68,6 +68,26 @@ function geoValida(p: Record<string, unknown>): { lat: number | null; lng: numbe
   return { lat: null, lng: null };
 }
 
+// Distancia entre dos puntos de paso del viaje, en km con 1 decimal.
+// ponytail: es línea recta (haversine) entre los puntos de cada tramo, no la ruta
+// real de carretera; se eligió así para no rastrear al transportista en continuo
+// (batería + permisos). Si algún día hacen falta km de carretera: OSRM público.
+function kmEntre(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const r = (x: number) => x * Math.PI / 180, R = 6371;
+  const dLat = r(bLat - aLat), dLng = r(bLng - aLng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(aLat)) * Math.cos(r(bLat)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(R * 2 * Math.asin(Math.sqrt(h)) * 10) / 10;
+}
+
+// Viaje vigente de una factura = el último intento que aún no llegó al paso 3.
+async function viajeVigente(facturaId: number) {
+  const { data } = await supa.from('viajes')
+    .select('id, paso1_lat, paso1_lng, paso2_lat, paso2_lng, km_tramo1')
+    .eq('factura_id', facturaId).is('paso3_ts', null)
+    .order('creado_at', { ascending: false }).limit(1);
+  return data?.[0] ?? null;
+}
+
 // Guarda una foto (data URL JPEG/PNG/WebP, máx ~1.8MB decodificada) en el bucket
 // PRIVADO registro-transportistas. Solo el service role accede; nada es público.
 async function guardarFoto(dataUrl: unknown, carpeta: string, nombre: string): Promise<string> {
@@ -475,16 +495,41 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const marca = crypto.randomUUID().slice(0, 8);
       const fotoSitio = await guardarFoto(p.fotoSitio, carpeta, `recogida-sitio-${marca}`);
       const fotoInsumo = await guardarFoto(p.fotoInsumo, carpeta, `recogida-insumo-${marca}`);
-      await supa.from('evidencias').insert([
+      const evidencias = [
         { factura_id: f.id, archivo: fotoSitio, descripcion: `Foto del sitio de recogida (${m.tienda})`, publica: false },
-        { factura_id: f.id, archivo: fotoInsumo, descripcion: 'Foto del insumo comprado', publica: false }]);
+        { factura_id: f.id, archivo: fotoInsumo, descripcion: 'Foto del insumo comprado', publica: false }];
+      // Foto de QUIEN ENTREGA el insumo. Opcional en el backend para no romper a
+      // un cliente viejo cacheado; el cliente actual la exige (lo pide el .txt).
+      if (p.fotoPersona) {
+        const fotoPersona = await guardarFoto(p.fotoPersona, carpeta, `recogida-persona-${marca}`);
+        evidencias.push({ factura_id: f.id, archivo: fotoPersona, descripcion: 'Foto de quien entrega el insumo', publica: false });
+      }
+      await supa.from('evidencias').insert(evidencias);
+      // GPS + hora de la recogida: cierran el primer tramo del viaje y sus km.
+      // Si no hay viaje vigente (factura anterior al paso 1) se omite sin fallar.
+      let km: number | null = null;
+      const gps = geoValida((p.gps ?? {}) as Record<string, unknown>);
+      if (gps.lat !== null && gps.lng !== null) {
+        const viaje = await viajeVigente(f.id);
+        if (viaje) {
+          const tramo1 = (viaje.paso1_lat !== null && viaje.paso1_lng !== null)
+            ? kmEntre(Number(viaje.paso1_lat), Number(viaje.paso1_lng), gps.lat, gps.lng)
+            : null;
+          await supa.from('viajes').update({
+            paso2_ts: new Date().toISOString(), paso2_lat: gps.lat, paso2_lng: gps.lng,
+            km_tramo1: tramo1 }).eq('id', viaje.id);
+          km = tramo1;
+        }
+      }
       const notas = s(p.notas, 300);
+      const datosMov: Record<string, unknown> = { nombre, tienda: m.tienda, direccion: m.direccion, notas };
+      if (km !== null) datosMov.km = km;
       const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Recogida',
-        descripcion: mov(notas ? 'insumoRecogidoConNota' : 'insumoRecogido', { nombre, tienda: m.tienda, direccion: m.direccion, notas }), monto: 0 });
+        descripcion: mov(notas ? 'insumoRecogidoConNota' : 'insumoRecogido', datosMov), monto: 0 });
       if (error) throw error;
       await supa.from('facturas').update({ estado: 'EnTransito' }).eq('id', f.id);
       await historial(String(m.centro), String(m.insumo), `Transportista ${nombre} recogió el insumo comprado en ${m.tienda}`, 'publico');
-      return { estado: 'EnTransito' };
+      return { estado: 'EnTransito', km };
     }
     case 'registrar_entrega_final': {
       // Cierre del ciclo: el transportista entrega en el centro, registra a la
