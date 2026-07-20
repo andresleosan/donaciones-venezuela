@@ -652,7 +652,9 @@
       bindTarjetasColapsables('#grid-comprados');
       $$('[data-recogida]').forEach((btn) => btn.addEventListener('click', () => {
         const pr = (estado.comprados || []).find((x) => x.token === btn.dataset.recogida);
-        if (pr) abrirRegistrarRecogida(pr);
+        // Paso 1 del ciclo: primero la pantalla de viaje (mapa + tiempo estimado
+        // + GPS); la recogida en sí es el paso 2, dentro de esa pantalla.
+        if (pr) abrirViaje(pr);
       }));
       $$('[data-entrega]').forEach((btn) => btn.addEventListener('click', () => {
         const pr = (estado.comprados || []).find((x) => x.token === btn.dataset.entrega);

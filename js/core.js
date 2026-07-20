@@ -158,6 +158,7 @@
       setText('#ofrecer-page-copy', 'offer.pageCopy');
       setText('#donar-dinero-title', 'money.modalTitle');
       setText('#mi-cuenta-title', 'session.menuTitle');
+      setText('#viaje-title', 'trip.pageTitle');
       setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
       setText('#reportar-summary', 'helpHub.reportSummary');
       setText('#form-lugar-copy', 'centers.formCopy');
@@ -627,6 +628,7 @@
       if (typeof window.reconstruirOfrecer === 'function') window.reconstruirOfrecer();
       if (typeof window.reconstruirDonarDinero === 'function') window.reconstruirDonarDinero();
       if (typeof window.reconstruirMiCuenta === 'function') window.reconstruirMiCuenta();
+      if (typeof window.reconstruirViaje === 'function') window.reconstruirViaje();
       if (typeof wizRetraducirTodos === 'function') wizRetraducirTodos();
       pintarBotonSesion();
       if (rehacerModal) { rehacerModal(); restaurarEstadoModal(estadoModal); }

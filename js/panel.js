@@ -332,5 +332,12 @@
         cambiarVista('inicio');
         return;
       }
+      // El viaje necesita el presupuesto en contexto: igual que donar-dinero.
+      if (hash === 'viaje') {
+        const shellViaje = $('#viaje-shell');
+        if (shellViaje && shellViaje.children.length) { cambiarVista('viaje'); return; }
+        cambiarVista('inicio');
+        return;
+      }
       cambiarVista(VISTAS.indexOf(hash) >= 0 ? hash : 'inicio');
     }

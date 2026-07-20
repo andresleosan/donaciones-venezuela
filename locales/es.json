@@ -1307,6 +1307,32 @@
     "entregadoConCargo": "Entregado en {centro}. Recibió: {receptor} ({cargo}). Foto de los insumos registrada.",
     "donacionOfrecida": "Donación ofrecida: {cantidad} {unidad} de {insumo} en {ubicacion}. Esperando transportista.",
     "donacionRecogida": "{nombre} recogió la donación en {ubicacion} para llevarla a {centro}.",
-    "necesidadCubierta": "Necesidad cubierta: el centro ya recibió todo lo solicitado."
+    "necesidadCubierta": "Necesidad cubierta: el centro ya recibió todo lo solicitado.",
+    "viajeIniciado": "{nombre} va en camino a recoger el insumo (llega en ~{eta} min)."
+  },
+  "trip": {
+    "pageTitle": "Viaje del transportista",
+    "stagesLabel": "Etapas del viaje",
+    "stage1": "Recogida",
+    "stage2": "En camino",
+    "stage3": "Entregado",
+    "intro": "Vas a mover {insumo} desde {tienda} hasta {centro}.",
+    "noMap": "Este centro aún no tiene ubicación en el mapa. Guíate por la dirección de arriba.",
+    "etaQuestion": "¿En cuánto tiempo llegas a recogerlo?",
+    "eta30": "30 min",
+    "eta60": "1 hora",
+    "eta120": "2 horas",
+    "etaOther": "Otro",
+    "etaMinutesPh": "Minutos (5 a 480)",
+    "etaInvalid": "Escribe un tiempo entre 5 y 480 minutos.",
+    "nameRequired": "Escribe tu nombre para iniciar el viaje.",
+    "startCta": "Voy a recogerlo",
+    "gpsAsking": "Tomando tu ubicación…",
+    "gpsRequired": "Necesitamos tu ubicación para iniciar el viaje. Activa el GPS y vuelve a intentarlo.",
+    "gpsUnsupported": "Este dispositivo no permite tomar la ubicación.",
+    "starting": "Iniciando el viaje…",
+    "started": "Viaje iniciado. Llegas en ~{eta} min.",
+    "onTheWay": "Viaje en curso. Cuando tengas el insumo en la mano, regístralo.",
+    "haveItCta": "Ya tengo el insumo"
   }
 }

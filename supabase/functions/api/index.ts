@@ -434,6 +434,31 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       return { referencia, token: f.token_publico, numeroFactura: f.numero_factura,
                recaudado: Number(tras?.monto_recaudado) || 0, precio: Number(f.monto_requerido) || 0, estado: estadoFinal };
     }
+    case 'viaje_iniciar': {
+      // Paso 1 del ciclo: el transportista declara que va en camino. Se guardan
+      // GPS y hora de salida + el tiempo estimado de llegada. Sin GPS válido no
+      // se inicia: ese punto es el origen de los km y de la vigilancia (plan 07).
+      const nombre = s(p.nombreTransportista, 120);
+      if (!nombre) throw new Error('nombre del transportista requerido');
+      const eta = Math.round(n(p.etaMinutos));
+      if (eta < 5 || eta > 480) throw new Error('Tiempo estimado inválido (5 a 480 minutos)');
+      const gps = geoValida((p.gps ?? {}) as Record<string, unknown>);
+      if (gps.lat === null || gps.lng === null) throw new Error('Se necesita tu ubicación GPS para iniciar el viaje');
+      const token = s(p.token, 24).toUpperCase();
+      const { data: f } = await supa.from('facturas')
+        .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
+      const m = f && metaPresupuesto(String(f.descripcion));
+      if (!f || !m) throw new Error('Presupuesto no encontrado');
+      if (f.estado !== 'Comprada') throw new Error('Este insumo no está listo para recoger');
+      const { error } = await supa.from('viajes').insert({
+        factura_id: f.id, transportista: nombre, email: s(p.email, 160) || null,
+        eta_minutos: eta, paso1_ts: new Date().toISOString(), paso1_lat: gps.lat, paso1_lng: gps.lng });
+      if (error) throw error;
+      await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Viaje',
+        descripcion: mov('viajeIniciado', { nombre, eta }), monto: 0 });
+      await historial(String(m.centro), String(m.insumo), `Transportista ${nombre} va en camino a recoger el insumo (llega en ~${eta} min)`, 'publico');
+      return { ok: true, etaMinutos: eta };
+    }
     case 'registrar_recogida': {
       // El transportista retira el insumo comprado en la tienda: fotos del
       // sitio y del insumo (bucket privado) + movimiento público con el relato.

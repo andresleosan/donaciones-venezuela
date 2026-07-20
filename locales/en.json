@@ -1307,6 +1307,32 @@
     "entregadoConCargo": "Delivered at {centro}. Received by: {receptor} ({cargo}). Photo of the supplies was recorded.",
     "donacionOfrecida": "Donation offered: {cantidad} {unidad} of {insumo} at {ubicacion}. Waiting for a driver.",
     "donacionRecogida": "{nombre} picked up the donation at {ubicacion} to take it to {centro}.",
-    "necesidadCubierta": "Need covered: the center has received everything it asked for."
+    "necesidadCubierta": "Need covered: the center has received everything it asked for.",
+    "viajeIniciado": "{nombre} is on the way to pick up the supply (arriving in ~{eta} min)."
+  },
+  "trip": {
+    "pageTitle": "Driver trip",
+    "stagesLabel": "Trip stages",
+    "stage1": "Pickup",
+    "stage2": "On the way",
+    "stage3": "Delivered",
+    "intro": "You are moving {insumo} from {tienda} to {centro}.",
+    "noMap": "This center has no map location yet. Use the address above.",
+    "etaQuestion": "How long until you get there?",
+    "eta30": "30 min",
+    "eta60": "1 hour",
+    "eta120": "2 hours",
+    "etaOther": "Other",
+    "etaMinutesPh": "Minutes (5 to 480)",
+    "etaInvalid": "Enter a time between 5 and 480 minutes.",
+    "nameRequired": "Enter your name to start the trip.",
+    "startCta": "I'm going to pick it up",
+    "gpsAsking": "Getting your location…",
+    "gpsRequired": "We need your location to start the trip. Turn on GPS and try again.",
+    "gpsUnsupported": "This device cannot provide a location.",
+    "starting": "Starting the trip…",
+    "started": "Trip started. You arrive in ~{eta} min.",
+    "onTheWay": "Trip in progress. Register the supply once you have it.",
+    "haveItCta": "I have the supply"
   }
 }
