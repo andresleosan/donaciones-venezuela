@@ -904,8 +904,13 @@
     // El sistema genera la referencia de transacción; con la cuenta real, la
     // referencia vendrá del pago y entrará por este mismo flujo.
     function abrirDonarDinero(pr) {
+      const shell = $('#donar-dinero-shell');
+      if (!shell) return;
       const faltan = Math.max(1, numero(pr.precio) - numero(pr.recaudado));
-      abrirModal(t('money.modalTitle'), `<form id="donar-dinero-form" data-wiz="donarDinero" novalidate>
+      // Página completa (patrón #ofrecer), ya no un modal flotante.
+      cambiarVista('donar-dinero');
+      if (!/^#donar-dinero$/i.test(window.location.hash)) window.location.hash = '#donar-dinero';
+      shell.innerHTML = `<form id="donar-dinero-form" data-wiz="donarDinero" novalidate>
         <p class="section-copy">${e(t('money.modalCopy', { insumo: mostrarInsumo(pr.insumo), tienda: pr.tienda, centro: pr.centro }))}</p>
         <p class="meta">${e(t('needs.missing', { faltan: formatearMonto(faltan) }))}</p>
         <div class="form-grid">
@@ -915,8 +920,16 @@
         <p class="meta">${e(t('money.simNote'))}</p>
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('money.submit'))}</button></div>
         <div id="din-message" class="form-message" role="status" aria-live="polite"></div>
-      </form>`);
-      recordarModal(() => abrirDonarDinero(pr));
+      </form>`;
+      // Cambiar de idioma repinta esta página conservando lo que el donante escribió.
+      window.reconstruirDonarDinero = () => {
+        if (!$('#donar-dinero-form')) return;
+        const monto = $('#din-monto') ? $('#din-monto').value : '';
+        const nombre = $('#din-nombre') ? $('#din-nombre').value : '';
+        abrirDonarDinero(pr);
+        if (monto !== '') $('#din-monto').value = monto;
+        if (nombre !== '') $('#din-nombre').value = nombre;
+      };
       wizPublico('donar-dinero-form');
       $('#donar-dinero-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -945,7 +958,7 @@
     // Recibo tras donar dinero: referencia de la transacción + token de
     // seguimiento. Debe poder copiarse, no vale un toast pasajero.
     function mostrarReciboDinero(res, pr) {
-      const cuerpo = $('#modal-root .modal-body');
+      const cuerpo = $('#donar-dinero-shell');
       const comprado = res.estado === 'Comprada';
       cuerpo.innerHTML = `<div class="token-result">
         <h3>${e(t('money.thanksTitle'))}</h3>
@@ -966,7 +979,6 @@
         } catch (err) { toast(res.token); }
       });
       $('#din-seguir').addEventListener('click', () => {
-        $('#modal-root dialog').close();
         buscarSeguimiento(res.token);
       });
     }

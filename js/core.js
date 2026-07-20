@@ -156,6 +156,7 @@
       setText('#help-ofrecer-copy', 'helpHub.offerCopy');
       setText('#ofrecer-title', 'offer.pageTitle');
       setText('#ofrecer-page-copy', 'offer.pageCopy');
+      setText('#donar-dinero-title', 'money.modalTitle');
       setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
       setText('#reportar-summary', 'helpHub.reportSummary');
       setText('#form-lugar-copy', 'centers.formCopy');
@@ -613,6 +614,7 @@
       renderAll();
       // Lo pintado con innerHTML no se traduce solo: hay que reconstruirlo.
       if (typeof window.reconstruirOfrecer === 'function') window.reconstruirOfrecer();
+      if (typeof window.reconstruirDonarDinero === 'function') window.reconstruirDonarDinero();
       if (typeof wizRetraducirTodos === 'function') wizRetraducirTodos();
       pintarBotonSesion();
       if (rehacerModal) { rehacerModal(); restaurarEstadoModal(estadoModal); }
