@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/ofrecer-insumo", "destination": "/#ofrecer", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/registrar-transportista", "destination": "/ventana.html?v=registrar-transportista" },
     { "source": "/apoyar-transportista", "destination": "/ventana.html?v=apoyar-transportista" },
