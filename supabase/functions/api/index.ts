@@ -884,6 +884,20 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (error) throw error;
       return { estado };
     }
+    // ===== Vigilancia de atrasos (plan 07 T4, solo panel) =====
+    case 'admin_viajes_atrasados': {
+      const { data } = await supa.from('viajes_atrasados')
+        .select('id, transportista, email, eta_minutos, token_publico, objetivo, tramo, transcurrido_min')
+        .order('transcurrido_min', { ascending: false }).limit(100);
+      return { viajes: data || [] };
+    }
+    case 'admin_viaje_resolver': {
+      const id = s(p.id, 40);
+      if (!id) throw new Error('id requerido');
+      const { error } = await supa.from('viajes').update({ resuelto: true }).eq('id', id);
+      if (error) throw error;
+      return { resuelto: true };
+    }
 
     // ===== Panel interno por centro =====
     case 'panel_crear': {

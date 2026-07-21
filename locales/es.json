@@ -1014,7 +1014,13 @@
     "donationDone": "Donación registrada",
     "vacancyLive": "La vacante ya aparece en la sección de voluntarios.",
     "regenIntro": "Genera un token y PIN nuevos para el panel de un centro ya registrado.",
-    "manageReports": "Denuncias"
+    "manageReports": "Denuncias",
+    "lateTitle": "Viajes atrasados",
+    "lateIntro": "Contacta al transportista para verificar dónde está el insumo.",
+    "lateLeg": "Tramo",
+    "lateEta": "ETA",
+    "lateElapsed": "transcurrido",
+    "markResolved": "Marcar resuelto"
   },
   "lugar": {},
   "home": {

@@ -67,6 +67,7 @@
       adminData.vacantes = await opcional('admin_listar_vacantes', 'vacantes');
       adminData.rescatistas = await opcional('admin_listar_rescatistas', 'rescatistas');
       adminData.denuncias = await opcional('admin_denuncias', 'denuncias');
+      adminData.atrasos = await opcional('admin_viajes_atrasados', 'viajes');
     }
 
     async function refrescarAdminData() {
@@ -109,11 +110,30 @@
           ${g.count != null ? `<span class="badge gray">${e(String(g.count))}</span>` : ''}
           <span class="admin-launch-go" aria-hidden="true">→</span>
         </button>`).join('');
+      const atrasos = adminData.atrasos || [];
+      const alertaHtml = atrasos.length ? `
+        <section class="admin-alert">
+          <h3 class="admin-alert-title">⚠ ${e(t('admin.lateTitle'))} <span class="badge red">${e(String(atrasos.length))}</span></h3>
+          <p class="meta">${e(t('admin.lateIntro'))}</p>
+          ${atrasos.map((v) => {
+            const min = Number(v.transcurrido_min) || 0;
+            const h = Math.floor(min / 60), mm = min % 60;
+            const dur = h ? `${h} h ${mm} min` : `${mm} min`;
+            return `<article class="card late-card">
+              <p><strong>${e(v.objetivo || '')}</strong></p>
+              <p class="meta">🚚 ${e(v.transportista || '')}${v.email ? ` · <a href="mailto:${e(v.email)}">${e(v.email)}</a>` : ''}</p>
+              <p class="meta">${e(t('admin.lateLeg'))} ${e(String(v.tramo))} · ${e(t('admin.lateEta'))} ${e(String(v.eta_minutos))} min · ${e(t('admin.lateElapsed'))} ${e(dur)}</p>
+              ${v.token_publico ? `<p class="meta">🧾 ${e(v.token_publico)}</p>` : ''}
+              <div class="form-actions"><button class="btn btn-soft btn-small" type="button" data-viaje-resolver="${e(v.id)}">${e(t('admin.markResolved'))}</button></div>
+            </article>`;
+          }).join('')}
+        </section>` : '';
       $('#admin-console').innerHTML = `
         <div class="admin-console-head">
           <div><h2>${e(t('admin.consoleTitle'))}</h2><p class="meta">${e(t('admin.consoleSubtitle'))}</p></div>
           <button class="btn btn-ghost btn-small" type="button" id="admin-salir">${e(t('admin.signOut'))}</button>
         </div>
+        ${alertaHtml}
         <section class="admin-group">
           <h3 class="admin-group-title">${e(t('admin.groupCreate'))}</h3>
           <div class="admin-launcher">${crearCards}</div>
@@ -124,6 +144,11 @@
         </section>`;
       $$('#admin-console [data-admin-tarea]').forEach((b) => b.addEventListener('click', () => abrirAsistente(b.dataset.adminTarea)));
       $$('#admin-console [data-admin-gestion]').forEach((b) => b.addEventListener('click', () => abrirGestion(b.dataset.adminGestion)));
+      $$('#admin-console [data-viaje-resolver]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try { await postAdmin({ accion: 'admin_viaje_resolver', id: b.dataset.viajeResolver }); await refrescarAdminData(); irAMenu(); }
+        catch (err) { b.disabled = false; }
+      }));
       $('#admin-salir').addEventListener('click', cerrarSesionAdmin);
     }
 

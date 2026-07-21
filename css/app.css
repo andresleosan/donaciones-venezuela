@@ -771,6 +771,14 @@
     }
     .admin-console-head h2 { color: var(--ink); font-size: 1.5rem; }
     .admin-console-head .meta { margin-top: 2px; }
+    .admin-alert {
+      margin-bottom: 24px; padding: 14px; border-radius: var(--radius-lg);
+      border: 1px solid var(--critical); background: #FFF5F7;
+    }
+    .admin-alert-title { color: var(--critical); font-size: 1rem; font-weight: 800; margin-bottom: 4px; }
+    .late-card { margin-top: 10px; }
+    .late-card p { margin: 2px 0; }
+
     .admin-group { margin-bottom: 24px; }
     .admin-group-title {
       color: var(--muted); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em;

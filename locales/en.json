@@ -1014,7 +1014,13 @@
     "donationDone": "Donation recorded",
     "vacancyLive": "The role is now live in the volunteers section.",
     "regenIntro": "Generate a fresh token and PIN for an existing center's panel.",
-    "manageReports": "Reports"
+    "manageReports": "Reports",
+    "lateTitle": "Delayed trips",
+    "lateIntro": "Contact the carrier to verify where the supply is.",
+    "lateLeg": "Leg",
+    "lateEta": "ETA",
+    "lateElapsed": "elapsed",
+    "markResolved": "Mark resolved"
   },
   "lugar": {},
   "home": {
