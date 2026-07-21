@@ -507,15 +507,25 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
         .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
-      const m = f && metaPresupuesto(String(f.descripcion));
+      // Polimórfico: una compra (metaPresupuesto, estado Comprada) o una OFERTA
+      // (metaOferta, estado Ofrecida). El «voy a recogerla» del plan 07 arranca el
+      // mismo viaje para ambas; solo la oferta cambia de estado (Ofrecida->EnCamino).
+      const mp = f && metaPresupuesto(String(f.descripcion));
+      const mo = f && metaOferta(String(f.descripcion));
+      const m = mp || mo;
       if (!f || !m) throw new Error('Presupuesto no encontrado');
-      if (f.estado !== 'Comprada') throw new Error('Este insumo no está listo para recoger');
+      if (mp) {
+        if (f.estado !== 'Comprada') throw new Error('Este insumo no está listo para recoger');
+      } else if (f.estado !== 'Ofrecida') {
+        throw new Error('Esta donación ya está en camino o fue recogida');
+      }
       const { error } = await supa.from('viajes').insert({
         factura_id: f.id, transportista: nombre, email: s(p.email, 160) || null,
         eta_minutos: eta, paso1_ts: new Date().toISOString(), paso1_lat: gps.lat, paso1_lng: gps.lng });
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Viaje',
         descripcion: mov('viajeIniciado', { nombre, eta }), monto: 0 });
+      if (mo) await supa.from('facturas').update({ estado: 'EnCamino' }).eq('id', f.id);
       await historial(String(m.centro), String(m.insumo), `Transportista ${nombre} va en camino a recoger el insumo (llega en ~${eta} min)`, 'publico');
       return { ok: true, etaMinutos: eta };
     }
@@ -585,9 +595,16 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
         .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
-      const m = f && metaPresupuesto(String(f.descripcion));
+      // Polimórfico: entrega de una compra (EnTransito) o de una OFERTA (Recogida).
+      const mp = f && metaPresupuesto(String(f.descripcion));
+      const mo = f && metaOferta(String(f.descripcion));
+      const m = mp || mo;
       if (!f || !m) throw new Error('Presupuesto no encontrado');
-      if (f.estado !== 'EnTransito') throw new Error('Este insumo no está en tránsito');
+      if (mp) {
+        if (f.estado !== 'EnTransito') throw new Error('Este insumo no está en tránsito');
+      } else if (f.estado !== 'Recogida') {
+        throw new Error('Esta donación no está lista para entregar');
+      }
       const carpeta = `ciclo/${f.numero_factura}`;
       const marca = crypto.randomUUID().slice(0, 8);
       const foto = await guardarFoto(fotoCentro, carpeta, `entrega-centro-${marca}`);
@@ -681,27 +698,55 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const { data } = await supa.from('facturas')
         .select('token_publico, descripcion, estado, fecha_creacion')
         .like('descripcion', '{"k":"oferta"%')
-        .eq('estado', 'Ofrecida')
+        .in('estado', ['Ofrecida', 'EnCamino'])
         .order('fecha_creacion').limit(100);
       return { ofertas: (data || []).map(ofertaUI).filter(Boolean) };
     }
     case 'recoger_oferta': {
+      // Paso 2 del ciclo de la oferta: el transportista YA recogió la donación en
+      // casa del donante. NO cierra la factura (fecha_cierre) — todavía falta la
+      // entrega en el centro (paso 3). Cierra el tramo 1 del viaje (GPS + km).
       const nombre = s(p.nombreTransportista, 120);
-      const centroDestino = s(p.centroDestino, 120);
       if (!nombre) throw new Error('nombre del transportista requerido');
-      if (!centroDestino) throw new Error('centro de destino requerido');
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
-        .select('id, descripcion, estado').eq('token_publico', token).maybeSingle();
+        .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
       const m = f && metaOferta(String(f.descripcion));
       if (!f || !m) throw new Error('Oferta no encontrada');
-      if (f.estado !== 'Ofrecida') throw new Error('Esta donación ya fue recogida');
+      if (f.estado !== 'EnCamino' && f.estado !== 'Ofrecida') throw new Error('Esta donación ya fue recogida');
+      const centroDestino = s(p.centroDestino, 120) || String(m.centro || '');
+      if (!centroDestino) throw new Error('centro de destino requerido');
+      // Fotos del paso 2 (opcionales para no romper clientes viejos): sitio, insumo
+      // y persona que entrega — evidencia privada, igual que el ciclo de compras.
+      const carpeta = `ofertas/${token}`;
+      const marca = crypto.randomUUID().slice(0, 8);
+      const evidencias: Record<string, unknown>[] = [];
+      if (p.fotoSitio) evidencias.push({ factura_id: f.id, archivo: await guardarFoto(p.fotoSitio, carpeta, `recogida-sitio-${marca}`), descripcion: 'Foto del sitio de recogida de la oferta', publica: false });
+      if (p.fotoInsumo) evidencias.push({ factura_id: f.id, archivo: await guardarFoto(p.fotoInsumo, carpeta, `recogida-insumo-${marca}`), descripcion: 'Foto de la donación recogida', publica: false });
+      if (p.fotoPersona) evidencias.push({ factura_id: f.id, archivo: await guardarFoto(p.fotoPersona, carpeta, `recogida-persona-${marca}`), descripcion: 'Foto de quien entrega la donación', publica: false });
+      if (evidencias.length) await supa.from('evidencias').insert(evidencias);
+      // GPS + hora → cierran el tramo 1 del viaje vigente y sus km.
+      let km: number | null = null;
+      const gps = geoValida((p.gps ?? {}) as Record<string, unknown>);
+      if (gps.lat !== null && gps.lng !== null) {
+        const viaje = await viajeVigente(f.id);
+        if (viaje) {
+          const tramo1 = (viaje.paso1_lat !== null && viaje.paso1_lng !== null)
+            ? kmEntre(Number(viaje.paso1_lat), Number(viaje.paso1_lng), gps.lat, gps.lng) : null;
+          await supa.from('viajes').update({
+            paso2_ts: new Date().toISOString(), paso2_lat: gps.lat, paso2_lng: gps.lng,
+            km_tramo1: tramo1 }).eq('id', viaje.id);
+          km = tramo1;
+        }
+      }
+      const datosMov: Record<string, unknown> = { nombre, ubicacion: m.ubicacion, centro: centroDestino };
+      if (km !== null) datosMov.km = km;
       const { error } = await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Recogida',
-        descripcion: mov('donacionRecogida', { nombre, ubicacion: m.ubicacion, centro: centroDestino }), monto: 0 });
+        descripcion: mov('donacionRecogida', datosMov), monto: 0 });
       if (error) throw error;
-      await supa.from('facturas').update({ estado: 'Recogida', fecha_cierre: new Date().toISOString() }).eq('id', f.id);
+      await supa.from('facturas').update({ estado: 'Recogida' }).eq('id', f.id); // SIN fecha_cierre: falta la entrega
       await historial(centroDestino, String(m.insumo), `Transportista ${nombre} recogió la donación ofrecida (${m.cantidad} ${m.unidad})`, 'publico', n(m.cantidad));
-      return { estado: 'Recogida' };
+      return { estado: 'Recogida', km };
     }
     // ===== Acceso por correo (OTP de Supabase Auth) =====
     // El frontend pide el código con /auth/v1/otp y lo canjea con /auth/v1/verify;

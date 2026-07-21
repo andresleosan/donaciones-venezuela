@@ -712,6 +712,14 @@
           <div class="field"><label for="of-cantidad">${e(t('offer.qtyLabel'))}</label><input id="of-cantidad" type="number" min="1" step="1" required /></div>
           <div class="field"><label for="of-unidad">${e(t('offer.unitLabel'))}</label><input id="of-unidad" value="${e(pre.unidad || '')}" placeholder="${e(t('offer.unitPh'))}" /></div>
         </div>
+        <div class="field full">
+          <label for="of-centro">${e(t('offer.centerLabel'))}</label>
+          <p class="field-help">${e(t('offer.centerHelp'))}</p>
+          <select id="of-centro" required>
+            <option value="">${e(t('offer.centerPlaceholder'))}</option>
+            ${(estado.lugares || []).map((l) => `<option value="${e(l.nombre)}"${pre.centro === l.nombre ? ' selected' : ''}>${e(l.nombre)}</option>`).join('')}
+          </select>
+        </div>
         ${pasoCamaraHtml('of-fotos', t('offer.photosTitle'), t('offer.photosCopy'))}
         <div class="form-grid">
           <div class="field full"><label for="of-nombre">${e(t('offer.contactNameLabel'))}</label><input id="of-nombre" required autocomplete="name" placeholder="${e(t('offer.contactNamePh'))}" /></div>
@@ -802,7 +810,8 @@
         if (!document.body.contains(form)) return;
         camFotos.parar(); camCedula.parar(); camLugar.parar();
         abrirOfrecerInsumo({
-          insumo: $('#of-insumo').value, unidad: $('#of-unidad').value, centro: pre.centro || '',
+          insumo: $('#of-insumo').value, unidad: $('#of-unidad').value,
+          centro: ($('#of-centro') && $('#of-centro').value) || pre.centro || '',
           cantidad: $('#of-cantidad').value, nombre: $('#of-nombre').value,
           telefono: $('#of-telefono').value, referencia: $('#of-referencia').value,
           fotos, cedula, fotoLugar, lat: coords.lat, lng: coords.lng
@@ -850,6 +859,8 @@
         if (!referencia) { mostrarMensaje('#of-message', 'error', t('offer.refRequired')); return; }
         const cantidad = numero($('#of-cantidad').value);
         if (cantidad <= 0) { mostrarMensaje('#of-message', 'error', t('needs.invalidAmount')); return; }
+        const centroDestino = ($('#of-centro') && $('#of-centro').value) || '';
+        if (!centroDestino) { mostrarMensaje('#of-message', 'error', t('offer.centerRequired')); return; }
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
         mostrarMensaje('#of-message', 'info', t('offer.saving'));
@@ -860,7 +871,7 @@
             telefono: $('#of-telefono').value.trim(), nombreDonante: $('#of-nombre').value.trim(),
             fotoInsumo: fotos[0], fotosInsumo: fotos, fotoCedula: cedula[0] || '',
             fotoLugar: fotoLugar[0] || '',
-            lat: coords.lat, lng: coords.lng, centro: pre.centro || ''
+            lat: coords.lat, lng: coords.lng, centro: centroDestino
           });
           camFotos.parar(); camCedula.parar(); camLugar.parar();
           mostrarTokenOferta(res.token);
@@ -897,41 +908,9 @@
       });
     }
 
-    // El transportista reclama una oferta: su nombre + centro de destino.
-    function abrirRecogerOferta(of) {
-      abrirModal(t('offer.pickupTitle'), `<form id="recoger-oferta-form" data-wiz="recoger" novalidate>
-        <p class="section-copy">${e(t('offer.pickupCopy', { cantidad: numero(of.cantidad), unidad: mostrarUnidad(of.unidad), insumo: mostrarInsumo(of.insumo), ubicacion: of.ubicacion }))}</p>
-        <div class="form-grid">
-          <div class="field"><label for="rof-nombre">${e(t('cycle.driverName'))}</label><input id="rof-nombre" required autocomplete="name" /></div>
-          <div class="field"><label for="rof-centro">${e(t('offer.destLabel'))}</label><input id="rof-centro" required value="${e(of.centro || '')}" placeholder="${e(t('offer.destPh'))}" /></div>
-        </div>
-        <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('offer.pickupSave'))}</button></div>
-        <div id="rof-message" class="form-message" role="status" aria-live="polite"></div>
-      </form>`);
-      recordarModal(() => abrirRecogerOferta(of));
-      wizPublico('recoger-oferta-form');
-      $('#recoger-oferta-form').addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const form = ev.currentTarget;
-        if (!validarFormulario(form, '#rof-message')) return;
-        const boton = form.querySelector('button[type="submit"]');
-        boton.disabled = true;
-        mostrarMensaje('#rof-message', 'info', t('money.saving'));
-        try {
-          await window.SheetsService.post({
-            accion: 'recoger_oferta', token: of.token,
-            nombreTransportista: $('#rof-nombre').value.trim(),
-            centroDestino: $('#rof-centro').value.trim()
-          });
-          $('#modal-root dialog').close();
-          toast(t('offer.pickupSaved'));
-          cargarOfertas();
-        } catch (err) {
-          boton.disabled = false;
-          mostrarMensaje('#rof-message', 'error', String(err && err.message || t('needs.error')));
-        }
-      });
-    }
+    // El «Voy a recogerla» de una oferta ahora enruta a la pantalla de viaje con
+    // el nombre del transportista tomado de la sesión (js/vistas.js →
+    // recogerOfertaConSesion → abrirViaje con pr de oferta). Ya no hay modal.
 
     // ── Donación en DINERO a un presupuesto (simulada hasta conectar la cuenta) ──
     // El sistema genera la referencia de transacción; con la cuenta real, la

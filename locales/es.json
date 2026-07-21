@@ -632,7 +632,8 @@
       "EnTransito": "En tránsito",
       "Entregada": "Entregada",
       "Registrada": "Registrada",
-      "Confirmada": "Confirmada"
+      "Confirmada": "Confirmada",
+      "EnCamino": "En camino"
     },
     "reportType": {
       "Retención de insumos": "Retención de insumos",
@@ -1284,7 +1285,13 @@
     "refRequired": "Escribe un nombre de referencia del sitio.",
     "placePhotoTitle": "Foto del sitio",
     "placePhotoCopy": "Una foto de la entrada o el punto exacto donde el transportista debe llegar.",
-    "placePhotoRequired": "Toma una foto del sitio de recogida."
+    "placePhotoRequired": "Toma una foto del sitio de recogida.",
+    "needSession": "Inicia sesión para recoger una donación.",
+    "continueCta": "Continuar el viaje",
+    "centerLabel": "Centro de destino",
+    "centerHelp": "¿A qué centro llevará la donación el transportista?",
+    "centerPlaceholder": "Elige un centro…",
+    "centerRequired": "Elige el centro de destino."
   },
   "vacancies": {
     "title": "Voluntarios que se necesitan",

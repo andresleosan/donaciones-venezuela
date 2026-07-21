@@ -583,7 +583,7 @@
       cont.innerHTML = lista.map((of) => `<article class="card centro-card" data-centro-card data-oferta-card>
           <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
             <span class="centro-resumen">
-              <span class="badge-row"><span class="badge green">${e(t('offer.badge'))}</span><span class="badge gray">${e(numero(of.cantidad))} ${e(mostrarUnidad(of.unidad))}</span></span>
+              <span class="badge-row">${of.estado === 'EnCamino' ? `<span class="badge yellow">${e(tValue('invoiceState', 'EnCamino'))}</span>` : `<span class="badge green">${e(t('offer.badge'))}</span>`}<span class="badge gray">${e(numero(of.cantidad))} ${e(mostrarUnidad(of.unidad))}</span></span>
               <span class="centro-nombre">${e(mostrarInsumo(of.insumo))}</span>
               <span class="meta">${e(of.ubicacion)}</span>
             </span>
@@ -595,15 +595,35 @@
             ${of.centro ? `<p class="meta"><strong>${e(t('offer.suggestedCenter'))}</strong> ${e(of.centro)}</p>` : ''}
             <div class="card-actions">
               ${soloDigitos(of.telefono) ? `<a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${waHref(of.telefono)}">${e(t('common.whatsapp'))}</a>` : ''}
-              <button class="btn btn-primary btn-small" type="button" data-recoger-oferta="${e(of.token)}">${e(t('offer.pickupCta'))}</button>
+              <button class="btn btn-primary btn-small" type="button" data-recoger-oferta="${e(of.token)}">${e(of.estado === 'EnCamino' ? t('offer.continueCta') : t('offer.pickupCta'))}</button>
             </div>
           </div>
         </article>`).join('');
       bindTarjetasColapsables('#grid-ofertas');
       $$('[data-recoger-oferta]').forEach((btn) => btn.addEventListener('click', () => {
         const of = (estado.ofertas || []).find((x) => x.token === btn.dataset.recogerOferta);
-        if (of) abrirRecogerOferta(of);
+        if (of) recogerOfertaConSesion(of);
       }));
+    }
+
+    // «Voy a recogerla»: exige sesión (el nombre del transportista sale de ahí, ya
+    // no se teclea — T1). Con sesión, abre la pantalla de viaje con un pr de OFERTA:
+    // el punto de recogida es la casa del donante (of.coords) y el destino, el centro.
+    function recogerOfertaConSesion(of) {
+      const sesion = (typeof sesionActual === 'function' && sesionActual()) || null;
+      if (!sesion) {
+        try { sessionStorage.setItem('dv-retorno', window.location.hash || '#ayudar'); } catch (err) { /* privado */ }
+        toast(t('offer.needSession'));
+        window.location.hash = '#acceso';
+        return;
+      }
+      const pr = {
+        token: of.token, estado: of.estado, insumo: of.insumo, centro: of.centro,
+        esOferta: true, recogidaCoords: of.coords || null,
+        ubicacion: of.ubicacion, tienda: of.ubicacion, direccion: ''
+      };
+      // Ofrecida → paso 1 (ETA); EnCamino (ya reclamada) → paso 2 (ya la tengo).
+      window.abrirViaje(pr, { etapa: of.estado === 'EnCamino' ? 1 : 0 });
     }
 
     // ── Ciclo del transportista: recoger lo comprado y entregarlo ──

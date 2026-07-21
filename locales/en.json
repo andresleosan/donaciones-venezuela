@@ -632,7 +632,8 @@
       "EnTransito": "In transit",
       "Entregada": "Delivered",
       "Registrada": "Recorded",
-      "Confirmada": "Confirmed"
+      "Confirmada": "Confirmed",
+      "EnCamino": "On the way"
     },
     "reportType": {
       "Retención de insumos": "Supply retention",
@@ -1284,7 +1285,13 @@
     "refRequired": "Write a reference name for the place.",
     "placePhotoTitle": "Photo of the place",
     "placePhotoCopy": "A photo of the entrance or the exact spot the driver has to reach.",
-    "placePhotoRequired": "Take a photo of the pickup place."
+    "placePhotoRequired": "Take a photo of the pickup place.",
+    "needSession": "Sign in to pick up a donation.",
+    "continueCta": "Continue the trip",
+    "centerLabel": "Destination center",
+    "centerHelp": "Which center will the driver take the donation to?",
+    "centerPlaceholder": "Choose a center…",
+    "centerRequired": "Choose the destination center."
   },
   "vacancies": {
     "title": "Volunteers needed",

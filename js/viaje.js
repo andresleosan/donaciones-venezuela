@@ -55,10 +55,13 @@
           <input id="viaje-eta-otro" class="of-ref-input" type="number" min="5" max="480" step="5"
                  placeholder="${e(t('trip.etaMinutesPh'))}" hidden />
         </div>
-        <div class="field full">
-          <label for="viaje-nombre">${e(t('cycle.driverName'))}</label>
-          <input id="viaje-nombre" required autocomplete="name" value="${e(nombreSesion)}" />
-        </div>
+        ${nombreSesion
+          ? `<p class="meta"><strong>${e(t('cycle.driverName'))}:</strong> ${e(nombreSesion)}</p>
+             <input id="viaje-nombre" type="hidden" value="${e(nombreSesion)}" />`
+          : `<div class="field full">
+               <label for="viaje-nombre">${e(t('cycle.driverName'))}</label>
+               <input id="viaje-nombre" required autocomplete="name" value="" />
+             </div>`}
         <div class="form-actions">
           <button class="btn btn-primary" type="button" id="viaje-iniciar">${e(t('trip.startCta'))}</button>
         </div>`;
@@ -121,6 +124,14 @@
         mapa = L.map('viaje-mapa').setView([destino.lat, destino.lng], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
         L.marker([destino.lat, destino.lng]).addTo(mapa).bindPopup(e(destino.nombre));
+        // Oferta: el punto de recogida (casa del donante) YA tiene coordenadas, así
+        // que se pinta la ruta recogida→entrega completa desde el inicio.
+        const rc = pr.esOferta && pr.recogidaCoords;
+        if (rc && rc.lat != null && rc.lng != null) {
+          L.marker([rc.lat, rc.lng]).addTo(mapa).bindPopup(e(pr.ubicacion || ''));
+          const ruta = L.polyline([[rc.lat, rc.lng], [destino.lat, destino.lng]], { weight: 3, dashArray: '6 6' }).addTo(mapa);
+          mapa.fitBounds(ruta.getBounds(), { padding: [30, 30] });
+        }
         setTimeout(() => mapa.invalidateSize(), 60);
       }
       const pintarMiPunto = (lat, lng) => {
@@ -173,12 +184,15 @@
           }
           mostrarMensaje('#rec-message', 'info', t('messages.driverUploading'));
           try {
-            const data = await window.SheetsService.post({
-              accion: 'registrar_recogida', token: pr.token,
-              nombreTransportista: nombre, notas: $('#rec-notas').value.trim(),
-              fotoSitio: fotoSitio[0], fotoInsumo: fotoInsumo[0], fotoPersona: fotoPersona[0],
-              gps: { lat: pos.coords.latitude, lng: pos.coords.longitude }
-            });
+            // Oferta → recoger_oferta (paso 2 que no cierra); compra → registrar_recogida.
+            const payload = pr.esOferta
+              ? { accion: 'recoger_oferta', token: pr.token, nombreTransportista: nombre,
+                  centroDestino: pr.centro || '', fotoSitio: fotoSitio[0], fotoInsumo: fotoInsumo[0],
+                  fotoPersona: fotoPersona[0], gps: { lat: pos.coords.latitude, lng: pos.coords.longitude } }
+              : { accion: 'registrar_recogida', token: pr.token, nombreTransportista: nombre,
+                  notas: $('#rec-notas').value.trim(), fotoSitio: fotoSitio[0], fotoInsumo: fotoInsumo[0],
+                  fotoPersona: fotoPersona[0], gps: { lat: pos.coords.latitude, lng: pos.coords.longitude } };
+            const data = await window.SheetsService.post(payload);
             toast(t('cycle.pickupSaved'));
             await cargarTodo();
             abrirViaje(pr, { etapa: 2, km: data && data.km });
