@@ -247,7 +247,117 @@
     }
 
     // ---- Motor de asistentes (stepper + un paso a la vez + confirmar + éxito) ----
+    // Plan 08 T3 — «Create a budget» conectado a las necesidades reales: centro →
+    // insumo (selects dependientes de las necesidades del centro), tienda clavada
+    // en el mapa, URL y adjunto (cualquier archivo ≤5 MB) opcionales.
+    async function abrirPresupuesto() {
+      wiz = { id: 'presupuesto', def: null, paso: 0, datos: {} }; // para que «crear otra» reabra este wizard
+      // El panel admin no carga la data pública (cargarTodo es no-op en ventana):
+      // las necesidades vienen de una acción admin dedicada.
+      $('#admin-console').innerHTML = marcoGestion(t('admin.taskBudget'), `<p class="section-copy">${e(t('admin.checking'))}</p>`);
+      bindGestMenu();
+      let centros = [];
+      try { centros = (await postAdmin({ accion: 'admin_listar_necesidades' })).centros || []; } catch (err) { centros = []; }
+      if (!centros.length) {
+        $('#admin-console').innerHTML = marcoGestion(t('admin.taskBudget'), `<p class="empty-state">${e(t('admin.budgetNoNeeds'))}</p>`);
+        bindGestMenu();
+        return;
+      }
+      const opcionesCentro = centros.map((l) => `<option value="${e(l.centro)}">${e(l.centro)}</option>`).join('');
+      $('#admin-console').innerHTML = marcoGestion(t('admin.taskBudget'), `
+        <form id="pres-form" class="offer-wizard" novalidate>
+          <div class="field full"><label for="pres-centro">${e(t('admin.centerName'))}</label>
+            <select id="pres-centro" required><option value="">${e(t('admin.budgetPickCenter'))}</option>${opcionesCentro}</select></div>
+          <div class="field full"><label for="pres-insumo">${e(t('admin.budgetSupply'))}</label>
+            <select id="pres-insumo" required disabled><option value="">${e(t('admin.budgetPickCenter'))}</option></select>
+            <p class="meta" id="pres-nec-info"></p></div>
+          <div class="field full"><label for="pres-tienda">${e(t('admin.budgetStore'))}</label>
+            <input id="pres-tienda" required placeholder="${e(t('admin.budgetStorePh'))}" /></div>
+          <div class="field full"><label>${e(t('admin.budgetMap'))}</label>
+            <div id="pres-mapa" class="of-mapa"></div>
+            <p class="meta" id="pres-coords">${e(t('admin.budgetMapHelp'))}</p></div>
+          <div class="field full"><label for="pres-direccion">${e(t('admin.budgetAddress'))}</label><input id="pres-direccion" /></div>
+          <div class="field full"><label for="pres-url">${e(t('admin.budgetUrl'))}</label><input id="pres-url" type="url" placeholder="https://" /></div>
+          <div class="field"><label for="pres-cantidad">${e(t('admin.budgetQty'))}</label><input id="pres-cantidad" type="number" min="1" required /></div>
+          <div class="field full"><label for="pres-presentacion">${e(t('admin.budgetPresentation'))}</label><input id="pres-presentacion" placeholder="${e(t('admin.budgetPresentationPh'))}" /></div>
+          <div class="field"><label for="pres-precio">${e(t('admin.budgetPrice'))}</label><input id="pres-precio" type="number" min="1" required /></div>
+          <div class="field full"><label for="pres-adjunto">${e(t('admin.budgetAttach'))}</label>
+            <input id="pres-adjunto" type="file" /><p class="meta">${e(t('admin.budgetAttachHelp'))}</p></div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('admin.budgetCreate'))}</button></div>
+          <div id="pres-msg" class="form-message" role="status" aria-live="polite"></div>
+        </form>`);
+      bindGestMenu();
+
+      // Insumo dependiente del centro + autollenado de cantidad faltante.
+      const selCentro = $('#pres-centro'), selInsumo = $('#pres-insumo');
+      selCentro.addEventListener('change', () => {
+        const centro = centros.find((l) => l.centro === selCentro.value);
+        const necs = centro ? (centro.insumos || []) : [];
+        selInsumo.disabled = !necs.length;
+        selInsumo.innerHTML = `<option value="">${e(t('admin.budgetPickSupply'))}</option>` +
+          necs.map((it, i) => `<option value="${i}">${e(mostrarInsumo(it.nombre))}</option>`).join('');
+        $('#pres-nec-info').textContent = '';
+        $('#pres-cantidad').value = '';
+        selInsumo.__necs = necs;
+      });
+      selInsumo.addEventListener('change', () => {
+        const it = (selInsumo.__necs || [])[Number(selInsumo.value)];
+        if (!it) { $('#pres-nec-info').textContent = ''; return; }
+        const pendiente = Math.max(0, Number(it.pendiente) || 0);
+        $('#pres-cantidad').value = pendiente || '';
+        $('#pres-nec-info').textContent = t('admin.budgetPending', { n: pendiente, unidad: mostrarUnidad(it.unidad || 'unidades') });
+      });
+
+      // Mapa: un clic clava la tienda (fuente de verdad del punto exacto).
+      let coords = null, marcador = null, mapa = null;
+      if (window.L) {
+        mapa = L.map('pres-mapa').setView([10.4806, -66.9036], 12); // Caracas
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+        mapa.on('click', (ev) => {
+          coords = { lat: ev.latlng.lat, lng: ev.latlng.lng };
+          if (marcador) marcador.setLatLng(ev.latlng); else marcador = L.marker(ev.latlng).addTo(mapa);
+          $('#pres-coords').textContent = t('admin.budgetMapSet', { lat: coords.lat.toFixed(5), lng: coords.lng.toFixed(5) });
+        });
+        setTimeout(() => mapa.invalidateSize(), 80);
+      }
+
+      const leerArchivo = (file) => new Promise((res, rej) => {
+        if (!file) return res('');
+        if (file.size > 5 * 1024 * 1024) return rej(new Error(t('admin.budgetAttachTooBig')));
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result); fr.onerror = () => rej(new Error('archivo')); fr.readAsDataURL(file);
+      });
+
+      $('#pres-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const it = (selInsumo.__necs || [])[Number(selInsumo.value)];
+        const centro = selCentro.value, tienda = $('#pres-tienda').value.trim();
+        const cantidad = $('#pres-cantidad').value, precio = $('#pres-precio').value;
+        if (!centro || !it || !tienda || !(Number(cantidad) > 0) || !(Number(precio) > 0)) {
+          mensajeAdmin('#pres-msg', 'error', t('admin.budgetIncomplete')); return;
+        }
+        if (!coords) { mensajeAdmin('#pres-msg', 'error', t('admin.budgetMapRequired')); return; }
+        const boton = $('#pres-form').querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mensajeAdmin('#pres-msg', 'info', t('admin.checking'));
+        try {
+          const adjunto = await leerArchivo($('#pres-adjunto').files[0]);
+          const r = await postAdmin({ accion: 'admin_crear_presupuesto', centro, insumo: it.nombre,
+            necesidadId: it.id || '', tienda, direccion: $('#pres-direccion').value.trim(),
+            tiendaLat: coords.lat, tiendaLng: coords.lng, tiendaUrl: $('#pres-url').value.trim(),
+            cantidad, presentacion: $('#pres-presentacion').value.trim(), precio, adjunto });
+          await refrescarAdminData();
+          exitoAsistente({ exitoTitulo: () => t('admin.budgetCreated'),
+            exitoCuerpo: () => reciboTokens([[t('admin.invoiceLabel'), r.numeroFactura], [t('needs.tokenLabel'), r.token]], r.token) }, r);
+        } catch (err) {
+          boton.disabled = false;
+          mensajeAdmin('#pres-msg', 'error', String((err && err.message) || t('needs.error')));
+        }
+      });
+    }
+
     function abrirAsistente(id) {
+      if (id === 'presupuesto') return abrirPresupuesto(); // plan 08 T3: wizard a medida (selects dependientes + mapa + adjunto)
       const def = defAsistente(id);
       if (!def) return;
       wiz = { id, def, paso: 0, datos: {} };
@@ -1522,11 +1632,13 @@
       // Si la factura es un presupuesto, su descripcion lleva el JSON de la
       // cotización: se pinta legible en vez del JSON crudo.
       let descripcionVisible = factura.descripcion || '';
+      let adjuntoUrl = ''; // plan 08 T3.3: presupuesto adjunto visible al donante
       try {
         const meta = JSON.parse(descripcionVisible);
         if (meta && meta.k === 'pres') {
           descripcionVisible = t('needs.budgetLine', { cantidad: numero(meta.cantidad), presentacion: meta.presentacion || '', tienda: meta.tienda }) +
             (meta.direccion ? ' · ' + meta.direccion : '') + ' → ' + meta.centro;
+          if (/^https?:\/\//i.test(String(meta.adjunto || ''))) adjuntoUrl = meta.adjunto;
         } else if (meta && meta.k === 'oferta') {
           // Vista pública del token: sin teléfono del donante
           descripcionVisible = `${numero(meta.cantidad)} ${mostrarUnidad(meta.unidad)} · ${meta.ubicacion}${meta.centro ? ' → ' + meta.centro : ''}`;
@@ -1551,6 +1663,7 @@
               <span class="badge ${estadoClase}">${e(tValue('invoiceState', factura.estado) || t('common.pending'))}</span>
               <h3>${e(factura.objetivo || t('tracking.invoice'))}</h3>
               ${descripcionVisible ? `<p class="meta">${e(descripcionVisible)}</p>` : ''}
+              ${adjuntoUrl ? `<p class="meta"><a href="${e(adjuntoUrl)}" target="_blank" rel="noopener">${e(t('tracking.seeBudget'))}</a></p>` : ''}
             </div>
             <span class="tracking-code">${e(factura.numero_factura || '')}</span>
           </div>

@@ -124,6 +124,23 @@ async function guardarVideo(dataUrl: unknown, carpeta: string, nombre: string, u
   return ruta;
 }
 
+// Adjunto del presupuesto (plan 08 T3.3): CUALQUIER tipo de archivo, ≤5 MB, a
+// bucket PÚBLICO 'presupuestos'. Devuelve la URL pública (el donante la abre).
+async function guardarAdjunto(dataUrl: unknown, carpeta: string, nombre: string): Promise<string> {
+  const m = String(dataUrl ?? '').match(/^data:([\w.+-]+\/[\w.+-]+);base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) throw new Error('adjunto inválido');
+  const mime = m[1];
+  const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+  if (bytes.length < 100) throw new Error('adjunto vacío');
+  if (bytes.length > 5_000_000) throw new Error('adjunto demasiado grande (máx 5 MB)');
+  const extMap: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+  const ext = extMap[mime] || (mime.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 8) || 'bin';
+  const ruta = `${carpeta}/${nombre}.${ext}`;
+  const { error } = await supa.storage.from('presupuestos').upload(ruta, bytes, { contentType: mime, upsert: true });
+  if (error) throw new Error('no se pudo guardar el adjunto');
+  return supa.storage.from('presupuestos').getPublicUrl(ruta).data.publicUrl;
+}
+
 // Identidad del denunciante a partir del JWT de la sesión (mismo patrón que
 // acceso_perfil): email + nombre + rol. El donante sin rol vale (rol='donante').
 async function identidadSesion(jwt: string): Promise<{ email: string; nombre: string; rol: string }> {
@@ -1076,23 +1093,59 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const cantidad = n(p.cantidad);
       const presentacion = s(p.presentacion, 140);
       const precio = n(p.precio);
+      // Plan 08 T3: destino enlazado a la necesidad real, tienda clavada en el
+      // mapa (fuente de verdad; la dirección es texto de referencia), URL y
+      // adjunto opcionales. Los nombres viejos se conservan (R2.3).
+      const necesidadId = s(p.necesidadId, 40);
+      const tiendaLat = Number(p.tiendaLat), tiendaLng = Number(p.tiendaLng);
+      const tiendaUrl = s(p.tiendaUrl, 300);
       if (!centro || !insumo || !tienda) throw new Error('centro, insumo y tienda requeridos');
       if (cantidad <= 0) throw new Error('cantidad debe ser mayor que 0');
       if (precio <= 0 || precio > 100_000_000) throw new Error('precio inválido');
+      if (!(Number.isFinite(tiendaLat) && Number.isFinite(tiendaLng) && Math.abs(tiendaLat) <= 90 && Math.abs(tiendaLng) <= 180)) {
+        throw new Error('marca la tienda en el mapa');
+      }
+      if (tiendaUrl && !/^https?:\/\//i.test(tiendaUrl)) throw new Error('la URL de la tienda debe empezar por http(s)://');
       const { data: lugar } = await supa.from('lugares').select('id').eq('nombre', centro).maybeSingle();
       if (!lugar) throw new Error('Centro no encontrado');
       const { data: seq2, error: eSeq2 } = await supa.rpc('factura_numero_siguiente');
       if (eSeq2) throw eSeq2;
       const numero = `FAC-${new Date().getFullYear()}-${String(seq2).padStart(6, '0')}`;
       const token = tokenAlfa('DV');
+      const adjunto = p.adjunto ? await guardarAdjunto(p.adjunto, `presupuestos/${token}`, 'presupuesto') : '';
       const { error } = await supa.from('facturas').insert({
         numero_factura: numero, token_publico: token,
         objetivo: s(`${insumo} → ${centro} · ${tienda}`, 200),
-        descripcion: JSON.stringify({ k: 'pres', centro, insumo, tienda, direccion, cantidad, presentacion }),
+        descripcion: JSON.stringify({ k: 'pres', centro, insumo, tienda, direccion, cantidad, presentacion,
+          necesidadId: necesidadId || null, tiendaLat, tiendaLng, tiendaUrl: tiendaUrl || null, adjunto: adjunto || null }),
         monto_requerido: precio });
       if (error) throw error;
       await historial(centro, insumo, `Presupuesto ${numero}: ${cantidad} × ${insumo} en ${tienda} por ${precio}`, 'admin', cantidad);
       return { numeroFactura: numero, token };
+    }
+    // Plan 08 T3: centros con necesidades ABIERTAS + sus insumos, para los selects
+    // dependientes del wizard de presupuesto (el panel admin no carga la data
+    // pública: cargarTodo es no-op en ventana.html).
+    case 'admin_listar_necesidades': {
+      const { data: ins } = await supa.from('insumos')
+        .select('id, nombre, unidad, cantidad_necesaria, cantidad_recibida, urgencia, lugar_id')
+        .eq('estado', 'Necesita');
+      const ids = [...new Set((ins || []).map((i) => i.lugar_id))];
+      const { data: lugs } = ids.length
+        ? await supa.from('lugares').select('id, nombre').in('id', ids)
+        : { data: [] as { id: number; nombre: string }[] };
+      const nombrePorId: Record<string, string> = {};
+      for (const l of lugs || []) nombrePorId[String(l.id)] = l.nombre as string;
+      const porCentro: Record<string, { centro: string; insumos: unknown[] }> = {};
+      for (const i of ins || []) {
+        const cn = nombrePorId[String(i.lugar_id)];
+        if (!cn) continue;
+        const pend = Math.max(0, (Number(i.cantidad_necesaria) || 0) - (Number(i.cantidad_recibida) || 0));
+        if (pend <= 0) continue;
+        (porCentro[cn] = porCentro[cn] || { centro: cn, insumos: [] }).insumos.push({
+          id: i.id, nombre: i.nombre, unidad: i.unidad || 'unidades', pendiente: pend, urgencia: i.urgencia });
+      }
+      return { centros: Object.values(porCentro).filter((c) => c.insumos.length) };
     }
     case 'admin_listar_facturas': {
       const { data } = await supa.from('facturas')

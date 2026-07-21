@@ -361,7 +361,8 @@
     "movement": "Movimiento",
     "openEvidence": "Abrir evidencia",
     "evidenceFile": "Evidencia",
-    "panelTitle": "Trazabilidad pública por token"
+    "panelTitle": "Trazabilidad pública por token",
+    "seeBudget": "Ver presupuesto"
   },
   "modal": {
     "historyTitle": "Historial de movimientos",
@@ -1033,7 +1034,20 @@
       "recogido": "Ya recogido",
       "entregado": "Entregado",
       "denuncia": "Con denuncia"
-    }
+    },
+    "budgetNoNeeds": "No hay centros con necesidades abiertas.",
+    "budgetPickCenter": "Elige un centro",
+    "budgetPickSupply": "Elige un insumo",
+    "budgetMap": "Ubicación de la tienda",
+    "budgetMapHelp": "Toca el mapa para marcar el punto exacto de la tienda.",
+    "budgetMapSet": "Punto marcado: {lat}, {lng}",
+    "budgetMapRequired": "Marca la tienda en el mapa.",
+    "budgetUrl": "Enlace de la tienda (opcional)",
+    "budgetAttach": "Presupuesto: foto o archivo (opcional)",
+    "budgetAttachHelp": "Cualquier archivo, máx 5 MB. El donante podrá verlo.",
+    "budgetAttachTooBig": "El archivo supera los 5 MB.",
+    "budgetPending": "Faltan {n} {unidad}.",
+    "budgetIncomplete": "Completa centro, insumo, tienda, cantidad y precio."
   },
   "lugar": {},
   "home": {

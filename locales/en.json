@@ -361,7 +361,8 @@
     "movement": "Movement",
     "openEvidence": "Open evidence",
     "evidenceFile": "Evidence",
-    "panelTitle": "Public token traceability"
+    "panelTitle": "Public token traceability",
+    "seeBudget": "See budget"
   },
   "modal": {
     "historyTitle": "Movement history",
@@ -1033,7 +1034,20 @@
       "recogido": "Picked up",
       "entregado": "Delivered",
       "denuncia": "Reported"
-    }
+    },
+    "budgetNoNeeds": "No centers with open needs.",
+    "budgetPickCenter": "Choose a center",
+    "budgetPickSupply": "Choose a supply",
+    "budgetMap": "Store location",
+    "budgetMapHelp": "Tap the map to mark the exact store spot.",
+    "budgetMapSet": "Spot marked: {lat}, {lng}",
+    "budgetMapRequired": "Mark the store on the map.",
+    "budgetUrl": "Store link (optional)",
+    "budgetAttach": "Budget: photo or file (optional)",
+    "budgetAttachHelp": "Any file, max 5 MB. Donors will be able to see it.",
+    "budgetAttachTooBig": "The file exceeds 5 MB.",
+    "budgetPending": "{n} {unidad} still needed.",
+    "budgetIncomplete": "Fill center, supply, store, quantity and price."
   },
   "lugar": {},
   "home": {
