@@ -1320,8 +1320,44 @@
       if (!formEmail) return; // la página-ventana no tiene la vista acceso
       const formCodigo = $('#acceso-codigo-form');
       let correo = '';
+      // Freno cliente: tras un envío el botón queda 60 s en cuenta atrás.
+      // El interval repinta con t() en cada tick → sobrevive al cambio de idioma;
+      // dataset.cooldown le dice a core.js que no lo sobrescriba al traducir.
+      let frenoTimer = null;
+      function frenarReenvio() {
+        const boton = $('#acceso-enviar-btn');
+        if (!boton) return;
+        if (frenoTimer) clearInterval(frenoTimer);
+        let restante = window.__ACCESO_FRENO_S || 60;
+        boton.disabled = true;
+        boton.dataset.cooldown = '1';
+        const pintar = () => { boton.textContent = t('access.waitResend', { s: restante }); };
+        pintar();
+        frenoTimer = setInterval(() => {
+          restante -= 1;
+          if (restante <= 0) {
+            clearInterval(frenoTimer); frenoTimer = null;
+            delete boton.dataset.cooldown;
+            boton.disabled = false;
+            boton.textContent = t('access.sendCode');
+            return;
+          }
+          pintar();
+        }, 1000);
+      }
       formEmail.addEventListener('submit', async (ev) => {
         ev.preventDefault();
+        // Cebo anti-bots: si el campo oculto trae texto es un bot. Fingimos el
+        // mismo éxito sin enviar nada, para no revelar el mecanismo.
+        const cebo = $('#acceso-web');
+        if (cebo && cebo.value) {
+          correo = ($('#acceso-email').value || '').trim().toLowerCase();
+          formEmail.hidden = true;
+          formCodigo.hidden = false;
+          mostrarMensaje('#acceso-msg', 'success', t('access.codeSent', { email: correo }));
+          frenarReenvio();
+          return;
+        }
         if (!validarFormulario(formEmail, '#acceso-msg')) return;
         correo = $('#acceso-email').value.trim().toLowerCase();
         const boton = $('#acceso-enviar-btn');
@@ -1333,9 +1369,11 @@
           formCodigo.hidden = false;
           $('#acceso-codigo').focus();
           mostrarMensaje('#acceso-msg', 'success', t('access.codeSent', { email: correo }));
+          frenarReenvio();
         } catch (err) {
           mostrarMensaje('#acceso-msg', 'error', String(err && err.message || t('access.sendError')));
-        } finally { boton.disabled = false; }
+          boton.disabled = false;
+        }
       });
       $('#acceso-otro-correo').addEventListener('click', () => {
         formCodigo.hidden = true;

@@ -98,6 +98,8 @@
       white-space: nowrap;
       border: 0;
     }
+    /* Cebo anti-bots: invisible para humanos, tentador para bots que rellenan todo. */
+    .hp-field { position: absolute; left: -9999px; height: 1px; width: 1px; opacity: 0; }
     .skip-link {
       position: absolute;
       top: -52px;

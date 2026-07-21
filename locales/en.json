@@ -1166,6 +1166,7 @@
     "loginTitle": "I already have an account",
     "loginCopy": "Enter your email and we will send you a 6-digit code to sign in. Works for drivers, volunteers and centers.",
     "sendCode": "Send me the code",
+    "waitResend": "Resend in {s}s",
     "codeLabel": "6-digit code",
     "enter": "Sign in",
     "changeEmail": "Use another email",

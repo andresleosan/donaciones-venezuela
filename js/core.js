@@ -197,7 +197,8 @@
       setText('#acceso-login-title', 'access.loginTitle');
       setText('#acceso-login-copy', 'access.loginCopy');
       setText('label[for="acceso-email"]', 'common.email');
-      setText('#acceso-enviar-btn', 'access.sendCode');
+      const btnEnviarAcceso = $('#acceso-enviar-btn');
+      if (!(btnEnviarAcceso && btnEnviarAcceso.dataset.cooldown)) setText('#acceso-enviar-btn', 'access.sendCode');
       setText('label[for="acceso-codigo"]', 'access.codeLabel');
       setText('#acceso-entrar-btn', 'access.enter');
       setText('#acceso-otro-correo', 'access.changeEmail');

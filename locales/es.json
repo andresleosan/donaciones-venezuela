@@ -1166,6 +1166,7 @@
     "loginTitle": "Ya estoy registrado",
     "loginCopy": "Escribe tu correo y te enviamos un código de 6 dígitos para entrar. Sirve para transportistas, voluntarios y centros.",
     "sendCode": "Enviarme el código",
+    "waitResend": "Reenviar en {s} s",
     "codeLabel": "Código de 6 dígitos",
     "enter": "Entrar",
     "changeEmail": "Usar otro correo",
