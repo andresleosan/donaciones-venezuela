@@ -1020,7 +1020,9 @@
     "lateLeg": "Leg",
     "lateEta": "ETA",
     "lateElapsed": "elapsed",
-    "markResolved": "Mark resolved"
+    "markResolved": "Mark resolved",
+    "generateReport": "File report",
+    "reportCreated": "Report filed"
   },
   "lugar": {},
   "home": {
@@ -1371,7 +1373,9 @@
     "onTheWay": "Trip in progress. Register the supply once you have it.",
     "haveItCta": "I have the supply",
     "kmSoFar": "You have traveled {km} km so far.",
-    "kmTotal": "Total distance: {km} km."
+    "kmTotal": "Total distance: {km} km.",
+    "simulate": "Simulate trip",
+    "simulating": "Simulating…"
   },
   "report": {
     "needSession": "Sign in to file a report.",

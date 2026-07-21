@@ -1020,7 +1020,9 @@
     "lateLeg": "Tramo",
     "lateEta": "ETA",
     "lateElapsed": "transcurrido",
-    "markResolved": "Marcar resuelto"
+    "markResolved": "Marcar resuelto",
+    "generateReport": "Generar denuncia",
+    "reportCreated": "Denuncia generada"
   },
   "lugar": {},
   "home": {
@@ -1371,7 +1373,9 @@
     "onTheWay": "Viaje en curso. Cuando tengas el insumo en la mano, regístralo.",
     "haveItCta": "Ya tengo el insumo",
     "kmSoFar": "Llevas {km} km recorridos.",
-    "kmTotal": "Recorrido total: {km} km."
+    "kmTotal": "Recorrido total: {km} km.",
+    "simulate": "Simular viaje",
+    "simulating": "Simulando…"
   },
   "report": {
     "needSession": "Inicia sesión para hacer una denuncia.",

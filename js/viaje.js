@@ -28,6 +28,53 @@
       return (l && l.lat != null && l.lng != null) ? { lat: l.lat, lng: l.lng, nombre: l.nombre } : null;
     }
 
+    // Puerta dev (misma que core.js): ?dev=1 / ?edit=1 o sessionStorage 'dv-dev'.
+    function simDisponible() {
+      try {
+        const q = new URLSearchParams(location.search);
+        if ((q.get('dev') || q.get('edit')) === '1') return true;
+        return sessionStorage.getItem('dv-dev') === '1';
+      } catch (err) { return false; }
+    }
+
+    // Foto de relleno (canvas) para la simulación — no toca la cámara real.
+    function fotoSimulada() {
+      const c = document.createElement('canvas'); c.width = 320; c.height = 240;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#7a8b74'; ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('SIMULACIÓN', 70, 128);
+      return c.toDataURL('image/jpeg', 0.6);
+    }
+
+    // Recorre paso 1→2→3 contra las acciones REALES con GPS ficticio (se acerca
+    // al destino) y fotos de canvas, ~5 s entre pasos: la línea de tiempo se mueve
+    // de verdad sobre datos de mentira. Solo se dispara desde el botón dev.
+    async function simularViaje(pr) {
+      const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+      const d = destinoDelCentro(pr.centro) || { lat: 10.4806, lng: -66.9036 };
+      const gps = (f) => ({ lat: d.lat + 0.02 * (1 - f), lng: d.lng - 0.02 * (1 - f) });
+      const foto = fotoSimulada();
+      const sesion = (typeof sesionActual === 'function' && sesionActual()) || {};
+      const nombre = sesion.nombre || 'SIM';
+      try {
+        await window.SheetsService.post({ accion: 'viaje_iniciar', token: pr.token,
+          nombreTransportista: nombre, etaMinutos: 60, gps: gps(0), email: sesion.email || '' });
+        await cargarTodo(); abrirViaje(pr, { etapa: 1 }); await espera(5000);
+        const p2 = pr.esOferta
+          ? { accion: 'recoger_oferta', token: pr.token, nombreTransportista: nombre, centroDestino: pr.centro || '',
+              fotoSitio: foto, fotoInsumo: foto, fotoPersona: foto, gps: gps(0.5) }
+          : { accion: 'registrar_recogida', token: pr.token, nombreTransportista: nombre, notas: 'sim',
+              fotoSitio: foto, fotoInsumo: foto, fotoPersona: foto, gps: gps(0.5) };
+        const r2 = await window.SheetsService.post(p2);
+        await cargarTodo(); abrirViaje(pr, { etapa: 2, km: r2 && r2.km }); await espera(5000);
+        const r3 = await window.SheetsService.post({ accion: 'registrar_entrega_final', token: pr.token,
+          nombreReceptor: 'SIM', cargoReceptor: 'sim', fotoCentro: foto, fotoEncargado: foto, gps: gps(1) });
+        await cargarTodo(); abrirViaje(pr, { etapa: 3, km: r3 && r3.km });
+      } catch (err) {
+        mostrarMensaje('#viaje-message', 'error', String(err && err.message || t('needs.error')));
+      }
+    }
+
     function abrirViaje(pr, opciones) {
       const shell = $('#viaje-shell');
       if (!shell) return;
@@ -115,6 +162,9 @@
         <p class="meta"><strong>${e(t('cycle.deliverTo'))}</strong> ${e(pr.centro)}</p>
         ${destino ? '<div id="viaje-mapa" class="of-mapa"></div>' : `<p class="meta">${e(t('trip.noMap'))}</p>`}
         ${bloquePaso}
+        ${(etapa === 0 && simDisponible())
+          ? `<div class="form-actions"><button class="btn btn-ghost btn-small" type="button" id="viaje-simular">▶ ${e(t('trip.simulate'))}</button></div>`
+          : ''}
         <div id="viaje-message" class="form-message" role="status" aria-live="polite"></div>`;
 
       // Mapa: destino siempre; el punto del transportista se añade cuando el GPS
@@ -147,6 +197,12 @@
         if (!$('#viaje-shell') || !$('#viaje-shell').children.length) return;
         abrirViaje(pr, { etapa: etapa, km: op.km });
       };
+
+      // Botón dev de simulación (solo ?dev=1, solo etapa 0).
+      const simBtn = $('#viaje-simular');
+      if (simBtn) simBtn.addEventListener('click', () => {
+        simBtn.disabled = true; simBtn.textContent = t('trip.simulating'); simularViaje(pr);
+      });
 
       // ── Paso 2 «Ya tengo el insumo»: 3 cámaras + GPS ──
       if (etapa === 1) {

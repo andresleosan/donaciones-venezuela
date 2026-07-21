@@ -124,7 +124,10 @@
               <p class="meta">🚚 ${e(v.transportista || '')}${v.email ? ` · <a href="mailto:${e(v.email)}">${e(v.email)}</a>` : ''}</p>
               <p class="meta">${e(t('admin.lateLeg'))} ${e(String(v.tramo))} · ${e(t('admin.lateEta'))} ${e(String(v.eta_minutos))} min · ${e(t('admin.lateElapsed'))} ${e(dur)}</p>
               ${v.token_publico ? `<p class="meta">🧾 ${e(v.token_publico)}</p>` : ''}
-              <div class="form-actions"><button class="btn btn-soft btn-small" type="button" data-viaje-resolver="${e(v.id)}">${e(t('admin.markResolved'))}</button></div>
+              <div class="form-actions">
+                <button class="btn btn-danger btn-small" type="button" data-viaje-denuncia="${e(v.id)}" data-token="${e(v.token_publico || '')}" data-driver="${e(v.transportista || '')}" data-min="${e(String(min))}" data-tramo="${e(String(v.tramo))}">${e(t('admin.generateReport'))}</button>
+                <button class="btn btn-soft btn-small" type="button" data-viaje-resolver="${e(v.id)}">${e(t('admin.markResolved'))}</button>
+              </div>
             </article>`;
           }).join('')}
         </section>` : '';
@@ -148,6 +151,16 @@
         b.disabled = true;
         try { await postAdmin({ accion: 'admin_viaje_resolver', id: b.dataset.viajeResolver }); await refrescarAdminData(); irAMenu(); }
         catch (err) { b.disabled = false; }
+      }));
+      $$('#admin-console [data-viaje-denuncia]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          await postAdmin({ accion: 'admin_denuncia_crear', facturaToken: b.dataset.token,
+            transportista: b.dataset.driver, horas: Math.round((Number(b.dataset.min) || 0) / 60), tramo: Number(b.dataset.tramo) });
+          await refrescarAdminData();
+          irAMenu();
+          toast(t('admin.reportCreated'));
+        } catch (err) { b.disabled = false; }
       }));
       $('#admin-salir').addEventListener('click', cerrarSesionAdmin);
     }

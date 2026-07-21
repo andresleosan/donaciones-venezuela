@@ -898,6 +898,27 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (error) throw error;
       return { resuelto: true };
     }
+    // Denuncia generada por administración (plan 07 T5): sobre la tabla del plan
+    // 01, origen 'admin', sin video, texto automático. El texto se compone aquí
+    // (español canónico, solo-admin) para no cablear español en el JS.
+    case 'admin_denuncia_crear': {
+      const facturaToken = s(p.facturaToken, 24).toUpperCase();
+      const transportista = s(p.transportista, 120) || 'desconocido';
+      const horas = Math.max(0, Math.min(999, Math.round(n(p.horas))));
+      const tramo = n(p.tramo) === 2 ? 2 : 1;
+      const texto = `Generada por administración: el transportista ${transportista} no se reportó; retraso de ${horas} h en el tramo ${tramo}.`;
+      const { data: nueva, error } = await supa.from('denuncias').insert({
+        email: 'administracion@sistema.local', nombre: 'Administración', rol: 'admin',
+        tipo: 'Retención de insumos', texto, factura_token: facturaToken || null,
+        origen: 'admin', estado: 'Recibida' }).select('id').single();
+      if (error) throw error;
+      if (facturaToken) {
+        const { data: f } = await supa.from('facturas').select('id').eq('token_publico', facturaToken).maybeSingle();
+        if (f) await supa.from('movimientos_factura').insert({
+          factura_id: f.id, tipo: 'Denuncia', descripcion: mov('denunciaRegistrada', {}), monto: 0 });
+      }
+      return { id: nueva.id, estado: 'Recibida' };
+    }
 
     // ===== Panel interno por centro =====
     case 'panel_crear': {
