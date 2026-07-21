@@ -53,7 +53,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=72">
+  <link rel="stylesheet" href="css/app.css?v=73">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -161,6 +161,11 @@
           </button>
         </div>
 
+        <div class="home-report">
+          <button class="btn btn-danger btn-block" type="button" id="btn-denunciar" data-view-link="denunciar">Hacer una denuncia</button>
+          <button class="link-btn" type="button" id="btn-ver-denuncias" data-view-link="denuncias">Ver denuncias</button>
+        </div>
+        <div id="den-pendiente" class="den-pendiente" role="status" aria-live="polite" hidden></div>
         <p class="home-foot"><span id="home-foot-q">¿Donaste algo?</span> <a href="#seguimiento" id="home-foot-link" data-view-link="seguimiento">Sigue tu donación con tu código</a></p>
         <p class="home-foot"><button class="link-btn" type="button" id="btn-home-admin">Acceso de administración</button></p>
         <aside class="pwa-card" id="pwa-install-card" aria-labelledby="pwa-card-title">
@@ -778,19 +783,39 @@
       <div class="form-panel" id="viaje-shell" aria-live="polite"></div>
     </section>
 
+    <section id="view-denunciar" class="view" data-view="denunciar" aria-labelledby="denunciar-title">
+      <div class="section-header">
+        <div>
+          <h2 id="denunciar-title" class="section-title">Hacer una denuncia</h2>
+        </div>
+      </div>
+      <div class="form-panel" id="denunciar-shell" aria-live="polite"></div>
+    </section>
+
+    <section id="view-denuncias" class="view" data-view="denuncias" aria-labelledby="denuncias-title">
+      <div class="section-header">
+        <div>
+          <h2 id="denuncias-title" class="section-title">Denuncias</h2>
+          <p id="denuncias-sub" class="section-sub">Anónimas para el público. Video, fecha y ubicación.</p>
+        </div>
+      </div>
+      <div class="form-panel" id="denuncias-shell" aria-live="polite"></div>
+    </section>
+
   </main>
 
   <div id="toast-root"></div>
   <div id="modal-root"></div>
 
   <script src="services/leaflet/leaflet.js"></script>
-  <script src="services/api.js?v=72"></script>
-  <script src="js/pwa.js?v=72"></script>
-  <script src="js/core.js?v=72"></script>
-  <script src="js/wiz.js?v=72"></script>
-  <script src="js/vistas.js?v=72"></script>
-  <script src="js/panel.js?v=72"></script>
-  <script src="js/admin.js?v=72"></script>
-  <script src="js/viaje.js?v=72"></script>
+  <script src="services/api.js?v=73"></script>
+  <script src="js/pwa.js?v=73"></script>
+  <script src="js/core.js?v=73"></script>
+  <script src="js/wiz.js?v=73"></script>
+  <script src="js/vistas.js?v=73"></script>
+  <script src="js/panel.js?v=73"></script>
+  <script src="js/admin.js?v=73"></script>
+  <script src="js/viaje.js?v=73"></script>
+  <script src="js/denuncias.js?v=73"></script>
 </body>
 </html>

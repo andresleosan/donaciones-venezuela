@@ -104,6 +104,41 @@ async function guardarFoto(dataUrl: unknown, carpeta: string, nombre: string): P
   return ruta;
 }
 
+// Guarda un video de denuncia (data URL webm/mp4) en el bucket PRIVADO
+// `denuncias`. upsert=true para el guardado progresivo (mismo objeto cada 5 s).
+// Tope ~30MB decodificados (90 s a 1.5 Mbps ≈ 17MB; margen para mp4/Safari).
+// ponytail: se resube el archivo COMPLETO en cada parcial (O(n²) de banda) porque
+// el .txt exige «guardar toda la info posible cada 5 s» y así el objeto servidor
+// siempre es reproducible ante un accidente; si el ancho de banda importa, subir
+// por rangos/multipart. El cliente ya salta si el envío previo sigue en vuelo.
+async function guardarVideo(dataUrl: unknown, carpeta: string, nombre: string, upsert = false): Promise<string> {
+  const m = String(dataUrl ?? '').match(/^data:video\/(webm|mp4);base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) throw new Error('video inválido (se espera webm o mp4)');
+  const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+  if (bytes.length < 1000) throw new Error('video vacío');
+  if (bytes.length > 30_000_000) throw new Error('video demasiado grande');
+  const ruta = `${carpeta}/${nombre}.${m[1]}`;
+  const { error } = await supa.storage.from('denuncias')
+    .upload(ruta, bytes, { contentType: `video/${m[1]}`, upsert });
+  if (error) throw new Error('no se pudo guardar el video');
+  return ruta;
+}
+
+// Identidad del denunciante a partir del JWT de la sesión (mismo patrón que
+// acceso_perfil): email + nombre + rol. El donante sin rol vale (rol='donante').
+async function identidadSesion(jwt: string): Promise<{ email: string; nombre: string; rol: string }> {
+  const { data: udata, error: eU } = await supa.auth.getUser(jwt);
+  const email = udata?.user?.email?.toLowerCase() || '';
+  if (eU || !email) throw new Error('Sesión inválida o vencida, vuelve a pedir un código');
+  const { data: mots } = await supa.from('motorizados').select('nombre').eq('email', email).limit(1);
+  if (mots?.[0]) return { email, nombre: String(mots[0].nombre || ''), rol: 'transportista' };
+  const { data: vols } = await supa.from('voluntarios').select('nombre, apellido').eq('email', email).limit(1);
+  if (vols?.[0]) return { email, nombre: `${vols[0].nombre} ${vols[0].apellido || ''}`.trim(), rol: 'voluntario' };
+  const { data: pans } = await supa.from('centros_panel').select('lugares(nombre)').eq('email', email).limit(1);
+  if (pans?.[0]) return { email, nombre: (pans[0] as { lugares?: { nombre?: string } }).lugares?.nombre || 'Centro', rol: 'centro' };
+  return { email, nombre: email.split('@')[0], rol: 'donante' };
+}
+
 // Los movimientos que ve el público NO se guardan como frase en español: se
 // guardan como código + datos y el cliente los redacta en el idioma del usuario
 // (regla R1.5). Las filas viejas siguen siendo texto plano y se muestran tal cual.
@@ -288,10 +323,15 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
   const esAdmin = accion.startsWith('admin_');
   // Las lecturas públicas no gastan el cupo de escrituras (30/h): navegar los
   // presupuestos o la lista de recogidas no debe bloquear el poder donar.
-  const esLectura = ['listar_presupuestos', 'listar_comprados', 'listar_ofertas', 'acceso_perfil'].includes(accion);
+  const esLectura = ['listar_presupuestos', 'listar_comprados', 'listar_ofertas', 'acceso_perfil', 'denuncias_listar'].includes(accion);
+  // Una denuncia manda ~18 parciales (cada 5 s durante 90 s) + el cierre: cubo
+  // propio y generoso para no chocar con el límite público de 30/h.
+  const esDenuncia = accion === 'denuncia_crear' || accion === 'denuncia_parcial';
   if (esAdmin) await autenticarAdmin(p, req);
   else if (esLectura) {
     if (!(await rateHit(ipDe(req), 'lectura', 240))) throw new Error('Demasiadas solicitudes, intenta en una hora');
+  } else if (esDenuncia) {
+    if (!(await rateHit(ipDe(req), 'denuncia', 400))) throw new Error('Demasiadas solicitudes, intenta en una hora');
   } else if (!esPanel && !(await rateHit(ipDe(req), 'publico', 30))) {
     throw new Error('Demasiadas solicitudes, intenta en una hora');
   }
@@ -694,6 +734,110 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         reportado_por: s(p.reportadoPor ?? p.reportado_por, 120), verificada: false });
       if (error) throw error;
       return {};
+    }
+
+    // ===== Denuncias con video (plan 01) =====
+    // Cualquier sesión iniciada puede denunciar (incluido el donante sin rol).
+    // El público solo ve video+fecha+coords+estado (vista denuncias_public);
+    // identidad/rol/texto/GPS-precisión = solo admin.
+    case 'denuncia_parcial': {
+      // Guardado progresivo cada 5 s: crea la fila en el primer fragmento y
+      // resube el objeto de video (upsert) para que siempre haya algo recuperable.
+      const jwt = s(p.accessToken, 4000);
+      if (!jwt) throw new Error('sesión requerida');
+      if (!p.videoBase64) throw new Error('Falta el fragmento de video');
+      const ident = await identidadSesion(jwt);
+      const duracion = Math.max(0, Math.min(600, Math.round(n(p.duracionS))));
+      let id = s(p.denunciaId, 40);
+      if (id) {
+        const { data: fila } = await supa.from('denuncias').select('id, email').eq('id', id).maybeSingle();
+        if (!fila || fila.email !== ident.email) throw new Error('Denuncia no encontrada');
+      } else {
+        const tipo = s(p.tipo, 40) === 'Retención de insumos' ? 'Retención de insumos' : 'Otro';
+        const g = geoValida((p.gps ?? {}) as Record<string, unknown>);
+        const prec = Number((p.gps as Record<string, unknown> | undefined)?.precision);
+        const facturaToken = s(p.facturaToken, 24).toUpperCase();
+        const { data: nueva, error: eIns } = await supa.from('denuncias').insert({
+          email: ident.email, nombre: ident.nombre, rol: ident.rol, tipo,
+          gps_lat: g.lat, gps_lng: g.lng, gps_precision: Number.isFinite(prec) ? prec : null,
+          factura_token: facturaToken || null, origen: 'usuario', estado: 'Recibida' }).select('id').single();
+        if (eIns) throw eIns;
+        id = nueva.id;
+      }
+      const ruta = await guardarVideo(p.videoBase64, `denuncias/${id}`, 'video', true);
+      await supa.from('denuncias').update({ video_path: ruta, duracion_s: duracion }).eq('id', id);
+      return { id };
+    }
+    case 'denuncia_crear': {
+      // Cierre de la denuncia: ensambla el video final y sella los datos.
+      const jwt = s(p.accessToken, 4000);
+      if (!jwt) throw new Error('sesión requerida');
+      if (!p.videoBase64) throw new Error('Falta el video de la denuncia');
+      const ident = await identidadSesion(jwt);
+      const tipo = s(p.tipo, 40) === 'Retención de insumos' ? 'Retención de insumos' : 'Otro';
+      const g = geoValida((p.gps ?? {}) as Record<string, unknown>);
+      const prec = Number((p.gps as Record<string, unknown> | undefined)?.precision);
+      const duracion = Math.max(0, Math.min(600, Math.round(n(p.duracionS))));
+      const texto = s(p.texto, 1000);
+      const facturaToken = s(p.facturaToken, 24).toUpperCase();
+      let id = s(p.denunciaId, 40);
+      if (id) {
+        const { data: fila } = await supa.from('denuncias').select('id, email').eq('id', id).maybeSingle();
+        if (!fila || fila.email !== ident.email) throw new Error('Denuncia no encontrada');
+      } else {
+        const { data: nueva, error: eIns } = await supa.from('denuncias').insert({
+          email: ident.email, nombre: ident.nombre, rol: ident.rol, tipo,
+          gps_lat: g.lat, gps_lng: g.lng, gps_precision: Number.isFinite(prec) ? prec : null,
+          texto, factura_token: facturaToken || null, origen: 'usuario', estado: 'Recibida' }).select('id').single();
+        if (eIns) throw eIns;
+        id = nueva.id;
+      }
+      const ruta = await guardarVideo(p.videoBase64, `denuncias/${id}`, 'video', true);
+      const { error } = await supa.from('denuncias').update({
+        video_path: ruta, duracion_s: duracion, tipo, texto,
+        gps_lat: g.lat, gps_lng: g.lng, gps_precision: Number.isFinite(prec) ? prec : null }).eq('id', id);
+      if (error) throw error;
+      if (facturaToken) {
+        const { data: f } = await supa.from('facturas').select('id').eq('token_publico', facturaToken).maybeSingle();
+        if (f) await supa.from('movimientos_factura').insert({
+          factura_id: f.id, tipo: 'Denuncia', descripcion: mov('denunciaRegistrada', {}), monto: 0 });
+      }
+      return { id, estado: 'Recibida' };
+    }
+    case 'denuncias_listar': {
+      const { data } = await supa.from('denuncias_public')
+        .select('*').order('created_at', { ascending: false }).limit(50);
+      const filas: Record<string, unknown>[] = [];
+      for (const d of data || []) {
+        let url = '';
+        if (d.video_path) {
+          const { data: signed } = await supa.storage.from('denuncias').createSignedUrl(d.video_path as string, 3600);
+          url = signed?.signedUrl || '';
+        }
+        filas.push({ ...d, video_url: url });
+      }
+      return { denuncias: filas };
+    }
+    case 'admin_denuncias': {
+      const { data } = await supa.from('denuncias')
+        .select('*').order('created_at', { ascending: false }).limit(100);
+      const filas: Record<string, unknown>[] = [];
+      for (const d of data || []) {
+        let url = '';
+        if (d.video_path) {
+          const { data: signed } = await supa.storage.from('denuncias').createSignedUrl(d.video_path as string, 3600);
+          url = signed?.signedUrl || '';
+        }
+        filas.push({ ...d, video_url: url });
+      }
+      return { denuncias: filas };
+    }
+    case 'admin_denuncia_estado': {
+      const id = s(p.id, 40);
+      const estado = ['Recibida', 'En revisión', 'Atendida'].includes(s(p.estado, 20)) ? s(p.estado, 20) : 'Recibida';
+      const { error } = await supa.from('denuncias').update({ estado }).eq('id', id);
+      if (error) throw error;
+      return { estado };
     }
 
     // ===== Panel interno por centro =====

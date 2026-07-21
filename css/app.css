@@ -2228,3 +2228,25 @@
     .of-coords { margin: 12px 0 0; font-weight: 600; color: var(--ink); }
     #of-geo-message:not(.visible) { display: none; }
     #of-geo-message.visible { margin-top: 12px; }
+
+    /* ── Denuncias con video (plan 01) ── */
+    .home-report { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 20px 0 8px; }
+    .home-report .btn-danger { color: #fff; }
+    .den-pendiente { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin: 8px 0; padding: 10px 14px; border-radius: 12px; background: #FFF0F0; color: var(--critical);
+      border: 1px solid var(--critical); font-weight: 600; }
+    .den-pendiente[hidden] { display: none; }
+    .den-notice { display: flex; gap: 6px; align-items: center; color: var(--critical); font-weight: 600; }
+    .den-stage { position: relative; margin: 12px 0; }
+    .den-video { width: 100%; max-height: 60vh; background: #000; border-radius: 14px; display: block; }
+    .den-timer { position: absolute; top: 10px; left: 12px; margin: 0; padding: 4px 10px; border-radius: 999px;
+      background: rgba(0,0,0,.6); color: #fff; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .den-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 8px 0 4px; }
+    .den-trigger { width: 68px; height: 68px; min-height: 52px; border-radius: 50%; border: 5px solid #fff;
+      background: var(--critical); box-shadow: 0 0 0 2px var(--critical); cursor: pointer; }
+    .den-trigger.is-recording { border-radius: 18px; }
+    .den-card { display: flex; flex-direction: column; gap: 8px; }
+    .den-card .den-video { max-height: 46vh; }
+    .den-mini-map { height: 140px; border-radius: 12px; overflow: hidden; }
+    .den-estado-acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+    .den-admin-list { display: flex; flex-direction: column; gap: 14px; }

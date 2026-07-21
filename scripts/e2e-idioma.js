@@ -8,7 +8,7 @@
    en la base de datos: solo mira. */
 async function pruebaIdioma() {
   const VISTAS = ['inicio', 'donaciones', 'ayuda', 'donar', 'ayudar', 'necesidades', 'acceso',
-    'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento', 'ofrecer'];
+    'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento', 'ofrecer', 'denuncias'];
   const MIN_TACTIL = 44; // px de alto mínimo para un control en móvil (regla R4.3)
 
   const aplanar = (obj, prefijo = '', salida = {}) => {

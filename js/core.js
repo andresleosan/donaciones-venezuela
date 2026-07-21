@@ -159,6 +159,11 @@
       setText('#donar-dinero-title', 'money.modalTitle');
       setText('#mi-cuenta-title', 'session.menuTitle');
       setText('#viaje-title', 'trip.pageTitle');
+      setText('#denunciar-title', 'report.pageTitle');
+      setText('#denuncias-title', 'report.listTitle');
+      setText('#denuncias-sub', 'report.listSub');
+      setText('#btn-denunciar', 'report.ctaTop');
+      setText('#btn-ver-denuncias', 'report.ctaList');
       setText('#btn-rescatista-texto', 'helpHub.rescuerCta');
       setText('#reportar-summary', 'helpHub.reportSummary');
       setText('#form-lugar-copy', 'centers.formCopy');
@@ -629,6 +634,8 @@
       if (typeof window.reconstruirDonarDinero === 'function') window.reconstruirDonarDinero();
       if (typeof window.reconstruirMiCuenta === 'function') window.reconstruirMiCuenta();
       if (typeof window.reconstruirViaje === 'function') window.reconstruirViaje();
+      if (typeof window.reconstruirDenunciar === 'function') window.reconstruirDenunciar();
+      if (typeof window.reconstruirDenuncias === 'function') window.reconstruirDenuncias();
       if (typeof wizRetraducirTodos === 'function') wizRetraducirTodos();
       pintarBotonSesion();
       if (rehacerModal) { rehacerModal(); restaurarEstadoModal(estadoModal); }

@@ -633,6 +633,21 @@
       "Entregada": "Delivered",
       "Registrada": "Recorded",
       "Confirmada": "Confirmed"
+    },
+    "reportType": {
+      "Retención de insumos": "Supply retention",
+      "Otro": "Other"
+    },
+    "reportState": {
+      "Recibida": "Received",
+      "En revisión": "Under review",
+      "Atendida": "Addressed"
+    },
+    "reportRole": {
+      "transportista": "Driver",
+      "voluntario": "Volunteer",
+      "centro": "Center",
+      "donante": "Donor"
     }
   },
   "donations": {
@@ -997,7 +1012,8 @@
     "invoiceLabel": "Invoice no.",
     "donationDone": "Donation recorded",
     "vacancyLive": "The role is now live in the volunteers section.",
-    "regenIntro": "Generate a fresh token and PIN for an existing center's panel."
+    "regenIntro": "Generate a fresh token and PIN for an existing center's panel.",
+    "manageReports": "Reports"
   },
   "lugar": {},
   "home": {
@@ -1314,7 +1330,8 @@
     "donacionOfrecida": "Donation offered: {cantidad} {unidad} of {insumo} at {ubicacion}. Waiting for a driver.",
     "donacionRecogida": "{nombre} picked up the donation at {ubicacion} to take it to {centro}.",
     "necesidadCubierta": "Need covered: the center has received everything it asked for.",
-    "viajeIniciado": "{nombre} is on the way to pick up the supply (arriving in ~{eta} min)."
+    "viajeIniciado": "{nombre} is on the way to pick up the supply (arriving in ~{eta} min).",
+    "denunciaRegistrada": "A report related to this supply was filed."
   },
   "trip": {
     "pageTitle": "Driver trip",
@@ -1342,5 +1359,34 @@
     "haveItCta": "I have the supply",
     "kmSoFar": "You have traveled {km} km so far.",
     "kmTotal": "Total distance: {km} km."
+  },
+  "report": {
+    "needSession": "Sign in to file a report.",
+    "locationNotice": "The exact location will be public.",
+    "typeLabel": "What kind of report?",
+    "startRec": "Start recording",
+    "stopRec": "Stop",
+    "whatHappened": "What happened? (optional)",
+    "send": "Send report",
+    "recording": "Recording… it saves itself every 5 seconds.",
+    "reviewSend": "Review the video and send the report.",
+    "noVideo": "Record a video before sending.",
+    "sending": "Sending report…",
+    "done": "Report sent. Thank you for reporting.",
+    "sendError": "The report could not be sent.",
+    "cameraError": "Could not access the camera. Check permissions.",
+    "pendingUpload": "You have a recorded report that wasn't sent.",
+    "loading": "Loading reports…",
+    "loadError": "Reports could not be loaded.",
+    "empty": "No public reports yet.",
+    "noCoords": "No coordinates",
+    "videoUnavailable": "Video unavailable",
+    "pageTitle": "File a report",
+    "listTitle": "Reports",
+    "listSub": "Anonymous to the public. Video, date and location.",
+    "ctaTop": "File a report",
+    "ctaList": "View reports",
+    "langLocked": "You can't change language while recording.",
+    "reporter": "Reporter"
   }
 }

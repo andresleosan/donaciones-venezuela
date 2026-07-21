@@ -314,11 +314,25 @@
       if (/^#admin$/i.test(hashRaw)) { window.location.href = '/admin'; return; }
       // El token de seguimiento (#seguimiento/DV-…) lo pinta cargarSeguimientoDesdeUrl.
       if (/^#seguimiento\//i.test(hashRaw)) return;
-      const VISTAS = ['inicio', 'donaciones', 'ayuda', 'donar', 'ayudar', 'necesidades', 'acceso', 'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento', 'ofrecer'];
+      const VISTAS = ['inicio', 'donaciones', 'ayuda', 'donar', 'ayudar', 'necesidades', 'acceso', 'transporte', 'centro', 'voluntarios', 'rescatistas', 'familiar', 'seguimiento', 'ofrecer', 'denuncias'];
       const hash = hashRaw.replace(/^#/, '').toLowerCase();
       // #ofrecer se construye al vuelo: sin esto, entrar directo o recargar
       // dejaba la página vacía (solo el título).
       if (hash === 'ofrecer' && typeof abrirOfrecerInsumo === 'function') { abrirOfrecerInsumo({}); return; }
+      // Denunciar EXIGE sesión (cualquiera, incluido el donante sin rol). Sin
+      // sesión: guarda el retorno y manda a #acceso (tras entrar vuelve aquí).
+      if (hash === 'denunciar') {
+        if (typeof sesionActual === 'function' && sesionActual()) {
+          if (typeof abrirDenunciar === 'function') abrirDenunciar();
+          return;
+        }
+        try { sessionStorage.setItem('dv-retorno', '#denunciar'); } catch (err) { /* privado */ }
+        if (typeof toast === 'function') toast(t('report.needSession'));
+        window.location.hash = '#acceso';
+        return;
+      }
+      // Lista pública de denuncias: se construye al vuelo (como #ofrecer).
+      if (hash === 'denuncias' && typeof abrirDenuncias === 'function') { abrirDenuncias(); return; }
       // Páginas construidas al vuelo: sin esto, fijar su hash dispara este mismo
       // manejador y las mandaba al inicio (rebote).
       // «Mi sesión» se reconstruye sola desde la sesión guardada; si no hay

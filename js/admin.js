@@ -9,7 +9,7 @@
     // se pierde. Toda interpolación pasa por e(); cada acción lleva adminKey.
 
     let facturaActiva = null;
-    let adminData = { facturas: [], personas: [], vacantes: [], rescatistas: [] };
+    let adminData = { facturas: [], personas: [], vacantes: [], rescatistas: [], denuncias: [] };
     let wiz = null;
 
     function claveAdmin() { return window.sessionStorage.getItem('adminKey') || ''; }
@@ -66,6 +66,7 @@
       adminData.personas = await opcional('admin_listar_personas', 'personas');
       adminData.vacantes = await opcional('admin_listar_vacantes', 'vacantes');
       adminData.rescatistas = await opcional('admin_listar_rescatistas', 'rescatistas');
+      adminData.denuncias = await opcional('admin_denuncias', 'denuncias');
     }
 
     async function refrescarAdminData() {
@@ -92,6 +93,7 @@
         { id: 'vacantes', icon: '📋', titulo: t('admin.manageVacancies'), count: adminData.vacantes.length },
         { id: 'personas', icon: '🔎', titulo: t('admin.managePeople'), count: adminData.personas.length },
         { id: 'rescatistas', icon: '🚑', titulo: t('admin.manageRescuers'), count: adminData.rescatistas.length },
+        { id: 'denuncias', icon: '🚨', titulo: t('admin.manageReports'), count: adminData.denuncias.length },
         { id: 'regenerar', icon: '🔑', titulo: t('admin.manageRegen'), count: null }
       ];
       const crearCards = crear.map((tk) => `
@@ -349,9 +351,40 @@
 
     // ---- Paneles de gestión ----
     function abrirGestion(cual) {
-      const panels = { facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, regenerar: panelRegenerar };
+      const panels = { facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, denuncias: panelDenuncias, regenerar: panelRegenerar };
       const fn = panels[cual];
       if (fn) fn();
+    }
+
+    // T7 — Denuncias: el admin ve TODO (identidad, rol, GPS exacto, video, texto)
+    // y puede cambiar el estado. La vista pública nunca expone esta identidad.
+    function panelDenuncias() {
+      const filas = (adminData.denuncias || []).map((d) => {
+        const fecha = new Date(d.created_at);
+        const gps = (d.gps_lat != null && d.gps_lng != null)
+          ? `<a href="https://www.openstreetmap.org/?mlat=${e(String(d.gps_lat))}&mlon=${e(String(d.gps_lng))}#map=17/${e(String(d.gps_lat))}/${e(String(d.gps_lng))}" target="_blank" rel="noopener">${e(Number(d.gps_lat).toFixed(5))}, ${e(Number(d.gps_lng).toFixed(5))}</a>`
+          : e(t('report.noCoords'));
+        return `<article class="card den-card">
+          <div class="badge-row"><span class="badge gray">${e(tValue('reportType', d.tipo))}</span><span class="badge">${e(tValue('reportState', d.estado))}</span></div>
+          ${d.video_url ? `<video class="den-video" controls preload="none" src="${e(d.video_url)}"></video>` : `<p class="meta">${e(t('report.videoUnavailable'))}</p>`}
+          <p class="meta"><strong>${e(t('report.reporter'))}:</strong> ${e(d.nombre || '')} · ${e(d.email || '')} · ${e(tValue('reportRole', d.rol) || d.rol || '')}</p>
+          <p class="meta">${e(fecha.toLocaleString())} · 📍 ${gps}</p>
+          ${d.texto ? `<p class="meta">"${e(d.texto)}"</p>` : ''}
+          ${d.factura_token ? `<p class="meta">🧾 ${e(d.factura_token)}</p>` : ''}
+          <div class="den-estado-acciones">
+            ${['Recibida', 'En revisión', 'Atendida'].map((es) => `<button class="btn btn-soft btn-small" type="button" data-den-estado="${e(es)}" data-den-id="${e(d.id)}"${es === d.estado ? ' disabled' : ''}>${e(tValue('reportState', es))}</button>`).join('')}
+          </div>
+        </article>`;
+      }).join('') || `<p class="empty-state">${e(t('report.empty'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.manageReports'), `<div class="admin-records den-admin-list">${filas}</div>`);
+      bindGestMenu();
+      $$('#admin-console [data-den-estado]').forEach((b) => b.addEventListener('click', async () => {
+        try {
+          await postAdmin({ accion: 'admin_denuncia_estado', id: b.dataset.denId, estado: b.dataset.denEstado });
+          await refrescarAdminData();
+          panelDenuncias();
+        } catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+      }));
     }
 
     function marcoGestion(titulo, cuerpo) {
@@ -1156,6 +1189,11 @@
           $('#acceso-codigo').value = '';
           mostrarMensaje('#acceso-msg', 'success', roles.length ? t('access.welcome') : t('access.welcomeNoRoles'));
           pintarPerfilAcceso();
+          // Si el usuario venía de una pantalla que exige sesión (p. ej. #denunciar),
+          // se le devuelve ahí tras entrar.
+          let retorno = '';
+          try { retorno = sessionStorage.getItem('dv-retorno') || ''; sessionStorage.removeItem('dv-retorno'); } catch (err) { /* privado */ }
+          if (retorno) window.setTimeout(() => { window.location.hash = retorno; }, 600);
         } catch (err) {
           const crudo = String(err && err.message || '');
           // GoTrue responde en inglés; el caso típico (código malo o vencido) se traduce.
@@ -1555,6 +1593,8 @@
       await cargarTodo();
       abrirPanelDesdeUrl();
       await cargarSeguimientoDesdeUrl();
+      // Denuncia a medias (grabada offline): muestra el banner para reenviarla.
+      if (typeof window.denRevisarPendiente === 'function') window.denRevisarPendiente();
       window.addEventListener('hashchange', () => { abrirPanelDesdeUrl(); cargarSeguimientoDesdeUrl(); });
       document.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape') {

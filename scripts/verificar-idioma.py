@@ -24,6 +24,8 @@ CANONICOS = {
     'Rescate Acuático', 'Transporte público', 'Ambulancia o unidad médica',
     'Unidad médica', 'Unidad de rescate pesado', 'Más de 10 personas',
     'Localizado con vida', 'Sin información reciente',
+    # Denuncias (plan 01): tipo y estado canónicos, se traducen con tValue.
+    'Retención de insumos', 'En revisión',
 }
 
 # El asistente interno de edición (?dev=1) es herramienta de trabajo, no

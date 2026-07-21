@@ -633,6 +633,21 @@
       "Entregada": "Entregada",
       "Registrada": "Registrada",
       "Confirmada": "Confirmada"
+    },
+    "reportType": {
+      "Retención de insumos": "Retención de insumos",
+      "Otro": "Otro"
+    },
+    "reportState": {
+      "Recibida": "Recibida",
+      "En revisión": "En revisión",
+      "Atendida": "Atendida"
+    },
+    "reportRole": {
+      "transportista": "Transportista",
+      "voluntario": "Voluntario",
+      "centro": "Centro",
+      "donante": "Donante"
     }
   },
   "donations": {
@@ -997,7 +1012,8 @@
     "invoiceLabel": "Nº de factura",
     "donationDone": "Donación registrada",
     "vacancyLive": "La vacante ya aparece en la sección de voluntarios.",
-    "regenIntro": "Genera un token y PIN nuevos para el panel de un centro ya registrado."
+    "regenIntro": "Genera un token y PIN nuevos para el panel de un centro ya registrado.",
+    "manageReports": "Denuncias"
   },
   "lugar": {},
   "home": {
@@ -1314,7 +1330,8 @@
     "donacionOfrecida": "Donación ofrecida: {cantidad} {unidad} de {insumo} en {ubicacion}. Esperando transportista.",
     "donacionRecogida": "{nombre} recogió la donación en {ubicacion} para llevarla a {centro}.",
     "necesidadCubierta": "Necesidad cubierta: el centro ya recibió todo lo solicitado.",
-    "viajeIniciado": "{nombre} va en camino a recoger el insumo (llega en ~{eta} min)."
+    "viajeIniciado": "{nombre} va en camino a recoger el insumo (llega en ~{eta} min).",
+    "denunciaRegistrada": "Se registró una denuncia relacionada con este insumo."
   },
   "trip": {
     "pageTitle": "Viaje del transportista",
@@ -1342,5 +1359,34 @@
     "haveItCta": "Ya tengo el insumo",
     "kmSoFar": "Llevas {km} km recorridos.",
     "kmTotal": "Recorrido total: {km} km."
+  },
+  "report": {
+    "needSession": "Inicia sesión para hacer una denuncia.",
+    "locationNotice": "La ubicación exacta será pública.",
+    "typeLabel": "¿Qué tipo de denuncia?",
+    "startRec": "Comenzar a grabar",
+    "stopRec": "Detener",
+    "whatHappened": "¿Qué pasó? (opcional)",
+    "send": "Enviar denuncia",
+    "recording": "Grabando… se guarda solo cada 5 segundos.",
+    "reviewSend": "Revisa el video y envía la denuncia.",
+    "noVideo": "Graba un video antes de enviar.",
+    "sending": "Enviando denuncia…",
+    "done": "Denuncia enviada. Gracias por reportar.",
+    "sendError": "No se pudo enviar la denuncia.",
+    "cameraError": "No se pudo acceder a la cámara. Revisa los permisos.",
+    "pendingUpload": "Tienes una denuncia grabada sin enviar.",
+    "loading": "Cargando denuncias…",
+    "loadError": "No se pudieron cargar las denuncias.",
+    "empty": "Aún no hay denuncias públicas.",
+    "noCoords": "Sin coordenadas",
+    "videoUnavailable": "Video no disponible",
+    "pageTitle": "Hacer una denuncia",
+    "listTitle": "Denuncias",
+    "listSub": "Anónimas para el público. Video, fecha y ubicación.",
+    "ctaTop": "Hacer una denuncia",
+    "ctaList": "Ver denuncias",
+    "langLocked": "No puedes cambiar de idioma mientras grabas.",
+    "reporter": "Denunciante"
   }
 }
