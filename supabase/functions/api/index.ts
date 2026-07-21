@@ -136,7 +136,12 @@ async function guardarAdjunto(dataUrl: unknown, carpeta: string, nombre: string)
   const extMap: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
   const ext = extMap[mime] || (mime.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 8) || 'bin';
   const ruta = `${carpeta}/${nombre}.${ext}`;
-  const { error } = await supa.storage.from('presupuestos').upload(ruta, bytes, { contentType: mime, upsert: true });
+  // SEGURIDAD: bucket PÚBLICO. Solo se sirve inline un allowlist seguro; cualquier
+  // otro tipo (html, svg, xml, js…) se guarda como octet-stream → el navegador lo
+  // DESCARGA en vez de ejecutarlo (evita XSS/phishing alojado en el dominio de storage).
+  const inlineSeguro = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+  const contentType = inlineSeguro.has(mime) ? mime : 'application/octet-stream';
+  const { error } = await supa.storage.from('presupuestos').upload(ruta, bytes, { contentType, upsert: true });
   if (error) throw new Error('no se pudo guardar el adjunto');
   return supa.storage.from('presupuestos').getPublicUrl(ruta).data.publicUrl;
 }
