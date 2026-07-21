@@ -753,6 +753,7 @@
     function setStatus(source) {
       fuenteDatosActual = source || 'loading';
       const banner = $('#banner');
+      if (!banner) return; // ventana.html (panel admin) no tiene banner: cambiar idioma no debe crashear
       banner.classList.toggle('visible', source !== 'live' && source !== 'loading');
       banner.textContent = source === 'live' || source === 'loading' ? '' : t('status.errorBanner');
     }

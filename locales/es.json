@@ -1022,7 +1022,18 @@
     "lateElapsed": "transcurrido",
     "markResolved": "Marcar resuelto",
     "generateReport": "Generar denuncia",
-    "reportCreated": "Denuncia generada"
+    "reportCreated": "Denuncia generada",
+    "taskTrack": "Rastrear donación",
+    "trackAll": "Todas",
+    "trackUpdated": "Actualizado",
+    "trackLink": "Ver seguimiento",
+    "trackEmpty": "No hay donaciones para mostrar.",
+    "trackState": {
+      "esperando": "Esperando recogida",
+      "recogido": "Ya recogido",
+      "entregado": "Entregado",
+      "denuncia": "Con denuncia"
+    }
   },
   "lugar": {},
   "home": {

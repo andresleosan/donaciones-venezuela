@@ -779,6 +779,10 @@
     .late-card { margin-top: 10px; }
     .late-card p { margin: 2px 0; }
 
+    .track-filtros { flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .track-card { margin-top: 10px; }
+    .track-card p { margin: 3px 0; }
+
     .admin-group { margin-bottom: 24px; }
     .admin-group-title {
       color: var(--muted); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em;

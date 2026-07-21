@@ -1022,7 +1022,18 @@
     "lateElapsed": "elapsed",
     "markResolved": "Mark resolved",
     "generateReport": "File report",
-    "reportCreated": "Report filed"
+    "reportCreated": "Report filed",
+    "taskTrack": "Track donation",
+    "trackAll": "All",
+    "trackUpdated": "Updated",
+    "trackLink": "View tracking",
+    "trackEmpty": "No donations to show.",
+    "trackState": {
+      "esperando": "Awaiting pickup",
+      "recogido": "Picked up",
+      "entregado": "Delivered",
+      "denuncia": "Reported"
+    }
   },
   "lugar": {},
   "home": {

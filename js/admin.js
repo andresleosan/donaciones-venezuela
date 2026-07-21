@@ -84,12 +84,15 @@
     // ---- Menú (lanzador de tareas) ----
     function irAMenu() {
       wiz = null; facturaActiva = null;
+      // El .txt pide DESAPARECER «Record a Donation» del menú y sustituirla por
+      // «Track Donation». La acción admin_registrar_donacion sigue viva (otros
+      // flujos la usan); solo se quita la tarjeta de este lanzador.
       const crear = [
-        { id: 'donacion', icon: '💛', titulo: t('admin.taskDonation'), desc: t('admin.taskDonationDesc') },
         { id: 'presupuesto', icon: '🧾', titulo: t('admin.taskBudget'), desc: t('admin.taskBudgetDesc') },
         { id: 'vacante', icon: '🙋', titulo: t('admin.taskVacancy'), desc: t('admin.taskVacancyDesc') }
       ];
       const gestion = [
+        { id: 'track', icon: '📦', titulo: t('admin.taskTrack'), count: adminData.facturas.length },
         { id: 'facturas', icon: '📁', titulo: t('admin.manageInvoices'), count: adminData.facturas.length },
         { id: 'vacantes', icon: '📋', titulo: t('admin.manageVacancies'), count: adminData.vacantes.length },
         { id: 'personas', icon: '🔎', titulo: t('admin.managePeople'), count: adminData.personas.length },
@@ -389,9 +392,61 @@
 
     // ---- Paneles de gestión ----
     function abrirGestion(cual) {
-      const panels = { facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, denuncias: panelDenuncias, regenerar: panelRegenerar };
+      const panels = { track: panelTrack, facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, denuncias: panelDenuncias, regenerar: panelRegenerar };
       const fn = panels[cual];
       if (fn) fn();
+    }
+
+    // ── Plan 08 T2 — Track Donation: los insumos agrupados por estatus (esperando
+    // recogida / ya recogido / entregado / con denuncia), con «actualizado hace X»
+    // (último movimiento) y enlace al seguimiento público por token. ──
+    let trackFiltro = 'todos';
+
+    // «hace X» localizado por el navegador (es/en) sin claves de i18n propias.
+    function haceTexto(iso) {
+      const then = new Date(iso).getTime();
+      if (!then) return '';
+      const diff = Math.round((then - Date.now()) / 1000); // negativo = pasado
+      let rtf;
+      try { rtf = new Intl.RelativeTimeFormat(document.documentElement.lang || 'es', { numeric: 'auto' }); }
+      catch (err) { return ''; }
+      const abs = Math.abs(diff);
+      if (abs < 60) return rtf.format(Math.round(diff), 'second');
+      if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
+      if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
+      return rtf.format(Math.round(diff / 86400), 'day');
+    }
+
+    // Con denuncia manda sobre todo (badge rojo prioritario). Si no, se mapea el
+    // estado de la factura a los 4 estatus del .txt; el resto cae en 'otro'.
+    function estatusTrack(f, denunciaSet) {
+      if (denunciaSet.has(f.token_publico)) return 'denuncia';
+      if (['Comprada', 'Ofrecida', 'EnCamino'].includes(f.estado)) return 'esperando';
+      if (['EnTransito', 'Recogida'].includes(f.estado)) return 'recogido';
+      if (f.estado === 'Entregada') return 'entregado';
+      return 'otro';
+    }
+
+    function panelTrack() {
+      const denunciaSet = new Set((adminData.denuncias || []).map((d) => d.factura_token).filter(Boolean));
+      const filtros = ['todos', 'esperando', 'recogido', 'entregado', 'denuncia'];
+      const chips = filtros.map((k) => `<button class="btn btn-soft btn-small${k === trackFiltro ? ' is-active' : ''}" type="button" data-track-filtro="${e(k)}">${e(k === 'todos' ? t('admin.trackAll') : t('admin.trackState.' + k))}</button>`).join('');
+      const items = (adminData.facturas || []).map((f) => ({ f, est: estatusTrack(f, denunciaSet) }))
+        .filter((it) => trackFiltro === 'todos' || it.est === trackFiltro);
+      const filas = items.map(({ f, est }) => {
+        const conDen = est === 'denuncia';
+        return `<article class="card track-card">
+          <div class="badge-row"><span class="badge ${conDen ? 'red' : 'gray'}">${e(conDen ? t('admin.trackState.denuncia') : tValue('invoiceState', f.estado))}</span></div>
+          <p><strong>${e(f.objetivo || '')}</strong></p>
+          <p class="meta">${e(t('admin.trackUpdated'))} ${e(haceTexto(f.ultima_actualizacion))}</p>
+          ${f.token_publico ? `<p class="meta"><a href="/#seguimiento/${e(f.token_publico)}" target="_blank" rel="noopener">${e(t('admin.trackLink'))} · ${e(f.token_publico)}</a></p>` : ''}
+        </article>`;
+      }).join('') || `<p class="empty-state">${e(t('admin.trackEmpty'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.taskTrack'), `
+        <div class="segmented track-filtros" role="group" aria-label="${e(t('admin.taskTrack'))}">${chips}</div>
+        <div class="admin-records track-list">${filas}</div>`);
+      bindGestMenu();
+      $$('#admin-console [data-track-filtro]').forEach((b) => b.addEventListener('click', () => { trackFiltro = b.dataset.trackFiltro; panelTrack(); }));
     }
 
     // T7 — Denuncias: el admin ve TODO (identidad, rol, GPS exacto, video, texto)

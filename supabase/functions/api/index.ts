@@ -1098,7 +1098,17 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const { data } = await supa.from('facturas')
         .select('id, numero_factura, token_publico, objetivo, monto_requerido, monto_recaudado, estado, fecha_creacion')
         .order('fecha_creacion', { ascending: false }).limit(100);
-      return { facturas: data || [] };
+      const filas = data || [];
+      // Última actualización = fecha del último movimiento de cada factura (el
+      // «hace X» de Track Donation, plan 08). Un solo query, se cruza en memoria.
+      const ids = filas.map((f) => f.id);
+      const ult: Record<string, string> = {};
+      if (ids.length) {
+        const { data: movs } = await supa.from('movimientos_factura')
+          .select('factura_id, fecha').in('factura_id', ids).order('fecha', { ascending: false });
+        for (const m of movs || []) { const k = String(m.factura_id); if (!ult[k]) ult[k] = m.fecha as string; }
+      }
+      return { facturas: filas.map((f) => ({ ...f, ultima_actualizacion: ult[String(f.id)] || f.fecha_creacion })) };
     }
     case 'admin_registrar_donacion': {
       const f = await facturaPor(p);
