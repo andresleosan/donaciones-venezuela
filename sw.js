@@ -1,6 +1,6 @@
 // Cascarón PWA y respaldo offline. Los datos privados no se almacenan aquí:
 // las lecturas públicas se guardan en IndexedDB desde services/api.js.
-const VERSION = '79';
+const VERSION = '80';
 const CACHE = 'ayuda-ve-v' + VERSION;
 const OFFLINE_URL = '/offline.html';
 // El sufijo sale de VERSION: antes estaba cableado (?v=60) mientras las páginas

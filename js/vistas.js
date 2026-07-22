@@ -500,6 +500,7 @@
       try {
         const r = await window.SheetsService.post({ accion: 'listar_presupuestos' });
         estado.presupuestos = r.presupuestos || [];
+        if (r.tasa) estado.tasa = r.tasa; // Bs por 1 USD, para mostrar el aproximado
       } catch (err) { /* se reintenta en la próxima recarga */ }
       cargandoPresupuestos = false;
       renderPresupuestos();
@@ -508,6 +509,25 @@
     function estadoPresupuesto(estadoP) {
       const clases = { Abierta: 'yellow', Comprada: 'green', EnTransito: 'rescue', Entregada: 'gray' };
       return { clase: clases[estadoP] || 'gray', texto: tValue('budgetState', estadoP) || estadoP };
+    }
+
+    // ── Conversión USD↔Bs: el precio es en bolívares (la compra es en Bs); el
+    // donante está en EE.UU. y ve el aproximado en dólares. La tasa la sirve el
+    // backend en listar_presupuestos (estado.tasa) — el navegador no llama afuera.
+    function tasaEfectiva() { return estado.tasa && estado.tasa.efectiva ? Number(estado.tasa.efectiva) : 0; }
+    function bsAUsd(bs) { const r = tasaEfectiva(); return r > 0 ? numero(bs) / r : 0; }
+    function usdABs(usd) { const r = tasaEfectiva(); return r > 0 ? Math.round(numero(usd) * r) : 0; }
+    function fmtBs(bs) { return t('needs.bsAmount', { bs: formatearMonto(bs) }); }
+    function fmtUsd(usd) {
+      try { return new Intl.NumberFormat(localeActual(), { style: 'currency', currency: 'USD' }).format(numero(usd)); }
+      catch (err) { return '$' + numero(usd).toFixed(2); }
+    }
+    function notaTasa() {
+      if (!tasaEfectiva()) return '';
+      const fuente = estado.tasa.fuente === 'bcv' ? 'BCV' : 'Remitly';
+      let fecha = '';
+      try { fecha = new Date(estado.tasa.fecha).toLocaleDateString(localeActual(), { day: 'numeric', month: 'short' }); } catch (err) { /* sin fecha */ }
+      return `<p class="meta rate-note">${e(t('needs.rateNote', { fuente, fecha, tasa: formatearMonto(estado.tasa.efectiva) }))}</p>`;
     }
 
     function barraProgreso(recaudado, precio) {
@@ -528,24 +548,26 @@
         cont.innerHTML = `<div class="empty-state">${e(t('needs.noBudgets'))}</div>`;
         return;
       }
-      cont.innerHTML = lista.map((pr) => {
+      cont.innerHTML = notaTasa() + lista.map((pr) => {
         const est = estadoPresupuesto(pr.estado);
         const faltan = Math.max(0, numero(pr.precio) - numero(pr.recaudado));
+        const usdMeta = tasaEfectiva() ? `<span class="badge gray">≈ ${e(fmtUsd(bsAUsd(pr.precio)))}</span>` : '';
         const accion = pr.estado === 'Abierta'
           ? `<button class="btn btn-primary btn-small" type="button" data-donar-dinero="${e(pr.token)}">${e(t('needs.donateMoneyCta'))}</button>`
           : `<span class="badge ${est.clase}">${e(est.texto)}</span>`;
         return `<article class="card centro-card" data-centro-card data-presupuesto-card>
           <button class="centro-toggle" type="button" data-centro-toggle aria-expanded="false">
             <span class="centro-resumen">
-              <span class="badge-row"><span class="badge ${est.clase}">${e(est.texto)}</span><span class="badge gray">${e(formatearMonto(pr.precio))}</span></span>
+              <span class="badge-row"><span class="badge ${est.clase}">${e(est.texto)}</span><span class="badge gray">${e(fmtBs(pr.precio))}</span>${usdMeta}</span>
               <span class="centro-nombre">${e(mostrarInsumo(pr.insumo))}</span>
               <span class="meta">${e(t('needs.budgetLine', { cantidad: numero(pr.cantidad), presentacion: pr.presentacion || '', tienda: pr.tienda }))}</span>
             </span>
             <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div class="centro-more" hidden>
+            ${tasaEfectiva() ? `<p class="meta goal-usd"><strong>${e(t('needs.goalUsd', { usd: fmtUsd(bsAUsd(pr.precio)) }))}</strong></p>` : ''}
             ${barraProgreso(numero(pr.recaudado), numero(pr.precio))}
-            <p class="meta">${e(t('needs.missing', { faltan: formatearMonto(faltan) }))}</p>
+            <p class="meta">${e(t('needs.missing', { faltan: fmtBs(faltan) }))}</p>
             <p class="meta"><strong>${e(t('needs.storeLabel'))}</strong> ${e(pr.tienda)}${pr.direccion ? ' · ' + e(pr.direccion) : ''}</p>
             <p class="meta"><strong>${e(t('needs.forCenter'))}</strong> ${e(pr.centro)}</p>
             <div class="card-actions">${accion}</div>

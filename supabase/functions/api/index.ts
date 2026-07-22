@@ -320,9 +320,53 @@ function presupuestoUI(f: Record<string, unknown>) {
   return {
     token: f.token_publico, objetivo: f.objetivo, estado: f.estado,
     centro: m.centro, insumo: m.insumo, tienda: m.tienda, direccion: m.direccion,
-    cantidad: m.cantidad, presentacion: m.presentacion,
+    cantidad: m.cantidad, presentacion: m.presentacion, moneda: m.moneda || 'VES',
     precio: Number(f.monto_requerido) || 0, recaudado: Number(f.monto_recaudado) || 0,
   };
+}
+
+// ===== Tasa de cambio USD→Bs (bot nocturno) =====
+// El donante está en EE.UU. (USD) pero la compra en la farmacia es en bolívares.
+// El bot guarda cada noche la tasa EFECTIVA de Remitly (lo que realmente recibe
+// quien envía); si Remitly falla, cae a la tasa OFICIAL del BCV. El navegador
+// nunca llama afuera: lee la tasa que ya dejó el backend.
+async function tasaActual(): Promise<{ efectiva: number; diaria: number; fuente: string; fecha: string } | null> {
+  const { data } = await supa.from('tasas')
+    .select('efectiva, diaria, fuente, capturado_en')
+    .order('capturado_en', { ascending: false }).limit(1).maybeSingle();
+  if (!data) return null;
+  return {
+    efectiva: Number(data.efectiva), diaria: Number(data.diaria) || Number(data.efectiva),
+    fuente: String(data.fuente), fecha: String(data.capturado_en),
+  };
+}
+
+const UA_TASA = { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36' };
+function numDe(html: string, re: RegExp): number | null { const m = html.match(re); return m ? Number(m[1]) : null; }
+const tasaPlausible = (x: number | null): x is number => x !== null && x > 200 && x < 5000;
+
+// Lo corre el cron nocturno: lee Remitly del HTML crudo (efectiva/everyday) y,
+// si falla o da algo raro, la tasa oficial del BCV. Inserta una fila en `tasas`.
+async function actualizarTasa() {
+  let efectiva: number | null = null, diaria: number | null = null, fuente = 'remitly';
+  try {
+    const r = await fetch('https://www.remitly.com/us/en/currency-converter/usd-to-ves-rate', { headers: UA_TASA });
+    const html = await r.text();
+    efectiva = numDe(html, /"effectiveRateAsLowAs"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?/);
+    diaria = numDe(html, /"everydayRateAsLowAs"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?/);
+  } catch { /* cae al fallback del BCV */ }
+  if (!tasaPlausible(efectiva)) {
+    const r = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', { headers: UA_TASA });
+    const j = await r.json();
+    efectiva = Number(j.promedio) || null;
+    diaria = efectiva;
+    fuente = 'bcv';
+    if (!tasaPlausible(efectiva)) throw new Error('no se pudo obtener la tasa');
+  }
+  if (!tasaPlausible(diaria)) diaria = efectiva;
+  const { error } = await supa.from('tasas').insert({ fuente, efectiva, diaria });
+  if (error) throw error;
+  return { fuente, efectiva, diaria };
 }
 
 async function verPanel(lugarId: number) {
@@ -341,6 +385,14 @@ async function nombreDeLugar(lugarId: number): Promise<string> {
 }
 
 async function handle(accion: string, p: Record<string, unknown>, req: Request) {
+  // Bot nocturno de la tasa: lo dispara pg_cron con un secreto compartido
+  // (config.cron_secret). No es admin ni gasta cupo público.
+  if (accion === 'cron_tasa') {
+    const secret = s(req.headers.get('x-cron-secret') || '', 128);
+    const { data: cfg } = await supa.from('config').select('valor').eq('clave', 'cron_secret').maybeSingle();
+    if (!cfg || !cfg.valor || secret !== String(cfg.valor)) throw new Error('no autorizado');
+    return await actualizarTasa();
+  }
   const esPanel = accion.startsWith('panel_') && accion !== 'panel_crear';
   const esAdmin = accion.startsWith('admin_');
   // Las lecturas públicas no gastan el cupo de escrituras (30/h): navegar los
@@ -472,7 +524,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         .select('token_publico, objetivo, descripcion, monto_requerido, monto_recaudado, estado, fecha_creacion')
         .like('descripcion', '{"k":"pres"%')
         .order('fecha_creacion', { ascending: false }).limit(200);
-      return { presupuestos: (data || []).map(presupuestoUI).filter(Boolean) };
+      return { presupuestos: (data || []).map(presupuestoUI).filter(Boolean), tasa: await tasaActual() };
     }
     case 'listar_comprados': {
       const { data } = await supa.from('facturas')
@@ -483,11 +535,16 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       return { comprados: (data || []).map(presupuestoUI).filter(Boolean) };
     }
     case 'donar_dinero': {
-      // Aporte monetario a UN presupuesto. Simulación por ahora: el sistema
-      // genera la referencia de transacción; cuando exista la cuenta real, la
-      // referencia vendrá del pago y entrará por este mismo camino.
-      const monto = n(p.monto);
-      if (monto <= 0 || monto > 10_000_000) throw new Error('monto inválido');
+      // El donante aporta en USD (está en EE.UU.); la compra en la farmacia es
+      // en Bs. Convertimos USD→Bs a la tasa vigente y CONGELAMOS esos bolívares
+      // en la donación, para que la meta (en Bs) no se mueva si la tasa cambia
+      // mañana. La referencia la genera el sistema (simulación); cuando exista la
+      // cuenta real, vendrá del pago y entrará por este mismo camino.
+      const montoUsd = n(p.montoUsd ?? p.monto);
+      if (montoUsd <= 0 || montoUsd > 100_000) throw new Error('monto inválido');
+      const tasa = await tasaActual();
+      if (!tasa || !(tasa.efectiva > 0)) throw new Error('tasa de cambio no disponible, intenta más tarde');
+      const montoBs = Math.round(montoUsd * tasa.efectiva);
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
         .select('id, numero_factura, token_publico, descripcion, monto_requerido, monto_recaudado, estado')
@@ -498,11 +555,12 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const referencia = tokenAlfa('REF');
       const { error } = await supa.from('donaciones').insert({
         factura_id: f.id, nombre_donante: s(p.nombreDonante, 120) || 'Anónimo',
-        monto, referencia_pago: referencia, estado: 'Confirmada' }); // Confirmada: el trigger suma al recaudado en vivo
+        monto: montoBs, monto_usd: montoUsd, tasa: tasa.efectiva,
+        referencia_pago: referencia, estado: 'Confirmada' }); // Confirmada: el trigger suma al recaudado en vivo (en Bs)
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Ingreso',
-        descripcion: mov('dineroRecibido', { referencia }), monto });
-      // ¿Se completó la meta? → el insumo queda Comprado y entra al ciclo logístico.
+        descripcion: mov('dineroRecibido', { referencia }), monto: montoBs });
+      // ¿Se completó la meta (en Bs)? → el insumo queda Comprado y entra al ciclo logístico.
       const { data: tras } = await supa.from('facturas')
         .select('monto_recaudado, monto_requerido, estado').eq('id', f.id).single();
       let estadoFinal = tras?.estado || 'Abierta';
@@ -512,9 +570,10 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Compra',
           descripcion: mov('metaAlcanzada', { insumo: m.insumo, tienda: m.tienda }), monto: 0 });
       }
-      await historial(String(m.centro), String(m.insumo), `Donación en dinero de ${monto} (ref ${referencia})`, 'publico', monto);
+      await historial(String(m.centro), String(m.insumo), `Donación de ${montoUsd} USD (${montoBs} Bs, ref ${referencia})`, 'publico', montoBs);
       return { referencia, token: f.token_publico, numeroFactura: f.numero_factura,
-               recaudado: Number(tras?.monto_recaudado) || 0, precio: Number(f.monto_requerido) || 0, estado: estadoFinal };
+               recaudado: Number(tras?.monto_recaudado) || 0, precio: Number(f.monto_requerido) || 0,
+               montoUsd, montoBs, tasa: tasa.efectiva, estado: estadoFinal };
     }
     case 'viaje_iniciar': {
       // Paso 1 del ciclo: el transportista declara que va en camino. Se guardan
@@ -1121,7 +1180,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const { error } = await supa.from('facturas').insert({
         numero_factura: numero, token_publico: token,
         objetivo: s(`${insumo} → ${centro} · ${tienda}`, 200),
-        descripcion: JSON.stringify({ k: 'pres', centro, insumo, tienda, direccion, cantidad, presentacion,
+        descripcion: JSON.stringify({ k: 'pres', moneda: 'VES', centro, insumo, tienda, direccion, cantidad, presentacion,
           necesidadId: necesidadId || null, tiendaLat, tiendaLng, tiendaUrl: tiendaUrl || null, adjunto: adjunto || null }),
         monto_requerido: precio });
       if (error) throw error;

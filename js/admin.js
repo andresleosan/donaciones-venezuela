@@ -1121,15 +1121,16 @@
     function abrirDonarDinero(pr) {
       const shell = $('#donar-dinero-shell');
       if (!shell) return;
-      const faltan = Math.max(1, numero(pr.precio) - numero(pr.recaudado));
+      const faltanBs = Math.max(1, numero(pr.precio) - numero(pr.recaudado));
+      const sugerenciaUsd = Math.max(1, Math.ceil(bsAUsd(faltanBs))) || 1; // ceil: cubre de sobra
       // Página completa (patrón #ofrecer), ya no un modal flotante.
       cambiarVista('donar-dinero');
       if (!/^#donar-dinero$/i.test(window.location.hash)) window.location.hash = '#donar-dinero';
       shell.innerHTML = `<form id="donar-dinero-form" data-wiz="donarDinero" novalidate>
         <p class="section-copy">${e(t('money.modalCopy', { insumo: mostrarInsumo(pr.insumo), tienda: pr.tienda, centro: pr.centro }))}</p>
-        <p class="meta">${e(t('needs.missing', { faltan: formatearMonto(faltan) }))}</p>
+        <p class="meta">${e(t('money.goalLine', { bs: fmtBs(pr.precio), usd: fmtUsd(bsAUsd(pr.precio)) }))}</p>
         <div class="form-grid">
-          <div class="field"><label for="din-monto">${e(t('money.amountLabel'))}</label><input id="din-monto" type="number" min="1" step="1" value="${e(faltan)}" required /></div>
+          <div class="field"><label for="din-monto">${e(t('money.amountLabel'))}</label><input id="din-monto" type="number" min="1" step="0.01" value="${e(sugerenciaUsd)}" required /><p class="meta" id="din-bs-hint" aria-live="polite"></p></div>
           <div class="field"><label for="din-nombre">${e(t('needs.donorLabel'))}</label><input id="din-nombre" autocomplete="name" placeholder="${e(t('needs.donorPlaceholder'))}" /></div>
         </div>
         <p class="meta">${e(t('money.simNote'))}</p>
@@ -1146,18 +1147,26 @@
         if (nombre !== '') $('#din-nombre').value = nombre;
       };
       wizPublico('donar-dinero-form');
+      // Vista previa en vivo: al teclear los dólares, muestra los bolívares
+      // aproximados a la tasa vigente (sobrevive al repintado del wizard).
+      const hintBs = () => {
+        const h = $('#din-bs-hint');
+        if (h) h.textContent = tasaEfectiva() ? t('money.amountHint', { bs: fmtBs(usdABs($('#din-monto').value)) }) : '';
+      };
+      $('#din-monto').addEventListener('input', hintBs);
+      hintBs();
       $('#donar-dinero-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
         if (!validarFormulario(form, '#din-message')) return;
-        const monto = numero($('#din-monto').value);
-        if (monto <= 0) { mostrarMensaje('#din-message', 'error', t('needs.invalidAmount')); return; }
+        const montoUsd = numero($('#din-monto').value);
+        if (montoUsd <= 0) { mostrarMensaje('#din-message', 'error', t('needs.invalidAmount')); return; }
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
         mostrarMensaje('#din-message', 'info', t('money.saving'));
         try {
           const res = await window.SheetsService.post({
-            accion: 'donar_dinero', token: pr.token, monto,
+            accion: 'donar_dinero', token: pr.token, montoUsd,
             nombreDonante: $('#din-nombre').value.trim()
           });
           mostrarReciboDinero(res, pr);
@@ -1178,6 +1187,7 @@
       cuerpo.innerHTML = `<div class="token-result">
         <h3>${e(t('money.thanksTitle'))}</h3>
         <p class="section-copy">${e(comprado ? t('money.thanksBought', { insumo: mostrarInsumo(pr.insumo) }) : t('money.thanksPartial', { insumo: mostrarInsumo(pr.insumo), recaudado: formatearMonto(res.recaudado), precio: formatearMonto(res.precio) }))}</p>
+        ${res.montoUsd != null ? `<p class="meta">${e(t('money.thanksAmount', { usd: fmtUsd(res.montoUsd), bs: fmtBs(res.montoBs) }))}</p>` : ''}
         <p class="meta">${e(t('money.refLabel'))}</p>
         <p class="token-value"><strong>${e(res.referencia)}</strong></p>
         <p class="meta">${e(t('needs.tokenLabel'))}</p>
