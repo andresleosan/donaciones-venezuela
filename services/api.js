@@ -302,13 +302,17 @@
     return data;
   }
 
-  function solicitarCodigo(email) {
-    return authPost('otp', { email: email, create_user: true });
+  // Crea la cuenta (correo + contraseña). Con la confirmación de correo apagada,
+  // Supabase devuelve la sesión al instante ({ access_token, … }); con ella
+  // encendida, devuelve el usuario sin access_token (hay que confirmar el correo).
+  function registrarse(email, password) {
+    return authPost('signup', { email: email, password: password });
   }
 
-  // Devuelve la sesión de Supabase Auth ({ access_token, refresh_token, expires_at, user, … }).
-  function verificarCodigo(email, codigo) {
-    return authPost('verify', { type: 'email', email: email, token: codigo });
+  // Inicia sesión con contraseña. Devuelve la sesión de Supabase Auth
+  // ({ access_token, refresh_token, expires_at, user, … }).
+  function iniciarSesion(email, password) {
+    return authPost('token?grant_type=password', { email: email, password: password });
   }
 
   // Renueva la sesión sin pedir otro código (refresh_token de GoTrue).
@@ -391,8 +395,8 @@
       '?order=fecha.desc' + (lugar ? '&lugar=eq.' + encodeURIComponent(lugar) : '')),
     getFamiliares,
     getSeguimiento,
-    solicitarCodigo,
-    verificarCodigo,
+    registrarse,
+    iniciarSesion,
     refrescarSesion,
     post,
     flushQueue,

@@ -38,6 +38,16 @@ async function rateHit(clave: string, cubo: string, limite: number): Promise<boo
   return data as boolean;
 }
 
+// Anti-ráfaga: máx N solicitudes por IP en la MISMA ventana de 1 segundo (misma
+// tabla/RPC, solo cambia la granularidad de la ventana). Protege el backend de
+// datos ante floods; los endpoints de /auth los limita Supabase Auth aparte.
+async function rateHitRafaga(clave: string, limite: number): Promise<boolean> {
+  const ventanaSeg = new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
+  const { data, error } = await supa.rpc('rate_hit', { p_ip: clave, p_ventana: ventanaSeg, p_cubo: 'burst', p_limite: limite });
+  if (error) { console.error('rate_hit burst', error.message); return true; }
+  return data as boolean;
+}
+
 async function sha256Hex(texto: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -393,6 +403,8 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
     if (!cfg || !cfg.valor || secret !== String(cfg.valor)) throw new Error('no autorizado');
     return await actualizarTasa();
   }
+  // Anti-ráfaga por IP: máx 12 solicitudes/segundo (cron_tasa queda exento arriba).
+  if (!(await rateHitRafaga(ipDe(req), 12))) throw new Error('Demasiadas solicitudes, baja el ritmo');
   const esPanel = accion.startsWith('panel_') && accion !== 'panel_crear';
   const esAdmin = accion.startsWith('admin_');
   // Las lecturas públicas no gastan el cupo de escrituras (30/h): navegar los

@@ -53,7 +53,7 @@
   </script>
 
   <link rel="stylesheet" href="services/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/app.css?v=80">
+  <link rel="stylesheet" href="css/app.css?v=81">
 </head>
 <body>
   <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -363,23 +363,30 @@
       </div>
 
       <div class="gate-card" id="acceso-login-card">
-        <h3 id="acceso-login-title">Ya estoy registrado</h3>
-        <p class="section-copy" id="acceso-login-copy">Escribe tu correo y te enviamos un código de 6 dígitos para entrar. Sirve para transportistas, voluntarios y centros.</p>
-        <form id="acceso-email-form" novalidate>
+        <h3 id="acceso-login-title">Entra o crea tu cuenta</h3>
+        <p class="section-copy" id="acceso-login-copy">Entra con tu correo y contraseña. Sirve para transportistas, voluntarios y centros.</p>
+        <div class="segmented acceso-modo" role="tablist" aria-label="Entrar o crear cuenta">
+          <button type="button" class="chip-btn" data-acceso-modo="entrar" id="acceso-tab-entrar" role="tab" aria-pressed="true">Entrar</button>
+          <button type="button" class="chip-btn" data-acceso-modo="crear" id="acceso-tab-crear" role="tab" aria-pressed="false">Crear cuenta</button>
+        </div>
+        <form id="acceso-login-form" novalidate>
           <div class="form-grid">
             <div class="field"><label for="acceso-email">Correo electrónico</label><input id="acceso-email" type="email" required autocomplete="email" placeholder="tu@correo.com" /></div>
+            <div class="field"><label for="acceso-pass">Contraseña</label><input id="acceso-pass" type="password" required autocomplete="current-password" minlength="8" placeholder="••••••••" /></div>
           </div>
+          <label class="check-inline"><input type="checkbox" data-ver-pass="acceso-pass" /> <span id="acceso-verpass-1">Mostrar contraseña</span></label>
           <input id="acceso-web" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp-field" />
-          <div class="form-actions"><button class="btn btn-primary" type="submit" id="acceso-enviar-btn">Enviarme el código</button></div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit" id="acceso-entrar-btn">Entrar</button></div>
         </form>
-        <form id="acceso-codigo-form" hidden>
+        <form id="acceso-signup-form" hidden novalidate>
           <div class="form-grid">
-            <div class="field"><label for="acceso-codigo">Código de 6 dígitos</label><input id="acceso-codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="123456" /></div>
+            <div class="field"><label for="acceso-su-email">Correo electrónico</label><input id="acceso-su-email" type="email" required autocomplete="email" placeholder="tu@correo.com" /></div>
+            <div class="field"><label for="acceso-su-pass">Contraseña (mínimo 8)</label><input id="acceso-su-pass" type="password" required autocomplete="new-password" minlength="8" placeholder="••••••••" /></div>
+            <div class="field"><label for="acceso-su-pass2">Repetir contraseña</label><input id="acceso-su-pass2" type="password" required autocomplete="new-password" minlength="8" placeholder="••••••••" /></div>
           </div>
-          <div class="form-actions">
-            <button class="btn btn-primary" type="submit" id="acceso-entrar-btn">Entrar</button>
-            <button class="btn btn-ghost" type="button" id="acceso-otro-correo">Usar otro correo</button>
-          </div>
+          <label class="check-inline"><input type="checkbox" data-ver-pass="acceso-su-pass,acceso-su-pass2" /> <span id="acceso-verpass-2">Mostrar contraseña</span></label>
+          <input id="acceso-web-2" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp-field" />
+          <div class="form-actions"><button class="btn btn-primary" type="submit" id="acceso-crear-btn">Crear cuenta</button></div>
         </form>
         <div id="acceso-msg" class="form-message" role="status" aria-live="polite"></div>
         <div id="acceso-perfil" hidden></div>
@@ -809,14 +816,14 @@
   <div id="modal-root"></div>
 
   <script src="services/leaflet/leaflet.js"></script>
-  <script src="services/api.js?v=80"></script>
-  <script src="js/pwa.js?v=80"></script>
-  <script src="js/core.js?v=80"></script>
-  <script src="js/wiz.js?v=80"></script>
-  <script src="js/vistas.js?v=80"></script>
-  <script src="js/panel.js?v=80"></script>
-  <script src="js/admin.js?v=80"></script>
-  <script src="js/viaje.js?v=80"></script>
-  <script src="js/denuncias.js?v=80"></script>
+  <script src="services/api.js?v=81"></script>
+  <script src="js/pwa.js?v=81"></script>
+  <script src="js/core.js?v=81"></script>
+  <script src="js/wiz.js?v=81"></script>
+  <script src="js/vistas.js?v=81"></script>
+  <script src="js/panel.js?v=81"></script>
+  <script src="js/admin.js?v=81"></script>
+  <script src="js/viaje.js?v=81"></script>
+  <script src="js/denuncias.js?v=81"></script>
 </body>
 </html>

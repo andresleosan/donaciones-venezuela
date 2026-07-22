@@ -1288,11 +1288,19 @@
       const cont = $('#acceso-perfil');
       if (!cont) return;
       const ses = window.sesionActual ? window.sesionActual() : sesionAcceso();
-      const formEmail = $('#acceso-email-form');
-      const formCodigo = $('#acceso-codigo-form');
-      if (!ses) { cont.hidden = true; cont.innerHTML = ''; formCodigo.hidden = true; formEmail.hidden = false; return; }
-      formEmail.hidden = true;
-      formCodigo.hidden = true;
+      const formLogin = $('#acceso-login-form');
+      const formSignup = $('#acceso-signup-form');
+      const modo = $('.acceso-modo');
+      if (!ses) {
+        cont.hidden = true; cont.innerHTML = '';
+        if (formSignup) formSignup.hidden = true;
+        if (formLogin) formLogin.hidden = false;
+        if (modo) modo.hidden = false;
+        return;
+      }
+      if (formLogin) formLogin.hidden = true;
+      if (formSignup) formSignup.hidden = true;
+      if (modo) modo.hidden = true;
       const roles = ses.roles || [];
       const filas = roles.map((r) => {
         if (r.tipo === 'transportista') {
@@ -1326,113 +1334,105 @@
     }
 
     function bindAcceso() {
-      const formEmail = $('#acceso-email-form');
-      if (!formEmail) return; // la página-ventana no tiene la vista acceso
-      const formCodigo = $('#acceso-codigo-form');
-      let correo = '';
-      // Freno cliente: tras un envío el botón queda 60 s en cuenta atrás.
-      // El interval repinta con t() en cada tick → sobrevive al cambio de idioma;
-      // dataset.cooldown le dice a core.js que no lo sobrescriba al traducir.
-      let frenoTimer = null;
-      function frenarReenvio() {
-        const boton = $('#acceso-enviar-btn');
-        if (!boton) return;
-        if (frenoTimer) clearInterval(frenoTimer);
-        let restante = window.__ACCESO_FRENO_S || 60;
-        boton.disabled = true;
-        boton.dataset.cooldown = '1';
-        const pintar = () => { boton.textContent = t('access.waitResend', { s: restante }); };
-        pintar();
-        frenoTimer = setInterval(() => {
-          restante -= 1;
-          if (restante <= 0) {
-            clearInterval(frenoTimer); frenoTimer = null;
-            delete boton.dataset.cooldown;
-            boton.disabled = false;
-            boton.textContent = t('access.sendCode');
-            return;
-          }
-          pintar();
-        }, 1000);
+      const formLogin = $('#acceso-login-form');
+      if (!formLogin) return; // la página-ventana no tiene la vista acceso
+      const formSignup = $('#acceso-signup-form');
+
+      // Toggle Entrar / Crear cuenta
+      const tabs = $$('.acceso-modo [data-acceso-modo]');
+      function verModo(modo) {
+        formLogin.hidden = modo !== 'entrar';
+        formSignup.hidden = modo !== 'crear';
+        tabs.forEach((b) => b.setAttribute('aria-pressed', b.dataset.accesoModo === modo ? 'true' : 'false'));
+        mostrarMensaje('#acceso-msg', 'info', '');
       }
-      formEmail.addEventListener('submit', async (ev) => {
+      tabs.forEach((b) => b.addEventListener('click', () => verModo(b.dataset.accesoModo)));
+
+      // Mostrar / ocultar contraseña
+      $$('[data-ver-pass]').forEach((chk) => chk.addEventListener('change', () => {
+        chk.dataset.verPass.split(',').forEach((id) => {
+          const el = $('#' + id);
+          if (el) el.type = chk.checked ? 'text' : 'password';
+        });
+      }));
+
+      // Con la sesión ya obtenida (login o signup con confirmación apagada):
+      // enriquecer con acceso_perfil, guardar y pintar. El donante (0 roles) NO
+      // se rechaza. acceso_perfil NO cambió: valida el JWT y devuelve los roles.
+      async function entrarConSesion(sesion, correo) {
+        const data = await window.SheetsService.post({ accion: 'acceso_perfil', accessToken: sesion.access_token });
+        const roles = (data && data.roles) || [];
+        const conNombre = roles.find((r) => r.nombre);
+        const email = (data && data.email) || correo;
+        window.guardarSesion({
+          access_token: sesion.access_token,
+          refresh_token: sesion.refresh_token,
+          expires_at: sesion.expires_at,
+          email: email,
+          nombre: conNombre ? conNombre.nombre : String(email).split('@')[0],
+          roles: roles
+        });
+        mostrarMensaje('#acceso-msg', 'success', roles.length ? t('access.welcome') : t('access.welcomeNoRoles'));
+        pintarPerfilAcceso();
+        let retorno = '';
+        try { retorno = sessionStorage.getItem('dv-retorno') || ''; sessionStorage.removeItem('dv-retorno'); } catch (err) { /* privado */ }
+        if (retorno) window.setTimeout(() => { window.location.hash = retorno; }, 600);
+      }
+
+      // ENTRAR (correo + contraseña)
+      formLogin.addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        // Cebo anti-bots: si el campo oculto trae texto es un bot. Fingimos el
-        // mismo éxito sin enviar nada, para no revelar el mecanismo.
         const cebo = $('#acceso-web');
-        if (cebo && cebo.value) {
-          correo = ($('#acceso-email').value || '').trim().toLowerCase();
-          formEmail.hidden = true;
-          formCodigo.hidden = false;
-          mostrarMensaje('#acceso-msg', 'success', t('access.codeSent', { email: correo }));
-          frenarReenvio();
-          return;
-        }
-        if (!validarFormulario(formEmail, '#acceso-msg')) return;
-        correo = $('#acceso-email').value.trim().toLowerCase();
-        const boton = $('#acceso-enviar-btn');
-        boton.disabled = true;
-        mostrarMensaje('#acceso-msg', 'info', t('access.sending'));
-        try {
-          await window.SheetsService.solicitarCodigo(correo);
-          formEmail.hidden = true;
-          formCodigo.hidden = false;
-          $('#acceso-codigo').focus();
-          mostrarMensaje('#acceso-msg', 'success', t('access.codeSent', { email: correo }));
-          frenarReenvio();
-        } catch (err) {
-          mostrarMensaje('#acceso-msg', 'error', String(err && err.message || t('access.sendError')));
-          boton.disabled = false;
-        }
-      });
-      $('#acceso-otro-correo').addEventListener('click', () => {
-        formCodigo.hidden = true;
-        formEmail.hidden = false;
-        $('#acceso-email').focus();
-      });
-      formCodigo.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const codigo = $('#acceso-codigo').value.trim();
-        if (!/^[0-9]{6}$/.test(codigo)) {
-          mostrarMensaje('#acceso-msg', 'error', t('access.codeFormat'));
-          return;
-        }
+        if (cebo && cebo.value) { mostrarMensaje('#acceso-msg', 'success', t('access.welcome')); return; } // finge éxito al bot
+        if (!validarFormulario(formLogin, '#acceso-msg')) return;
+        const correo = $('#acceso-email').value.trim().toLowerCase();
+        const pass = $('#acceso-pass').value;
+        if (pass.length < 8) { mostrarMensaje('#acceso-msg', 'error', t('access.passShort')); return; }
         const boton = $('#acceso-entrar-btn');
         boton.disabled = true;
-        mostrarMensaje('#acceso-msg', 'info', t('access.verifying'));
+        mostrarMensaje('#acceso-msg', 'info', t('access.signingIn'));
         try {
-          const sesion = await window.SheetsService.verificarCodigo(correo, codigo);
-          const data = await window.SheetsService.post({ accion: 'acceso_perfil', accessToken: sesion.access_token });
-          const roles = (data && data.roles) || [];
-          const conNombre = roles.find((r) => r.nombre);
-          const email = (data && data.email) || correo;
-          // Se guarda la sesión completa (tokens + nombre + roles) en localStorage
-          // vía el módulo de sesión de core.js. El donante (0 roles) NO se rechaza.
-          window.guardarSesion({
-            access_token: sesion.access_token,
-            refresh_token: sesion.refresh_token,
-            expires_at: sesion.expires_at,
-            email: email,
-            nombre: conNombre ? conNombre.nombre : String(email).split('@')[0],
-            roles: roles
-          });
-          $('#acceso-codigo').value = '';
-          mostrarMensaje('#acceso-msg', 'success', roles.length ? t('access.welcome') : t('access.welcomeNoRoles'));
-          pintarPerfilAcceso();
-          // Si el usuario venía de una pantalla que exige sesión (p. ej. #denunciar),
-          // se le devuelve ahí tras entrar.
-          let retorno = '';
-          try { retorno = sessionStorage.getItem('dv-retorno') || ''; sessionStorage.removeItem('dv-retorno'); } catch (err) { /* privado */ }
-          if (retorno) window.setTimeout(() => { window.location.hash = retorno; }, 600);
+          const sesion = await window.SheetsService.iniciarSesion(correo, pass);
+          await entrarConSesion(sesion, correo);
+        } catch (err) {
+          // Mensaje genérico: no revelar si el correo existe (anti-enumeración).
+          mostrarMensaje('#acceso-msg', 'error', t('access.loginError'));
+        } finally { boton.disabled = false; }
+      });
+
+      // CREAR CUENTA (correo + contraseña + repetir)
+      formSignup.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const cebo = $('#acceso-web-2');
+        if (cebo && cebo.value) { mostrarMensaje('#acceso-msg', 'success', t('access.welcome')); return; }
+        if (!validarFormulario(formSignup, '#acceso-msg')) return;
+        const correo = $('#acceso-su-email').value.trim().toLowerCase();
+        const pass = $('#acceso-su-pass').value;
+        const pass2 = $('#acceso-su-pass2').value;
+        if (pass.length < 8) { mostrarMensaje('#acceso-msg', 'error', t('access.passShort')); return; }
+        if (pass !== pass2) { mostrarMensaje('#acceso-msg', 'error', t('access.passMismatch')); return; }
+        const boton = $('#acceso-crear-btn');
+        boton.disabled = true;
+        mostrarMensaje('#acceso-msg', 'info', t('access.creating'));
+        try {
+          const resp = await window.SheetsService.registrarse(correo, pass);
+          // Confirmación apagada → hay access_token, se entra al instante.
+          // Encendida → sin token; pedir que confirmen el correo.
+          if (resp && resp.access_token) {
+            await entrarConSesion(resp, correo);
+          } else {
+            mostrarMensaje('#acceso-msg', 'success', t('access.confirmSent', { email: correo }));
+          }
         } catch (err) {
           const crudo = String(err && err.message || '');
-          // GoTrue responde en inglés; el caso típico (código malo o vencido) se traduce.
-          const amigable = /expired|invalid|not found/i.test(crudo) || !crudo ? t('access.verifyError') : crudo;
+          const amigable = /registered|already|exists/i.test(crudo) ? t('access.emailTaken') : t('access.signupError');
           mostrarMensaje('#acceso-msg', 'error', amigable);
         } finally { boton.disabled = false; }
       });
+
       $$('.js-acceso-entrar').forEach((btn) => btn.addEventListener('click', () => {
         document.getElementById('acceso-login-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        verModo('entrar');
         $('#acceso-email').focus();
       }));
       pintarPerfilAcceso();
