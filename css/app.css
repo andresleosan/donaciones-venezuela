@@ -1321,6 +1321,15 @@
     .home-foot { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 24px; }
     .home-foot a { color: var(--primary); font-weight: 700; text-decoration: none; display: inline-block; padding: 12px 4px; }
     .home-foot a:hover { text-decoration: underline; }
+    /* Botón "Guía de usuario": suave y centrado, bajo las puertas del home. */
+    .home-guide {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin: 18px auto 0; max-width: 640px;
+      padding: 14px 18px; border: 1px solid var(--border); border-radius: var(--radius);
+      background: #fff; color: var(--ink); font-weight: 800; font-size: 1rem;
+      text-decoration: none; box-shadow: var(--shadow-sm, 0 1px 2px rgba(10,37,64,.06));
+    }
+    .home-guide:hover { border-color: var(--primary); color: var(--primary); }
     .pwa-card {
       display: flex;
       align-items: flex-start;

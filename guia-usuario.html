@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Guía de usuario · Respuesta Humanitaria Venezuela</title>
+<meta name="theme-color" content="#faf6ef" />
+<meta name="description" content="Guía sencilla y completa: todo lo que puede hacer cada persona en la app de Respuesta Humanitaria Venezuela." />
+<style>
+  :root{
+    --bg:#faf6ef; --card:#ffffff; --ink:#20303f; --soft:#5f7385; --line:#eee6d8;
+    --shadow:0 10px 30px rgba(40,55,70,.08), 0 2px 6px rgba(40,55,70,.05);
+    --r:22px;
+    --ayuda:#e8615a;   --ayuda-bg:#fdeceb;
+    --cosas:#e08a2b;   --cosas-bg:#fcf1e0;
+    --dinero:#2fa36b;  --dinero-bg:#e6f5ec;
+    --denuncia:#c0405f;--denuncia-bg:#fbe9ee;
+    --trans:#3f7ee0;   --trans-bg:#e8f0fd;
+    --volu:#8b5cd6;    --volu-bg:#f1eafb;
+    --centro:#0f9aa8;  --centro-bg:#e3f5f6;
+    --acceso:#2f6f8f;  --acceso-bg:#e5f0f5;
+    --extra:#635bff;   --extra-bg:#ecebff;
+    --admin:#516074;   --admin-bg:#eaeef3;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 500px at 50% -8%, #fff8ec 0%, rgba(255,248,236,0) 60%), var(--bg);
+    color:var(--ink);
+    font-family:ui-rounded,"SF Pro Rounded","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased;
+    padding:0 18px calc(46px + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:540px;margin:0 auto;}
+
+  header{text-align:center;padding:38px 6px 18px;}
+  .mark{width:64px;height:64px;margin:0 auto 16px;border-radius:20px;background:linear-gradient(160deg,#e8615a,#e08a2b);display:flex;align-items:center;justify-content:center;font-size:34px;color:#fff;box-shadow:var(--shadow);transform:rotate(-4deg);}
+  .eyebrow{font-size:.82rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--cosas);margin:0 0 8px;}
+  h1{font-size:clamp(1.7rem,7.5vw,2.3rem);line-height:1.12;margin:0 0 12px;font-weight:850;letter-spacing:-.01em;}
+  .lead{font-size:1.06rem;color:var(--soft);margin:0 auto;max-width:33ch;}
+  .lead b{color:var(--ink);}
+  .point{font-size:1.4rem;margin-top:14px;}
+
+  .cards{display:flex;flex-direction:column;gap:18px;margin-top:8px;}
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:20px 20px 22px;border:1px solid var(--line);opacity:0;transform:translateY(14px);animation:rise .6s cubic-bezier(.2,.7,.3,1) forwards;}
+  @keyframes rise{to{opacity:1;transform:none;}}
+  .card:nth-child(1){animation-delay:.04s}
+  .card:nth-child(2){animation-delay:.09s}
+  .card:nth-child(3){animation-delay:.14s}
+  .card:nth-child(4){animation-delay:.19s}
+  .card:nth-child(5){animation-delay:.24s}
+  .card:nth-child(6){animation-delay:.29s}
+  .card:nth-child(7){animation-delay:.34s}
+  .card:nth-child(8){animation-delay:.39s}
+  .card:nth-child(9){animation-delay:.42s}
+
+  .top{display:flex;align-items:center;gap:14px;}
+  .emoji{flex:0 0 auto;width:58px;height:58px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:31px;line-height:1;}
+  .role{font-size:1.24rem;font-weight:850;margin:0;letter-spacing:-.01em;}
+  .who{font-size:1.02rem;color:var(--soft);margin:15px 0 4px;}
+  ul{list-style:none;margin:8px 0 0;padding:0;}
+  li{display:flex;gap:11px;align-items:flex-start;font-size:1.04rem;padding:7px 0;}
+  li .dot{flex:0 0 auto;width:23px;height:23px;border-radius:50%;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;}
+  .note{margin-top:14px;font-size:.96rem;color:var(--soft);background:#fbf8f2;border:1px dashed var(--line);border-radius:14px;padding:11px 13px;}
+
+  .c-ayuda .emoji{background:var(--ayuda-bg)} .c-ayuda .dot{background:var(--ayuda)} .c-ayuda .role{color:var(--ayuda)}
+  .c-cosas .emoji{background:var(--cosas-bg)} .c-cosas .dot{background:var(--cosas)} .c-cosas .role{color:var(--cosas)}
+  .c-dinero .emoji{background:var(--dinero-bg)} .c-dinero .dot{background:var(--dinero)} .c-dinero .role{color:var(--dinero)}
+  .c-denuncia .emoji{background:var(--denuncia-bg)} .c-denuncia .dot{background:var(--denuncia)} .c-denuncia .role{color:var(--denuncia)}
+  .c-trans .emoji{background:var(--trans-bg)} .c-trans .dot{background:var(--trans)} .c-trans .role{color:var(--trans)}
+  .c-volu .emoji{background:var(--volu-bg)} .c-volu .dot{background:var(--volu)} .c-volu .role{color:var(--volu)}
+  .c-centro .emoji{background:var(--centro-bg)} .c-centro .dot{background:var(--centro)} .c-centro .role{color:var(--centro)}
+  .c-acceso .emoji{background:var(--acceso-bg)} .c-acceso .dot{background:var(--acceso)} .c-acceso .role{color:var(--acceso)}
+  .c-extra{background:linear-gradient(180deg,#ffffff,#fbfbff);} .c-extra .emoji{background:var(--extra-bg)} .c-extra .dot{background:var(--extra)} .c-extra .role{color:var(--extra)}
+
+  .divider{display:flex;align-items:center;gap:12px;margin:34px 4px 22px;color:var(--soft);}
+  .divider::before,.divider::after{content:"";height:1px;flex:1;background:var(--line);}
+  .divider span{font-size:.82rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
+
+  .c-admin{border-color:#dfe5ec;background:linear-gradient(180deg,#ffffff,#fbfcfd);}
+  .c-admin .emoji{background:var(--admin-bg)} .c-admin .role{color:var(--admin)} .c-admin .dot{background:var(--admin)}
+  .tag{display:inline-flex;align-items:center;gap:6px;margin-left:auto;background:var(--admin-bg);color:var(--admin);font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:999px;white-space:nowrap;}
+  .subhead{font-size:.8rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--admin);margin:20px 0 2px;}
+
+  .flow{margin-top:30px;background:#20303f;color:#fff;border-radius:var(--r);padding:26px 22px;box-shadow:var(--shadow);}
+  .flow h2{font-size:1.28rem;margin:0 0 4px;font-weight:850;}
+  .flow p{color:#b9c6d2;margin:0 0 18px;font-size:1rem;}
+  .steps{display:flex;flex-direction:column;gap:0;}
+  .step{display:flex;align-items:center;gap:14px;}
+  .step .ball{flex:0 0 auto;width:46px;height:46px;border-radius:14px;background:#2c3f52;display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .step .txt{font-size:1.04rem;font-weight:650;}
+  .bridge{width:46px;text-align:center;color:#4d6478;font-size:1.1rem;line-height:.7;padding:4px 0;}
+
+  footer{text-align:center;margin-top:30px;color:var(--soft);font-size:1rem;}
+  footer .cta{display:inline-block;margin-top:14px;background:#e8615a;color:#fff;text-decoration:none;font-weight:800;font-size:1.05rem;padding:14px 26px;border-radius:16px;box-shadow:var(--shadow);}
+  footer .url{display:block;margin-top:14px;font-size:.9rem;color:var(--soft);word-break:break-all;}
+
+  @media (prefers-reduced-motion: reduce){ .card{animation:none;opacity:1;transform:none;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mark" aria-hidden="true">✚</div>
+    <p class="eyebrow">Guía de usuario</p>
+    <h1>¿Cómo se usa la app?</h1>
+    <p class="lead">Aquí te explicamos, con palabras fáciles, <b>todo</b> lo que puedes hacer según quién seas. Busca tu caso.</p>
+    <div class="point" aria-hidden="true">👇</div>
+  </header>
+
+  <main class="cards">
+
+    <section class="card c-ayuda">
+      <div class="top"><div class="emoji" aria-hidden="true">🆘</div><h2 class="role">Necesito ayuda</h2></div>
+      <p class="who">Si tú o tu familia necesitan ayuda:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Ves en un <b>mapa</b> todos los centros de ayuda y hospitales.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Tocas <b>“cerca de mí”</b> y la app te muestra los más cercanos.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Filtras por <b>tipo</b> (centro, hospital), por <b>categoría</b> (comida, medicinas…) o buscas por nombre.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Abres un centro y ves <b>qué necesita</b> y <b>qué tiene</b> para dar.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Si un centro necesita algo que otro tiene, la app <b>te lo avisa</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Contactas al centro: <b>llamar</b>, <b>WhatsApp</b>, o <b>cómo llegar</b> (Maps o Waze).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Buscas a un <b>familiar</b> por su nombre o su cédula.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Si no encuentras a alguien, lo <b>reportas</b> para que otros ayuden a buscarlo.</span></li>
+      </ul>
+      <p class="note">No necesitas cuenta para nada de esto. Solo entra y busca. 🙂</p>
+    </section>
+
+    <section class="card c-cosas">
+      <div class="top"><div class="emoji" aria-hidden="true">📦</div><h2 class="role">Quiero donar cosas que tengo</h2></div>
+      <p class="who">Si tienes agua, comida, medicinas, pañales o ropa para regalar:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Dices <b>qué tienes</b>, <b>cuánto</b> y en qué presentación (caja, paquete…).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Marcas en el mapa <b>dónde recogerlo</b>, con tu GPS o poniendo el punto tú mismo.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Le tomas <b>fotos</b> a lo que vas a donar con la cámara del teléfono.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Dejas tu <b>teléfono</b> para que te coordinen (no se muestra en público).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Recibes un <b>código</b> para seguir tu donación.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Un transportista la reclama, la recoge y la lleva a un centro; tú ves <b>cada paso</b>.</span></li>
+      </ul>
+    </section>
+
+    <section class="card c-dinero">
+      <div class="top"><div class="emoji" aria-hidden="true">💵</div><h2 class="role">Quiero donar dinero</h2></div>
+      <p class="who">Si quieres ayudar con dinero, aunque estés en otro país:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Ves las necesidades que ya tienen precio (por ejemplo, <b>guantes para un hospital</b>).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>El precio real es en <b>bolívares</b>; la app te dice cuántos <b>dólares</b> es, más o menos.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Ves una <b>barra en vivo</b> de cuánto se ha juntado y cuánto falta.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Donas <b>la cantidad que quieras</b> y recibes una referencia y un código.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Con tu código ves cuándo se <b>compra</b> y cuándo se <b>entrega</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Cuando se junta la meta, la compra sigue el mismo camino hasta el centro.</span></li>
+      </ul>
+      <p class="note">La tasa de cambio se actualiza sola cada noche, para que el monto sea justo. 🌙</p>
+    </section>
+
+    <section class="card c-denuncia">
+      <div class="top"><div class="emoji" aria-hidden="true">🚨</div><h2 class="role">Reportar un problema</h2></div>
+      <p class="who">Si ves algo que está mal y quieres avisar:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Haces una <b>denuncia</b> (por ejemplo, si alguien retiene o desvía insumos).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Puedes <b>grabar un video</b> como prueba.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Si se te va el internet un momento, tu reporte <b>se guarda solo</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Tu denuncia se ve de forma <b>anónima</b> y el equipo la revisa.</span></li>
+      </ul>
+    </section>
+
+    <section class="card c-trans">
+      <div class="top"><div class="emoji" aria-hidden="true">🚚</div><h2 class="role">Soy transportista</h2></div>
+      <p class="who">Después de registrarte como transportista, puedes:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Registrarte con tu <b>cédula</b> y los datos de tu vehículo y tu zona.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Ver en el mapa las cosas por <b>llevar</b>: donaciones ofrecidas y compras listas.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Elegir una y decir <b>“voy en camino”</b>; la app te traza la ruta y calcula el tiempo.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Al <b>recoger</b>, tomas una foto, marcas el punto y la app cuenta los kilómetros.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Al <b>entregar</b> en el centro, tomas otra foto y anotas quién la recibió.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Registrar tus <b>trayectos</b> (de dónde a dónde y qué llevaste).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>La gente puede <b>apoyarte</b> con una donación para gasolina.</span></li>
+      </ul>
+    </section>
+
+    <section class="card c-volu">
+      <div class="top"><div class="emoji" aria-hidden="true">🙋</div><h2 class="role">Soy voluntario o rescatista</h2></div>
+      <p class="who">Después de registrarte, puedes:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Registrarte con tu <b>zona</b>, tu <b>profesión</b> y <b>cuándo</b> puedes ayudar.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Ver las <b>vacantes</b>: dónde y para qué hacen falta manos.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Los centros ven tu perfil para <b>llamarte</b> cuando te necesiten.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Si eres <b>rescatista</b>, te sumas a los equipos de rescate.</span></li>
+      </ul>
+    </section>
+
+    <section class="card c-centro">
+      <div class="top"><div class="emoji" aria-hidden="true">🏥</div><h2 class="role">Soy un centro de ayuda</h2></div>
+      <p class="who">Después de registrar tu centro, comunidad u hospital, puedes:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Registrar tu centro con su <b>ubicación</b> en el mapa y una <b>foto</b> del sitio.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Entrar a tu <b>panel</b> con tu código y tu PIN.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Escribir <b>qué necesitas</b> y <b>qué tienes</b>, eligiendo del catálogo, con cantidades.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span><b>Editar</b> o <b>borrar</b> lo que ya no aplica.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span><b>Actualizar</b> los datos del centro (tipo, dirección, teléfono, ubicación).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Cuando llega una donación, la marcas como <b>recibida</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Tu centro sale en el <b>mapa</b> con lo que necesita, y la app lo conecta con quien puede dar.</span></li>
+      </ul>
+      <p class="note">Tu código y tu PIN te los da el equipo. Se pueden volver a generar si los pierdes. 🔑</p>
+    </section>
+
+    <section class="card c-acceso">
+      <div class="top"><div class="emoji" aria-hidden="true">🔑</div><h2 class="role">Entrar o crear cuenta</h2></div>
+      <p class="who">Para los roles que necesitan cuenta (transportista, voluntario, centro):</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Creas tu cuenta con tu <b>correo</b> y una <b>contraseña</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Entras con ese correo y contraseña, <b>rápido y sin códigos</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Al entrar ves tu <b>perfil</b> y tus roles.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Una <b>sola cuenta</b> te sirve para todo.</span></li>
+      </ul>
+    </section>
+
+    <section class="card c-extra">
+      <div class="top"><div class="emoji" aria-hidden="true">📱</div><h2 class="role">La app también hace esto por ti</h2></div>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Se <b>instala</b> en tu teléfono como una app, sin tienda de aplicaciones.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Funciona <b>sin internet</b>: lo que llenas se guarda y se envía cuando vuelve la señal.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Está en <b>español e inglés</b> (cambias el idioma arriba).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Todo lo que donas o pides se sigue con un <b>código</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Cuida tu <b>privacidad</b>: tu teléfono y tu nombre no se muestran en público.</span></li>
+      </ul>
+    </section>
+
+  </main>
+
+  <div class="divider" role="separator"><span>Solo para el equipo</span></div>
+
+  <section class="card c-admin" aria-label="Guía del administrador">
+    <div class="top">
+      <div class="emoji" aria-hidden="true">🛠️</div>
+      <h2 class="role">Soy del equipo (admin)</h2>
+      <span class="tag" aria-hidden="true">🔒 Equipo</span>
+    </div>
+    <p class="who">Entras a la <b>consola de administración</b> con tu clave de admin. Desde ahí manejas todo y llevas la cuenta clara de cada ayuda.</p>
+
+    <p class="subhead">✍️ Crear</p>
+    <ul>
+      <li><span class="dot" aria-hidden="true">✓</span><span>Registrar una <b>donación de dinero</b> directa.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span>Crear un <b>presupuesto</b>: eliges el centro y lo que necesita, marcas la <b>tienda en el mapa</b>, pones el precio en bolívares y adjuntas la cotización. Así la gente puede donar dinero.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span>Publicar y actualizar <b>vacantes</b> para voluntarios.</span></li>
+    </ul>
+
+    <p class="subhead">📋 Gestionar y seguir</p>
+    <ul>
+      <li><span class="dot" aria-hidden="true">✓</span><span><b>Rastrear cada donación</b> en 4 estados: esperando, recogido, entregado y con denuncia.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span>En cada cuenta: registrar un <b>pago</b>, anotar un <b>movimiento</b>, subir una <b>evidencia</b> (foto o recibo) o <b>cerrarla</b>.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span><b>Verificar</b> a las personas reportadas, para que sean reales.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span>Ver a los <b>rescatistas</b> y las <b>vacantes</b>.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span>Vigilar los <b>viajes atrasados</b> y marcarlos como resueltos.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span>Registrar <b>denuncias</b> y cambiar su estado.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span><b>Regenerar</b> el código y el PIN de un centro si los pierde.</span></li>
+    </ul>
+    <p class="note">Todo queda <b>registrado y transparente</b>: cada donante puede seguir su ayuda con su código, del principio al fin.</p>
+  </section>
+
+  <section class="flow" aria-label="Cómo se conecta todo">
+    <h2>Cómo se conecta todo 🔗</h2>
+    <p>Un ejemplo, del principio al final:</p>
+    <div class="steps">
+      <div class="step"><div class="ball" aria-hidden="true">🎁</div><div class="txt">Alguien dona una cosa o dinero.</div></div>
+      <div class="bridge" aria-hidden="true">┆</div>
+      <div class="step"><div class="ball" aria-hidden="true">🚚</div><div class="txt">Un transportista la lleva.</div></div>
+      <div class="bridge" aria-hidden="true">┆</div>
+      <div class="step"><div class="ball" aria-hidden="true">🏥</div><div class="txt">Llega a un centro de ayuda.</div></div>
+      <div class="bridge" aria-hidden="true">┆</div>
+      <div class="step"><div class="ball" aria-hidden="true">💙</div><div class="txt">Y ayuda a una familia. Todo con tu código.</div></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Todo empieza en la pantalla de inicio:<br><b>solo elige tu opción.</b></p>
+    <a class="cta" href="https://donacionesvenezuela.vercel.app/">Abrir la app</a>
+    <span class="url">donacionesvenezuela.vercel.app</span>
+  </footer>
+
+</div>
+</body>
+</html>

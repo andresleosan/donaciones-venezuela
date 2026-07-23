@@ -142,6 +142,7 @@
       setText('#door-acceso-copy', 'home.doors.acceso.copy');
       setText('#home-foot-q', 'home.footQuestion');
       setText('#home-foot-link', 'home.footLink');
+      setText('#home-guide-link', 'home.userGuide');
       setText('#btn-volver-texto', 'home.back');
       setAttr('#btn-volver', 'aria-label', 'home.back');
 
