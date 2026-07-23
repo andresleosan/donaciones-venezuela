@@ -650,6 +650,20 @@
       "voluntario": "Volunteer",
       "centro": "Center",
       "donante": "Donor"
+    },
+    "familyRel": {
+      "self": "Responsible",
+      "spouse": "Spouse/partner",
+      "child": "Child",
+      "parent": "Parent",
+      "grandparent": "Grandparent",
+      "sibling": "Sibling",
+      "other": "Other"
+    },
+    "familyState": {
+      "nuevo": "New",
+      "contactado": "Contacted",
+      "atendido": "Handled"
     }
   },
   "donations": {
@@ -1047,7 +1061,14 @@
     "budgetAttachHelp": "Any file, max 5 MB. Donors will be able to see it.",
     "budgetAttachTooBig": "The file exceeds 5 MB.",
     "budgetPending": "{n} {unidad} still needed.",
-    "budgetIncomplete": "Fill center, supply, store, quantity and price."
+    "budgetIncomplete": "Fill center, supply, store, quantity and price.",
+    "manageFamilies": "Affected families",
+    "famEmpty": "No families registered yet.",
+    "famMembers": "Members",
+    "famLivelihood": "Livelihood",
+    "famLosses": "Losses",
+    "famAge": "yrs",
+    "famMinor": "minor"
   },
   "lugar": {},
   "home": {
@@ -1081,6 +1102,10 @@
       "acceso": {
         "title": "Register or sign in",
         "copy": "Driver, volunteer or center"
+      },
+      "damnificado": {
+        "title": "I lost my home",
+        "copy": "Register your family to get help"
       }
     },
     "adminCta": "Administration access"
@@ -1453,5 +1478,75 @@
     "ctaList": "View reports",
     "langLocked": "You can't change language while recording.",
     "reporter": "Reporter"
+  },
+  "registro": {
+    "pageTitle": "Register my family",
+    "intro": "Tell us about your family and what you lost. This helps teams prioritize the help you need most and support you to start over.",
+    "privacy": "This information is private. Only the coordination team sees it to help you; it is never published.",
+    "contactTitle": "Who is registering the family?",
+    "name": "Your full name",
+    "namePh": "First and last name",
+    "phone": "Phone / WhatsApp",
+    "email": "Email (optional)",
+    "stayTitle": "Where are you staying now?",
+    "stayWhere": "Where you sleep today",
+    "stayWherePh": "Shelter, a relative's home, the street…",
+    "municipio": "Municipality",
+    "estado": "State / region",
+    "gpsBtn": "Use my location",
+    "gpsNone": "No location",
+    "gpsAsking": "Getting location…",
+    "gpsSet": "Location saved ({lat}, {lng})",
+    "gpsError": "Couldn't get location",
+    "membersTitle": "Who is in the family?",
+    "membersHelp": "Add everyone living with you. Details about children and medical conditions help identify urgent needs.",
+    "addMember": "Add member",
+    "removeMember": "Remove",
+    "mName": "Name",
+    "mRel": "Relationship",
+    "mAge": "Age",
+    "mJob": "What did they do? (before)",
+    "mJobPh": "Trade or job",
+    "mMed": "Medical condition or disability",
+    "mMedPh": "Diabetes, pregnancy, wheelchair…",
+    "mNotes": "Other note",
+    "rel": {
+      "self": "Me (responsible)",
+      "spouse": "Spouse or partner",
+      "child": "Child",
+      "parent": "Parent",
+      "grandparent": "Grandparent",
+      "sibling": "Sibling",
+      "other": "Other"
+    },
+    "livelihoodTitle": "How did the family earn a living?",
+    "livelihood": "Main livelihood before the disaster",
+    "livelihoodPh": "How they earned a living: business, job, farming…",
+    "deceasedTitle": "Did you lose any family member?",
+    "deceasedCount": "How many died?",
+    "deceasedDetail": "Details (optional)",
+    "deceasedDetailPh": "Who, if you want to share",
+    "lossesTitle": "What did you lose?",
+    "lostHouse": "We lost our home",
+    "lostVehicle": "We lost a vehicle",
+    "vehicleDetail": "Which vehicle(s)?",
+    "vehicleDetailPh": "Car, motorcycle, work truck…",
+    "lostItems": "Everything you lost",
+    "lostItemsPh": "Furniture, work tools, documents, animals…",
+    "photosTitle": "Photos of what you lost",
+    "photosHelp": "If you have old photos of your home, vehicle or business, add them. They help convey the scale of the loss. (Optional)",
+    "photoRemove": "Remove photo",
+    "submit": "Send registration",
+    "sending": "Sending…",
+    "sent": "Registration sent",
+    "error": "Couldn't send. Please try again.",
+    "nameRequired": "Enter your name to continue",
+    "successTitle": "Registration received!",
+    "successBody": "Thank you. The coordination team will review your case. Save this code in case you need to follow up.",
+    "codeLabel": "Your code",
+    "saveCode": "Keep it in a safe place.",
+    "copyCode": "Copy code",
+    "copied": "Code copied",
+    "backHome": "Back to home"
   }
 }

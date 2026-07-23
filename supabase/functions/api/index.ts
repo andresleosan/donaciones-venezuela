@@ -100,15 +100,16 @@ async function viajeVigente(facturaId: number) {
 
 // Guarda una foto (data URL JPEG/PNG/WebP, máx ~1.8MB decodificada) en el bucket
 // PRIVADO registro-transportistas. Solo el service role accede; nada es público.
-async function guardarFoto(dataUrl: unknown, carpeta: string, nombre: string): Promise<string> {
+async function guardarFoto(dataUrl: unknown, carpeta: string, nombre: string,
+    bucket = 'registro-transportistas', maxBytes = 1_800_000): Promise<string> {
   const m = String(dataUrl ?? '').match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
   if (!m) throw new Error(`foto de ${nombre} inválida (se espera imagen JPEG/PNG)`);
   const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
   if (bytes.length < 1000) throw new Error(`foto de ${nombre} vacía`);
-  if (bytes.length > 1_800_000) throw new Error(`foto de ${nombre} demasiado grande`);
+  if (bytes.length > maxBytes) throw new Error(`foto de ${nombre} demasiado grande`);
   const ext = m[1] === 'jpeg' ? 'jpg' : m[1];
   const ruta = `${carpeta}/${nombre}.${ext}`;
-  const { error } = await supa.storage.from('registro-transportistas')
+  const { error } = await supa.storage.from(bucket)
     .upload(ruta, bytes, { contentType: `image/${m[1]}`, upsert: false });
   if (error) throw new Error(`no se pudo guardar la foto de ${nombre}`);
   return ruta;
@@ -485,6 +486,63 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         placa: s(p.placa, 20), foto_placa, foto_vehiculo, foto_cedula });
       if (error) throw error;
       return {};
+    }
+    // ===== Auto-registro de damnificados (público → PRIVADO solo-admin) =====
+    // Una familia se registra a sí misma. PII sensible: va a familias_damnificadas
+    // (RLS, revoke anon) y las fotos al bucket privado 'damnificados'. Nada público.
+    case 'damnificado_registrar': {
+      // Honeypot: un bot rellena el campo oculto → fingimos éxito sin escribir.
+      if (s(p.web, 100)) return { codigo: 'FAM-000000', ok: true };
+      const nombre = s(p.responsableNombre, 120);
+      if (!nombre) throw new Error('Falta el nombre de quien registra a la familia');
+      const codigo = 'FAM-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+      // Integrantes (máx 20): se limpia cada campo; «menor» derivado de la edad.
+      const crudos = Array.isArray(p.integrantes) ? (p.integrantes as unknown[]).slice(0, 20) : [];
+      const integrantes = crudos.map((x) => {
+        const it = (x || {}) as Record<string, unknown>;
+        const edad = Math.max(0, Math.min(120, Math.round(n(it.edad))));
+        const menor = it.menor === true || (edad > 0 && edad < 18);
+        return {
+          nombre: s(it.nombre, 120), parentesco: s(it.parentesco, 60), edad,
+          menor, ocupacion: s(it.ocupacion, 160),
+          condicion_medica: s(it.condicionMedica ?? it.condicion_medica, 400), notas: s(it.notas, 400)
+        };
+      }).filter((it) => it.nombre || it.parentesco || it.edad);
+      const numMenores = integrantes.filter((it) => it.menor).length;
+      // Fotos antiguas de lo perdido (máx 12) al bucket PRIVADO. Una foto inválida
+      // se omite en vez de tumbar el registro (no perder los datos ya escritos).
+      const fotosIn = Array.isArray(p.fotos) ? (p.fotos as unknown[]).slice(0, 12) : [];
+      const fotos: string[] = [];
+      for (let i = 0; i < fotosIn.length; i++) {
+        try { fotos.push(await guardarFoto(fotosIn[i], codigo, 'p' + i, 'damnificados', 2_500_000)); }
+        catch (_) { /* foto inválida/grande: se omite */ }
+      }
+      const gps = (p.gps || {}) as Record<string, unknown>;
+      const { error } = await supa.from('familias_damnificadas').insert({
+        codigo,
+        responsable_nombre: nombre,
+        responsable_telefono: s(p.responsableTelefono, 40),
+        responsable_email: s(p.responsableEmail, 120),
+        alojamiento: s(p.alojamiento, 500),
+        municipio: s(p.municipio, 120),
+        estado_geo: s(p.estadoGeo, 120),
+        gps_lat: gps.lat != null ? n(gps.lat) : null,
+        gps_lng: gps.lng != null ? n(gps.lng) : null,
+        num_personas: integrantes.length,
+        num_menores: numMenores,
+        integrantes,
+        fallecidos: Math.max(0, Math.min(99, Math.round(n(p.fallecidos)))),
+        fallecidos_detalle: s(p.fallecidosDetalle, 500),
+        perdio_casa: p.perdioCasa !== false,
+        perdio_vehiculo: p.perdioVehiculo === true,
+        vehiculos_detalle: s(p.vehiculosDetalle, 400),
+        sustento_principal: s(p.sustentoPrincipal, 400),
+        bienes_perdidos: s(p.bienesPerdidos, 2000),
+        notas: s(p.notas, 1000),
+        fotos
+      });
+      if (error) throw error;
+      return { codigo, numPersonas: integrantes.length, numMenores };
     }
     case 'registrar_trayecto': {
       if (!s(p.origen) || !s(p.destino)) throw new Error('origen y destino requeridos');
@@ -974,6 +1032,28 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const id = s(p.id, 40);
       const estado = ['Recibida', 'En revisión', 'Atendida'].includes(s(p.estado, 20)) ? s(p.estado, 20) : 'Recibida';
       const { error } = await supa.from('denuncias').update({ estado }).eq('id', id);
+      if (error) throw error;
+      return { estado };
+    }
+    // ===== Familias damnificadas: solo el admin las ve (fotos con URL firmada) =====
+    case 'admin_damnificados': {
+      const { data } = await supa.from('familias_damnificadas')
+        .select('*').order('created_at', { ascending: false }).limit(300);
+      const filas: Record<string, unknown>[] = [];
+      for (const f of data || []) {
+        const urls: string[] = [];
+        for (const ruta of (Array.isArray(f.fotos) ? f.fotos : [])) {
+          const { data: signed } = await supa.storage.from('damnificados').createSignedUrl(ruta as string, 3600);
+          if (signed?.signedUrl) urls.push(signed.signedUrl);
+        }
+        filas.push({ ...f, fotos_urls: urls });
+      }
+      return { familias: filas };
+    }
+    case 'admin_damnificado_estado': {
+      const id = s(p.id, 40);
+      const estado = ['nuevo', 'contactado', 'atendido'].includes(s(p.estado, 20)) ? s(p.estado, 20) : 'nuevo';
+      const { error } = await supa.from('familias_damnificadas').update({ estado }).eq('id', id);
       if (error) throw error;
       return { estado };
     }

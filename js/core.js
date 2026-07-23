@@ -130,6 +130,8 @@
       setText('#home-sub', 'home.sub');
       setText('#door-ayuda-title', 'home.doors.ayuda.title');
       setText('#door-ayuda-copy', 'home.doors.ayuda.copy');
+      setText('#door-damnificado-title', 'home.doors.damnificado.title');
+      setText('#door-damnificado-copy', 'home.doors.damnificado.copy');
       setText('#door-ayudar-title', 'home.doors.ayudar.title');
       setText('#door-ayudar-copy', 'home.doors.ayudar.copy');
       setText('#door-transporte-title', 'home.doors.transporte.title');

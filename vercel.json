@@ -8,6 +8,7 @@
     { "source": "/trayectos", "destination": "/ventana.html?v=trayectos" },
     { "source": "/historial", "destination": "/ventana.html?v=historial" },
     { "source": "/crear-centro", "destination": "/ventana.html?v=crear-centro" },
+    { "source": "/registro-familia", "destination": "/ventana.html?v=registro-familia" },
     { "source": "/panel-centro", "destination": "/ventana.html?v=panel-centro" },
     { "source": "/admin", "destination": "/ventana.html?v=admin" }
   ],

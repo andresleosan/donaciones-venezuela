@@ -67,6 +67,7 @@
       adminData.vacantes = await opcional('admin_listar_vacantes', 'vacantes');
       adminData.rescatistas = await opcional('admin_listar_rescatistas', 'rescatistas');
       adminData.denuncias = await opcional('admin_denuncias', 'denuncias');
+      adminData.familias = await opcional('admin_damnificados', 'familias');
       adminData.atrasos = await opcional('admin_viajes_atrasados', 'viajes');
     }
 
@@ -98,6 +99,7 @@
         { id: 'personas', icon: '🔎', titulo: t('admin.managePeople'), count: adminData.personas.length },
         { id: 'rescatistas', icon: '🚑', titulo: t('admin.manageRescuers'), count: adminData.rescatistas.length },
         { id: 'denuncias', icon: '🚨', titulo: t('admin.manageReports'), count: adminData.denuncias.length },
+        { id: 'familias', icon: '🏠', titulo: t('admin.manageFamilies'), count: (adminData.familias || []).length },
         { id: 'regenerar', icon: '🔑', titulo: t('admin.manageRegen'), count: null }
       ];
       const crearCards = crear.map((tk) => `
@@ -502,7 +504,7 @@
 
     // ---- Paneles de gestión ----
     function abrirGestion(cual) {
-      const panels = { track: panelTrack, facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, denuncias: panelDenuncias, regenerar: panelRegenerar };
+      const panels = { track: panelTrack, facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, denuncias: panelDenuncias, familias: panelFamilias, regenerar: panelRegenerar };
       const fn = panels[cual];
       if (fn) fn();
     }
@@ -586,6 +588,57 @@
           await postAdmin({ accion: 'admin_denuncia_estado', id: b.dataset.denId, estado: b.dataset.denEstado });
           await refrescarAdminData();
           panelDenuncias();
+        } catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+      }));
+    }
+
+    // Familias damnificadas: el admin ve TODO (contacto, integrantes, condiciones
+    // médicas, dónde se quedan, fotos firmadas) para poder contactar y priorizar.
+    // Estado nuevo → contactado → atendido. Nada de esto se expone en público.
+    function panelFamilias() {
+      const filas = (adminData.familias || []).map((f) => {
+        const fecha = new Date(f.created_at);
+        const gps = (f.gps_lat != null && f.gps_lng != null)
+          ? `<a href="https://www.openstreetmap.org/?mlat=${e(String(f.gps_lat))}&mlon=${e(String(f.gps_lng))}#map=17/${e(String(f.gps_lat))}/${e(String(f.gps_lng))}" target="_blank" rel="noopener">${e(Number(f.gps_lat).toFixed(5))}, ${e(Number(f.gps_lng).toFixed(5))}</a>`
+          : '';
+        const integrantes = (Array.isArray(f.integrantes) ? f.integrantes : []).map((m) => {
+          const bits = [];
+          if (m.parentesco) bits.push(e(tValue('familyRel', m.parentesco) || m.parentesco));
+          if (m.edad) bits.push(`${e(String(m.edad))} ${e(t('admin.famAge'))}${m.menor ? ' · ' + e(t('admin.famMinor')) : ''}`);
+          if (m.ocupacion) bits.push(`💼 ${e(m.ocupacion)}`);
+          if (m.condicion_medica) bits.push(`⚕️ ${e(m.condicion_medica)}`);
+          if (m.notas) bits.push(e(m.notas));
+          return `<li>${e(m.nombre || '')}${bits.length ? ' — ' + bits.join(' · ') : ''}</li>`;
+        }).join('');
+        const fotos = (Array.isArray(f.fotos_urls) ? f.fotos_urls : []).map((u) => `<a href="${e(u)}" target="_blank" rel="noopener" class="fam-foto-link"><img src="${e(u)}" alt="" loading="lazy" /></a>`).join('');
+        const perdidas = [];
+        if (f.perdio_casa) perdidas.push(e(t('registro.lostHouse')));
+        if (f.perdio_vehiculo) perdidas.push(e(t('registro.lostVehicle')) + (f.vehiculos_detalle ? ` (${e(f.vehiculos_detalle)})` : ''));
+        const lugar = [f.alojamiento, f.municipio, f.estado_geo].filter(Boolean).join(', ');
+        return `<article class="card fam-admin-card">
+          <div class="badge-row"><span class="badge">${e(tValue('familyState', f.estado) || f.estado)}</span><span class="badge gray">👥 ${e(String(f.num_personas || 0))}</span>${f.num_menores ? `<span class="badge gray">🧒 ${e(String(f.num_menores))}</span>` : ''}${f.fallecidos ? `<span class="badge red">✝ ${e(String(f.fallecidos))}</span>` : ''}</div>
+          <p><strong>${e(f.responsable_nombre || '')}</strong> · <span class="meta">${e(f.codigo || '')}</span></p>
+          <p class="meta">📞 ${e(f.responsable_telefono || '—')}${f.responsable_email ? ` · ${e(f.responsable_email)}` : ''}</p>
+          ${lugar || gps ? `<p class="meta">🏠 ${e(lugar)}${gps ? ' · 📍 ' + gps : ''}</p>` : ''}
+          ${integrantes ? `<p class="meta"><strong>${e(t('admin.famMembers'))}:</strong></p><ul class="fam-admin-lista">${integrantes}</ul>` : ''}
+          ${f.sustento_principal ? `<p class="meta"><strong>${e(t('admin.famLivelihood'))}:</strong> ${e(f.sustento_principal)}</p>` : ''}
+          ${perdidas.length ? `<p class="meta"><strong>${e(t('admin.famLosses'))}:</strong> ${perdidas.join(' · ')}</p>` : ''}
+          ${f.bienes_perdidos ? `<p class="meta">${e(f.bienes_perdidos)}</p>` : ''}
+          ${f.fallecidos_detalle ? `<p class="meta">✝ ${e(f.fallecidos_detalle)}</p>` : ''}
+          ${fotos ? `<div class="fam-admin-fotos">${fotos}</div>` : ''}
+          <p class="meta">${e(fecha.toLocaleString())}</p>
+          <div class="den-estado-acciones">
+            ${['nuevo', 'contactado', 'atendido'].map((es) => `<button class="btn btn-soft btn-small" type="button" data-fam-estado="${e(es)}" data-fam-id="${e(f.id)}"${es === f.estado ? ' disabled' : ''}>${e(tValue('familyState', es))}</button>`).join('')}
+          </div>
+        </article>`;
+      }).join('') || `<p class="empty-state">${e(t('admin.famEmpty'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.manageFamilies'), `<div class="admin-records fam-admin-list">${filas}</div>`);
+      bindGestMenu();
+      $$('#admin-console [data-fam-estado]').forEach((b) => b.addEventListener('click', async () => {
+        try {
+          await postAdmin({ accion: 'admin_damnificado_estado', id: b.dataset.famId, estado: b.dataset.famEstado });
+          await refrescarAdminData();
+          panelFamilias();
         } catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || t('admin.authError'))); }
       }));
     }
@@ -1802,6 +1855,7 @@
       renderDonations();
       [['#btn-panel-centro', '/panel-centro'], ['#btn-acceso-panel', '/panel-centro'],
        ['#btn-crear-centro', '/crear-centro'], ['#btn-acceso-crear-centro', '/crear-centro'],
+       ['#door-damnificado', '/registro-familia'],
        ['#btn-acceso-transportista', '/registrar-transportista'], ['#btn-home-admin', '/admin']].forEach(([sel, ruta]) => {
         const btn = $(sel);
         if (btn) btn.addEventListener('click', () => { window.location.href = ruta; });

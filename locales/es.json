@@ -650,6 +650,20 @@
       "voluntario": "Voluntario",
       "centro": "Centro",
       "donante": "Donante"
+    },
+    "familyRel": {
+      "self": "Responsable",
+      "spouse": "Cónyuge/pareja",
+      "child": "Hijo/a",
+      "parent": "Padre/madre",
+      "grandparent": "Abuelo/a",
+      "sibling": "Hermano/a",
+      "other": "Otro"
+    },
+    "familyState": {
+      "nuevo": "Nuevo",
+      "contactado": "Contactado",
+      "atendido": "Atendido"
     }
   },
   "donations": {
@@ -1047,7 +1061,14 @@
     "budgetAttachHelp": "Cualquier archivo, máx 5 MB. El donante podrá verlo.",
     "budgetAttachTooBig": "El archivo supera los 5 MB.",
     "budgetPending": "Faltan {n} {unidad}.",
-    "budgetIncomplete": "Completa centro, insumo, tienda, cantidad y precio."
+    "budgetIncomplete": "Completa centro, insumo, tienda, cantidad y precio.",
+    "manageFamilies": "Familias damnificadas",
+    "famEmpty": "Aún no hay familias registradas.",
+    "famMembers": "Integrantes",
+    "famLivelihood": "Sustento",
+    "famLosses": "Pérdidas",
+    "famAge": "años",
+    "famMinor": "menor"
   },
   "lugar": {},
   "home": {
@@ -1081,6 +1102,10 @@
       "acceso": {
         "title": "Registrarme o entrar",
         "copy": "Transportista, voluntario o centro"
+      },
+      "damnificado": {
+        "title": "Soy damnificado",
+        "copy": "Registra a tu familia para recibir ayuda"
       }
     },
     "adminCta": "Acceso de administración"
@@ -1453,5 +1478,75 @@
     "ctaList": "Ver denuncias",
     "langLocked": "No puedes cambiar de idioma mientras grabas.",
     "reporter": "Denunciante"
+  },
+  "registro": {
+    "pageTitle": "Registrar a mi familia",
+    "intro": "Cuéntanos sobre tu familia y lo que perdieron. Con esta información los equipos pueden priorizar la ayuda que más necesitan y apoyarlos a empezar de nuevo.",
+    "privacy": "Esta información es privada. Solo la ve el equipo de coordinación para ayudarte; nunca se publica.",
+    "contactTitle": "¿Quién registra a la familia?",
+    "name": "Tu nombre completo",
+    "namePh": "Nombre y apellido",
+    "phone": "Teléfono / WhatsApp",
+    "email": "Correo (opcional)",
+    "stayTitle": "¿Dónde se están quedando ahora?",
+    "stayWhere": "Lugar donde duermen hoy",
+    "stayWherePh": "Refugio, casa de un familiar, la calle…",
+    "municipio": "Municipio",
+    "estado": "Estado / región",
+    "gpsBtn": "Usar mi ubicación",
+    "gpsNone": "Sin ubicación",
+    "gpsAsking": "Obteniendo ubicación…",
+    "gpsSet": "Ubicación guardada ({lat}, {lng})",
+    "gpsError": "No se pudo obtener la ubicación",
+    "membersTitle": "¿Quiénes forman la familia?",
+    "membersHelp": "Agrega a cada persona que vive contigo. Los datos de los menores y las condiciones médicas ayudan a saber qué se necesita con urgencia.",
+    "addMember": "Agregar integrante",
+    "removeMember": "Quitar",
+    "mName": "Nombre",
+    "mRel": "Parentesco",
+    "mAge": "Edad",
+    "mJob": "¿A qué se dedicaba? (antes)",
+    "mJobPh": "Oficio o trabajo",
+    "mMed": "Condición médica o discapacidad",
+    "mMedPh": "Diabetes, embarazo, silla de ruedas…",
+    "mNotes": "Otra nota",
+    "rel": {
+      "self": "Yo (responsable)",
+      "spouse": "Cónyuge o pareja",
+      "child": "Hijo/a",
+      "parent": "Padre/madre",
+      "grandparent": "Abuelo/a",
+      "sibling": "Hermano/a",
+      "other": "Otro"
+    },
+    "livelihoodTitle": "¿De qué vivía la familia?",
+    "livelihood": "Sustento principal antes de la tragedia",
+    "livelihoodPh": "Cómo se ganaban la vida: negocio, empleo, agricultura…",
+    "deceasedTitle": "¿Perdieron a algún familiar?",
+    "deceasedCount": "¿Cuántos fallecieron?",
+    "deceasedDetail": "Detalle (opcional)",
+    "deceasedDetailPh": "Quiénes, si quieres contarlo",
+    "lossesTitle": "¿Qué perdieron?",
+    "lostHouse": "Perdimos la casa",
+    "lostVehicle": "Perdimos un vehículo",
+    "vehicleDetail": "¿Qué vehículo(s)?",
+    "vehicleDetailPh": "Carro, moto, camión de trabajo…",
+    "lostItems": "Todo lo que perdieron",
+    "lostItemsPh": "Muebles, herramientas de trabajo, documentos, animales…",
+    "photosTitle": "Fotos de lo que perdieron",
+    "photosHelp": "Si tienes fotos antiguas de tu casa, tu vehículo o tu negocio, agrégalas. Ayudan a entender la magnitud de la pérdida. (Opcional)",
+    "photoRemove": "Quitar foto",
+    "submit": "Enviar registro",
+    "sending": "Enviando…",
+    "sent": "Registro enviado",
+    "error": "No se pudo enviar. Intenta de nuevo.",
+    "nameRequired": "Escribe tu nombre para continuar",
+    "successTitle": "¡Registro recibido!",
+    "successBody": "Gracias. El equipo de coordinación revisará tu caso. Guarda este código por si necesitas dar seguimiento.",
+    "codeLabel": "Tu código",
+    "saveCode": "Guárdalo en un lugar seguro.",
+    "copyCode": "Copiar código",
+    "copied": "Código copiado",
+    "backHome": "Volver al inicio"
   }
 }

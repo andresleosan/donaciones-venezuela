@@ -49,6 +49,7 @@
         'trayectos': function () { abrirTrayectos(id); },
         'historial': function () { abrirHistorial(solicitud.nombre); },
         'crear-centro': function () { abrirCrearPanel(); },
+        'registro-familia': function () { abrirRegistroFamilia(); },
         'panel-centro': function () { abrirPanelCentro(solicitud.token); },
         'admin': function () { abrirAdmin(); }
       };
