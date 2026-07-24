@@ -781,6 +781,8 @@
       border: 1px solid var(--critical); background: #FFF5F7;
     }
     .admin-alert-title { color: var(--critical); font-size: 1rem; font-weight: 800; margin-bottom: 4px; }
+    .admin-alert-compra { border-color: var(--warning); background: #FFFBEB; }
+    .admin-alert-compra .admin-alert-title { color: var(--warning); }
     .late-card { margin-top: 10px; }
     .late-card p { margin: 2px 0; }
 

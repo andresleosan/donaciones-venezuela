@@ -363,7 +363,10 @@
     "openEvidence": "Abrir evidencia",
     "evidenceFile": "Evidencia",
     "panelTitle": "Trazabilidad pública por token",
-    "seeBudget": "Ver presupuesto"
+    "seeBudget": "Ver presupuesto",
+    "contributions": "Aportes recibidos",
+    "anonNote": "Mostramos montos y fechas, nunca la identidad de quien dona.",
+    "contributionsTotal": "Total aportado: ≈ {usd}"
   },
   "modal": {
     "historyTitle": "Historial de movimientos",
@@ -635,7 +638,9 @@
       "Entregada": "Entregada",
       "Registrada": "Registrada",
       "Confirmada": "Confirmada",
-      "EnCamino": "En camino"
+      "EnCamino": "En camino",
+      "PorComprar": "En espera de compra",
+      "Transferida": "Dinero transferido, comprando"
     },
     "reportType": {
       "Retención de insumos": "Retención de insumos",
@@ -670,6 +675,11 @@
       "nuevo": "En espera de ayuda",
       "contactado": "En atención",
       "atendido": "Atendida"
+    },
+    "donationState": {
+      "Confirmada": "Confirmada",
+      "Registrada": "Registrada",
+      "Anulada": "Anulada"
     }
   },
   "donations": {
@@ -1074,7 +1084,30 @@
     "famLivelihood": "Sustento",
     "famLosses": "Pérdidas",
     "famAge": "años",
-    "famMinor": "menor"
+    "famMinor": "menor",
+    "purchase": {
+      "title": "Gestión de compra",
+      "alertTitle": "En espera de compra",
+      "alertIntro": "Estos presupuestos ya recaudaron todo. Verifica los aportes, transfiere el dinero y registra la compra.",
+      "raised": "Recaudado",
+      "manage": "Gestionar compra",
+      "viewProof": "Ver comprobante",
+      "noProof": "Sin comprobante",
+      "void": "Anular",
+      "voidConfirm": "¿Anular esta donación? Se restará del total y, si baja de la meta, el presupuesto se reabrirá.",
+      "noDonations": "Aún no hay donaciones.",
+      "consolidatedLabel": "Consolidado de transferencias recibidas",
+      "consolidatedHelp": "Sube un archivo (imagen o PDF) con el resumen de las transferencias recibidas. ANONIMÍZALO antes: no muestres datos personales de los donantes. Será público.",
+      "markTransferred": "Marcar dinero transferido a Bs",
+      "invoiceLabel": "Factura de compra pagada al proveedor",
+      "invoiceHelp": "Sube la factura pagada (imagen o PDF). Será pública. Al confirmar, el insumo queda listo para que un transportista lo recoja.",
+      "confirmPurchase": "Confirmar compra",
+      "donationsTitle": "Donaciones y comprobantes",
+      "actionsTitle": "Compra",
+      "fileRequired": "Selecciona un archivo primero.",
+      "sending": "Enviando…",
+      "done": "Compra registrada. El insumo ya puede recogerse."
+    }
   },
   "lugar": {},
   "home": {
@@ -1264,7 +1297,10 @@
     "thanksPartial": "Tu aporte a {insumo} suma. Van {recaudado} de {precio} Bs: cuando se complete, verás la compra, la recogida y la entrega con tu código.",
     "thanksAmount": "Aportaste {usd} ({bs}).",
     "refLabel": "Tu referencia de transacción",
-    "copyText": "Referencia: {referencia} · Código de seguimiento: {token}"
+    "copyText": "Referencia: {referencia} · Código de seguimiento: {token}",
+    "proofLabel": "Comprobante de tu transferencia",
+    "proofHelp": "Sube la captura o el PDF de tu transferencia. Solo lo ve el equipo, para confirmar que el aporte es real.",
+    "proofRequired": "Adjunta el comprobante de tu transferencia para continuar."
   },
   "cycle": {
     "title": "Insumos comprados, listos para recoger",

@@ -68,6 +68,7 @@
       adminData.rescatistas = await opcional('admin_listar_rescatistas', 'rescatistas');
       adminData.denuncias = await opcional('admin_denuncias', 'denuncias');
       adminData.familias = await opcional('admin_damnificados', 'familias');
+      adminData.porComprar = await opcional('admin_presupuestos_por_comprar', 'presupuestos');
       adminData.atrasos = await opcional('admin_viajes_atrasados', 'viajes');
     }
 
@@ -136,11 +137,25 @@
             </article>`;
           }).join('')}
         </section>` : '';
+      const porComprar = adminData.porComprar || [];
+      const alertaCompra = porComprar.length ? `
+        <section class="admin-alert admin-alert-compra">
+          <h3 class="admin-alert-title">⏳ ${e(t('admin.purchase.alertTitle'))} <span class="badge yellow">${e(String(porComprar.length))}</span></h3>
+          <p class="meta">${e(t('admin.purchase.alertIntro'))}</p>
+          ${porComprar.map((pr) => `<article class="card">
+            <div class="badge-row"><span class="badge">${e(tValue('invoiceState', pr.estado) || pr.estado)}</span></div>
+            <p><strong>${e(pr.objetivo || '')}</strong></p>
+            <p class="meta">${e(t('admin.purchase.raised'))}: ${e(formatearMonto(pr.recaudado))} / ${e(formatearMonto(pr.precio))}</p>
+            ${pr.token ? `<p class="meta">🧾 ${e(pr.token)}</p>` : ''}
+            <div class="form-actions"><button class="btn btn-primary btn-small" type="button" data-compra-token="${e(pr.token)}">${e(t('admin.purchase.manage'))}</button></div>
+          </article>`).join('')}
+        </section>` : '';
       $('#admin-console').innerHTML = `
         <div class="admin-console-head">
           <div><h2>${e(t('admin.consoleTitle'))}</h2><p class="meta">${e(t('admin.consoleSubtitle'))}</p></div>
           <button class="btn btn-ghost btn-small" type="button" id="admin-salir">${e(t('admin.signOut'))}</button>
         </div>
+        ${alertaCompra}
         ${alertaHtml}
         <section class="admin-group">
           <h3 class="admin-group-title">${e(t('admin.groupCreate'))}</h3>
@@ -152,6 +167,7 @@
         </section>`;
       $$('#admin-console [data-admin-tarea]').forEach((b) => b.addEventListener('click', () => abrirAsistente(b.dataset.adminTarea)));
       $$('#admin-console [data-admin-gestion]').forEach((b) => b.addEventListener('click', () => abrirGestion(b.dataset.adminGestion)));
+      $$('#admin-console [data-compra-token]').forEach((b) => b.addEventListener('click', () => panelCompra(b.dataset.compraToken)));
       $$('#admin-console [data-viaje-resolver]').forEach((b) => b.addEventListener('click', async () => {
         b.disabled = true;
         try { await postAdmin({ accion: 'admin_viaje_resolver', id: b.dataset.viajeResolver }); await refrescarAdminData(); irAMenu(); }
@@ -641,6 +657,73 @@
           panelFamilias();
         } catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || t('admin.authError'))); }
       }));
+    }
+
+    // Gestión de compra de un presupuesto (ciclo verificado). Ver las donaciones y
+    // sus comprobantes (para confirmar que son reales), anular una falsa, marcar la
+    // transferencia USD→Bs (sube el consolidado público) y confirmar la compra
+    // (sube la factura pública). Los archivos del admin son PÚBLICOS; el comprobante
+    // de cada donante es privado (URL firmada, se abre en pestaña).
+    async function panelCompra(token) {
+      const pr = (adminData.porComprar || []).find((x) => x.token === token) || { token: token };
+      $('#admin-console').innerHTML = marcoGestion(t('admin.purchase.title'), `<p class="section-copy">${e(t('admin.checking'))}</p>`);
+      bindGestMenu();
+      let donaciones = [];
+      try { donaciones = (await postAdmin({ accion: 'admin_donaciones_presupuesto', token: token })).donaciones || []; }
+      catch (err) { const b = $('#admin-console .admin-manage-body'); if (b) b.innerHTML = `<p class="form-message error visible">${e(String((err && err.message) || t('admin.authError')))}</p>`; return; }
+      const donHtml = donaciones.map((d) => `<article class="card">
+        <div class="badge-row"><span class="badge ${d.estado === 'Anulada' ? 'red' : 'gray'}">${e(tValue('donationState', d.estado) || d.estado)}</span></div>
+        <p><strong>≈ $${e(Number(d.monto_usd || 0).toFixed(2))}</strong> · ${e(formatearMonto(d.monto))}${d.nombre_donante ? ' · ' + e(d.nombre_donante) : ''}</p>
+        <p class="meta">${e(fechaPublica(d.fecha))}${d.referencia_pago ? ' · ' + e(d.referencia_pago) : ''}</p>
+        <div class="form-actions">
+          ${d.comprobante_url ? `<a class="btn btn-soft btn-small" href="${e(d.comprobante_url)}" target="_blank" rel="noopener">${e(t('admin.purchase.viewProof'))}</a>` : `<span class="meta">${e(t('admin.purchase.noProof'))}</span>`}
+          ${d.estado !== 'Anulada' ? `<button class="btn btn-danger btn-small" type="button" data-anular="${e(d.id)}">${e(t('admin.purchase.void'))}</button>` : ''}
+        </div>
+      </article>`).join('') || `<p class="empty-state">${e(t('admin.purchase.noDonations'))}</p>`;
+      const esPorComprar = pr.estado === 'PorComprar';
+      const accionesHtml = `
+        ${esPorComprar ? `<div class="field full">
+          <label for="compra-consolidado">${e(t('admin.purchase.consolidatedLabel'))}</label>
+          <p class="field-help">${e(t('admin.purchase.consolidatedHelp'))}</p>
+          <input id="compra-consolidado" type="file" accept="image/*,application/pdf" />
+          <div class="form-actions"><button class="btn btn-primary btn-small" type="button" id="compra-transferido">${e(t('admin.purchase.markTransferred'))}</button></div>
+        </div>` : ''}
+        <div class="field full">
+          <label for="compra-factura">${e(t('admin.purchase.invoiceLabel'))}</label>
+          <p class="field-help">${e(t('admin.purchase.invoiceHelp'))}</p>
+          <input id="compra-factura" type="file" accept="image/*,application/pdf" />
+          <div class="form-actions"><button class="btn btn-primary btn-small" type="button" id="compra-comprado">${e(t('admin.purchase.confirmPurchase'))}</button></div>
+        </div>`;
+      const body = $('#admin-console .admin-manage-body');
+      body.innerHTML = `
+        <p class="meta">🧾 ${e(token)} · <span class="badge">${e(tValue('invoiceState', pr.estado) || pr.estado || '')}</span></p>
+        <h3>${e(t('admin.purchase.donationsTitle'))}</h3>
+        <div class="admin-records">${donHtml}</div>
+        <h3>${e(t('admin.purchase.actionsTitle'))}</h3>
+        ${accionesHtml}
+        <div id="compra-msg" class="form-message" role="status" aria-live="polite"></div>`;
+      $$('#admin-console [data-anular]').forEach((b) => b.addEventListener('click', async () => {
+        if (!window.confirm(t('admin.purchase.voidConfirm'))) return;
+        b.disabled = true;
+        try { await postAdmin({ accion: 'admin_donacion_anular', id: b.dataset.anular }); await refrescarAdminData(); panelCompra(token); }
+        catch (err) { b.disabled = false; mensajeAdmin('#compra-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+      }));
+      const btnT = $('#compra-transferido');
+      if (btnT) btnT.addEventListener('click', async () => {
+        const file = ($('#compra-consolidado').files || [])[0];
+        if (!file) { mensajeAdmin('#compra-msg', 'error', t('admin.purchase.fileRequired')); return; }
+        btnT.disabled = true; mensajeAdmin('#compra-msg', 'info', t('admin.purchase.sending'));
+        try { const data = await leerComprobante(file); await postAdmin({ accion: 'admin_presupuesto_transferido', token: token, consolidado: data }); await refrescarAdminData(); panelCompra(token); }
+        catch (err) { btnT.disabled = false; mensajeAdmin('#compra-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+      });
+      const btnC = $('#compra-comprado');
+      if (btnC) btnC.addEventListener('click', async () => {
+        const file = ($('#compra-factura').files || [])[0];
+        if (!file) { mensajeAdmin('#compra-msg', 'error', t('admin.purchase.fileRequired')); return; }
+        btnC.disabled = true; mensajeAdmin('#compra-msg', 'info', t('admin.purchase.sending'));
+        try { const data = await leerComprobante(file); await postAdmin({ accion: 'admin_presupuesto_comprado', token: token, factura: data }); await refrescarAdminData(); toast(t('admin.purchase.done')); irAMenu(); }
+        catch (err) { btnC.disabled = false; mensajeAdmin('#compra-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+      });
     }
 
     function marcoGestion(titulo, cuerpo) {
@@ -1171,6 +1254,29 @@
     // ── Donación en DINERO a un presupuesto (simulada hasta conectar la cuenta) ──
     // El sistema genera la referencia de transacción; con la cuenta real, la
     // referencia vendrá del pago y entrará por este mismo flujo.
+    // Comprobante del donante → dataURL. Imagen: se recomprime (≤1600px, jpeg).
+    // PDF: se envía tal cual. El backend acepta imagen o PDF (≤5 MB).
+    function leerComprobante(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onerror = () => reject(new Error('archivo'));
+        fr.onload = () => {
+          if (file.type === 'application/pdf') { resolve(fr.result); return; }
+          const img = new Image();
+          img.onerror = () => reject(new Error('imagen'));
+          img.onload = () => {
+            const max = 1600; let w = img.width, h = img.height;
+            if (w > max || h > max) { const r = Math.min(max / w, max / h); w = Math.round(w * r); h = Math.round(h * r); }
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(c.toDataURL('image/jpeg', 0.82));
+          };
+          img.src = fr.result;
+        };
+        fr.readAsDataURL(file);
+      });
+    }
+
     function abrirDonarDinero(pr) {
       const shell = $('#donar-dinero-shell');
       if (!shell) return;
@@ -1185,6 +1291,11 @@
         <div class="form-grid">
           <div class="field"><label for="din-monto">${e(t('money.amountLabel'))}</label><input id="din-monto" type="number" min="1" step="0.01" value="${e(sugerenciaUsd)}" required /><p class="meta" id="din-bs-hint" aria-live="polite"></p></div>
           <div class="field"><label for="din-nombre">${e(t('needs.donorLabel'))}</label><input id="din-nombre" autocomplete="name" placeholder="${e(t('needs.donorPlaceholder'))}" /></div>
+        </div>
+        <div class="field full">
+          <label for="din-comprobante">${e(t('money.proofLabel'))}</label>
+          <p class="field-help">${e(t('money.proofHelp'))}</p>
+          <input id="din-comprobante" type="file" accept="image/*,application/pdf" required />
         </div>
         <p class="meta">${e(t('money.simNote'))}</p>
         <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('money.submit'))}</button></div>
@@ -1208,19 +1319,26 @@
       };
       $('#din-monto').addEventListener('input', hintBs);
       hintBs();
+      // Comprobante (imagen o PDF): se lee a dataURL; las imágenes se recomprimen.
+      let comprobanteData = '';
+      $('#din-comprobante').addEventListener('change', async (ev) => {
+        const file = (ev.target.files || [])[0];
+        comprobanteData = file ? await leerComprobante(file).catch(() => '') : '';
+      });
       $('#donar-dinero-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const form = ev.currentTarget;
         if (!validarFormulario(form, '#din-message')) return;
         const montoUsd = numero($('#din-monto').value);
         if (montoUsd <= 0) { mostrarMensaje('#din-message', 'error', t('needs.invalidAmount')); return; }
+        if (!comprobanteData) { mostrarMensaje('#din-message', 'error', t('money.proofRequired')); return; }
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
         mostrarMensaje('#din-message', 'info', t('money.saving'));
         try {
           const res = await window.SheetsService.post({
             accion: 'donar_dinero', token: pr.token, montoUsd,
-            nombreDonante: $('#din-nombre').value.trim()
+            nombreDonante: $('#din-nombre').value.trim(), comprobante: comprobanteData
           });
           mostrarReciboDinero(res, pr);
           cargarPresupuestos();
@@ -1786,7 +1904,27 @@
         <div class="tracking-layout">
           <section class="tracking-panel" aria-labelledby="tracking-history-title"><h3 id="tracking-history-title">${e(t('tracking.history'))}</h3>${historialHtml}</section>
           <section class="tracking-panel" aria-labelledby="tracking-evidence-title"><h3 id="tracking-evidence-title">${e(t('tracking.evidence'))}</h3>${evidenciasHtml}</section>
-        </div>`;
+        </div>
+        <div id="seguimiento-aportes"></div>`;
+      renderAportes(factura.token_publico);
+    }
+
+    // Desglose ANÓNIMO de los aportes (monto + fecha, sin identidad). Transparencia
+    // pública de la recolecta; los datos de los donantes nunca salen de aquí.
+    async function renderAportes(token) {
+      const cont = $('#seguimiento-aportes');
+      if (!cont || !token) return;
+      let filas = [];
+      try { filas = (await window.SheetsService.getDesgloseDonaciones(token)) || []; }
+      catch (err) { cont.innerHTML = ''; return; }
+      if (!filas.length) { cont.innerHTML = ''; return; }
+      const total = filas.reduce((a, d) => a + (numero(d.monto_usd) || 0), 0);
+      cont.innerHTML = `<section class="tracking-panel" aria-labelledby="tracking-aportes-title">
+        <h3 id="tracking-aportes-title">${e(t('tracking.contributions'))} <span class="badge gray">${e(String(filas.length))}</span></h3>
+        <p class="meta">${e(t('tracking.anonNote'))}</p>
+        <ul class="timeline-list">${filas.map((d) => `<li class="timeline-item"><div class="supply-line"><strong>≈ ${e(fmtUsd(numero(d.monto_usd)))}</strong><span class="tracking-code">${e(fmtBs(numero(d.monto)))}</span></div><p class="meta">${e(fechaPublica(d.creado))}</p></li>`).join('')}</ul>
+        <p class="meta"><strong>${e(t('tracking.contributionsTotal', { usd: fmtUsd(total) }))}</strong></p>
+      </section>`;
     }
 
     async function cargarSeguimientoDesdeUrl() {

@@ -390,6 +390,7 @@
     getRescatistas: () => Promise.resolve({ data: [], source: 'restricted' }),
     getMotorizados: () => getList('motorizados_public', '?order=fecha_registro.desc', motorizadoUI),
     getFamiliasPublicas: () => getList('familias_public', '?order=created_at.desc&limit=200'),
+    getDesgloseDonaciones: (token) => rpc('seguimiento_donaciones', { p_token: token }),
     getTrayectos: (motorizadoId) => getList('trayectos_public',
       '?order=fecha.desc' + (motorizadoId ? '&motorizado_id=eq.' + encodeURIComponent(motorizadoId) : '')),
     getHistorial: (lugar) => getList('historial_public',

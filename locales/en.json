@@ -363,7 +363,10 @@
     "openEvidence": "Open evidence",
     "evidenceFile": "Evidence",
     "panelTitle": "Public token traceability",
-    "seeBudget": "See budget"
+    "seeBudget": "See budget",
+    "contributions": "Contributions received",
+    "anonNote": "We show amounts and dates, never the donor's identity.",
+    "contributionsTotal": "Total contributed: ≈ {usd}"
   },
   "modal": {
     "historyTitle": "Movement history",
@@ -635,7 +638,9 @@
       "Entregada": "Delivered",
       "Registrada": "Recorded",
       "Confirmada": "Confirmed",
-      "EnCamino": "On the way"
+      "EnCamino": "On the way",
+      "PorComprar": "Awaiting purchase",
+      "Transferida": "Funds transferred, purchasing"
     },
     "reportType": {
       "Retención de insumos": "Supply retention",
@@ -670,6 +675,11 @@
       "nuevo": "Waiting for help",
       "contactado": "Being helped",
       "atendido": "Helped"
+    },
+    "donationState": {
+      "Confirmada": "Confirmed",
+      "Registrada": "Registered",
+      "Anulada": "Voided"
     }
   },
   "donations": {
@@ -1074,7 +1084,30 @@
     "famLivelihood": "Livelihood",
     "famLosses": "Losses",
     "famAge": "yrs",
-    "famMinor": "minor"
+    "famMinor": "minor",
+    "purchase": {
+      "title": "Purchase management",
+      "alertTitle": "Awaiting purchase",
+      "alertIntro": "These budgets are fully funded. Verify the contributions, transfer the money and record the purchase.",
+      "raised": "Raised",
+      "manage": "Manage purchase",
+      "viewProof": "View proof",
+      "noProof": "No proof",
+      "void": "Void",
+      "voidConfirm": "Void this donation? It will be subtracted from the total and, if it drops below the goal, the budget will reopen.",
+      "noDonations": "No donations yet.",
+      "consolidatedLabel": "Summary of transfers received",
+      "consolidatedHelp": "Upload a file (image or PDF) summarizing the transfers received. ANONYMIZE it first: do not show donors' personal data. It will be public.",
+      "markTransferred": "Mark money transferred to Bs",
+      "invoiceLabel": "Supplier purchase invoice (paid)",
+      "invoiceHelp": "Upload the paid invoice (image or PDF). It will be public. On confirm, the supply is ready for a driver to pick up.",
+      "confirmPurchase": "Confirm purchase",
+      "donationsTitle": "Donations and proofs",
+      "actionsTitle": "Purchase",
+      "fileRequired": "Select a file first.",
+      "sending": "Sending…",
+      "done": "Purchase recorded. The supply can now be picked up."
+    }
   },
   "lugar": {},
   "home": {
@@ -1264,7 +1297,10 @@
     "thanksPartial": "Your contribution to {insumo} adds up. {recaudado} of {precio} Bs so far: once complete, you will see the purchase, pickup and delivery with your code.",
     "thanksAmount": "You gave {usd} ({bs}).",
     "refLabel": "Your transaction reference",
-    "copyText": "Reference: {referencia} · Tracking code: {token}"
+    "copyText": "Reference: {referencia} · Tracking code: {token}",
+    "proofLabel": "Proof of your transfer",
+    "proofHelp": "Upload the screenshot or PDF of your transfer. Only the team sees it, to confirm the contribution is real.",
+    "proofRequired": "Attach the proof of your transfer to continue."
   },
   "cycle": {
     "title": "Purchased supplies, ready for pickup",
