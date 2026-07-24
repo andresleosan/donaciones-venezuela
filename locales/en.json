@@ -1425,7 +1425,11 @@
     "donacionRecogida": "{nombre} picked up the donation at {ubicacion} to take it to {centro}.",
     "necesidadCubierta": "Need covered: the center has received everything it asked for.",
     "viajeIniciado": "{nombre} is on the way to pick up the supply (arriving in ~{eta} min).",
-    "denunciaRegistrada": "A report related to this supply was filed."
+    "denunciaRegistrada": "A report related to this supply was filed.",
+    "metaCubierta": "Goal reached: full funds for {insumo} at {tienda}. Awaiting the team's purchase.",
+    "transferidoABs": "The team transferred the funds to Venezuela (Bs) and published the summary of contributions received.",
+    "compraConfirmada": "Purchase made. Supplier invoice published. The supply can now be picked up by a driver.",
+    "reabiertoPorAnulacion": "An unverified donation was voided; the budget is open again."
   },
   "trip": {
     "pageTitle": "Driver trip",

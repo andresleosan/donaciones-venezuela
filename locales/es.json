@@ -1425,7 +1425,11 @@
     "donacionRecogida": "{nombre} recogió la donación en {ubicacion} para llevarla a {centro}.",
     "necesidadCubierta": "Necesidad cubierta: el centro ya recibió todo lo solicitado.",
     "viajeIniciado": "{nombre} va en camino a recoger el insumo (llega en ~{eta} min).",
-    "denunciaRegistrada": "Se registró una denuncia relacionada con este insumo."
+    "denunciaRegistrada": "Se registró una denuncia relacionada con este insumo.",
+    "metaCubierta": "Meta cubierta: fondos completos para {insumo} en {tienda}. En espera de compra del equipo.",
+    "transferidoABs": "El equipo transfirió los fondos a Venezuela (Bs) y publicó el consolidado de aportes recibidos.",
+    "compraConfirmada": "Compra realizada. Factura del proveedor publicada. El insumo ya puede ser retirado por un transportista.",
+    "reabiertoPorAnulacion": "Se anuló una donación no verificada; el presupuesto vuelve a estar abierto."
   },
   "trip": {
     "pageTitle": "Viaje del transportista",

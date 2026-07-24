@@ -157,6 +157,37 @@ async function guardarAdjunto(dataUrl: unknown, carpeta: string, nombre: string)
   return supa.storage.from('presupuestos').getPublicUrl(ruta).data.publicUrl;
 }
 
+// Comprobante de transferencia del donante: imagen o PDF, ≤5 MB, bucket PRIVADO
+// 'comprobantes'. No genera URL pública; devuelve la ruta (el admin la abre firmada).
+async function guardarComprobante(dataUrl: unknown, carpeta: string, nombre: string): Promise<string> {
+  const m = String(dataUrl ?? '').match(/^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) throw new Error('comprobante inválido (se espera imagen JPEG/PNG o PDF)');
+  const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+  if (bytes.length < 200) throw new Error('comprobante vacío');
+  if (bytes.length > 5_000_000) throw new Error('comprobante demasiado grande (máx 5 MB)');
+  const ext = m[1] === 'application/pdf' ? 'pdf' : (m[1].split('/')[1] === 'jpeg' ? 'jpg' : m[1].split('/')[1]);
+  const ruta = `${carpeta}/${nombre}.${ext}`;
+  const { error } = await supa.storage.from('comprobantes').upload(ruta, bytes, { contentType: m[1], upsert: false });
+  if (error) throw new Error('no se pudo guardar el comprobante');
+  return ruta;
+}
+
+// Notificación a Telegram (APAGADA hasta que config tenga token + chat_id). Nunca
+// rompe el flujo que la llama; si la API falla, se ignora.
+async function notificarTelegram(texto: string): Promise<void> {
+  const { data } = await supa.from('config').select('clave, valor')
+    .in('clave', ['telegram_bot_token', 'telegram_chat_id']);
+  const cfg: Record<string, string> = {};
+  for (const r of data || []) cfg[r.clave as string] = String(r.valor || '');
+  if (!cfg.telegram_bot_token || !cfg.telegram_chat_id) return; // apagado
+  try {
+    await fetch(`https://api.telegram.org/bot${cfg.telegram_bot_token}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: cfg.telegram_chat_id, text: texto, parse_mode: 'HTML', disable_web_page_preview: true }),
+    });
+  } catch (_) { /* la notificación no debe tumbar la operación */ }
+}
+
 // Identidad del denunciante a partir del JWT de la sesión (mismo patrón que
 // acceso_perfil): email + nombre + rol. El donante sin rol vale (rol='donante').
 async function identidadSesion(jwt: string): Promise<{ email: string; nombre: string; rol: string }> {
@@ -622,10 +653,14 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const m = f && metaPresupuesto(String(f.descripcion));
       if (!f || !m) throw new Error('Presupuesto no encontrado');
       if (f.estado !== 'Abierta') throw new Error('Este presupuesto ya está financiado');
+      // Prueba obligatoria: el donante adjunta su comprobante (imagen/PDF) → bucket
+      // PRIVADO. El admin lo revisa antes de comprar; el donante nunca lo expone.
+      if (!p.comprobante) throw new Error('Adjunta el comprobante de tu transferencia');
+      const comprobante = await guardarComprobante(p.comprobante, `don/${f.id}`, tokenAlfa('C'));
       const referencia = tokenAlfa('REF');
       const { error } = await supa.from('donaciones').insert({
         factura_id: f.id, nombre_donante: s(p.nombreDonante, 120) || 'Anónimo',
-        monto: montoBs, monto_usd: montoUsd, tasa: tasa.efectiva,
+        monto: montoBs, monto_usd: montoUsd, tasa: tasa.efectiva, comprobante,
         referencia_pago: referencia, estado: 'Confirmada' }); // Confirmada: el trigger suma al recaudado en vivo (en Bs)
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Ingreso',
@@ -634,11 +669,15 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const { data: tras } = await supa.from('facturas')
         .select('monto_recaudado, monto_requerido, estado').eq('id', f.id).single();
       let estadoFinal = tras?.estado || 'Abierta';
+      // Al cubrir la meta NO se compra solo: pasa a 'PorComprar' (en espera de que el
+      // admin transfiera USD→Bs y compre). El insumo NO entra aún al ciclo del
+      // transportista (eso ocurre solo al llegar a 'Comprada' con la factura).
       if (tras && Number(tras.monto_recaudado) >= Number(tras.monto_requerido) && tras.estado === 'Abierta') {
-        estadoFinal = 'Comprada';
-        await supa.from('facturas').update({ estado: 'Comprada' }).eq('id', f.id);
-        await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Compra',
-          descripcion: mov('metaAlcanzada', { insumo: m.insumo, tienda: m.tienda }), monto: 0 });
+        estadoFinal = 'PorComprar';
+        await supa.from('facturas').update({ estado: 'PorComprar' }).eq('id', f.id);
+        await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Recaudado',
+          descripcion: mov('metaCubierta', { insumo: m.insumo, tienda: m.tienda }), monto: 0 });
+        await notificarTelegram(`✅ Se recaudó todo para <b>${m.insumo}</b> (${m.centro}). Toca transferir y comprar. Token: ${f.token_publico}`);
       }
       await historial(String(m.centro), String(m.insumo), `Donación de ${montoUsd} USD (${montoBs} Bs, ref ${referencia})`, 'publico', montoBs);
       return { referencia, token: f.token_publico, numeroFactura: f.numero_factura,
@@ -1278,6 +1317,82 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (error) throw error;
       await historial(centro, insumo, `Presupuesto ${numero}: ${cantidad} × ${insumo} en ${tienda} por ${precio}`, 'admin', cantidad);
       return { numeroFactura: numero, token };
+    }
+    // ===== Ciclo de compra verificada (admin) =====
+    // Presupuestos que ya cubrieron la meta y esperan la compra del admin.
+    case 'admin_presupuestos_por_comprar': {
+      const { data } = await supa.from('facturas')
+        .select('numero_factura, token_publico, objetivo, descripcion, monto_requerido, monto_recaudado, estado, fecha_creacion')
+        .in('estado', ['PorComprar', 'Transferida'])
+        .order('fecha_creacion', { ascending: true });
+      return { presupuestos: (data || []).map(presupuestoUI).filter(Boolean) };
+    }
+    // Donaciones de un presupuesto + URL firmada del comprobante (para verificar).
+    case 'admin_donaciones_presupuesto': {
+      const token = s(p.token, 40);
+      const { data: f } = await supa.from('facturas').select('id').eq('token_publico', token).maybeSingle();
+      if (!f) throw new Error('presupuesto no encontrado');
+      const { data } = await supa.from('donaciones')
+        .select('id, nombre_donante, monto, monto_usd, tasa, referencia_pago, estado, comprobante, fecha')
+        .eq('factura_id', f.id).order('fecha', { ascending: false });
+      const filas: Record<string, unknown>[] = [];
+      for (const d of data || []) {
+        let url = '';
+        if (d.comprobante) {
+          const { data: signed } = await supa.storage.from('comprobantes').createSignedUrl(d.comprobante as string, 3600);
+          url = signed?.signedUrl || '';
+        }
+        filas.push({ ...d, comprobante_url: url });
+      }
+      return { donaciones: filas };
+    }
+    // Anula una donación no verificada; si el recaudado cae bajo la meta, reabre.
+    case 'admin_donacion_anular': {
+      const id = s(p.id, 40);
+      const { data: d } = await supa.from('donaciones').select('id, factura_id').eq('id', id).maybeSingle();
+      if (!d) throw new Error('donación no encontrada');
+      await supa.from('donaciones').update({ estado: 'Anulada' }).eq('id', id); // el trigger deja de sumarla
+      const { data: f } = await supa.from('facturas')
+        .select('id, monto_recaudado, monto_requerido, estado').eq('id', d.factura_id).single();
+      if (f && ['PorComprar', 'Transferida'].includes(f.estado as string)
+            && Number(f.monto_recaudado) < Number(f.monto_requerido)) {
+        await supa.from('facturas').update({ estado: 'Abierta' }).eq('id', f.id);
+        await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Reapertura',
+          descripcion: mov('reabiertoPorAnulacion', {}), monto: 0 });
+      }
+      return { estado: f?.estado, recaudado: Number(f?.monto_recaudado) || 0 };
+    }
+    // El admin marca USD→Bs transferido y sube el consolidado PÚBLICO (ya anonimizado
+    // por él) de las transferencias recibidas → estado Transferida.
+    case 'admin_presupuesto_transferido': {
+      const token = s(p.token, 40);
+      const { data: f } = await supa.from('facturas').select('id, estado').eq('token_publico', token).maybeSingle();
+      if (!f) throw new Error('presupuesto no encontrado');
+      if (f.estado !== 'PorComprar') throw new Error('El presupuesto no está en espera de compra');
+      if (!p.consolidado) throw new Error('Sube el archivo consolidado de transferencias recibidas');
+      const url = await guardarAdjunto(p.consolidado, `presupuestos/${token}`, `transferencias-${Date.now()}`);
+      await supa.from('evidencias').insert({ factura_id: f.id, archivo: url,
+        descripcion: 'Transferencias recibidas (consolidado)', publica: true });
+      await supa.from('facturas').update({ estado: 'Transferida' }).eq('id', f.id);
+      await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Transferencia',
+        descripcion: mov('transferidoABs', {}), monto: 0 });
+      return { estado: 'Transferida' };
+    }
+    // El admin sube la factura pagada al proveedor (PÚBLICA) → estado Comprada. Recién
+    // aquí el insumo entra al ciclo del transportista.
+    case 'admin_presupuesto_comprado': {
+      const token = s(p.token, 40);
+      const { data: f } = await supa.from('facturas').select('id, estado').eq('token_publico', token).maybeSingle();
+      if (!f) throw new Error('presupuesto no encontrado');
+      if (!['PorComprar', 'Transferida'].includes(f.estado as string)) throw new Error('El presupuesto no está listo para comprar');
+      if (!p.factura) throw new Error('Sube la factura pagada al proveedor');
+      const url = await guardarAdjunto(p.factura, `presupuestos/${token}`, `factura-compra-${Date.now()}`);
+      await supa.from('evidencias').insert({ factura_id: f.id, archivo: url,
+        descripcion: 'Factura de compra pagada al proveedor', publica: true });
+      await supa.from('facturas').update({ estado: 'Comprada' }).eq('id', f.id);
+      await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Compra',
+        descripcion: mov('compraConfirmada', {}), monto: 0 });
+      return { estado: 'Comprada' };
     }
     // Plan 08 T3: centros con necesidades ABIERTAS + sus insumos, para los selects
     // dependientes del wizard de presupuesto (el panel admin no carga la data
