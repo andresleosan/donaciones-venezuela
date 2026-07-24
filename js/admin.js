@@ -1906,7 +1906,9 @@
           <section class="tracking-panel" aria-labelledby="tracking-evidence-title"><h3 id="tracking-evidence-title">${e(t('tracking.evidence'))}</h3>${evidenciasHtml}</section>
         </div>
         <div id="seguimiento-aportes"></div>`;
-      renderAportes(factura.token_publico);
+      // El RPC de seguimiento NO devuelve el token (es la entrada). Se toma del
+      // campo de búsqueda, que buscarSeguimiento ya dejó con el token normalizado.
+      renderAportes(($('#seguimiento-token') || {}).value || '');
     }
 
     // Desglose ANÓNIMO de los aportes (monto + fecha, sin identidad). Transparencia
