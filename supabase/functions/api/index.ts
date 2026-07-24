@@ -1354,13 +1354,15 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       await supa.from('donaciones').update({ estado: 'Anulada' }).eq('id', id); // el trigger deja de sumarla
       const { data: f } = await supa.from('facturas')
         .select('id, monto_recaudado, monto_requerido, estado').eq('id', d.factura_id).single();
+      let estadoFin = f?.estado as string | undefined;
       if (f && ['PorComprar', 'Transferida'].includes(f.estado as string)
             && Number(f.monto_recaudado) < Number(f.monto_requerido)) {
         await supa.from('facturas').update({ estado: 'Abierta' }).eq('id', f.id);
         await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Reapertura',
           descripcion: mov('reabiertoPorAnulacion', {}), monto: 0 });
+        estadoFin = 'Abierta';
       }
-      return { estado: f?.estado, recaudado: Number(f?.monto_recaudado) || 0 };
+      return { estado: estadoFin, recaudado: Number(f?.monto_recaudado) || 0 };
     }
     // El admin marca USD→Bs transferido y sube el consolidado PÚBLICO (ya anonimizado
     // por él) de las transferencias recibidas → estado Transferida.
