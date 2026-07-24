@@ -50,6 +50,7 @@
         'historial': function () { abrirHistorial(solicitud.nombre); },
         'crear-centro': function () { abrirCrearPanel(); },
         'registro-familia': function () { abrirRegistroFamilia(); },
+        'familias-afectadas': function () { abrirFamiliasAfectadas(); },
         'panel-centro': function () { abrirPanelCentro(solicitud.token); },
         'admin': function () { abrirAdmin(); }
       };

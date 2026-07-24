@@ -235,7 +235,8 @@
     "noAvailability": "Availability to confirm",
     "availabilityHeading": "Current availability",
     "needsHeading": "Active needs",
-    "whatsappText": "Hello, I saw your center's information on Humanitarian Response Venezuela. I would like to confirm the details before coming."
+    "whatsappText": "Hello, I saw your center's information on Humanitarian Response Venezuela. I would like to confirm the details before coming.",
+    "affectedFamiliesCta": "See affected families"
   },
   "volunteers": {
     "formTitle": "Volunteer details",
@@ -664,6 +665,11 @@
       "nuevo": "New",
       "contactado": "Contacted",
       "atendido": "Handled"
+    },
+    "familyStatePublic": {
+      "nuevo": "Waiting for help",
+      "contactado": "Being helped",
+      "atendido": "Helped"
     }
   },
   "donations": {
@@ -1547,6 +1553,30 @@
     "saveCode": "Keep it in a safe place.",
     "copyCode": "Copy code",
     "copied": "Code copied",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "livelihoodHelp": "So we know how to help them earn a living again.",
+    "summaryMembers": "{n} members",
+    "summaryPhotos": "{n} photos",
+    "deceasedNone": "None"
+  },
+  "familiasPub": {
+    "pageTitle": "Affected families",
+    "title": "Affected families",
+    "intro": "Families who lost their home in the earthquake and registered their situation. Here you can see how many people they are and what they need, so you can help.",
+    "privacy": "For their safety we don't show names, phone numbers, addresses or medical details. Only the coordination team can see that.",
+    "loading": "Loading families…",
+    "error": "Couldn't load the families. Please try again.",
+    "empty": "No families registered yet.",
+    "count": "{n} families registered",
+    "people": "Family of {n}",
+    "person1": "Family of 1",
+    "minors": "{n} children",
+    "minor1": "1 child",
+    "lostHouse": "Lost their home",
+    "lostVehicle": "Lost a vehicle",
+    "medical": "Needs medical care",
+    "bereaved": "Lost a loved one",
+    "waiting": "Waiting for help",
+    "help": "Want to help a specific family? Write to us with their code and we'll connect you with the team supporting them."
   }
 }

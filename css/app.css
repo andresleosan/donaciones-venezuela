@@ -1335,6 +1335,24 @@
     .fam-admin-lista { margin: 4px 0 8px 18px; font-size: 0.9rem; color: var(--muted); }
     .fam-admin-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin: 8px 0; }
     .fam-admin-fotos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+    /* Integrante en el wizard: etiqueta + campo apilados, compacto */
+    .fam-miembro-grid { display: grid; gap: 4px; }
+    .fam-miembro-grid label { font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-top: 6px; }
+    .fam-miembro-grid label:first-child { margin-top: 0; }
+    .fam-miembro-grid input, .fam-miembro-grid select { width: 100%; }
+    /* Página pública de familias afectadas (anónima) */
+    .fam-pub-head { margin-bottom: 18px; }
+    .fam-pub-head h1 { margin: 0 0 8px; }
+    .fam-pub-count { margin: 0 0 12px; font-weight: 700; color: var(--ink); }
+    .fam-pub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+    .fam-pub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(10,37,64,0.06)); }
+    .fam-pub-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .fam-pub-code { font-family: var(--mono, monospace); font-size: 0.8rem; color: var(--muted); }
+    .fam-pub-people { margin: 0 0 4px; font-size: 1.05rem; }
+    .fam-pub-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .fam-chip { font-size: 0.8rem; padding: 4px 9px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); color: var(--text); }
+    .fam-chip-med { background: #FBE9EE; border-color: #F3C6D2; color: var(--critical); }
+    .fam-pub-ayuda { margin-top: 20px; padding: 12px 14px; background: var(--primary-soft); border-radius: 12px; color: var(--text); }
     .home-foot { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 24px; }
     .home-foot a { color: var(--primary); font-weight: 700; text-decoration: none; display: inline-block; padding: 12px 4px; }
     .home-foot a:hover { text-decoration: underline; }

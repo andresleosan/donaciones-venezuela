@@ -9,6 +9,7 @@
     { "source": "/historial", "destination": "/ventana.html?v=historial" },
     { "source": "/crear-centro", "destination": "/ventana.html?v=crear-centro" },
     { "source": "/registro-familia", "destination": "/ventana.html?v=registro-familia" },
+    { "source": "/familias-afectadas", "destination": "/ventana.html?v=familias-afectadas" },
     { "source": "/panel-centro", "destination": "/ventana.html?v=panel-centro" },
     { "source": "/admin", "destination": "/ventana.html?v=admin" }
   ],

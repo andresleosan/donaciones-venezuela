@@ -242,6 +242,7 @@
       setText('#btn-mapa-toggle', 'centers.mapToggle');
       setText('#filtros-extra-summary', 'centers.filtersSummary');
       setText('#btn-buscar-familiar-texto', 'centers.findFamilyCta');
+      setText('#centers-familias-text', 'centers.affectedFamiliesCta');
       const modeLink = $('#centers-mode-link');
       if (modeLink) {
         const siguienteModo = modoCentros === 'donar' ? 'ayuda' : 'donar';

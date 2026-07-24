@@ -235,7 +235,8 @@
     "noAvailability": "Disponibilidad por confirmar",
     "availabilityHeading": "Disponibilidad actual",
     "needsHeading": "Necesidades activas",
-    "whatsappText": "Hola, vi la información de su centro en Respuesta Humanitaria Venezuela. Quisiera confirmar los datos antes de acercarme."
+    "whatsappText": "Hola, vi la información de su centro en Respuesta Humanitaria Venezuela. Quisiera confirmar los datos antes de acercarme.",
+    "affectedFamiliesCta": "Ver familias afectadas"
   },
   "volunteers": {
     "formTitle": "Datos del voluntario",
@@ -664,6 +665,11 @@
       "nuevo": "Nuevo",
       "contactado": "Contactado",
       "atendido": "Atendido"
+    },
+    "familyStatePublic": {
+      "nuevo": "En espera de ayuda",
+      "contactado": "En atención",
+      "atendido": "Atendida"
     }
   },
   "donations": {
@@ -1547,6 +1553,30 @@
     "saveCode": "Guárdalo en un lugar seguro.",
     "copyCode": "Copiar código",
     "copied": "Código copiado",
-    "backHome": "Volver al inicio"
+    "backHome": "Volver al inicio",
+    "livelihoodHelp": "Para saber cómo ayudarles a generar ingresos otra vez.",
+    "summaryMembers": "{n} integrantes",
+    "summaryPhotos": "{n} fotos",
+    "deceasedNone": "Ninguno"
+  },
+  "familiasPub": {
+    "pageTitle": "Familias afectadas",
+    "title": "Familias afectadas",
+    "intro": "Familias que perdieron su hogar en el terremoto y registraron su situación. Aquí ves cuántas personas son y qué necesitan, para poder ayudar.",
+    "privacy": "Por su seguridad no mostramos nombres, teléfonos, direcciones ni datos médicos. Esa información solo la ve el equipo de coordinación.",
+    "loading": "Cargando familias…",
+    "error": "No se pudieron cargar las familias. Intenta de nuevo.",
+    "empty": "Todavía no hay familias registradas.",
+    "count": "{n} familias registradas",
+    "people": "Familia de {n} personas",
+    "person1": "Familia de 1 persona",
+    "minors": "{n} menores",
+    "minor1": "1 menor",
+    "lostHouse": "Perdió su casa",
+    "lostVehicle": "Perdió un vehículo",
+    "medical": "Necesita atención médica",
+    "bereaved": "Perdió a un ser querido",
+    "waiting": "En espera de ayuda",
+    "help": "¿Quieres ayudar a una familia en particular? Escríbenos con su código y te ponemos en contacto con el equipo que la atiende."
   }
 }

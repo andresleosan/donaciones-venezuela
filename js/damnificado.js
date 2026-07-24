@@ -1,8 +1,13 @@
-// Auto-registro de damnificados (página-ventana /registro-familia). Una familia
-// se registra a sí misma con todos sus datos + fotos antiguas de lo perdido. El
-// envío es público (sin login) pero el destino es PRIVADO solo-admin: la edge fn
-// escribe en familias_damnificadas (RLS) y sube las fotos al bucket privado.
-// Nada de esto se lista jamás en público. Reusa los helpers globales de core.js.
+// Damnificados. Dos flujos:
+//  1) abrirRegistroFamilia (ventana /registro-familia): el responsable registra a
+//     su familia, PASO A PASO (reusa wizPublico, como los demás formularios). Envío
+//     público sin login → la edge fn escribe en familias_damnificadas (RLS) y sube
+//     las fotos al bucket PRIVADO. Nada de esto se lista jamás en público.
+//  2) abrirFamiliasAfectadas (ventana /familias-afectadas): lista PÚBLICA y
+//     ANONIMIZADA (vista familias_public por PostgREST). Solo área general, conteos
+//     y banderas de alto nivel; nombres, contacto, dirección, GPS, condiciones
+//     médicas y fotos NUNCA salen de aquí.
+// Reusa los helpers globales de core.js ($, e, t, tValue, abrirModal, toast…).
 'use strict';
 
     function abrirRegistroFamilia() {
@@ -16,78 +21,87 @@
       const filaIntegrante = () => {
         const i = filaSeq++;
         return `<div class="fam-miembro card" data-fila="${i}">
-          <div class="form-grid">
-            <div class="field"><label for="fam-m-nombre-${i}">${e(t('registro.mName'))}</label><input id="fam-m-nombre-${i}" data-campo="nombre" /></div>
-            <div class="field"><label for="fam-m-rel-${i}">${e(t('registro.mRel'))}</label><select id="fam-m-rel-${i}" data-campo="parentesco">${opcionesRel}</select></div>
-            <div class="field"><label for="fam-m-edad-${i}">${e(t('registro.mAge'))}</label><input id="fam-m-edad-${i}" data-campo="edad" type="number" min="0" max="120" inputmode="numeric" /></div>
-            <div class="field"><label for="fam-m-ocup-${i}">${e(t('registro.mJob'))}</label><input id="fam-m-ocup-${i}" data-campo="ocupacion" placeholder="${e(t('registro.mJobPh'))}" /></div>
+          <div class="fam-miembro-grid">
+            <label for="fam-m-nombre-${i}">${e(t('registro.mName'))}</label>
+            <input id="fam-m-nombre-${i}" data-campo="nombre" />
+            <label for="fam-m-rel-${i}">${e(t('registro.mRel'))}</label>
+            <select id="fam-m-rel-${i}" data-campo="parentesco">${opcionesRel}</select>
+            <label for="fam-m-edad-${i}">${e(t('registro.mAge'))}</label>
+            <input id="fam-m-edad-${i}" data-campo="edad" type="number" min="0" max="120" inputmode="numeric" />
+            <label for="fam-m-ocup-${i}">${e(t('registro.mJob'))}</label>
+            <input id="fam-m-ocup-${i}" data-campo="ocupacion" placeholder="${e(t('registro.mJobPh'))}" />
+            <label for="fam-m-med-${i}">${e(t('registro.mMed'))}</label>
+            <input id="fam-m-med-${i}" data-campo="condicionMedica" placeholder="${e(t('registro.mMedPh'))}" />
+            <label for="fam-m-notas-${i}">${e(t('registro.mNotes'))}</label>
+            <input id="fam-m-notas-${i}" data-campo="notas" />
           </div>
-          <div class="field full"><label for="fam-m-med-${i}">${e(t('registro.mMed'))}</label><input id="fam-m-med-${i}" data-campo="condicionMedica" placeholder="${e(t('registro.mMedPh'))}" /></div>
-          <div class="field full"><label for="fam-m-notas-${i}">${e(t('registro.mNotes'))}</label><input id="fam-m-notas-${i}" data-campo="notas" /></div>
           <button class="btn btn-ghost btn-small fam-quitar" type="button" data-quitar="${i}">${e(t('registro.removeMember'))}</button>
         </div>`;
       };
 
+      // Cada bloque [data-wiz-step] es UNA pantalla del asistente. Los campos sueltos
+      // (.field) también son una pantalla cada uno (así lo maneja wizPublico).
       abrirModal(t('registro.pageTitle'), `<form id="fam-form" novalidate>
         <p class="section-copy">${e(t('registro.intro'))}</p>
         <p class="field-help fam-privacy">🔒 ${e(t('registro.privacy'))}</p>
 
-        <section class="fam-seccion">
-          <h3 class="fam-seccion-titulo">${e(t('registro.contactTitle'))}</h3>
-          <div class="form-grid">
-            <div class="field"><label for="fam-nombre">${e(t('registro.name'))}</label><input id="fam-nombre" required placeholder="${e(t('registro.namePh'))}" /></div>
-            <div class="field"><label for="fam-tel">${e(t('registro.phone'))}</label><input id="fam-tel" type="tel" inputmode="tel" /></div>
-            <div class="field"><label for="fam-email">${e(t('registro.email'))}</label><input id="fam-email" type="email" autocomplete="email" /></div>
-          </div>
-        </section>
+        <div data-wiz-step class="field full" data-paso="contacto">
+          <label for="fam-nombre">${e(t('registro.name'))}</label>
+          <input id="fam-nombre" required placeholder="${e(t('registro.namePh'))}" />
+          <label for="fam-tel">${e(t('registro.phone'))}</label>
+          <input id="fam-tel" type="tel" inputmode="tel" />
+          <label for="fam-email">${e(t('registro.email'))}</label>
+          <input id="fam-email" type="email" autocomplete="email" />
+        </div>
 
-        <section class="fam-seccion">
-          <h3 class="fam-seccion-titulo">${e(t('registro.stayTitle'))}</h3>
-          <div class="field full"><label for="fam-aloj">${e(t('registro.stayWhere'))}</label><textarea id="fam-aloj" rows="2" placeholder="${e(t('registro.stayWherePh'))}"></textarea></div>
-          <div class="form-grid">
-            <div class="field"><label for="fam-muni">${e(t('registro.municipio'))}</label><input id="fam-muni" /></div>
-            <div class="field"><label for="fam-estado">${e(t('registro.estado'))}</label><input id="fam-estado" /></div>
-          </div>
-          <div class="form-actions fam-gps">
+        <div data-wiz-step class="field full" data-paso="donde">
+          <label for="fam-aloj">${e(t('registro.stayWhere'))}</label>
+          <textarea id="fam-aloj" rows="2" placeholder="${e(t('registro.stayWherePh'))}"></textarea>
+          <label for="fam-muni">${e(t('registro.municipio'))}</label>
+          <input id="fam-muni" />
+          <label for="fam-estado">${e(t('registro.estado'))}</label>
+          <input id="fam-estado" />
+          <div class="fam-gps">
             <button class="btn btn-soft btn-small" type="button" id="fam-gps-btn">📍 ${e(t('registro.gpsBtn'))}</button>
             <span class="meta" id="fam-gps-txt" aria-live="polite">${e(t('registro.gpsNone'))}</span>
           </div>
-        </section>
+        </div>
 
-        <section class="fam-seccion">
-          <h3 class="fam-seccion-titulo">${e(t('registro.membersTitle'))}</h3>
+        <div data-wiz-step class="field full" data-paso="familia">
+          <label>${e(t('registro.membersTitle'))}</label>
           <p class="field-help">${e(t('registro.membersHelp'))}</p>
           <div id="fam-integrantes"></div>
           <button class="btn btn-soft btn-small" type="button" id="fam-agregar">＋ ${e(t('registro.addMember'))}</button>
-        </section>
+        </div>
 
-        <section class="fam-seccion">
-          <h3 class="fam-seccion-titulo">${e(t('registro.livelihoodTitle'))}</h3>
-          <div class="field full"><label for="fam-sustento">${e(t('registro.livelihood'))}</label><textarea id="fam-sustento" rows="2" placeholder="${e(t('registro.livelihoodPh'))}"></textarea></div>
-        </section>
+        <div class="field full" data-paso="sustento">
+          <label for="fam-sustento">${e(t('registro.livelihood'))}</label>
+          <p class="field-help">${e(t('registro.livelihoodHelp'))}</p>
+          <textarea id="fam-sustento" rows="2" placeholder="${e(t('registro.livelihoodPh'))}"></textarea>
+        </div>
 
-        <section class="fam-seccion">
-          <h3 class="fam-seccion-titulo">${e(t('registro.deceasedTitle'))}</h3>
-          <div class="form-grid">
-            <div class="field"><label for="fam-fallecidos">${e(t('registro.deceasedCount'))}</label><input id="fam-fallecidos" type="number" min="0" max="99" inputmode="numeric" value="0" /></div>
-          </div>
-          <div class="field full"><label for="fam-fallecidos-det">${e(t('registro.deceasedDetail'))}</label><input id="fam-fallecidos-det" placeholder="${e(t('registro.deceasedDetailPh'))}" /></div>
-        </section>
+        <div data-wiz-step class="field full" data-paso="fallecidos">
+          <label for="fam-fallecidos">${e(t('registro.deceasedCount'))}</label>
+          <input id="fam-fallecidos" type="number" min="0" max="99" inputmode="numeric" value="0" />
+          <label for="fam-fallecidos-det">${e(t('registro.deceasedDetail'))}</label>
+          <input id="fam-fallecidos-det" placeholder="${e(t('registro.deceasedDetailPh'))}" />
+        </div>
 
-        <section class="fam-seccion">
-          <h3 class="fam-seccion-titulo">${e(t('registro.lossesTitle'))}</h3>
+        <div data-wiz-step class="field full" data-paso="bienes">
+          <label>${e(t('registro.lossesTitle'))}</label>
           <label class="check-inline"><input type="checkbox" id="fam-casa" checked /> ${e(t('registro.lostHouse'))}</label>
           <label class="check-inline"><input type="checkbox" id="fam-vehiculo" /> ${e(t('registro.lostVehicle'))}</label>
-          <div class="field full" id="fam-vehiculo-det-wrap" hidden><label for="fam-vehiculo-det">${e(t('registro.vehicleDetail'))}</label><input id="fam-vehiculo-det" placeholder="${e(t('registro.vehicleDetailPh'))}" /></div>
-          <div class="field full"><label for="fam-bienes">${e(t('registro.lostItems'))}</label><textarea id="fam-bienes" rows="3" placeholder="${e(t('registro.lostItemsPh'))}"></textarea></div>
-        </section>
+          <div id="fam-vehiculo-det-wrap" hidden><label for="fam-vehiculo-det">${e(t('registro.vehicleDetail'))}</label><input id="fam-vehiculo-det" placeholder="${e(t('registro.vehicleDetailPh'))}" /></div>
+          <label for="fam-bienes">${e(t('registro.lostItems'))}</label>
+          <textarea id="fam-bienes" rows="3" placeholder="${e(t('registro.lostItemsPh'))}"></textarea>
+        </div>
 
-        <section class="fam-seccion">
-          <h3 class="fam-seccion-titulo">${e(t('registro.photosTitle'))}</h3>
+        <div data-wiz-step class="field full" data-paso="fotos">
+          <label>${e(t('registro.photosTitle'))}</label>
           <p class="field-help">${e(t('registro.photosHelp'))}</p>
           <input id="fam-fotos-input" type="file" accept="image/*" multiple />
           <div id="fam-fotos-grid" class="fam-fotos-grid"></div>
-        </section>
+        </div>
 
         <input id="fam-web" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp-field" />
         <div class="form-actions"><button class="btn btn-primary" type="submit" id="fam-enviar">${e(t('registro.submit'))}</button></div>
@@ -96,25 +110,19 @@
 
       recordarModal(() => abrirRegistroFamilia());
 
-      // Semilla: una fila (quien registra suele ser el primer integrante).
       const cont = $('#fam-integrantes');
       cont.insertAdjacentHTML('beforeend', filaIntegrante());
-      $('#fam-agregar').addEventListener('click', () => {
-        cont.insertAdjacentHTML('beforeend', filaIntegrante());
-      });
+      $('#fam-agregar').addEventListener('click', () => cont.insertAdjacentHTML('beforeend', filaIntegrante()));
       cont.addEventListener('click', (ev) => {
         const b = ev.target.closest('[data-quitar]');
         if (!b) return;
-        const fila = b.closest('[data-fila]');
-        if (cont.querySelectorAll('[data-fila]').length > 1) fila.remove();
+        if (cont.querySelectorAll('[data-fila]').length > 1) b.closest('[data-fila]').remove();
       });
 
-      // Detalle de vehículo solo si perdió uno.
       $('#fam-vehiculo').addEventListener('change', (ev) => {
         $('#fam-vehiculo-det-wrap').hidden = !ev.target.checked;
       });
 
-      // GPS opcional de dónde se están quedando.
       $('#fam-gps-btn').addEventListener('click', () => {
         if (!navigator.geolocation) { $('#fam-gps-txt').textContent = t('registro.gpsError'); return; }
         $('#fam-gps-txt').textContent = t('registro.gpsAsking');
@@ -125,7 +133,6 @@
           { enableHighAccuracy: true, timeout: 10000 });
       });
 
-      // Fotos: se comprimen en el navegador (≤1600px, jpeg) para subir livianas.
       $('#fam-fotos-input').addEventListener('change', async (ev) => {
         const files = Array.from(ev.target.files || []);
         for (const file of files) {
@@ -146,6 +153,39 @@
         grid.innerHTML = fotos.map((src, i) => `<div class="fam-foto-thumb"><img src="${e(src)}" alt="" /><button class="fam-foto-x" type="button" data-foto="${i}" aria-label="${e(t('registro.photoRemove'))}">✕</button></div>`).join('');
       }
 
+      // Resumen legible por paso (lo muestra la pantalla de "Confirmar").
+      function famResumen(p) {
+        switch (p.dataset.paso) {
+          case 'contacto': return $('#fam-nombre').value.trim() || '—';
+          case 'donde': return [$('#fam-aloj').value.trim(), $('#fam-muni').value.trim(), $('#fam-estado').value.trim()].filter(Boolean).join(' · ') || '—';
+          case 'familia': {
+            const n = $$('#fam-integrantes [data-fila]').filter((f) => (f.querySelector('[data-campo="nombre"]').value || '').trim()).length;
+            return n ? t('registro.summaryMembers', { n: n }) : '—';
+          }
+          case 'fallecidos': {
+            const n = Number($('#fam-fallecidos').value) || 0;
+            return n ? String(n) : t('registro.deceasedNone');
+          }
+          case 'bienes': {
+            const partes = [];
+            if ($('#fam-casa').checked) partes.push(t('registro.lostHouse'));
+            if ($('#fam-vehiculo').checked) partes.push(t('registro.lostVehicle'));
+            if ($('#fam-bienes').value.trim()) partes.push('…');
+            return partes.join(' · ') || '—';
+          }
+          case 'fotos': return fotos.length ? t('registro.summaryPhotos', { n: fotos.length }) : '—';
+          default: return '';
+        }
+      }
+
+      // Asistente 1-a-1 (mismo motor que transportista / recogida / entrega).
+      wizPublico('fam-form', {
+        validar: (p) => {
+          if (p.dataset.paso) p.dataset.wizDone = famResumen(p);
+          return undefined; // deja correr la validez nativa (nombre requerido)
+        }
+      });
+
       $('#fam-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const nombre = $('#fam-nombre').value.trim();
@@ -157,7 +197,7 @@
         }).filter((o) => o.nombre || o.parentesco || o.edad);
         const boton = $('#fam-enviar');
         boton.disabled = true;
-        mostrarMensaje('#fam-message', 'info', t('registro.sending'));
+        famMensaje('#fam-message', 'info', t('registro.sending'));
         try {
           const r = await window.SheetsService.post({
             accion: 'damnificado_registrar',
@@ -169,7 +209,7 @@
             municipio: $('#fam-muni').value.trim(),
             estadoGeo: $('#fam-estado').value.trim(),
             gps: (coords.lat != null) ? coords : null,
-            integrantes,
+            integrantes: integrantes,
             sustentoPrincipal: $('#fam-sustento').value.trim(),
             fallecidos: $('#fam-fallecidos').value,
             fallecidosDetalle: $('#fam-fallecidos-det').value.trim(),
@@ -177,14 +217,24 @@
             perdioVehiculo: $('#fam-vehiculo').checked,
             vehiculosDetalle: $('#fam-vehiculo-det').value.trim(),
             bienesPerdidos: $('#fam-bienes').value.trim(),
-            fotos
+            fotos: fotos
           });
           famExito(r && r.codigo);
         } catch (err) {
           boton.disabled = false;
-          mostrarMensaje('#fam-message', 'error', String((err && err.message) || t('registro.error')));
+          famMensaje('#fam-message', 'error', String((err && err.message) || t('registro.error')));
         }
       });
+    }
+
+    // mostrarMensaje vive en vistas.js, que NO se carga en ventana.html; helper local.
+    function famMensaje(sel, tipo, txt) {
+      const box = $(sel);
+      if (!box) return;
+      box.className = `form-message visible ${tipo}`;
+      box.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+      box.setAttribute('aria-live', tipo === 'error' ? 'assertive' : 'polite');
+      box.textContent = txt;
     }
 
     function famComprimir(file) {
@@ -227,4 +277,51 @@
       });
     }
 
+    // ── Página pública: familias afectadas (anónima) ──
+    async function abrirFamiliasAfectadas() {
+      abrirModal(t('familiasPub.pageTitle'), `<div class="fam-pub">
+        <header class="fam-pub-head">
+          <h1>${e(t('familiasPub.title'))}</h1>
+          <p class="section-copy">${e(t('familiasPub.intro'))}</p>
+          <p class="field-help fam-privacy">🔒 ${e(t('familiasPub.privacy'))}</p>
+        </header>
+        <div id="fam-pub-lista" class="fam-pub-lista" aria-live="polite"><p class="meta">${e(t('familiasPub.loading'))}</p></div>
+        <p class="meta fam-pub-ayuda">${e(t('familiasPub.help'))}</p>
+      </div>`);
+      let filas = [];
+      try { filas = (await window.SheetsService.getFamiliasPublicas()).data || []; }
+      catch (err) { const l = $('#fam-pub-lista'); if (l) l.innerHTML = `<p class="form-message error visible">${e(t('familiasPub.error'))}</p>`; return; }
+      famPubPintar(filas);
+      window.reconstruirFamiliasAfectadas = () => { document.title = t('familiasPub.pageTitle'); if ($('#fam-pub-lista')) famPubPintar(filas); };
+    }
+
+    function famPubPintar(filas) {
+      const cont = $('#fam-pub-lista');
+      if (!cont) return;
+      if (!filas.length) { cont.innerHTML = `<p class="empty-state">${e(t('familiasPub.empty'))}</p>`; return; }
+      const tarjetas = filas.map((f) => {
+        const personas = Number(f.num_personas) || 0;
+        const menores = Number(f.num_menores) || 0;
+        const chips = [];
+        if (f.perdio_casa) chips.push(`<span class="fam-chip">🏠 ${e(t('familiasPub.lostHouse'))}</span>`);
+        if (f.perdio_vehiculo) chips.push(`<span class="fam-chip">🚗 ${e(t('familiasPub.lostVehicle'))}</span>`);
+        if (f.necesidad_medica) chips.push(`<span class="fam-chip fam-chip-med">⚕️ ${e(t('familiasPub.medical'))}</span>`);
+        if (f.perdio_familiar) chips.push(`<span class="fam-chip">🕊️ ${e(t('familiasPub.bereaved'))}</span>`);
+        const lugar = [f.municipio, f.estado_geo].filter(Boolean).join(', ');
+        const gente = personas === 1 ? t('familiasPub.person1') : t('familiasPub.people', { n: personas });
+        const menoresTxt = menores ? ` · ${e(menores === 1 ? t('familiasPub.minor1') : t('familiasPub.minors', { n: menores }))}` : '';
+        return `<article class="fam-pub-card">
+          <div class="fam-pub-top">
+            <span class="badge">${e(tValue('familyStatePublic', f.estado) || t('familiasPub.waiting'))}</span>
+            <span class="fam-pub-code">${e(f.codigo || '')}</span>
+          </div>
+          <p class="fam-pub-people"><strong>${e(gente)}</strong>${menoresTxt}</p>
+          ${lugar ? `<p class="meta">📍 ${e(lugar)}</p>` : ''}
+          ${chips.length ? `<div class="fam-pub-chips">${chips.join('')}</div>` : ''}
+        </article>`;
+      }).join('');
+      cont.innerHTML = `<p class="meta fam-pub-count">${e(t('familiasPub.count', { n: filas.length }))}</p><div class="fam-pub-grid">${tarjetas}</div>`;
+    }
+
     window.abrirRegistroFamilia = abrirRegistroFamilia;
+    window.abrirFamiliasAfectadas = abrirFamiliasAfectadas;

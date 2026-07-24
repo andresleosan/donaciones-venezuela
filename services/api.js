@@ -389,6 +389,7 @@
     getVoluntarios: () => getList('voluntarios_public', '?order=fecha_registro.desc', voluntarioUI),
     getRescatistas: () => Promise.resolve({ data: [], source: 'restricted' }),
     getMotorizados: () => getList('motorizados_public', '?order=fecha_registro.desc', motorizadoUI),
+    getFamiliasPublicas: () => getList('familias_public', '?order=created_at.desc&limit=200'),
     getTrayectos: (motorizadoId) => getList('trayectos_public',
       '?order=fecha.desc' + (motorizadoId ? '&motorizado_id=eq.' + encodeURIComponent(motorizadoId) : '')),
     getHistorial: (lugar) => getList('historial_public',
