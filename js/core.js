@@ -9,6 +9,7 @@
       en: { label: 'English', hreflang: 'en', locale: 'en_US' }
     };
     const i18nCache = {};
+    const IDIOMA_KEY = 'dv-idioma'; // elección de idioma persistida (sobrevive navegar entre páginas)
     let idiomaActual = I18N_DEFAULT_LANGUAGE;
     let traducciones = {};
     let fuenteDatosActual = 'loading';
@@ -23,7 +24,10 @@
 
     function idiomaInicial() {
       const params = new URLSearchParams(window.location.search);
-      return normalizarIdioma(params.get('lang') || navigator.language || I18N_DEFAULT_LANGUAGE);
+      let guardado = null;
+      try { guardado = localStorage.getItem(IDIOMA_KEY); } catch (err) { /* modo privado */ }
+      // Prioridad: ?lang= (enlaces compartibles) → elección persistida → idioma del navegador.
+      return normalizarIdioma(params.get('lang') || guardado || navigator.language || I18N_DEFAULT_LANGUAGE);
     }
 
     async function cargarTraducciones(lang) {
@@ -631,7 +635,10 @@
       } else if (modalAbierto) {
         modalAbierto.close();
       }
-      if (shouldPersist) sincronizarUrlIdioma(nextLang);
+      if (shouldPersist) {
+        sincronizarUrlIdioma(nextLang);
+        try { localStorage.setItem(IDIOMA_KEY, nextLang); } catch (err) { /* modo privado */ }
+      }
       const select = $('#language-select');
       if (select) select.value = nextLang;
       actualizarSeo();
