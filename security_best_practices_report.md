@@ -107,3 +107,40 @@ token que expira — que es justo lo que pediste ("usa un JWT").
 3. **S2/S3 — confirmar intención** de exposición de contacto/ubicación y ajustar si procede.
 
 *Ya aplicado en esta pasada: S5 (revocado recalcular_recaudado) y S6 (CSP endurecido).*
+
+---
+
+## Segunda pasada (2026-07-24, tarde): revisión profunda del frontend + S2
+
+### S2 · CORREGIDO — teléfono de voluntarios ya no es público
+- `voluntarios_public` recreada **sin `telefono`** (verificado: anon ya no recibe el número → se cierra la recolección masiva).
+- Nueva acción admin de solo-lectura `admin_listar_voluntarios` (edge fn **v35**) + panel **"Voluntarios (privado)"** en el admin, con teléfono/correo tras "ver datos sensibles" (protegido por `autenticarAdmin`; verificado que sin clave devuelve "Clave admin incorrecta").
+- La tarjeta pública de voluntarios degrada con gracia (sin teléfono ni botón de WhatsApp). PWA v88→v89.
+- *Rescatistas y transportistas mantienen su teléfono público a propósito (coordinación de rescate/transporte).*
+
+### Sobre "proteger las contraseñas de usuarios en el frontend"
+**No hay contraseñas de usuario expuestas en el frontend.** El manejo es correcto por diseño:
+- Las contraseñas van **directo a Supabase Auth** por TLS (`/auth/v1/signup` y `/auth/v1/token`) y **nunca** se guardan en el cliente ni en variables persistentes.
+- La única "clave" embebida en el código (`sb_publishable_…`) es la clave **publishable/anónima**, **pública por diseño**: no da acceso a nada por sí sola porque la seguridad la imponen el servidor (RLS *deny-by-default* + la edge function). No es un secreto y no debe "ocultarse".
+- Los secretos reales (service_role, hash de la ADMIN_KEY, tokens de Telegram) viven **solo en el servidor** (env de la edge fn / tabla `config`), nunca en el repo ni en el navegador.
+
+### Barrido de seguridad del frontend — resultado: limpio
+Revisado contra la guía `javascript-general-web-frontend-security.md`:
+- **XSS:** todo valor externo interpolado en `innerHTML` pasa por `e()`. Sin `eval`, sin `new Function`, sin `setTimeout("string")`, sin `document.write`.
+- **Sin secretos hardcodeados** (solo la clave publishable, pública por diseño).
+- **Sin open-redirects:** todas las asignaciones a `location.href/hash` usan destinos fijos (`#acceso`, `/admin`, …), ninguna toma valores del usuario/URL.
+- **Reverse-tabnabbing:** todos los `target="_blank"` llevan `rel="noopener"`.
+- **Sin `postMessage`/`onmessage`** (no hay superficie de mensajería cross-frame).
+- **Sin logging de datos sensibles** (contraseña/token/clave).
+- **La clave admin** vive en `sessionStorage` (transitoria, se borra al salir), no en `localStorage`.
+- **CSP endurecido (S6)** confirma que no se necesitaba `unsafe-inline` en `script-src` → sin puntos de apoyo inline para XSS.
+
+### Almacenamiento de archivos (buckets) — verificado
+- **Privados** (correcto): `comprobantes` (pruebas de donación), `damnificados` (fotos/cédulas de familias), `denuncias` (videos), `registro-transportistas` (placa/vehículo/cédula).
+- **Público** (intencional): `presupuestos` (facturas/consolidados, transparencia).
+- *Corrige S3:* el bucket `denuncias` es **privado**, así que el `video_path` en `denuncias_public` **no es descargable** por anon (solo el GPS queda expuesto; el video no).
+
+### Pendiente (acción tuya)
+- **S4** — activar "Leaked password protection" en el panel de Supabase (checa contraseñas contra HaveIBeenPwned). 1 clic.
+- **S1** — JWT admin: **pospuesto por tu decisión**. El admin sigue con clave hasheada + rate-limit + bloqueo por 10 fallos.
+
