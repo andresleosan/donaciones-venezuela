@@ -21,6 +21,7 @@
     --acceso:#2f6f8f;  --acceso-bg:#e5f0f5;
     --extra:#635bff;   --extra-bg:#ecebff;
     --admin:#516074;   --admin-bg:#eaeef3;
+    --damni:#b9541b;   --damni-bg:#fbeee6;
   }
   *{box-sizing:border-box;}
   html{-webkit-text-size-adjust:100%;}
@@ -54,6 +55,7 @@
   .card:nth-child(7){animation-delay:.34s}
   .card:nth-child(8){animation-delay:.39s}
   .card:nth-child(9){animation-delay:.42s}
+  .card:nth-child(10){animation-delay:.46s}
 
   .top{display:flex;align-items:center;gap:14px;}
   .emoji{flex:0 0 auto;width:58px;height:58px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:31px;line-height:1;}
@@ -72,6 +74,7 @@
   .c-volu .emoji{background:var(--volu-bg)} .c-volu .dot{background:var(--volu)} .c-volu .role{color:var(--volu)}
   .c-centro .emoji{background:var(--centro-bg)} .c-centro .dot{background:var(--centro)} .c-centro .role{color:var(--centro)}
   .c-acceso .emoji{background:var(--acceso-bg)} .c-acceso .dot{background:var(--acceso)} .c-acceso .role{color:var(--acceso)}
+  .c-damni .emoji{background:var(--damni-bg)} .c-damni .dot{background:var(--damni)} .c-damni .role{color:var(--damni)}
   .c-extra{background:linear-gradient(180deg,#ffffff,#fbfbff);} .c-extra .emoji{background:var(--extra-bg)} .c-extra .dot{background:var(--extra)} .c-extra .role{color:var(--extra)}
 
   .divider{display:flex;align-items:center;gap:12px;margin:34px 4px 22px;color:var(--soft);}
@@ -126,6 +129,20 @@
         <li><span class="dot" aria-hidden="true">✓</span><span>Si no encuentras a alguien, lo <b>reportas</b> para que otros ayuden a buscarlo.</span></li>
       </ul>
       <p class="note">No necesitas cuenta para nada de esto. Solo entra y busca. 🙂</p>
+    </section>
+
+    <section class="card c-damni">
+      <div class="top"><div class="emoji" aria-hidden="true">🏠</div><h2 class="role">Soy damnificado</h2></div>
+      <p class="who">Si perdiste tu casa en el terremoto, registra a tu familia para que el equipo sepa cómo ayudarte a empezar de nuevo:</p>
+      <ul>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Entras desde el botón <b>“Soy damnificado”</b> en la pantalla de inicio. <b>No necesitas cuenta.</b></span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Pones tu <b>nombre y teléfono</b> y <b>dónde se están quedando</b> ahora (un refugio, la casa de un familiar…).</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Agregas a <b>cada persona</b> de tu familia: su edad, a qué se dedicaba antes y si tiene alguna <b>condición médica</b>.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Cuentas si <b>perdieron a un familiar</b>, si perdieron el <b>carro</b> y qué otras cosas perdieron.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Si tienes <b>fotos antiguas</b> de tu casa, tu carro o tu negocio, las agregas.</span></li>
+        <li><span class="dot" aria-hidden="true">✓</span><span>Recibes un <b>código</b> para dar seguimiento a tu caso.</span></li>
+      </ul>
+      <p class="note">Esta información es <b>privada</b>: solo la ve el equipo de coordinación para priorizar tu ayuda. Nunca se publica. 🔒</p>
     </section>
 
     <section class="card c-cosas">
@@ -255,6 +272,7 @@
       <li><span class="dot" aria-hidden="true">✓</span><span>Ver a los <b>rescatistas</b> y las <b>vacantes</b>.</span></li>
       <li><span class="dot" aria-hidden="true">✓</span><span>Vigilar los <b>viajes atrasados</b> y marcarlos como resueltos.</span></li>
       <li><span class="dot" aria-hidden="true">✓</span><span>Registrar <b>denuncias</b> y cambiar su estado.</span></li>
+      <li><span class="dot" aria-hidden="true">✓</span><span>Ver las <b>familias damnificadas</b> registradas (contacto, integrantes, condiciones médicas, dónde se quedan, lo que perdieron y sus fotos) para <b>contactarlas y priorizar</b>; marcar cada caso como nuevo → contactado → atendido. Estos datos son privados, solo del equipo.</span></li>
       <li><span class="dot" aria-hidden="true">✓</span><span><b>Regenerar</b> el código y el PIN de un centro si los pierde.</span></li>
     </ul>
     <p class="note">Todo queda <b>registrado y transparente</b>: cada donante puede seguir su ayuda con su código, del principio al fin.</p>
