@@ -484,12 +484,15 @@
       align-content: space-between;
       gap: 12px;
       padding: 15px;
-      border-left: 4px solid var(--primary);
+      /* Acento semántico por color de borde + tinte de fondo (no barra lateral). */
+      --accent: var(--primary);
+      border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+      background: color-mix(in srgb, var(--accent) 6%, #fff);
     }
-    .dashboard-card.volunteer { border-left-color: var(--volunteer); }
-    .dashboard-card.rescue { border-left-color: var(--rescue); }
-    .dashboard-card.critical { border-left-color: var(--critical); }
-    .dashboard-card.neutral { border-left-color: var(--ink); }
+    .dashboard-card.volunteer { --accent: var(--volunteer); }
+    .dashboard-card.rescue { --accent: var(--rescue); }
+    .dashboard-card.critical { --accent: var(--critical); }
+    .dashboard-card.neutral { --accent: var(--ink); }
     .dashboard-value { font-size: clamp(1.75rem, 7vw, 2.65rem); }
     .dashboard-meta { margin: 0; color: var(--muted); font-size: 0.84rem; }
 
@@ -579,12 +582,13 @@
       box-shadow: var(--shadow-soft);
     }
     .card-bordered { border: 1px solid var(--border); }
-    .place-card { border-top: 4px solid var(--primary); }
-    .place-card.hospital { border-top-color: var(--critical); }
-    .place-card.refugio { border-top-color: var(--volunteer); }
-    .person-card.volunteer { border-top: 4px solid var(--volunteer); }
-    .person-card.rescue { border-top: 4px solid var(--rescue); }
-    .family-card { border-top: 4px solid var(--ink); }
+    /* Acento semántico por borde completo tintado + fondo tenue (no barra superior). */
+    .place-card { --accent: var(--primary); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); background: color-mix(in srgb, var(--accent) 6%, #fff); }
+    .place-card.hospital { --accent: var(--critical); }
+    .place-card.refugio { --accent: var(--volunteer); }
+    .person-card.volunteer { border-color: color-mix(in srgb, var(--volunteer) 42%, var(--border)); background: color-mix(in srgb, var(--volunteer) 6%, #fff); }
+    .person-card.rescue { border-color: color-mix(in srgb, var(--rescue) 42%, var(--border)); background: color-mix(in srgb, var(--rescue) 6%, #fff); }
+    .family-card { border-color: color-mix(in srgb, var(--ink) 30%, var(--border)); background: color-mix(in srgb, var(--ink) 4%, #fff); }
     .card-top {
       display: flex;
       justify-content: space-between;
@@ -710,8 +714,8 @@
       background: #fff;
       box-shadow: var(--shadow-soft);
     }
-    .volunteer-shell .form-panel, .volunteer-shell .registry-side { border-top: 4px solid var(--volunteer); }
-    .rescue-shell .form-panel, .rescue-shell .registry-side { border-top: 4px solid var(--rescue); }
+    .volunteer-shell .form-panel, .volunteer-shell .registry-side { border-color: color-mix(in srgb, var(--volunteer) 45%, var(--border)); }
+    .rescue-shell .form-panel, .rescue-shell .registry-side { border-color: color-mix(in srgb, var(--rescue) 45%, var(--border)); }
     .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .form-actions { margin-top: 12px; }
     .form-message { display: none; margin-top: 12px; padding: 10px; border-radius: var(--radius); font-weight: 760; }
@@ -915,9 +919,8 @@
       gap: 12px;
       padding: 14px;
       border-radius: var(--radius);
-      background: #fff;
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--critical);
+      background: color-mix(in srgb, var(--critical) 6%, #fff);
+      border: 1px solid color-mix(in srgb, var(--critical) 42%, var(--border));
       box-shadow: var(--shadow-soft);
     }
     .map-shell {
@@ -951,8 +954,7 @@
       display: grid;
       gap: 14px;
       padding: 16px;
-      border: 1px solid var(--border);
-      border-top: 4px solid var(--ink);
+      border: 1px solid color-mix(in srgb, var(--ink) 26%, var(--border));
       border-radius: var(--radius);
       background: #fff;
       box-shadow: var(--shadow-soft);
@@ -1032,11 +1034,13 @@
       min-height: 112px;
       display: grid;
       align-content: space-between;
-      border-left: 4px solid var(--primary);
+      --accent: var(--primary);
+      border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+      background: color-mix(in srgb, var(--accent) 6%, #fff);
     }
-    .donation-kpi-card.critical { border-left-color: var(--critical); }
-    .donation-kpi-card.green { border-left-color: var(--volunteer); }
-    .donation-kpi-card.rescue { border-left-color: var(--rescue); }
+    .donation-kpi-card.critical { --accent: var(--critical); }
+    .donation-kpi-card.green { --accent: var(--volunteer); }
+    .donation-kpi-card.rescue { --accent: var(--rescue); }
     .donation-kpi-value, .donation-impact-value {
       display: block;
       color: var(--ink);
@@ -1074,23 +1078,24 @@
       display: grid;
       gap: 8px;
       padding: 13px;
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--critical);
+      border: 1px solid color-mix(in srgb, var(--critical) 42%, var(--border));
       border-radius: var(--radius);
-      background: #fff;
+      background: color-mix(in srgb, var(--critical) 6%, #fff);
       box-shadow: var(--shadow-soft);
     }
     .donation-map-item {
       display: grid;
       gap: 8px;
-      border-left: 4px solid var(--primary);
+      --accent: var(--primary);
+      border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+      background: color-mix(in srgb, var(--accent) 6%, #fff);
     }
-    .donation-map-item.critical { border-left-color: var(--critical); }
-    .donation-map-item.high { border-left-color: var(--warning); }
-    .donation-card { border-top: 4px solid var(--primary); }
-    .donation-card.hospital { border-top-color: var(--critical); }
-    .donation-card.volunteer { border-top-color: var(--volunteer); }
-    .donation-card.rescue { border-top-color: var(--rescue); }
+    .donation-map-item.critical { --accent: var(--critical); }
+    .donation-map-item.high { --accent: var(--warning); }
+    .donation-card { --accent: var(--primary); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); background: color-mix(in srgb, var(--accent) 6%, #fff); }
+    .donation-card.hospital { --accent: var(--critical); }
+    .donation-card.volunteer { --accent: var(--volunteer); }
+    .donation-card.rescue { --accent: var(--rescue); }
     .donation-card .meta-grid { margin-top: 2px; }
     .donation-status-row { display: flex; flex-wrap: wrap; gap: 6px; }
     .need-ranking-list, .donation-history-list { display: grid; gap: 10px; margin-top: 12px; }
@@ -1105,11 +1110,13 @@
     .donation-history-item {
       display: grid;
       gap: 7px;
-      border-left: 4px solid var(--primary);
+      --accent: var(--primary);
+      border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+      background: color-mix(in srgb, var(--accent) 6%, #fff);
     }
-    .donation-history-item.pending { border-left-color: var(--warning); }
-    .donation-history-item.process { border-left-color: var(--primary); }
-    .donation-history-item.delivered { border-left-color: var(--volunteer); }
+    .donation-history-item.pending { --accent: var(--warning); }
+    .donation-history-item.process { --accent: var(--primary); }
+    .donation-history-item.delivered { --accent: var(--volunteer); }
     .donation-category-card { display: grid; gap: 8px; min-height: 106px; }
     .donation-category-card strong { color: var(--ink); }
     .transparency-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
