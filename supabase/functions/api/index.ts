@@ -1277,6 +1277,15 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       if (error) throw error;
       return { rescatistas: data || [] };
     }
+    case 'admin_listar_voluntarios': {
+      // El teléfono/correo de voluntarios NO está en la vista pública (S2); el equipo
+      // de coordinación los consulta aquí, ya autenticado como admin.
+      const { data, error } = await supa.from('voluntarios')
+        .select('id, nombre, apellido, email, telefono, estado, ciudad, profesion, disponibilidad, medio_transporte, observaciones, fecha_registro')
+        .order('fecha_registro', { ascending: false }).limit(200);
+      if (error) throw error;
+      return { voluntarios: data || [] };
+    }
     case 'admin_crear_presupuesto': {
       // Cotización de un insumo necesitado en una tienda concreta. Puede haber
       // varios presupuestos por insumo (una farmacia tiene 200, otra 1000…):

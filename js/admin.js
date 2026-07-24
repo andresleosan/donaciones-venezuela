@@ -9,7 +9,7 @@
     // se pierde. Toda interpolación pasa por e(); cada acción lleva adminKey.
 
     let facturaActiva = null;
-    let adminData = { facturas: [], personas: [], vacantes: [], rescatistas: [], denuncias: [] };
+    let adminData = { facturas: [], personas: [], vacantes: [], rescatistas: [], denuncias: [], voluntarios: [] };
     let wiz = null;
 
     function claveAdmin() { return window.sessionStorage.getItem('adminKey') || ''; }
@@ -66,6 +66,7 @@
       adminData.personas = await opcional('admin_listar_personas', 'personas');
       adminData.vacantes = await opcional('admin_listar_vacantes', 'vacantes');
       adminData.rescatistas = await opcional('admin_listar_rescatistas', 'rescatistas');
+      adminData.voluntarios = await opcional('admin_listar_voluntarios', 'voluntarios');
       adminData.denuncias = await opcional('admin_denuncias', 'denuncias');
       adminData.familias = await opcional('admin_damnificados', 'familias');
       adminData.porComprar = await opcional('admin_presupuestos_por_comprar', 'presupuestos');
@@ -99,6 +100,7 @@
         { id: 'vacantes', icon: '📋', titulo: t('admin.manageVacancies'), count: adminData.vacantes.length },
         { id: 'personas', icon: '🔎', titulo: t('admin.managePeople'), count: adminData.personas.length },
         { id: 'rescatistas', icon: '🚑', titulo: t('admin.manageRescuers'), count: adminData.rescatistas.length },
+        { id: 'voluntarios', icon: '🙌', titulo: t('admin.manageVolunteers'), count: adminData.voluntarios.length },
         { id: 'denuncias', icon: '🚨', titulo: t('admin.manageReports'), count: adminData.denuncias.length },
         { id: 'familias', icon: '🏠', titulo: t('admin.manageFamilies'), count: (adminData.familias || []).length },
         { id: 'regenerar', icon: '🔑', titulo: t('admin.manageRegen'), count: null }
@@ -520,7 +522,7 @@
 
     // ---- Paneles de gestión ----
     function abrirGestion(cual) {
-      const panels = { track: panelTrack, facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, denuncias: panelDenuncias, familias: panelFamilias, regenerar: panelRegenerar };
+      const panels = { track: panelTrack, facturas: panelFacturas, vacantes: panelVacantes, personas: panelPersonas, rescatistas: panelRescatistas, voluntarios: panelVoluntarios, denuncias: panelDenuncias, familias: panelFamilias, regenerar: panelRegenerar };
       const fn = panels[cual];
       if (fn) fn();
     }
@@ -843,6 +845,20 @@
           <details class="admin-private-details"><summary>${e(t('admin.viewSensitiveDetails'))}</summary><div class="meta-grid"><span><strong>${e(t('common.phone'))}</strong> ${e(r.telefono || t('common.pending'))}</span><span><strong>${e(t('rescuers.equipmentLabel'))}</strong> ${e(r.equipo_disponible || t('common.pending'))}</span><span><strong>${e(t('rescuers.notesLabel'))}</strong> ${e(r.observaciones || t('common.pending'))}</span><span><strong>${e(t('common.updated'))}</strong> ${e(fechaRelativa(r.fecha_registro))}</span></div></details>
         </article>`).join('') || `<p class="empty-state">${e(t('admin.rescuersNone'))}</p>`;
       $('#admin-console').innerHTML = marcoGestion(t('admin.manageRescuers'), `<p class="meta">${e(t('admin.rescuersIntro'))}</p><div class="admin-private-list">${filas}</div>`);
+      bindGestMenu();
+    }
+
+    function panelVoluntarios() {
+      const filas = adminData.voluntarios.map((v) => {
+        const nombre = `${v.nombre || ''} ${v.apellido || ''}`.trim() || t('volunteers.defaultName');
+        return `
+        <article class="admin-private-card">
+          <div class="supply-line"><strong>${e(nombre)}</strong><span class="badge green">${e(mostrarProfesion(v.profesion) || t('common.pending'))}</span></div>
+          <p class="meta">${e(v.ciudad || '')}${v.estado ? `, ${e(v.estado)}` : ''} · ${e(v.disponibilidad || t('common.pending'))}</p>
+          <details class="admin-private-details"><summary>${e(t('admin.viewSensitiveDetails'))}</summary><div class="meta-grid"><span><strong>${e(t('common.phone'))}</strong> ${e(v.telefono || t('common.pending'))}</span><span><strong>${e(t('common.email'))}</strong> ${e(v.email || t('common.pending'))}</span><span><strong>${e(t('volunteers.transport'))}</strong> ${e(v.medio_transporte || t('common.pending'))}</span><span><strong>${e(t('common.updated'))}</strong> ${e(fechaRelativa(v.fecha_registro))}</span></div>${soloDigitos(v.telefono) ? `<div class="card-actions"><a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${e(waHref(v.telefono))}">${e(t('common.whatsapp'))}</a></div>` : ''}</details>
+        </article>`;
+      }).join('') || `<p class="empty-state">${e(t('admin.volunteersNone'))}</p>`;
+      $('#admin-console').innerHTML = marcoGestion(t('admin.manageVolunteers'), `<p class="meta">${e(t('admin.volunteersIntro'))}</p><div class="admin-private-list">${filas}</div>`);
       bindGestMenu();
     }
 
