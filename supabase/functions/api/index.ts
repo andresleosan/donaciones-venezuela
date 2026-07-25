@@ -288,9 +288,9 @@ async function autenticarPanel(p: Record<string, unknown>) {
 }
 
 // ===== Admin: clave hasheada en config (fail-closed) + anti fuerza bruta =====
-async function autenticarAdmin(p: Record<string, unknown>, req: Request) {
+async function autenticarAdmin(p: Record<string, unknown>, req: Request, cubo = 'admin', limite = 60) {
   const ip = ipDe(req);
-  if (!(await rateHit(ip, 'admin', 60))) throw new Error('Demasiadas solicitudes admin, intenta en una hora');
+  if (!(await rateHit(ip, cubo, limite))) throw new Error('Demasiadas solicitudes admin, intenta en una hora');
   const { data: fallos } = await supa.from('rate_limit').select('contador')
     .eq('ip', ip).eq('cubo', 'admin_fallos').eq('ventana', ventanaActual()).maybeSingle();
   if ((fallos?.contador || 0) >= 10) throw new Error('Demasiadas claves incorrectas, espera una hora');
@@ -479,6 +479,417 @@ async function nombreDeLugar(lugarId: number): Promise<string> {
   return data?.nombre || '';
 }
 
+// ===== Consola de datos del admin: registro con LISTA BLANCA =====
+// Lo que no esté declarado aquí no se puede listar, crear, editar ni borrar por las
+// acciones admin_datos_*. Esta constante ES el control de qué toca el admin: una
+// columna ausente de `editables` es una columna que nadie puede cambiar desde la web.
+type ColTipo = 'texto' | 'entero' | 'numero' | 'booleano' | 'email' | 'telefono'
+             | 'lat' | 'lng' | 'opcion' | 'refLugar';
+
+interface ColDef {
+  id: string;
+  tipo: ColTipo;
+  max?: number;          // largo máximo (texto) — se recorta, no se rechaza
+  opciones?: string[];   // valores permitidos (tipo 'opcion')
+  requerido?: boolean;
+  minNum?: number;
+  maxNum?: number;
+}
+
+interface NaturalDef { campos: string[]; norma: 'texto' | 'digitos' | 'email' }
+interface HijoDef { tabla: string; fk: string; etiqueta: string; modo: 'cascade' | 'null' }
+interface FotoDef { campo: string; bucket: string }
+
+interface EntidadDef {
+  tabla: string;
+  pk: string;
+  pkTexto: boolean;      // true si la clave primaria es texto (voluntarios, motorizados…)
+  prefijoId?: string;    // prefijo del id generado cuando pkTexto (VOL1a2b3c4d)
+  etiqueta: string;      // columna que identifica la fila para el humano
+  orden: string;
+  ordenAsc: boolean;
+  lectura: string[];     // columnas que se devuelven al listar y en la ficha
+  editables: ColDef[];
+  buscar: string[];      // columnas del buscador (ilike)
+  borrado: 'fisico';     // el Plan 2 añade 'archivo'
+  naturales: NaturalDef[];
+  fotos: FotoDef[];
+  hijos: HijoDef[];
+}
+
+const ENTIDADES: Record<string, EntidadDef> = {
+  lugares: {
+    tabla: 'lugares', pk: 'id', pkTexto: false, etiqueta: 'nombre',
+    orden: 'nombre', ordenAsc: true,
+    lectura: ['id', 'tipo', 'nombre', 'ubicacion', 'telefono', 'lat', 'lng', 'actualizado'],
+    editables: [
+      { id: 'tipo', tipo: 'opcion', opciones: ['Centro', 'Hospital', 'Refugio'], requerido: true },
+      { id: 'nombre', tipo: 'texto', max: 120, requerido: true },
+      { id: 'ubicacion', tipo: 'texto', max: 300 },
+      { id: 'telefono', tipo: 'telefono', max: 40 },
+      { id: 'lat', tipo: 'lat' },
+      { id: 'lng', tipo: 'lng' },
+    ],
+    buscar: ['nombre', 'ubicacion', 'telefono'],
+    borrado: 'fisico',
+    naturales: [{ campos: ['nombre'], norma: 'texto' }],
+    fotos: [],
+    hijos: [
+      { tabla: 'insumos', fk: 'lugar_id', etiqueta: 'insumos', modo: 'cascade' },
+      { tabla: 'centros_panel', fk: 'lugar_id', etiqueta: 'accesos de panel', modo: 'cascade' },
+    ],
+  },
+  insumos: {
+    tabla: 'insumos', pk: 'id', pkTexto: false, etiqueta: 'nombre',
+    orden: 'nombre', ordenAsc: true,
+    lectura: ['id', 'lugar_id', 'nombre', 'categoria', 'estado', 'cantidad_necesaria',
+              'cantidad_recibida', 'urgencia', 'unidad', 'actualizado'],
+    editables: [
+      { id: 'lugar_id', tipo: 'refLugar', requerido: true },
+      { id: 'nombre', tipo: 'texto', max: 120, requerido: true },
+      { id: 'categoria', tipo: 'texto', max: 60 },
+      { id: 'estado', tipo: 'opcion', opciones: ['Necesita', 'Disponible', 'Cubierto'], requerido: true },
+      { id: 'cantidad_necesaria', tipo: 'numero', minNum: 0, maxNum: 1_000_000 },
+      { id: 'cantidad_recibida', tipo: 'numero', minNum: 0, maxNum: 1_000_000 },
+      { id: 'urgencia', tipo: 'opcion', opciones: ['Alta', 'Normal', 'Baja'], requerido: true },
+      { id: 'unidad', tipo: 'texto', max: 30 },
+    ],
+    buscar: ['nombre', 'categoria'],
+    borrado: 'fisico',
+    naturales: [{ campos: ['lugar_id', 'nombre'], norma: 'texto' }],
+    fotos: [],
+    hijos: [],
+  },
+  voluntarios: {
+    tabla: 'voluntarios', pk: 'id', pkTexto: true, prefijoId: 'VOL', etiqueta: 'nombre',
+    orden: 'fecha_registro', ordenAsc: false,
+    lectura: ['id', 'nombre', 'apellido', 'email', 'telefono', 'estado', 'ciudad',
+              'profesion', 'disponibilidad', 'medio_transporte', 'observaciones',
+              'foto_cedula', 'fecha_registro'],
+    editables: [
+      { id: 'nombre', tipo: 'texto', max: 120, requerido: true },
+      { id: 'apellido', tipo: 'texto', max: 120 },
+      { id: 'email', tipo: 'email', max: 254 },
+      { id: 'telefono', tipo: 'telefono', max: 40 },
+      { id: 'estado', tipo: 'texto', max: 60 },
+      { id: 'ciudad', tipo: 'texto', max: 80 },
+      { id: 'profesion', tipo: 'texto', max: 80 },
+      { id: 'disponibilidad', tipo: 'texto', max: 120 },
+      { id: 'medio_transporte', tipo: 'texto', max: 60 },
+      { id: 'observaciones', tipo: 'texto', max: 500 },
+    ],
+    buscar: ['nombre', 'apellido', 'email', 'telefono', 'ciudad'],
+    borrado: 'fisico',
+    naturales: [
+      { campos: ['email'], norma: 'email' },
+      { campos: ['telefono'], norma: 'digitos' },
+      { campos: ['nombre', 'apellido'], norma: 'texto' },
+    ],
+    fotos: [{ campo: 'foto_cedula', bucket: 'registro-transportistas' }],
+    hijos: [],
+  },
+  motorizados: {
+    tabla: 'motorizados', pk: 'id', pkTexto: true, prefijoId: 'MOT', etiqueta: 'nombre',
+    orden: 'fecha_registro', ordenAsc: false,
+    lectura: ['id', 'nombre', 'tipo_vehiculo', 'telefono', 'zona_operacion', 'placa',
+              'email', 'foto_placa', 'foto_vehiculo', 'foto_cedula', 'fecha_registro'],
+    editables: [
+      { id: 'nombre', tipo: 'texto', max: 120, requerido: true },
+      { id: 'tipo_vehiculo', tipo: 'opcion',
+        opciones: ['Moto', 'Carro', 'Bicicleta', 'Camión', 'Triciclo motorizado'], requerido: true },
+      { id: 'telefono', tipo: 'telefono', max: 40 },
+      { id: 'zona_operacion', tipo: 'texto', max: 120 },
+      { id: 'placa', tipo: 'texto', max: 20 },
+      { id: 'email', tipo: 'email', max: 254 },
+    ],
+    buscar: ['nombre', 'placa', 'telefono', 'email', 'zona_operacion'],
+    borrado: 'fisico',
+    naturales: [
+      { campos: ['email'], norma: 'email' },
+      { campos: ['telefono'], norma: 'digitos' },
+      { campos: ['placa'], norma: 'texto' },
+    ],
+    fotos: [
+      { campo: 'foto_placa', bucket: 'registro-transportistas' },
+      { campo: 'foto_vehiculo', bucket: 'registro-transportistas' },
+      { campo: 'foto_cedula', bucket: 'registro-transportistas' },
+    ],
+    hijos: [
+      { tabla: 'trayectos', fk: 'motorizado_id', etiqueta: 'trayectos', modo: 'null' },
+      { tabla: 'donaciones_motorizados', fk: 'motorizado_id', etiqueta: 'aportes recibidos', modo: 'null' },
+    ],
+  },
+  rescatistas: {
+    tabla: 'rescatistas', pk: 'id', pkTexto: true, prefijoId: 'RES', etiqueta: 'nombre',
+    orden: 'fecha_registro', ordenAsc: false,
+    lectura: ['id', 'nombre', 'organizacion', 'telefono', 'especialidad', 'estado',
+              'ciudad', 'disponibilidad', 'equipo_disponible', 'capacidad_operativa',
+              'observaciones', 'fecha_registro'],
+    editables: [
+      { id: 'nombre', tipo: 'texto', max: 120, requerido: true },
+      { id: 'organizacion', tipo: 'texto', max: 120 },
+      { id: 'telefono', tipo: 'telefono', max: 40 },
+      { id: 'especialidad', tipo: 'texto', max: 80 },
+      { id: 'estado', tipo: 'texto', max: 60 },
+      { id: 'ciudad', tipo: 'texto', max: 80 },
+      { id: 'disponibilidad', tipo: 'texto', max: 120 },
+      { id: 'equipo_disponible', tipo: 'texto', max: 300 },
+      { id: 'capacidad_operativa', tipo: 'texto', max: 120 },
+      { id: 'observaciones', tipo: 'texto', max: 500 },
+    ],
+    buscar: ['nombre', 'organizacion', 'telefono', 'ciudad', 'especialidad'],
+    borrado: 'fisico',
+    naturales: [
+      { campos: ['telefono'], norma: 'digitos' },
+      { campos: ['nombre', 'organizacion'], norma: 'texto' },
+    ],
+    fotos: [],
+    hijos: [],
+  },
+  centros_panel: {
+    tabla: 'centros_panel', pk: 'id', pkTexto: false, etiqueta: 'token_centro',
+    orden: 'creado', ordenAsc: false,
+    // token_centro se LEE (el admin necesita identificar la fila) pero NO se edita.
+    // pin_hash y pin_salt no se leen siquiera: son la credencial.
+    lectura: ['id', 'lugar_id', 'token_centro', 'email', 'foto_cedula', 'foto_sitio', 'creado'],
+    editables: [
+      { id: 'email', tipo: 'email', max: 254 },
+    ],
+    buscar: ['token_centro', 'email'],
+    borrado: 'fisico',
+    naturales: [],
+    fotos: [
+      { campo: 'foto_cedula', bucket: 'registro-transportistas' },
+      { campo: 'foto_sitio', bucket: 'registro-transportistas' },
+    ],
+    hijos: [],
+  },
+  vacantes_voluntarios: {
+    tabla: 'vacantes_voluntarios', pk: 'id', pkTexto: false, etiqueta: 'rol',
+    orden: 'fecha_creacion', ordenAsc: false,
+    lectura: ['id', 'lugar_tipo', 'lugar_nombre', 'ubicacion', 'rol', 'descripcion',
+              'cantidad_necesaria', 'cantidad_cubierta', 'urgencia', 'turno', 'telefono',
+              'estado', 'fecha_creacion'],
+    editables: [
+      { id: 'lugar_tipo', tipo: 'opcion',
+        opciones: ['Centro', 'Hospital', 'Refugio', 'Zona de derrumbe'], requerido: true },
+      { id: 'lugar_nombre', tipo: 'texto', max: 120, requerido: true },
+      { id: 'ubicacion', tipo: 'texto', max: 160 },
+      { id: 'rol', tipo: 'texto', max: 80, requerido: true },
+      { id: 'descripcion', tipo: 'texto', max: 400 },
+      { id: 'cantidad_necesaria', tipo: 'numero', minNum: 1, maxNum: 10_000 },
+      { id: 'cantidad_cubierta', tipo: 'numero', minNum: 0, maxNum: 10_000 },
+      { id: 'urgencia', tipo: 'opcion', opciones: ['Alta', 'Normal', 'Baja'], requerido: true },
+      { id: 'turno', tipo: 'texto', max: 80 },
+      { id: 'telefono', tipo: 'telefono', max: 40 },
+      { id: 'estado', tipo: 'opcion', opciones: ['Abierta', 'Cubierta', 'Cerrada'], requerido: true },
+    ],
+    buscar: ['lugar_nombre', 'rol', 'ubicacion'],
+    borrado: 'fisico',
+    naturales: [{ campos: ['lugar_nombre', 'rol'], norma: 'texto' }],
+    fotos: [],
+    hijos: [],
+  },
+  personas: {
+    tabla: 'personas', pk: 'id', pkTexto: false, etiqueta: 'nombre',
+    orden: 'fecha', ordenAsc: false,
+    lectura: ['id', 'nombre', 'cedula', 'estado', 'ubicacion', 'contacto', 'fuente',
+              'reportado_por', 'verificada', 'fecha'],
+    editables: [
+      { id: 'nombre', tipo: 'texto', max: 160, requerido: true },
+      { id: 'cedula', tipo: 'texto', max: 20 },
+      { id: 'estado', tipo: 'texto', max: 120 },
+      { id: 'ubicacion', tipo: 'texto', max: 200 },
+      { id: 'contacto', tipo: 'texto', max: 120 },
+      { id: 'fuente', tipo: 'texto', max: 120 },
+      { id: 'reportado_por', tipo: 'texto', max: 120 },
+      { id: 'verificada', tipo: 'booleano' },
+    ],
+    buscar: ['nombre', 'cedula', 'ubicacion', 'contacto'],
+    borrado: 'fisico',
+    naturales: [
+      { campos: ['cedula'], norma: 'digitos' },
+      { campos: ['nombre'], norma: 'texto' },
+    ],
+    fotos: [],
+    hijos: [],
+  },
+};
+
+function entidadDe(nombre: unknown): EntidadDef {
+  const def = ENTIDADES[s(nombre, 40)];
+  if (!def) throw new Error('Ese dato no se puede editar desde aquí');
+  return def;
+}
+
+// Clave natural normalizada: así «José Pérez» y «jose perez  » son el mismo,
+// y «0412-000 00 00» y «04120000000» también.
+const sinAcentos = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function normaClave(valor: unknown, norma: 'texto' | 'digitos' | 'email'): string {
+  const v = String(valor ?? '').trim();
+  if (!v) return '';
+  if (norma === 'digitos') return v.replace(/[^0-9]/g, '');
+  if (norma === 'email') return v.toLowerCase();
+  return sinAcentos(v.toLowerCase()).replace(/\s+/g, ' ');
+}
+
+const idDe = (def: EntidadDef, id: unknown) => (def.pkTexto ? s(id, 60) : Math.round(n(id)));
+
+async function filaPorId(def: EntidadDef, id: unknown) {
+  const { data } = await supa.from(def.tabla)
+    .select(def.lectura.join(', ')).eq(def.pk, idDe(def, id)).maybeSingle();
+  return (data as Record<string, unknown> | null) ?? null;
+}
+
+// Cuántas filas dependen de esta y qué les pasa al borrarla. La pantalla lo enseña
+// ANTES de confirmar: borrar un centro se lleva sus insumos y su acceso al panel.
+async function dependientesDe(def: EntidadDef, id: unknown) {
+  const salida: { etiqueta: string; cuantos: number; modo: string }[] = [];
+  for (const h of def.hijos) {
+    const { count } = await supa.from(h.tabla)
+      .select('*', { count: 'exact', head: true }).eq(h.fk, idDe(def, id));
+    if (count) salida.push({ etiqueta: h.etiqueta, cuantos: count, modo: h.modo });
+  }
+  return salida;
+}
+
+// URL firmada de una hora para las fotos privadas: el admin las VE para comprobar
+// que el registro es real, pero nunca las sustituye.
+async function fotosFirmadas(def: EntidadDef, fila: Record<string, unknown>) {
+  const salida: { campo: string; url: string }[] = [];
+  for (const f of def.fotos) {
+    const ruta = String(fila[f.campo] || '');
+    if (!ruta) continue;
+    const { data } = await supa.storage.from(f.bucket).createSignedUrl(ruta, 3600);
+    if (data?.signedUrl) salida.push({ campo: f.campo, url: data.signedUrl });
+  }
+  return salida;
+}
+
+// Traduce a algo legible los errores de Postgres que el admin puede provocar.
+function mensajeDePostgres(err: { code?: string; message?: string } | null): string {
+  if (err?.code === '23505') return 'Ya existe un registro con ese valor único';
+  if (err?.code === '23503') return 'Ese registro está enlazado con otro y no se puede guardar así';
+  if (err?.code === '23502') return 'Falta un campo obligatorio';
+  return s(err?.message, 200) || 'No se pudo guardar';
+}
+
+// Valida y normaliza UN campo según su declaración. Lanza nombrando el campo, para
+// que la pantalla pueda enseñar el error junto al recuadro correcto.
+function valorValidado(col: ColDef, crudo: unknown): unknown {
+  if (col.tipo === 'booleano') return crudo === true || crudo === 'true';
+  if (col.tipo === 'entero' || col.tipo === 'numero') {
+    const x = n(crudo);
+    if (col.minNum != null && x < col.minNum) throw new Error(`${col.id}: el mínimo es ${col.minNum}`);
+    if (col.maxNum != null && x > col.maxNum) throw new Error(`${col.id}: el máximo es ${col.maxNum}`);
+    return col.tipo === 'entero' ? Math.round(x) : x;
+  }
+  if (col.tipo === 'lat' || col.tipo === 'lng') {
+    if (crudo === '' || crudo === null || crudo === undefined) return null;
+    const x = Number(crudo);
+    // Mismo recuadro que usa geoValida() para el resto de la app.
+    const min = col.tipo === 'lat' ? -4 : -74;
+    const max = col.tipo === 'lat' ? 13 : -59;
+    if (!Number.isFinite(x) || x < min || x > max) {
+      throw new Error(`${col.id}: esa coordenada cae fuera de Venezuela`);
+    }
+    return x;
+  }
+  if (col.tipo === 'email') {
+    const bruto = s(crudo, 254);
+    if (!bruto) return null;
+    const v = emailNorm(bruto);
+    if (!v) throw new Error(`${col.id}: correo electrónico inválido`);
+    return v;
+  }
+  if (col.tipo === 'telefono') {
+    const v = s(crudo, col.max ?? 40);
+    if (v && v.replace(/[^0-9]/g, '').length < 7) throw new Error(`${col.id}: teléfono demasiado corto`);
+    return v;
+  }
+  if (col.tipo === 'opcion') {
+    const v = s(crudo, 60);
+    if (!col.opciones || !col.opciones.includes(v)) throw new Error(`${col.id}: ese valor no está permitido`);
+    return v;
+  }
+  if (col.tipo === 'refLugar') {
+    const id = Math.round(n(crudo));
+    if (id <= 0) throw new Error(`${col.id}: hay que elegir un centro`);
+    return id;
+  }
+  return s(crudo, col.max ?? 300);
+}
+
+// Convierte lo que manda el cliente en el objeto exacto que se va a escribir.
+// `parcial` = true al editar: solo se toca lo que venga en la petición.
+// Una columna que no esté en `editables` NO se ignora en silencio: se rechaza, para
+// que un intento de tocar pin_hash o monto_recaudado sea visible y no una sorpresa.
+async function camposValidados(def: EntidadDef, crudos: Record<string, unknown>, parcial: boolean) {
+  const permitidas = new Set(def.editables.map((c) => c.id));
+  for (const k of Object.keys(crudos)) {
+    if (!permitidas.has(k)) throw new Error(`Ese dato no se puede editar desde aquí: ${k}`);
+  }
+  const datos: Record<string, unknown> = {};
+  for (const col of def.editables) {
+    const presente = Object.prototype.hasOwnProperty.call(crudos, col.id);
+    if (parcial && !presente) continue;
+    const valor = valorValidado(col, presente ? crudos[col.id] : '');
+    if (col.requerido && (valor === '' || valor === null || valor === undefined)) {
+      throw new Error(`${col.id}: es obligatorio`);
+    }
+    if (col.tipo === 'refLugar') {
+      const { data } = await supa.from('lugares').select('id').eq('id', valor).maybeSingle();
+      if (!data) throw new Error(`${col.id}: ese centro no existe`);
+    }
+    datos[col.id] = valor;
+  }
+  if (!Object.keys(datos).length) throw new Error('No hay nada que guardar');
+  return datos;
+}
+
+// Filas que comparten alguna clave natural con lo que se va a guardar. NO bloquea:
+// informa. Dos personas pueden llamarse igual; quien decide es el admin.
+// ponytail: compara en memoria sobre las primeras 2000 filas — normalizar sin acentos
+// no se puede expresar en un filtro de PostgREST. Si un padrón pasa de ahí, mover la
+// normalización a columnas generadas con índice.
+async function duplicadosDe(def: EntidadDef, datos: Record<string, unknown>, excluirId: unknown) {
+  if (!def.naturales.length) return [];
+  const cols = [...new Set([def.pk, def.etiqueta, ...def.naturales.flatMap((x) => x.campos)])];
+  const { data } = await supa.from(def.tabla).select(cols.join(', ')).limit(2000);
+  const encontrados: { id: unknown; etiqueta: string; porque: string }[] = [];
+  const vistos = new Set<string>();
+  for (const nat of def.naturales) {
+    const buscadas = nat.campos.map((c) => normaClave(datos[c], nat.norma));
+    if (buscadas.some((k) => !k)) continue; // clave incompleta: no se compara
+    for (const fila of (data || []) as Record<string, unknown>[]) {
+      if (excluirId != null && String(fila[def.pk]) === String(excluirId)) continue;
+      const suyas = nat.campos.map((c) => normaClave(fila[c], nat.norma));
+      if (suyas.join('|') !== buscadas.join('|')) continue;
+      const id = String(fila[def.pk]);
+      if (vistos.has(id)) continue;
+      vistos.add(id);
+      encontrados.push({
+        id: fila[def.pk],
+        etiqueta: String(fila[def.etiqueta] ?? id),
+        porque: nat.campos.join(' + '),
+      });
+    }
+  }
+  return encontrados;
+}
+
+// Bitácora de cada cambio del admin. Deliberadamente NO tumba la operación si falla
+// el registro: perder una línea de bitácora es malo, pero impedir que el admin
+// corrija un dato en plena emergencia es peor. El fallo queda en los logs de la
+// función y la prueba 20 verifica que en condiciones normales sí se escribe.
+async function auditar(req: Request, accion: string, entidad: string, filaId: unknown,
+                       antes: unknown, despues: unknown) {
+  const { error } = await supa.from('auditoria_admin').insert({
+    ip: ipDe(req), accion, entidad, fila_id: String(filaId ?? ''),
+    antes: antes ?? null, despues: despues ?? null });
+  if (error) console.error('auditoria_admin', error.message);
+}
+
 async function handle(accion: string, p: Record<string, unknown>, req: Request) {
   // Bot nocturno de la tasa: lo dispara pg_cron con un secreto compartido
   // (config.cron_secret). No es admin ni gasta cupo público.
@@ -498,7 +909,11 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
   // Una denuncia manda ~18 parciales (cada 5 s durante 90 s) + el cierre: cubo
   // propio y generoso para no chocar con el límite público de 30/h.
   const esDenuncia = accion === 'denuncia_crear' || accion === 'denuncia_parcial';
-  if (esAdmin) await autenticarAdmin(p, req);
+  // Ojo: las acciones admin_* NO pasan por los cubos de abajo (van por autenticarAdmin,
+  // que tiene su propio cubo de 60/h). Navegar la consola de datos son muchas lecturas
+  // seguidas: se les da su propio cubo generoso para no agotar el de admin.
+  const esAdminLectura = ['admin_datos_entidades', 'admin_datos_listar', 'admin_datos_ficha'].includes(accion);
+  if (esAdmin) await autenticarAdmin(p, req, esAdminLectura ? 'admin_lectura' : 'admin', esAdminLectura ? 600 : 60);
   else if (esLectura) {
     if (!(await rateHit(ipDe(req), 'lectura', 240))) throw new Error('Demasiadas solicitudes, intenta en una hora');
   } else if (esDenuncia) {
@@ -1369,6 +1784,152 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         .order('fecha_registro', { ascending: false }).limit(200);
       if (error) throw error;
       return { voluntarios: data || [] };
+    }
+    // ===== Consola de datos del admin (lectura) =====
+    // Nombre con prefijo admin_ ⇒ handle() ya exigió autenticarAdmin más arriba.
+    case 'admin_datos_entidades': {
+      // Catálogo para que el cliente sepa qué campos pintar y cómo validarlos.
+      const entidades = Object.entries(ENTIDADES).map(([id, d]) => ({
+        id, etiqueta: d.etiqueta, pk: d.pk, borrado: d.borrado,
+        columnas: d.editables, fotos: d.fotos.map((f) => f.campo),
+        hijos: d.hijos.map((h) => ({ etiqueta: h.etiqueta, modo: h.modo })),
+      }));
+      return { entidades };
+    }
+    case 'admin_datos_listar': {
+      const def = entidadDe(p.entidad);
+      const porPagina = Math.min(100, Math.max(5, Math.round(n(p.porPagina)) || 25));
+      const pagina = Math.max(1, Math.round(n(p.pagina)) || 1);
+      const desde = (pagina - 1) * porPagina;
+      const busca = s(p.busca, 80);
+      let q = supa.from(def.tabla).select(def.lectura.join(', '), { count: 'exact' });
+      if (busca && def.buscar.length) {
+        // PostgREST: OR de ilike sobre las columnas declaradas para buscar. Las comas
+        // y los paréntesis romperían la sintaxis del filtro, así que se quitan.
+        const limpio = busca.replace(/[(),*]/g, ' ').trim();
+        if (limpio) q = q.or(def.buscar.map((c) => `${c}.ilike.%${limpio}%`).join(','));
+      }
+      const { data, count, error } = await q
+        .order(def.orden, { ascending: def.ordenAsc }).range(desde, desde + porPagina - 1);
+      if (error) throw error;
+      return { filas: data || [], total: count || 0, pagina, porPagina };
+    }
+    case 'admin_datos_ficha': {
+      const def = entidadDe(p.entidad);
+      const fila = await filaPorId(def, p.id);
+      if (!fila) throw new Error('No se encontró ese registro');
+      return {
+        fila,
+        fotos: await fotosFirmadas(def, fila),
+        dependientes: await dependientesDe(def, p.id),
+      };
+    }
+    case 'admin_datos_crear': {
+      const def = entidadDe(p.entidad);
+      const datos = await camposValidados(def, (p.campos ?? {}) as Record<string, unknown>, false);
+      const dups = await duplicadosDe(def, datos, null);
+      // Sin forzar, un duplicado NO crea nada: devuelve los parecidos para que la
+      // pantalla ofrezca abrir el que ya existe.
+      if (dups.length && p.forzar !== true) return { duplicados: dups };
+      if (def.pkTexto) {
+        datos[def.pk] = (def.prefijoId || 'REG') + crypto.randomUUID().slice(0, 8).toUpperCase();
+      }
+      const { data, error } = await supa.from(def.tabla)
+        .insert(datos).select(def.lectura.join(', ')).single();
+      if (error) throw new Error(mensajeDePostgres(error));
+      const fila = data as Record<string, unknown>;
+      await auditar(req, 'crear', s(p.entidad, 40), fila[def.pk], null, fila);
+      return { fila, duplicados: [] };
+    }
+    case 'admin_datos_editar': {
+      const def = entidadDe(p.entidad);
+      const antes = await filaPorId(def, p.id);
+      if (!antes) throw new Error('No se encontró ese registro');
+      const datos = await camposValidados(def, (p.campos ?? {}) as Record<string, unknown>, true);
+      const dups = await duplicadosDe(def, { ...antes, ...datos }, p.id);
+      if (dups.length && p.forzar !== true) return { duplicados: dups };
+      const { data, error } = await supa.from(def.tabla)
+        .update(datos).eq(def.pk, idDe(def, p.id)).select(def.lectura.join(', ')).single();
+      if (error) throw new Error(mensajeDePostgres(error));
+      await auditar(req, 'editar', s(p.entidad, 40), p.id, antes, data);
+      return { fila: data, cambiados: Object.keys(datos) };
+    }
+    case 'admin_datos_duplicados': {
+      const def = entidadDe(p.entidad);
+      if (!def.naturales.length) return { grupos: [] };
+      const cols = [...new Set([def.pk, def.etiqueta, ...def.naturales.flatMap((x) => x.campos)])];
+      const { data } = await supa.from(def.tabla).select(cols.join(', ')).limit(2000);
+      const grupos: { porque: string; clave: string; filas: { id: unknown; etiqueta: string }[] }[] = [];
+      for (const nat of def.naturales) {
+        const mapa = new Map<string, { id: unknown; etiqueta: string }[]>();
+        for (const fila of (data || []) as Record<string, unknown>[]) {
+          const partes = nat.campos.map((c) => normaClave(fila[c], nat.norma));
+          if (partes.some((k) => !k)) continue;
+          const clave = partes.join('|');
+          const lista = mapa.get(clave) || [];
+          lista.push({ id: fila[def.pk], etiqueta: String(fila[def.etiqueta] ?? fila[def.pk]) });
+          mapa.set(clave, lista);
+        }
+        for (const [clave, filas] of mapa) {
+          if (filas.length > 1) grupos.push({ porque: nat.campos.join(' + '), clave, filas });
+        }
+      }
+      return { grupos };
+    }
+    case 'admin_bitacora': {
+      const pagina = Math.max(1, Math.round(n(p.pagina)) || 1);
+      const porPagina = 40;
+      const desde = (pagina - 1) * porPagina;
+      let q = supa.from('auditoria_admin')
+        .select('id, fecha, ip, accion, entidad, fila_id, antes, despues', { count: 'exact' });
+      const ent = s(p.entidad, 40);
+      if (ent) q = q.eq('entidad', ent);
+      const { data, count, error } = await q
+        .order('fecha', { ascending: false }).range(desde, desde + porPagina - 1);
+      if (error) throw error;
+      return { cambios: data || [], total: count || 0, pagina };
+    }
+    case 'admin_datos_deshacer': {
+      const { data: reg } = await supa.from('auditoria_admin')
+        .select('id, accion, entidad, fila_id, antes')
+        .eq('id', Math.round(n(p.auditoriaId))).maybeSingle();
+      if (!reg) throw new Error('No se encontró ese cambio en la bitácora');
+      if (reg.accion !== 'editar') throw new Error('Solo se puede deshacer una edición');
+      const def = entidadDe(reg.entidad);
+      const antes = (reg.antes || {}) as Record<string, unknown>;
+      // Se re-aplica por el MISMO camino con lista blanca: deshacer no puede escribir
+      // una columna que una edición normal no podría tocar.
+      const soloEditables: Record<string, unknown> = {};
+      for (const col of def.editables) {
+        if (Object.prototype.hasOwnProperty.call(antes, col.id)) soloEditables[col.id] = antes[col.id];
+      }
+      const datos = await camposValidados(def, soloEditables, true);
+      const actual = await filaPorId(def, reg.fila_id);
+      if (!actual) throw new Error('Ese registro ya no existe');
+      const { data, error } = await supa.from(def.tabla)
+        .update(datos).eq(def.pk, idDe(def, reg.fila_id)).select(def.lectura.join(', ')).single();
+      if (error) throw new Error(mensajeDePostgres(error));
+      await auditar(req, 'deshacer', String(reg.entidad), reg.fila_id, actual, data);
+      return { fila: data };
+    }
+    case 'admin_datos_borrar': {
+      const def = entidadDe(p.entidad);
+      const antes = await filaPorId(def, p.id);
+      if (!antes) throw new Error('No se encontró ese registro');
+      // Confirmación POR ESCRITO: hay que teclear la etiqueta de la fila. Un «¿seguro?»
+      // se acepta sin leerlo; escribir el nombre obliga a mirar qué se está borrando.
+      const esperado = normaClave(antes[def.etiqueta], 'texto');
+      if (!esperado || normaClave(p.confirmar, 'texto') !== esperado) {
+        throw new Error('Escribe el nombre del registro para confirmar el borrado');
+      }
+      // Se calculan ANTES de borrar: después de la cascada ya no hay a quién contar.
+      const dependientes = await dependientesDe(def, p.id);
+      const { error } = await supa.from(def.tabla).delete().eq(def.pk, idDe(def, p.id));
+      if (error) throw new Error(mensajeDePostgres(error));
+      // La bitácora guarda la fila ENTERA y lo que se llevó por delante: es lo único
+      // que queda de un borrado físico.
+      await auditar(req, 'borrar', s(p.entidad, 40), p.id, { fila: antes, dependientes }, null);
+      return { borrado: true, dependientes };
     }
     case 'admin_crear_presupuesto': {
       // Cotización de un insumo necesitado en una tienda concreta. Puede haber
