@@ -190,25 +190,35 @@ Cada una debe fallar antes del arreglo y pasar después:
 3. Editar una entidad fuera del registro (`config`) → rechazado.
 4. Crear un voluntario con un correo que ya existe → responde con el duplicado.
 5. Borrar un lugar con insumos → avisa cuántos arrastra, y al confirmar los borra.
-6. Archivar una factura → desaparece de la lista pública y del seguimiento por token.
-7. Restaurar esa factura → vuelve a verse.
-8. Toda mutación deja fila en `auditoria_admin` con `antes` y `despues`.
-9. Deshacer una edición → la fila vuelve a su valor anterior.
+6. Toda mutación deja fila en `auditoria_admin` con `antes` y `despues`.
+7. Deshacer una edición → la fila vuelve a su valor anterior.
+8. *(Plan 2)* Archivar una factura → desaparece de la lista pública y del seguimiento.
+9. *(Plan 2)* Restaurar esa factura → vuelve a verse.
 
 ## Alcance y orden
 
 El trabajo se parte en **dos planes**, cada uno desplegable y verificable por sí mismo:
 
-**Plan 1 (ahora) — cimientos + Grupo A.** Migración, registro y acciones genéricas,
-bitácora, papelera, detector de duplicados, fontanería compartida y las **8 pantallas de
-registros**: centros, insumos, voluntarios, rescatistas, transportistas, accesos de
-centro, vacantes y personas. Es exactamente lo que Luis nombró («transportistas,
-voluntarios, centros de acopio… revisar todos los usuarios registrados») y funciona solo.
+**Plan 1 (ahora) — cimientos + Grupo A.** Tabla de bitácora, registro con lista blanca,
+acciones genéricas de lectura, escritura y **borrado físico**, detector de duplicados,
+deshacer, fontanería compartida y las **8 pantallas de registros**: centros, insumos,
+voluntarios, rescatistas, transportistas, accesos de centro, vacantes y personas. Es
+exactamente lo que Luis nombró («transportistas, voluntarios, centros de acopio… revisar
+todos los usuarios registrados») y funciona solo.
 
-**Plan 2 (después) — Grupo B.** Las 11 pantallas de trazabilidad, evidencia y PII
+**Plan 2 (después) — Grupo B + archivado.** La columna `archivado_at`, el filtrado de las
+**8 vistas públicas** y del RPC `seguimiento_factura`, las acciones de archivar,
+restaurar y purgar, la papelera, y las 11 pantallas de trazabilidad, evidencia y PII
 (facturas, donaciones, movimientos, evidencias, viajes, trayectos, donaciones de
-motorizados, historial, denuncias, familias y entregas), más la fusión de lugares. No
-inventa arquitectura: reusa el registro, la bitácora y la papelera del Plan 1.
+motorizados, historial, denuncias, familias y entregas), más la fusión de lugares. Reusa
+el registro, la validación, los duplicados y la bitácora del Plan 1 sin inventar
+arquitectura nueva.
+
+> **Por qué el archivado va en el Plan 2 y no en el 1:** archivar solo tiene sentido para
+> el Grupo B, y hacerlo bien obliga a tocar las vistas públicas y el seguimiento por
+> token — es decir, la trazabilidad del donante. Las 8 pantallas del Plan 1 borran de
+> verdad y no rozan nada público, así que el Plan 1 no toca ninguna vista. El riesgo
+> queda concentrado en el plan que realmente lo necesita.
 
 ## Fuera de alcance
 
