@@ -2320,3 +2320,10 @@
     .den-mini-map { height: 140px; border-radius: 12px; overflow: hidden; }
     .den-estado-acciones { display: flex; flex-wrap: wrap; gap: 6px; }
     .den-admin-list { display: flex; flex-direction: column; gap: 14px; }
+
+    /* Consola de datos del admin */
+    .datos-barra { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .datos-barra .field { flex: 1 1 220px; margin: 0; }
+    .datos-pag { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+    .datos-fotos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+    .datos-fotos h4 { margin: 0; flex-basis: 100%; font-size: .95rem; }

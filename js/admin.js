@@ -118,6 +118,22 @@
           ${g.count != null ? `<span class="badge gray">${e(String(g.count))}</span>` : ''}
           <span class="admin-launch-go" aria-hidden="true">→</span>
         </button>`).join('');
+      // Grupo «Datos»: una fila por pantalla registrada en DV_DATOS_PANELES
+      // (js/admin-datos.js + las pantallas a medida) y la bitácora al final.
+      const datosRows = Object.keys(DV_DATOS_PANELES).map((id) => {
+        const d = DV_DATOS_PANELES[id];
+        return `
+        <button class="admin-manage-row" type="button" data-admin-datos="${e(id)}">
+          <span class="admin-manage-icon" aria-hidden="true">${d.icono}</span>
+          <span class="admin-manage-title">${e(d.titulo())}</span>
+          <span class="admin-launch-go" aria-hidden="true">→</span>
+        </button>`;
+      }).join('') + `
+        <button class="admin-manage-row" type="button" data-admin-datos="__bitacora">
+          <span class="admin-manage-icon" aria-hidden="true">🕘</span>
+          <span class="admin-manage-title">${e(t('datos.logTitle'))}</span>
+          <span class="admin-launch-go" aria-hidden="true">→</span>
+        </button>`;
       const atrasos = adminData.atrasos || [];
       const alertaHtml = atrasos.length ? `
         <section class="admin-alert">
@@ -166,9 +182,20 @@
         <section class="admin-group">
           <h3 class="admin-group-title">${e(t('admin.groupManage'))}</h3>
           <div class="admin-manage-list">${gestionRows}</div>
+        </section>
+        <section class="admin-group">
+          <h3 class="admin-group-title">${e(t('datos.groupTitle'))}</h3>
+          <p class="meta">${e(t('datos.groupIntro'))}</p>
+          <div class="admin-manage-list">${datosRows}</div>
         </section>`;
       $$('#admin-console [data-admin-tarea]').forEach((b) => b.addEventListener('click', () => abrirAsistente(b.dataset.adminTarea)));
       $$('#admin-console [data-admin-gestion]').forEach((b) => b.addEventListener('click', () => abrirGestion(b.dataset.adminGestion)));
+      $$('#admin-console [data-admin-datos]').forEach((b) => b.addEventListener('click', () => {
+        const id = b.dataset.adminDatos;
+        if (id === '__bitacora') { dvPanelBitacora(''); return; }
+        const panel = DV_DATOS_PANELES[id];
+        if (panel) panel.abrir();
+      }));
       $$('#admin-console [data-compra-token]').forEach((b) => b.addEventListener('click', () => panelCompra(b.dataset.compraToken)));
       $$('#admin-console [data-viaje-resolver]').forEach((b) => b.addEventListener('click', async () => {
         b.disabled = true;
