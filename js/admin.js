@@ -1103,6 +1103,12 @@
           </div>
 
           <div class="of-bloque">
+            <h4 class="of-sub"><label for="of-zona">${e(t('offer.zoneLabel'))}</label></h4>
+            <input id="of-zona" class="of-ref-input" maxlength="80" placeholder="${e(t('offer.zonePh'))}" />
+            <p class="meta">${e(t('offer.zoneHelp'))}</p>
+          </div>
+
+          <div class="of-bloque">
             <h4 class="of-sub">${e(t('offer.placePhotoTitle'))}</h4>
             <p class="meta">${e(t('offer.placePhotoCopy'))}</p>
             ${camaraHtml('of-lugar')}
@@ -1226,6 +1232,7 @@
             telefono: $('#of-telefono').value.trim(), nombreDonante: $('#of-nombre').value.trim(),
             fotoInsumo: fotos[0], fotosInsumo: fotos, fotoCedula: cedula[0] || '',
             fotoLugar: fotoLugar[0] || '',
+            zona: (($('#of-zona') || {}).value || '').trim(),
             lat: coords.lat, lng: coords.lng, centro: centroDestino
           });
           camFotos.parar(); camCedula.parar(); camLugar.parar();
@@ -1496,7 +1503,11 @@
         if (r.tipo === 'voluntario') {
           return `<li><strong>${e(t('access.volunteerTitle'))}</strong> · ${e(r.nombre)} — <a href="#voluntarios">${e(t('access.goVolunteer'))}</a></li>`;
         }
-        return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="/panel-centro?token=${e(encodeURIComponent(r.token || ''))}">${e(t('access.goCenter'))}</a></li>`;
+        // V02: el token ya no viaja desde el servidor. Si este dispositivo lo tiene
+      // guardado, se prellena; si no, el centro lo escribe en el panel.
+      const tokLocal = (function () { try { return localStorage.getItem('dv-token-centro') || ''; } catch (err) { return ''; } })();
+      const hrefCentro = tokLocal ? `/panel-centro?token=${encodeURIComponent(tokLocal)}` : '/panel-centro';
+      return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="${e(hrefCentro)}">${e(t('access.goCenter'))}</a></li>`;
       }).join('');
       // El donante inicia sesión sin ningún rol: en vez de rechazarlo, se le
       // ofrecen los registros disponibles (problema 2).

@@ -92,10 +92,44 @@ function kmEntre(aLat: number, aLng: number, bLat: number, bLng: number): number
 // Viaje vigente de una factura = el último intento que aún no llegó al paso 3.
 async function viajeVigente(facturaId: number) {
   const { data } = await supa.from('viajes')
-    .select('id, paso1_lat, paso1_lng, paso2_lat, paso2_lng, km_tramo1')
+    .select('id, email, eta_minutos, paso1_ts, resuelto, paso1_lat, paso1_lng, paso2_lat, paso2_lng, km_tramo1')
     .eq('factura_id', facturaId).is('paso3_ts', null)
     .order('creado_at', { ascending: false }).limit(1);
   return data?.[0] ?? null;
+}
+
+// ===== La reserva del viaje ES el permiso del ciclo logístico (V01) =====
+// Un insumo solo lo mueve quien lo reservó. La reserva vive en la fila de `viajes`:
+// quién (email del JWT), cuándo empezó (paso1_ts) y hasta cuándo vale (eta + gracia).
+const GRACIA_RESERVA_MIN = 60;
+
+// Reserva viva = viaje sin cerrar, no resuelto por el admin y dentro de su plazo.
+// Fuera de plazo devuelve null → el trabajo queda libre para que lo tome otro.
+async function reservaViva(facturaId: number) {
+  const v = await viajeVigente(facturaId);
+  if (!v || v.resuelto) return null;
+  const inicio = v.paso1_ts ? new Date(String(v.paso1_ts)).getTime() : 0;
+  if (!inicio) return null;
+  const vence = inicio + ((Number(v.eta_minutos) || 0) + GRACIA_RESERVA_MIN) * 60_000;
+  return Date.now() < vence ? v : null;
+}
+
+// Exige sesión iniciada y devuelve la identidad VERIFICADA del JWT. El correo nunca
+// se toma del cuerpo de la petición: el cliente puede mentir, el JWT no.
+async function exigirSesion(p: Record<string, unknown>) {
+  const jwt = s(p.accessToken, 4000);
+  if (!jwt) throw new Error('Entra con tu cuenta para reservar este trabajo');
+  return await identidadSesion(jwt);
+}
+
+// Para avanzar un trabajo hay que ser el dueño de su reserva viva.
+async function exigirDuenoReserva(facturaId: number, email: string) {
+  const v = await reservaViva(facturaId);
+  if (!v) throw new Error('Tu reserva venció; vuelve a reservarla');
+  if (String(v.email || '').toLowerCase() !== email.toLowerCase()) {
+    throw new Error('Este trabajo está reservado por otra persona');
+  }
+  return v;
 }
 
 // Guarda una foto (data URL JPEG/PNG/WebP, máx ~1.8MB decodificada) en el bucket
@@ -345,6 +379,7 @@ function metaOferta(descripcion: string): Record<string, unknown> | null {
   try { const o = JSON.parse(descripcion); return o && o.k === 'oferta' ? o : null; } catch { return null; }
 }
 
+// Vista PRIVADA de una oferta: contacto completo. Solo para quien tiene su reserva.
 function ofertaUI(f: Record<string, unknown>) {
   const m = metaOferta(String(f.descripcion ?? ''));
   if (!m) return null;
@@ -352,7 +387,25 @@ function ofertaUI(f: Record<string, unknown>) {
     token: f.token_publico, estado: f.estado,
     insumo: m.insumo, cantidad: m.cantidad, unidad: m.unidad,
     ubicacion: m.ubicacion, telefono: m.telefono, nombreDonante: m.nombreDonante, centro: m.centro,
-    coords: m.coords ?? null,
+    zona: m.zona || '', coords: m.coords ?? null,
+  };
+}
+
+// V03 — Vista PÚBLICA de una oferta: ni nombre, ni teléfono, ni dirección exacta.
+// Solo la zona y unas coordenadas redondeadas a ~1 km, que bastan para calcular
+// «cuánto me queda de camino» y no sirven para localizar la casa de nadie.
+function ofertaPublicaUI(f: Record<string, unknown>) {
+  const m = metaOferta(String(f.descripcion ?? ''));
+  if (!m) return null;
+  const c = m.coords as { lat?: number; lng?: number } | null;
+  const aprox = (c && Number.isFinite(Number(c.lat)) && Number.isFinite(Number(c.lng)))
+    ? { lat: Math.round(Number(c.lat) * 100) / 100, lng: Math.round(Number(c.lng) * 100) / 100 }
+    : null;
+  return {
+    token: f.token_publico, estado: f.estado,
+    insumo: m.insumo, cantidad: m.cantidad, unidad: m.unidad,
+    zona: m.zona || '', centro: m.centro,
+    coordsAprox: aprox,
   };
 }
 
@@ -441,7 +494,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
   const esAdmin = accion.startsWith('admin_');
   // Las lecturas públicas no gastan el cupo de escrituras (30/h): navegar los
   // presupuestos o la lista de recogidas no debe bloquear el poder donar.
-  const esLectura = ['listar_presupuestos', 'listar_comprados', 'listar_ofertas', 'acceso_perfil', 'denuncias_listar'].includes(accion);
+  const esLectura = ['listar_presupuestos', 'listar_comprados', 'listar_ofertas', 'acceso_perfil', 'denuncias_listar', 'reserva_detalle'].includes(accion);
   // Una denuncia manda ~18 parciales (cada 5 s durante 90 s) + el cierre: cubo
   // propio y generoso para no chocar con el límite público de 30/h.
   const esDenuncia = accion === 'denuncia_crear' || accion === 'denuncia_parcial';
@@ -688,15 +741,17 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       // Paso 1 del ciclo: el transportista declara que va en camino. Se guardan
       // GPS y hora de salida + el tiempo estimado de llegada. Sin GPS válido no
       // se inicia: ese punto es el origen de los km y de la vigilancia (plan 07).
-      const nombre = s(p.nombreTransportista, 120);
-      if (!nombre) throw new Error('nombre del transportista requerido');
+      // V01: reservar exige sesión. El nombre sale de la identidad, no del cliente.
+      const ident = await exigirSesion(p);
+      const nombre = ident.nombre || s(p.nombreTransportista, 120) || ident.email;
       const eta = Math.round(n(p.etaMinutos));
       if (eta < 5 || eta > 480) throw new Error('Tiempo estimado inválido (5 a 480 minutos)');
       const gps = geoValida((p.gps ?? {}) as Record<string, unknown>);
       if (gps.lat === null || gps.lng === null) throw new Error('Se necesita tu ubicación GPS para iniciar el viaje');
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
-        .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
+        .select('id, numero_factura, token_publico, objetivo, descripcion, estado, monto_requerido, monto_recaudado')
+        .eq('token_publico', token).maybeSingle();
       // Polimórfico: una compra (metaPresupuesto, estado Comprada) o una OFERTA
       // (metaOferta, estado Ofrecida). El «voy a recogerla» del plan 07 arranca el
       // mismo viaje para ambas; solo la oferta cambia de estado (Ofrecida->EnCamino).
@@ -709,21 +764,31 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       } else if (f.estado !== 'Ofrecida') {
         throw new Error('Esta donación ya está en camino o fue recogida');
       }
+      // Si ya hay una reserva viva de OTRA persona, este trabajo no está libre.
+      // Si es tuya, no se duplica la fila: sigues con la que ya tenías.
+      const reservaPrevia = await reservaViva(f.id);
+      if (reservaPrevia) {
+        if (String(reservaPrevia.email || '').toLowerCase() !== ident.email.toLowerCase()) {
+          throw new Error('Este trabajo ya lo reservó otra persona');
+        }
+        return { ok: true, yaReservado: true, viajeId: reservaPrevia.id, detalle: ofertaUI(f) || presupuestoUI(f) };
+      }
       const { error } = await supa.from('viajes').insert({
-        factura_id: f.id, transportista: nombre, email: s(p.email, 160) || null,
+        factura_id: f.id, transportista: nombre, email: ident.email,
         eta_minutos: eta, paso1_ts: new Date().toISOString(), paso1_lat: gps.lat, paso1_lng: gps.lng });
       if (error) throw error;
       await supa.from('movimientos_factura').insert({ factura_id: f.id, tipo: 'Viaje',
         descripcion: mov('viajeIniciado', { nombre, eta }), monto: 0 });
       if (mo) await supa.from('facturas').update({ estado: 'EnCamino' }).eq('id', f.id);
       await historial(String(m.centro), String(m.insumo), `Transportista ${nombre} va en camino a recoger el insumo (llega en ~${eta} min)`, 'publico');
-      return { ok: true, etaMinutos: eta };
+      // El que acaba de reservar ya puede ver el contacto (V03).
+      return { ok: true, etaMinutos: eta, detalle: ofertaUI(f) || presupuestoUI(f) };
     }
     case 'registrar_recogida': {
       // El transportista retira el insumo comprado en la tienda: fotos del
       // sitio y del insumo (bucket privado) + movimiento público con el relato.
-      const nombre = s(p.nombreTransportista, 120);
-      if (!nombre) throw new Error('nombre del transportista requerido');
+      const ident = await exigirSesion(p);
+      const nombre = ident.nombre || s(p.nombreTransportista, 120) || ident.email;
       if (!p.fotoSitio || !p.fotoInsumo) throw new Error('Faltan fotos: sitio de recogida e insumo son obligatorias');
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
@@ -731,6 +796,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const m = f && metaPresupuesto(String(f.descripcion));
       if (!f || !m) throw new Error('Presupuesto no encontrado');
       if (f.estado !== 'Comprada') throw new Error('Este insumo no está listo para recoger');
+      await exigirDuenoReserva(f.id, ident.email); // V01: solo el dueño de la reserva
       const carpeta = `ciclo/${f.numero_factura}`;
       const marca = crypto.randomUUID().slice(0, 8);
       const fotoSitio = await guardarFoto(p.fotoSitio, carpeta, `recogida-sitio-${marca}`);
@@ -777,6 +843,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       // recibe (todas por camara). GPS+hora cierran el paso 3 y el km_tramo2.
       const receptor = s(p.nombreReceptor, 120);
       if (!receptor) throw new Error('nombre de quien recibe requerido');
+      const ident = await exigirSesion(p); // V01: entregar exige sesión
       // fotoCentro es la nueva foto principal; fotoEntrega es el alias viejo (un
       // cliente cacheado sigue funcionando). fotoEncargado (quien recibe) es la
       // segunda foto que exige el .txt del ciclo.
@@ -795,6 +862,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       } else if (f.estado !== 'Recogida') {
         throw new Error('Esta donación no está lista para entregar');
       }
+      await exigirDuenoReserva(f.id, ident.email); // V01: solo el dueño de la reserva
       const carpeta = `ciclo/${f.numero_factura}`;
       const marca = crypto.randomUUID().slice(0, 8);
       const foto = await guardarFoto(fotoCentro, carpeta, `entrega-centro-${marca}`);
@@ -851,6 +919,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const lat = Number(p.lat), lng = Number(p.lng);
       const coordsOk = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
       const centro = s(p.centro, 120); // destino sugerido (opcional)
+      const zona = s(p.zona, 80); // municipio o sector: contexto público sin señalar la casa
       if (!insumo) throw new Error('insumo requerido');
       if (cantidad <= 0 || cantidad > 1_000_000) throw new Error('cantidad inválida');
       if (!ubicacion) throw new Error('nombre de referencia del sitio requerido');
@@ -874,7 +943,7 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       const { data: fila, error } = await supa.from('facturas').insert({
         numero_factura: numero, token_publico: token,
         objetivo: s(`Oferta: ${insumo} (${ubicacion})`, 200),
-        descripcion: JSON.stringify({ k: 'oferta', insumo, cantidad, unidad, ubicacion, telefono, nombreDonante,
+        descripcion: JSON.stringify({ k: 'oferta', insumo, cantidad, unidad, ubicacion, telefono, nombreDonante, zona,
           fotoInsumo: rutas[0], fotos: rutas, fotoCedula: rutaCedula, fotoLugar: rutaLugar,
           coords: coordsOk ? { lat, lng } : null, centro }),
         monto_requerido: cantidad, estado: 'Ofrecida' }).select('id').single();
@@ -890,20 +959,34 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
         .like('descripcion', '{"k":"oferta"%')
         .in('estado', ['Ofrecida', 'EnCamino'])
         .order('fecha_creacion').limit(100);
-      return { ofertas: (data || []).map(ofertaUI).filter(Boolean) };
+      return { ofertas: (data || []).map(ofertaPublicaUI).filter(Boolean) };
+    }
+    // V03: el contacto del donante solo lo ve quien tiene la reserva viva del trabajo.
+    case 'reserva_detalle': {
+      const ident = await exigirSesion(p);
+      const token = s(p.token, 24).toUpperCase();
+      const { data: f } = await supa.from('facturas')
+        .select('id, token_publico, objetivo, descripcion, estado, monto_requerido, monto_recaudado')
+        .eq('token_publico', token).maybeSingle();
+      if (!f) throw new Error('Trabajo no encontrado');
+      await exigirDuenoReserva(f.id, ident.email);
+      const detalle = ofertaUI(f) || presupuestoUI(f);
+      if (!detalle) throw new Error('Trabajo no encontrado');
+      return { detalle };
     }
     case 'recoger_oferta': {
       // Paso 2 del ciclo de la oferta: el transportista YA recogió la donación en
       // casa del donante. NO cierra la factura (fecha_cierre) — todavía falta la
       // entrega en el centro (paso 3). Cierra el tramo 1 del viaje (GPS + km).
-      const nombre = s(p.nombreTransportista, 120);
-      if (!nombre) throw new Error('nombre del transportista requerido');
+      const ident = await exigirSesion(p);
+      const nombre = ident.nombre || s(p.nombreTransportista, 120) || ident.email;
       const token = s(p.token, 24).toUpperCase();
       const { data: f } = await supa.from('facturas')
         .select('id, numero_factura, descripcion, estado').eq('token_publico', token).maybeSingle();
       const m = f && metaOferta(String(f.descripcion));
       if (!f || !m) throw new Error('Oferta no encontrada');
       if (f.estado !== 'EnCamino' && f.estado !== 'Ofrecida') throw new Error('Esta donación ya fue recogida');
+      await exigirDuenoReserva(f.id, ident.email); // V01: solo el dueño de la reserva
       const centroDestino = s(p.centroDestino, 120) || String(m.centro || '');
       if (!centroDestino) throw new Error('centro de destino requerido');
       // Fotos del paso 2 (opcionales para no romper clientes viejos): sitio, insumo
@@ -941,9 +1024,8 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
     // ===== Acceso por correo (OTP de Supabase Auth) =====
     // El frontend pide el código con /auth/v1/otp y lo canjea con /auth/v1/verify;
     // aquí llega el access_token resultante. Se valida contra Auth y se devuelven
-    // los roles registrados con ese correo. El token del panel del centro solo se
-    // entrega a quien demostró (vía OTP) controlar el correo del registro; el PIN
-    // sigue siendo obligatorio para actuar.
+    // los roles registrados con ese correo. El token del panel del centro NO se
+    // entrega nunca (V02): el centro entra siempre con token + PIN.
     case 'acceso_perfil': {
       const jwt = s(p.accessToken, 4000);
       if (!jwt) throw new Error('sesión requerida');
@@ -955,9 +1037,11 @@ async function handle(accion: string, p: Record<string, unknown>, req: Request) 
       for (const m of mots || []) roles.push({ tipo: 'transportista', nombre: m.nombre });
       const { data: vols } = await supa.from('voluntarios').select('nombre, apellido').eq('email', email);
       for (const v of vols || []) roles.push({ tipo: 'voluntario', nombre: `${v.nombre} ${v.apellido || ''}`.trim() });
-      const { data: pans } = await supa.from('centros_panel').select('token_centro, lugares(nombre)').eq('email', email);
+      // V02: NO se devuelve token_centro. Tener un correo que coincide no puede
+      // entregar la credencial del panel; el centro sigue entrando con token + PIN.
+      const { data: pans } = await supa.from('centros_panel').select('lugares(nombre)').eq('email', email);
       for (const c of pans || []) {
-        roles.push({ tipo: 'centro', nombre: (c as { lugares?: { nombre?: string } }).lugares?.nombre || 'Centro', token: c.token_centro });
+        roles.push({ tipo: 'centro', nombre: (c as { lugares?: { nombre?: string } }).lugares?.nombre || 'Centro' });
       }
       return { email, roles };
     }

@@ -41,6 +41,9 @@
         try {
           const data = await window.SheetsService.post({ accion: 'panel_ver', token, pin });
           credencialesPanel = { token, pin };
+          // El token queda en ESTE dispositivo para que el centro no lo reescriba cada
+          // vez. El servidor ya no lo entrega por correo (V02); esta copia es local.
+          try { localStorage.setItem('dv-token-centro', token); } catch (err) { /* modo privado */ }
           $('#panel-auth-form').hidden = true;
           renderPanelCentro(data);
         } catch (err) {

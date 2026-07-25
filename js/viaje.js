@@ -56,18 +56,24 @@
       const foto = fotoSimulada();
       const sesion = (typeof sesionActual === 'function' && sesionActual()) || {};
       const nombre = sesion.nombre || 'SIM';
+      // La simulación recorre las acciones REALES, que ahora exigen sesión (V01).
+      if (!sesion.access_token) { toast(t('trip.loginRequired')); return; }
+      const jwt = sesion.access_token;
       try {
-        await window.SheetsService.post({ accion: 'viaje_iniciar', token: pr.token,
+        await window.SheetsService.post({ accion: 'viaje_iniciar', token: pr.token, accessToken: jwt,
           nombreTransportista: nombre, etaMinutos: 60, gps: gps(0), email: sesion.email || '' });
         await cargarTodo(); abrirViaje(pr, { etapa: 1 }); await espera(5000);
         const p2 = pr.esOferta
-          ? { accion: 'recoger_oferta', token: pr.token, nombreTransportista: nombre, centroDestino: pr.centro || '',
+          ? { accion: 'recoger_oferta', token: pr.token, nombreTransportista: nombre, accessToken: jwt,
+              centroDestino: pr.centro || '',
               fotoSitio: foto, fotoInsumo: foto, fotoPersona: foto, gps: gps(0.5) }
-          : { accion: 'registrar_recogida', token: pr.token, nombreTransportista: nombre, notas: 'sim',
+          : { accion: 'registrar_recogida', token: pr.token, nombreTransportista: nombre, accessToken: jwt,
+              notas: 'sim',
               fotoSitio: foto, fotoInsumo: foto, fotoPersona: foto, gps: gps(0.5) };
         const r2 = await window.SheetsService.post(p2);
         await cargarTodo(); abrirViaje(pr, { etapa: 2, km: r2 && r2.km }); await espera(5000);
         const r3 = await window.SheetsService.post({ accion: 'registrar_entrega_final', token: pr.token,
+          accessToken: jwt,
           nombreReceptor: 'SIM', cargoReceptor: 'sim', fotoCentro: foto, fotoEncargado: foto, gps: gps(1) });
         await cargarTodo(); abrirViaje(pr, { etapa: 3, km: r3 && r3.km });
       } catch (err) {
@@ -82,6 +88,12 @@
       const etapa = op.etapa != null ? op.etapa : (pr.estado === 'Comprada' ? 0 : 1);
       const destino = destinoDelCentro(pr.centro);
       const sesion = (typeof sesionActual === 'function' && sesionActual()) || null;
+      // Sin sesión: al entrar, dv-retorno lo devuelve a la LISTA de donde vino
+      // (no a #viaje, que no se repinta solo y mostraría la puerta ya logueado).
+      if (!sesion) {
+        const volverA = /^#(viaje)?$/i.test(window.location.hash) ? '#transporte' : window.location.hash;
+        try { sessionStorage.setItem('dv-retorno', volverA); } catch (err) { /* modo privado */ }
+      }
 
       cambiarVista('viaje');
       if (!/^#viaje$/i.test(window.location.hash)) window.location.hash = '#viaje';
@@ -102,16 +114,18 @@
           <input id="viaje-eta-otro" class="of-ref-input" type="number" min="5" max="480" step="5"
                  placeholder="${e(t('trip.etaMinutesPh'))}" hidden />
         </div>
-        ${nombreSesion
-          ? `<p class="meta"><strong>${e(t('cycle.driverName'))}:</strong> ${e(nombreSesion)}</p>
-             <input id="viaje-nombre" type="hidden" value="${e(nombreSesion)}" />`
+        ${sesion
+          ? `<p class="meta"><strong>${e(t('cycle.driverName'))}:</strong> ${e(nombreSesion || sesion.email || '')}</p>
+             <input id="viaje-nombre" type="hidden" value="${e(nombreSesion || sesion.email || '')}" />
+             <div class="form-actions">
+               <button class="btn btn-primary" type="button" id="viaje-iniciar">${e(t('trip.startCta'))}</button>
+             </div>`
+          // V01: reservar exige sesión. Sin ella no hay campo de nombre libre:
+          // hay una puerta de acceso, y dv-retorno trae al usuario de vuelta aquí.
           : `<div class="field full">
-               <label for="viaje-nombre">${e(t('cycle.driverName'))}</label>
-               <input id="viaje-nombre" required autocomplete="name" value="" />
-             </div>`}
-        <div class="form-actions">
-          <button class="btn btn-primary" type="button" id="viaje-iniciar">${e(t('trip.startCta'))}</button>
-        </div>`;
+               <p class="form-message visible info">${e(t('trip.loginRequired'))}</p>
+               <a class="btn btn-primary" id="viaje-entrar" href="#acceso">${e(t('trip.loginCta'))}</a>
+             </div>`}`;
       } else if (etapa === 1) {
         // Paso 2 «Ya tengo el insumo»: asistente 1-a-1 con TRES cámaras (sitio,
         // insumo, y la persona que entrega). Sin ventana flotante: vive aquí.
@@ -243,9 +257,11 @@
             // Oferta → recoger_oferta (paso 2 que no cierra); compra → registrar_recogida.
             const payload = pr.esOferta
               ? { accion: 'recoger_oferta', token: pr.token, nombreTransportista: nombre,
+                  accessToken: (sesion && sesion.access_token) || '',
                   centroDestino: pr.centro || '', fotoSitio: fotoSitio[0], fotoInsumo: fotoInsumo[0],
                   fotoPersona: fotoPersona[0], gps: { lat: pos.coords.latitude, lng: pos.coords.longitude } }
               : { accion: 'registrar_recogida', token: pr.token, nombreTransportista: nombre,
+                  accessToken: (sesion && sesion.access_token) || '',
                   notas: $('#rec-notas').value.trim(), fotoSitio: fotoSitio[0], fotoInsumo: fotoInsumo[0],
                   fotoPersona: fotoPersona[0], gps: { lat: pos.coords.latitude, lng: pos.coords.longitude } };
             const data = await window.SheetsService.post(payload);
@@ -295,6 +311,7 @@
           try {
             const data = await window.SheetsService.post({
               accion: 'registrar_entrega_final', token: pr.token,
+              accessToken: (sesion && sesion.access_token) || '',
               nombreReceptor: receptor, cargoReceptor: $('#ent-cargo').value.trim(),
               fotoCentro: fotoCentro[0], fotoEncargado: fotoEncargado[0],
               gps: { lat: pos.coords.latitude, lng: pos.coords.longitude }
@@ -325,7 +342,11 @@
       }));
       marcar(chips[1]); // 1 h por defecto
 
-      $('#viaje-iniciar').addEventListener('click', async () => {
+      // Sin sesión no se pinta el botón de reservar (V01): en su lugar hay la
+      // puerta de acceso, así que aquí no hay nada que enganchar.
+      const botonIniciar = $('#viaje-iniciar');
+      if (!botonIniciar) return;
+      botonIniciar.addEventListener('click', async () => {
         const nombre = $('#viaje-nombre').value.trim();
         if (!nombre) { mostrarMensaje('#viaje-message', 'error', t('trip.nameRequired')); return; }
         let eta = etaMinutos;
@@ -355,6 +376,7 @@
             accion: 'viaje_iniciar', token: pr.token,
             nombreTransportista: nombre, etaMinutos: eta,
             gps: { lat: lat, lng: lng },
+            accessToken: (sesion && sesion.access_token) || '',
             email: (sesion && sesion.email) || ''
           });
           toast(t('trip.started', { eta: eta }));

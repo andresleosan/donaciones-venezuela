@@ -1366,7 +1366,7 @@
     "thanksTitle": "¡Gracias! Tu donación quedó publicada",
     "thanksCopy": "Un transportista la verá con tu ubicación y te contactará para recogerla. Guarda este código para seguirla.",
     "listTitle": "Donaciones ofrecidas, localizadas para recoger",
-    "listCopy": "Personas que ya tienen el insumo y esperan que lo recojas: cantidad, ubicación y teléfono para coordinar. Llévalo a un centro que lo necesite.",
+    "listCopy": "Personas que ya tienen el insumo y esperan que lo recojas: cantidad y zona. Al reservar la recogida verás su contacto y la dirección exacta. Llévalo a un centro que lo necesite.",
     "empty": "No hay donaciones ofrecidas esperando recogida.",
     "badge": "Lista para recoger",
     "whereLabel": "Recoger en:",
@@ -1417,7 +1417,12 @@
     "centerLabel": "Centro de destino",
     "centerHelp": "¿A qué centro llevará la donación el transportista?",
     "centerPlaceholder": "Elige un centro…",
-    "centerRequired": "Elige el centro de destino."
+    "centerRequired": "Elige el centro de destino.",
+    "zoneLabel": "Municipio o sector (opcional)",
+    "zonePh": "Chacao, El Hatillo, Petare…",
+    "zoneHelp": "Ayuda al transportista a saber si le queda de camino. Tu dirección exacta y tu teléfono solo los ve quien reserve la recogida.",
+    "zoneUnknown": "Zona no indicada",
+    "contactOnReserve": "El contacto y la dirección exacta aparecen al reservar la recogida."
   },
   "vacancies": {
     "title": "Voluntarios que se necesitan",
@@ -1497,7 +1502,10 @@
     "kmSoFar": "Llevas {km} km recorridos.",
     "kmTotal": "Recorrido total: {km} km.",
     "simulate": "Simular viaje",
-    "simulating": "Simulando…"
+    "simulating": "Simulando…",
+    "loginRequired": "Entra con tu cuenta para reservar este trabajo",
+    "loginCta": "Entrar y reservar",
+    "takenByOther": "Este trabajo ya lo reservó otra persona"
   },
   "report": {
     "needSession": "Inicia sesión para hacer una denuncia.",

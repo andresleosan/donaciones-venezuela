@@ -569,7 +569,11 @@
     function filaRolSesion(r) {
       if (r.tipo === 'transportista') return `<li><strong>${e(t('access.driverTitle'))}</strong> · ${e(r.nombre)} — <a href="#transporte">${e(t('access.goDriver'))}</a></li>`;
       if (r.tipo === 'voluntario') return `<li><strong>${e(t('access.volunteerTitle'))}</strong> · ${e(r.nombre)} — <a href="#voluntarios">${e(t('access.goVolunteer'))}</a></li>`;
-      return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="/panel-centro?token=${e(encodeURIComponent(r.token || ''))}">${e(t('access.goCenter'))}</a></li>`;
+      // V02: el token ya no viaja desde el servidor. Si este dispositivo lo tiene
+      // guardado, se prellena; si no, el centro lo escribe en el panel.
+      const tokLocal = (function () { try { return localStorage.getItem('dv-token-centro') || ''; } catch (err) { return ''; } })();
+      const hrefCentro = tokLocal ? `/panel-centro?token=${encodeURIComponent(tokLocal)}` : '/panel-centro';
+      return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="${e(hrefCentro)}">${e(t('access.goCenter'))}</a></li>`;
     }
     function abrirMenuSesion() {
       const s = sesionActual();

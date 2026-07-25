@@ -1366,7 +1366,7 @@
     "thanksTitle": "Thank you! Your donation is published",
     "thanksCopy": "A driver will see it with your location and contact you to pick it up. Save this code to track it.",
     "listTitle": "Offered donations, located and ready for pickup",
-    "listCopy": "People who already have the supply and are waiting for you to pick it up: quantity, location and phone to coordinate. Take it to a center that needs it.",
+    "listCopy": "People who already have the supply and are waiting for you to pick it up: quantity and area. When you reserve the pickup you'll see their contact and exact address. Take it to a center that needs it.",
     "empty": "No offered donations awaiting pickup.",
     "badge": "Ready for pickup",
     "whereLabel": "Pick up at:",
@@ -1417,7 +1417,12 @@
     "centerLabel": "Destination center",
     "centerHelp": "Which center will the driver take the donation to?",
     "centerPlaceholder": "Choose a center…",
-    "centerRequired": "Choose the destination center."
+    "centerRequired": "Choose the destination center.",
+    "zoneLabel": "Municipality or area (optional)",
+    "zonePh": "Chacao, El Hatillo, Petare…",
+    "zoneHelp": "Helps the driver know if it is on their way. Your exact address and phone are only shown to whoever reserves the pickup.",
+    "zoneUnknown": "Area not given",
+    "contactOnReserve": "The contact and exact address appear once you reserve the pickup."
   },
   "vacancies": {
     "title": "Volunteers needed",
@@ -1497,7 +1502,10 @@
     "kmSoFar": "You have traveled {km} km so far.",
     "kmTotal": "Total distance: {km} km.",
     "simulate": "Simulate trip",
-    "simulating": "Simulating…"
+    "simulating": "Simulating…",
+    "loginRequired": "Sign in to reserve this job",
+    "loginCta": "Sign in and reserve",
+    "takenByOther": "Someone else already reserved this job"
   },
   "report": {
     "needSession": "Sign in to file a report.",

@@ -607,16 +607,15 @@
             <span class="centro-resumen">
               <span class="badge-row">${of.estado === 'EnCamino' ? `<span class="badge yellow">${e(tValue('invoiceState', 'EnCamino'))}</span>` : `<span class="badge green">${e(t('offer.badge'))}</span>`}<span class="badge gray">${e(numero(of.cantidad))} ${e(mostrarUnidad(of.unidad))}</span></span>
               <span class="centro-nombre">${e(mostrarInsumo(of.insumo))}</span>
-              <span class="meta">${e(of.ubicacion)}</span>
+              <span class="meta">${e(of.zona || t('offer.zoneUnknown'))}</span>
             </span>
             <svg class="centro-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div class="centro-more" hidden>
-            ${of.nombreDonante ? `<p class="meta"><strong>${e(t('offer.contactNameLabel'))}</strong> ${e(of.nombreDonante)}</p>` : ''}
-            <p class="meta"><strong>${e(t('offer.whereLabel'))}</strong> ${e(of.ubicacion)}</p>
+            <p class="meta"><strong>${e(t('offer.whereLabel'))}</strong> ${e(of.zona || t('offer.zoneUnknown'))}</p>
             ${of.centro ? `<p class="meta"><strong>${e(t('offer.suggestedCenter'))}</strong> ${e(of.centro)}</p>` : ''}
+            <p class="meta">${e(t('offer.contactOnReserve'))}</p>
             <div class="card-actions">
-              ${soloDigitos(of.telefono) ? `<a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${waHref(of.telefono)}">${e(t('common.whatsapp'))}</a>` : ''}
               <button class="btn btn-primary btn-small" type="button" data-recoger-oferta="${e(of.token)}">${e(of.estado === 'EnCamino' ? t('offer.continueCta') : t('offer.pickupCta'))}</button>
             </div>
           </div>
@@ -639,10 +638,12 @@
         window.location.hash = '#acceso';
         return;
       }
+      // V03: la lista pública ya no trae dirección exacta ni coords reales; solo la
+      // zona y un punto de ~1 km. El contacto completo llega al reservar (detalle).
       const pr = {
         token: of.token, estado: of.estado, insumo: of.insumo, centro: of.centro,
-        esOferta: true, recogidaCoords: of.coords || null,
-        ubicacion: of.ubicacion, tienda: of.ubicacion, direccion: ''
+        esOferta: true, recogidaCoords: of.coordsAprox || null,
+        ubicacion: of.zona || '', tienda: of.zona || '', direccion: ''
       };
       // Ofrecida → paso 1 (ETA); EnCamino (ya reclamada) → paso 2 (ya la tengo).
       window.abrirViaje(pr, { etapa: of.estado === 'EnCamino' ? 1 : 0 });
