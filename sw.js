@@ -1,6 +1,6 @@
 // Cascarón PWA y respaldo offline. Los datos privados no se almacenan aquí:
 // las lecturas públicas se guardan en IndexedDB desde services/api.js.
-const VERSION = '96';
+const VERSION = '97';
 const CACHE = 'ayuda-ve-v' + VERSION;
 const OFFLINE_URL = '/offline.html';
 // El sufijo sale de VERSION: antes estaba cableado (?v=60) mientras las páginas
@@ -24,7 +24,10 @@ const ESTATICOS = [
 ];
 
 function esRecursoFresco(url) {
-  return url.pathname.startsWith('/locales/') || url.pathname === '/manifest.json';
+  // entorno.js es configuración, no un estático: si se cacheara, un entorno de
+  // pruebas seguiría hablando con el backend anterior tras cambiarlo.
+  return url.pathname.startsWith('/locales/') || url.pathname === '/manifest.json'
+    || url.pathname === '/js/entorno.js';
 }
 
 self.addEventListener('install', (event) => {

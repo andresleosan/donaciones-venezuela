@@ -680,8 +680,11 @@
     }
 
     // ── CONFIGURACIÓN ─────────────────────────────────────────
-    const SUPABASE_URL = 'https://zryfwbjvlacorryzdaod.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_T7fK4bKb1f3o9b7z84IbxQ_1HMnEi56'; // clave pública (publishable), segura en el cliente
+    // `js/entorno.js` puede definir `window.DV_ENTORNO` para apuntar la app a
+    // otro backend. En producción ese archivo es un stub vacío y se usan los
+    // valores de abajo; el entorno de pruebas lo sirve sobrescrito.
+    const SUPABASE_URL = (window.DV_ENTORNO && window.DV_ENTORNO.supabaseUrl) || 'https://zryfwbjvlacorryzdaod.supabase.co';
+    const SUPABASE_KEY = (window.DV_ENTORNO && window.DV_ENTORNO.supabaseKey) || 'sb_publishable_T7fK4bKb1f3o9b7z84IbxQ_1HMnEi56'; // clave pública (publishable), segura en el cliente
 
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
