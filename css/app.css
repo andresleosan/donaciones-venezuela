@@ -28,7 +28,7 @@
       --surface-strong: #FDFEFF;
       --ink: #0A2540;
       --text: #3C4257;
-      --muted: #6B7C93;
+      --muted: #5F7087;
       --border: #E6EBF1;
       --border-strong: #C7D2E0;
       --radius: 8px;
@@ -110,7 +110,7 @@
       align-items: center;
       background: var(--ink);
       color: #fff;
-      padding: 0 14px;
+      padding: 0 16px;
       border-radius: var(--radius);
       text-decoration: none;
       font-weight: 800;
@@ -147,7 +147,7 @@
       min-height: var(--header-height);
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
     }
     /* Botón de sesión centrado en la barra (problema 2). Con nombre largo se
@@ -164,7 +164,7 @@
       min-width: 0;
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       color: var(--ink);
       text-decoration: none;
       font-weight: 850;
@@ -261,7 +261,7 @@
     main {
       width: min(1220px, calc(100% - 24px));
       margin: 0 auto;
-      padding: 18px 0 92px;
+      padding: 16px 0 92px;
     }
     .view { display: none; }
     .view.active { display: block; animation: viewIn 0.22s ease both; }
@@ -326,7 +326,7 @@
       gap: 8px;
       border: 1px solid transparent;
       border-radius: var(--radius);
-      padding: 0 15px;
+      padding: 0 16px;
       text-decoration: none;
       font-size: 0.94rem;
       font-weight: 820;
@@ -1264,7 +1264,7 @@
     }
     @media (max-width: 420px) {
       .language-control { min-width: 112px; }
-      .language-control select { font-size: 0.78rem; padding-right: 26px; }
+      .language-control select { font-size: 0.78rem; padding-right: 24px; }
       .section-actions .btn, .form-actions .btn, .card-actions .btn, .inline-actions .btn { flex: 1 1 100%; }
       h1 { font-size: clamp(2.2rem, 13vw, 3.2rem); }
     }
