@@ -99,7 +99,7 @@
         <div data-wiz-step class="field full" data-paso="fotos">
           <label>${e(t('registro.photosTitle'))}</label>
           <p class="field-help">${e(t('registro.photosHelp'))}</p>
-          <input id="fam-fotos-input" type="file" accept="image/*" multiple />
+          <input id="fam-fotos-input" type="file" accept="image/*" capture="environment" multiple />
           <div id="fam-fotos-grid" class="fam-fotos-grid"></div>
         </div>
 
@@ -152,6 +152,47 @@
       function famPintarFotos() {
         grid.innerHTML = fotos.map((src, i) => `<div class="fam-foto-thumb"><img src="${e(src)}" alt="" /><button class="fam-foto-x" type="button" data-foto="${i}" aria-label="${e(t('registro.photoRemove'))}">✕</button></div>`).join('');
       }
+
+      // Cambiar de idioma reconstruye este modal entero (core.js: cambiarIdioma →
+      // guardarEstadoModal / restaurarEstadoModal). Lo que no vive en un control
+      // con id —las fotos, el GPS y los integrantes añadidos— se salva por este
+      // gancho, igual que .of-cam salva las suyas con __camara. RQ-IDIOMA-4.
+      const dialogFam = $('#modal-root dialog');
+      if (dialogFam) dialogFam.__estadoExtra = {
+        guardar() {
+          return {
+            fotos: fotos.slice(),
+            coords: { lat: coords.lat, lng: coords.lng },
+            miembros: Array.from(cont.querySelectorAll('[data-fila]')).map((fila) => {
+              const datos = {};
+              Array.from(fila.querySelectorAll('[data-campo]')).forEach((c) => { datos[c.dataset.campo] = c.value; });
+              return datos;
+            })
+          };
+        },
+        restaurar(est) {
+          if (!est) return;
+          if (est.fotos && est.fotos.length) { fotos.push.apply(fotos, est.fotos); famPintarFotos(); }
+          if (est.coords && est.coords.lat != null) {
+            coords.lat = est.coords.lat;
+            coords.lng = est.coords.lng;
+            $('#fam-gps-txt').textContent = t('registro.gpsSet', { lat: coords.lat.toFixed(5), lng: coords.lng.toFixed(5) });
+          }
+          // Por POSICIÓN, no por id: al reconstruirse, filaSeq vuelve a 0 y los
+          // ids de las filas no tienen por qué coincidir con los de antes.
+          const filas = est.miembros || [];
+          if (!filas.length) return;
+          cont.innerHTML = '';
+          filaSeq = 0;
+          filas.forEach(() => cont.insertAdjacentHTML('beforeend', filaIntegrante()));
+          Array.from(cont.querySelectorAll('[data-fila]')).forEach((fila, i) => {
+            Object.keys(filas[i]).forEach((campo) => {
+              const c = fila.querySelector('[data-campo="' + campo + '"]');
+              if (c) c.value = filas[i][campo];
+            });
+          });
+        }
+      };
 
       // Resumen legible por paso (lo muestra la pantalla de "Confirmar").
       function famResumen(p) {

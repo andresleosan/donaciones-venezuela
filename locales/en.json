@@ -316,6 +316,7 @@
     "submit": "Find family",
     "searching": "Searching...",
     "errorMessage": "This search could not be completed.",
+    "searchUnavailable": "The persons registry could not be queried.",
     "notFound": "We did not find this person in the available records.",
     "idLabel": "ID:",
     "locationLabel": "Location:",
@@ -339,6 +340,7 @@
     "unverifiedBadge": "Unverified"
   },
   "tracking": {
+    "searchUnavailable": "The tracking registry could not be queried.",
     "title": "Donation tracking",
     "copy": "Look up the public traceability record for an invoice with the token shared with the donor.",
     "tokenLabel": "Public token",
@@ -1191,6 +1193,7 @@
     "adminNote": "The admin module (invoices, traceability, verification) opens via direct access with a key."
   },
   "needs": {
+    "searchLabel": "Search a need",
     "title": "Open needs",
     "copy": "Pick what is missing and which center. When you donate you get a code to follow your help until the center receives it.",
     "searchPlaceholder": "Supply, center or city",

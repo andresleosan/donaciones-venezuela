@@ -179,6 +179,7 @@
       setText('#necesidades-title', 'needs.title');
       setText('#necesidades-copy', 'needs.copy');
       setPlaceholder('#filtro-necesidad-q', 'needs.searchPlaceholder');
+      setText('#filtro-necesidad-q-label', 'needs.searchLabel');
       setText('#presupuestos-title', 'needs.budgetsTitle');
       setText('#presupuestos-copy', 'needs.budgetsCopy');
       setText('#necesidades-insumos-title', 'needs.inKindTitle');
@@ -308,7 +309,7 @@
       // se re-rotulan al cambiar de idioma, sin perder la foto tomada (R1.3/R1.4).
       setText('#vol-cedula-field > label', 'volunteers.idPhoto');
       setText('#vol-cedula-field > .section-copy', 'volunteers.idPhotoHelp');
-      setText('#vol-cedula-field .cam-guia-texto', 'offer.idGuide');
+      setText('#vol-cedula-field .cam-guia-texto', 'modal.idGuide');
       setText('label[for="vol-ciudad"]', 'volunteers.parish');
       setPlaceholder('#vol-ciudad', 'volunteers.parishPlaceholder');
       setText('label[for="vol-estado"]', 'common.state');
@@ -500,7 +501,10 @@
       });
       const form = dialog.querySelector('form');
       const paso = form && form.__wiz ? form.__wiz.pasoActual() : null;
-      return { valores, fotos, paso };
+      // Estado que no vive en un control con id (fotos de un cierre, coordenadas,
+      // filas añadidas a mano). El modal que lo tenga publica __estadoExtra.
+      const extra = dialog.__estadoExtra ? dialog.__estadoExtra.guardar() : null;
+      return { valores, fotos, paso, extra };
     }
 
     function restaurarEstadoModal(estado) {
@@ -517,6 +521,9 @@
           cam.__camara.pintar();
         }
       });
+      // Después de los valores por id (el gancho puede rehacer filas que aún no
+      // existían) y antes de mover el asistente de paso.
+      if (dialog.__estadoExtra && estado.extra) dialog.__estadoExtra.restaurar(estado.extra);
       const form = dialog.querySelector('form');
       if (form && form.__wiz && estado.paso != null) form.__wiz.irA(estado.paso);
     }
@@ -680,8 +687,11 @@
     }
 
     // ── CONFIGURACIÓN ─────────────────────────────────────────
-    const SUPABASE_URL = 'https://zryfwbjvlacorryzdaod.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_T7fK4bKb1f3o9b7z84IbxQ_1HMnEi56'; // clave pública (publishable), segura en el cliente
+    // `js/entorno.js` puede definir `window.DV_ENTORNO` para apuntar la app a
+    // otro backend. En producción ese archivo es un stub vacío y se usan los
+    // valores de abajo; el entorno de pruebas lo sirve sobrescrito.
+    const SUPABASE_URL = (window.DV_ENTORNO && window.DV_ENTORNO.supabaseUrl) || 'https://zryfwbjvlacorryzdaod.supabase.co';
+    const SUPABASE_KEY = (window.DV_ENTORNO && window.DV_ENTORNO.supabaseKey) || 'sb_publishable_T7fK4bKb1f3o9b7z84IbxQ_1HMnEi56'; // clave pública (publishable), segura en el cliente
 
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
@@ -780,9 +790,12 @@
     }
 
     function cambiarVista(view) {
+      const previa = $('.view.active') && $('.view.active').dataset.view;
       const aliasCentros = { ayuda: 'donaciones', donar: 'donaciones' };
       const vistaReal = aliasCentros[view] || view;
       const target = $(`.view[data-view="${vistaReal}"]`) ? vistaReal : 'inicio';
+      // Al abandonar #denunciar hay que soltar cámara y micrófono (RQ-SEG-1).
+      if (previa === 'denunciar' && target !== 'denunciar' && typeof window.denApagarCamara === 'function') window.denApagarCamara();
       if (aliasCentros[view] && typeof window.establecerModoCentros === 'function') {
         window.establecerModoCentros(view === 'donar' ? 'donar' : 'ayuda');
       }
@@ -1685,11 +1698,13 @@
     }
 
     function poblarCategorias() {
+      const sel = $('#filtro-lugar-categoria');
+      if (!sel) return;
       const cats = new Set();
       estado.lugares.forEach((l) => (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []).forEach((i) => i.categoria && cats.add(i.categoria)));
       const sortedCats = Array.from(cats).sort((a, b) => mostrarCategoria(a).localeCompare(mostrarCategoria(b), localeActual()));
-      $('#filtro-lugar-categoria').innerHTML = `<option value="">${e(t('common.allFemale'))}</option>` + sortedCats.map((cat) => `<option value="${e(cat)}">${e(mostrarCategoria(cat))}</option>`).join('');
-      $('#filtro-lugar-categoria').value = estado.filtros.lugarCategoria;
+      sel.innerHTML = `<option value="">${e(t('common.allFemale'))}</option>` + sortedCats.map((cat) => `<option value="${e(cat)}">${e(mostrarCategoria(cat))}</option>`).join('');
+      sel.value = estado.filtros.lugarCategoria;
     }
 
     function itemCantidad(item) {

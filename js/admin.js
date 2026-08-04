@@ -1051,7 +1051,7 @@
       // el usuario coloque bien el documento. Solo se ve con la cámara abierta
       // (CSS: .offer-camera.is-live .cam-guia).
       const guia = opts && opts.guia
-        ? `<div class="cam-guia cam-guia-${e(opts.guia)}" aria-hidden="true"><div class="cam-guia-marco"></div><p class="cam-guia-texto">${e(t('offer.idGuide'))}</p></div>`
+        ? `<div class="cam-guia cam-guia-${e(opts.guia)}" aria-hidden="true"><div class="cam-guia-marco"></div><p class="cam-guia-texto">${e(t('modal.idGuide'))}</p></div>`
         : '';
       return `<div class="of-cam" id="${prefijo}-cam">
         <div class="offer-camera">
@@ -1810,7 +1810,7 @@
       $('#familiar-resultados').innerHTML = `<div class="empty-state">${e(t('family.searching'))}</div>`;
       try {
         const res = await window.SheetsService.getFamiliares(query);
-        if (res.source !== 'live') throw res.error || new Error('No se pudo consultar Google Sheets');
+        if (res.source !== 'live') throw res.error || new Error(t('family.searchUnavailable'));
         renderFamiliares(res.data || [], (res.data || []).length > 0);
         $('#familiar-message').classList.remove('visible');
       } catch (err) {
@@ -1860,7 +1860,7 @@
       try {
         const res = await window.SheetsService.getSeguimiento(limpio);
         if (res.source !== 'live' || !res.data || res.data.success === false) {
-          throw res.error || new Error(res.data && res.data.error ? res.data.error : 'No se pudo consultar Google Sheets');
+          throw res.error || new Error(res.data && res.data.error ? res.data.error : t('tracking.searchUnavailable'));
         }
         ultimoSeguimiento = res.data;
         renderSeguimiento(res.data);

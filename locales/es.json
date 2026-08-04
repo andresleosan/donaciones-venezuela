@@ -316,6 +316,7 @@
     "submit": "Buscar familiar",
     "searching": "Buscando...",
     "errorMessage": "No se pudo completar esta búsqueda.",
+    "searchUnavailable": "No se pudo consultar el registro de personas.",
     "notFound": "No encontramos a esta persona en los registros disponibles.",
     "idLabel": "Cédula:",
     "locationLabel": "Ubicación:",
@@ -339,6 +340,7 @@
     "unverifiedBadge": "Sin verificar"
   },
   "tracking": {
+    "searchUnavailable": "No se pudo consultar el registro de seguimiento.",
     "title": "Seguimiento de donaciones",
     "copy": "Consulta la trazabilidad pública de una factura con el token entregado al donante.",
     "tokenLabel": "Token público",
@@ -1191,6 +1193,7 @@
     "adminNote": "El módulo de administración (facturas, trazabilidad, verificación) se abre por acceso directo con clave."
   },
   "needs": {
+    "searchLabel": "Buscar necesidad",
     "title": "Necesidades abiertas",
     "copy": "Elige qué falta y a qué centro. Al donar recibes un código para seguir tu ayuda hasta que el centro la reciba.",
     "searchPlaceholder": "Insumo, centro o ciudad",
