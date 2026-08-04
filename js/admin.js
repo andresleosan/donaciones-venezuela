@@ -1810,7 +1810,7 @@
       $('#familiar-resultados').innerHTML = `<div class="empty-state">${e(t('family.searching'))}</div>`;
       try {
         const res = await window.SheetsService.getFamiliares(query);
-        if (res.source !== 'live') throw res.error || new Error('No se pudo consultar Google Sheets');
+        if (res.source !== 'live') throw res.error || new Error(t('family.searchUnavailable'));
         renderFamiliares(res.data || [], (res.data || []).length > 0);
         $('#familiar-message').classList.remove('visible');
       } catch (err) {
@@ -1860,7 +1860,7 @@
       try {
         const res = await window.SheetsService.getSeguimiento(limpio);
         if (res.source !== 'live' || !res.data || res.data.success === false) {
-          throw res.error || new Error(res.data && res.data.error ? res.data.error : 'No se pudo consultar Google Sheets');
+          throw res.error || new Error(res.data && res.data.error ? res.data.error : t('tracking.searchUnavailable'));
         }
         ultimoSeguimiento = res.data;
         renderSeguimiento(res.data);
