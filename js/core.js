@@ -790,9 +790,12 @@
     }
 
     function cambiarVista(view) {
+      const previa = $('.view.active') && $('.view.active').dataset.view;
       const aliasCentros = { ayuda: 'donaciones', donar: 'donaciones' };
       const vistaReal = aliasCentros[view] || view;
       const target = $(`.view[data-view="${vistaReal}"]`) ? vistaReal : 'inicio';
+      // Al abandonar #denunciar hay que soltar cámara y micrófono (RQ-SEG-1).
+      if (previa === 'denunciar' && target !== 'denunciar' && typeof window.denApagarCamara === 'function') window.denApagarCamara();
       if (aliasCentros[view] && typeof window.establecerModoCentros === 'function') {
         window.establecerModoCentros(view === 'donar' ? 'donar' : 'ayuda');
       }

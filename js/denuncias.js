@@ -183,8 +183,11 @@
       den.mime = DEN_MIMES.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
     }
 
-    function denGrabar() {
+    async function denGrabar() {
       if (!den.stream || !window.MediaRecorder) { mostrarMensaje('#den-message', 'error', t('report.cameraError')); return; }
+      // Borra los fragmentos de una toma anterior sin enviar: el keyPath `seq` los
+      // sobrescribiría parcialmente y se subiría un video mezclado (RQ-PLAT-6).
+      await denLimpiar();
       den.chunks = []; den.id = null; den.enVuelo = false; den.blobFinal = null;
       try {
         den.rec = den.mime ? new MediaRecorder(den.stream, { mimeType: den.mime, videoBitsPerSecond: 1_500_000 })
@@ -358,5 +361,8 @@
     window.abrirDenunciar = abrirDenunciar;
     window.abrirDenuncias = abrirDenuncias;
     window.denRevisarPendiente = denRevisarPendiente;
+    window.denApagarCamara = denApagarCamara;
+    // Cerrar pestaña / salir del SPA / segundo plano no pasan por cambiarVista.
+    window.addEventListener('pagehide', () => { denApagarCamara(); });
     // Al volver la conexión, reintenta subir lo pendiente (mismo espíritu que la cola).
     window.addEventListener('online', () => { denRevisarPendiente(); });
