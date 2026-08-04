@@ -706,16 +706,18 @@
     }
     .form-panel h3 { margin-bottom: 6px; color: var(--ink); }
     .form-panel .section-copy { margin-bottom: 14px; }
-    .registry-shell { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+    .registry-shell { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
     .registry-side {
       display: grid;
-      gap: 10px;
-      padding: 15px;
+      gap: 12px;
+      padding: 16px;
       border-radius: var(--radius);
       border: 1px solid var(--border);
-      background: #fff;
+      background: var(--surface);
       box-shadow: var(--shadow-soft);
     }
+    .registry-shell[hidden] { display: none; }
+    .registry-side[hidden] { display: none; }
     .volunteer-shell .form-panel, .volunteer-shell .registry-side { border-color: color-mix(in srgb, var(--volunteer) 45%, var(--border)); }
     .rescue-shell .form-panel, .rescue-shell .registry-side { border-color: color-mix(in srgb, var(--rescue) 45%, var(--border)); }
     .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -730,24 +732,27 @@
     .vac-resumen {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px 28px;
-      margin-bottom: 14px;
-      padding: 13px 16px;
+      gap: 12px 28px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
       border-radius: var(--radius-lg);
       border: 1px solid var(--border);
       background: var(--surface);
       box-shadow: var(--shadow-soft);
     }
-    .vac-kpi { display: flex; align-items: baseline; gap: 7px; color: var(--muted); font-size: 0.86rem; font-weight: 700; }
+    .vac-resumen[hidden] { display: none; } /* hidden debe ganar al display de la clase */
+    .vac-kpi { display: flex; align-items: baseline; gap: 8px; color: var(--muted); font-size: 0.86rem; font-weight: 700; }
     .vac-kpi strong { font-size: 1.4rem; font-weight: 860; color: var(--ink); font-variant-numeric: tabular-nums; }
     .vac-kpi-alta strong { color: var(--critical); }
-    .vac-card { gap: 9px; }
-    .vac-card.vac-alta { border: 1px solid #EFC4D1; background: #FFFBFC; }
+    .vac-card { gap: 8px; }
+    .vac-card.vac-alta { border: 1px solid color-mix(in srgb, var(--critical) 30%, var(--surface)); background: color-mix(in srgb, var(--critical) 2%, var(--surface)); }
     .vac-rol { margin: 0; font-size: 1.12rem; font-weight: 830; color: var(--ink); }
     .vac-lugar { margin: 0; color: var(--text); font-size: 0.92rem; }
-    .vac-cupos { display: grid; gap: 7px; }
+    .vac-cupos { display: grid; gap: 8px; }
+    .vac-kpi[hidden] { display: none; }
+    .vac-cupos[hidden] { display: none; }
     .vac-faltan { font-weight: 800; color: var(--ink); font-size: 0.9rem; }
-    .vol-registro { margin-top: 22px; }
+    .vol-registro { margin-top: 24px; }
     .vol-registro > summary {
       list-style: none;
       cursor: pointer;
@@ -761,7 +766,8 @@
     .vol-registro > summary::-webkit-details-marker { display: none; }
     .vol-registro > summary::before { content: '+'; font-size: 1.25rem; line-height: 1; font-weight: 760; }
     .vol-registro[open] > summary::before { content: '\2212'; }
-    .vol-registro[open] > summary { margin-bottom: 10px; }
+    .vol-registro[open] > summary { margin-bottom: 12px; }
+    .vol-registro > summary[hidden] { display: none; }
     .form-message.info { background: var(--primary-soft); color: var(--primary-dark); border: 1px solid var(--primary-border); }
 
     /* ===== Consola de administración: auth + lanzador + asistentes + gestión ===== */
@@ -1805,12 +1811,14 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 18px 16px;
+      padding: 16px;
       box-shadow: var(--shadow-soft);
       transition: transform 0.15s ease, box-shadow 0.15s ease;
       color: var(--text);
     }
     .help-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .help3[hidden] { display: none; }
+    .help-card[hidden] { display: none; }
     .help-card .door-icon { width: 46px; height: 46px; background: var(--primary-soft); color: var(--primary); }
     .help-title { font-weight: 800; color: var(--ink); }
     .help-copy { font-size: 0.85rem; color: var(--muted); }
@@ -2066,7 +2074,7 @@
 
       /* Puerta 2: tarjetas de ayuda más generosas */
       .help3 { max-width: none; gap: 16px; }
-      .help-card { padding: 26px 22px; }
+      .help-card { padding: 24px; }
 
       /* Puertas 3 y 4: tarjetas de acceso horizontales, botón a la derecha */
       .gate-card {
