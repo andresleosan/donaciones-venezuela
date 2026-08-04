@@ -1695,11 +1695,13 @@
     }
 
     function poblarCategorias() {
+      const sel = $('#filtro-lugar-categoria');
+      if (!sel) return;
       const cats = new Set();
       estado.lugares.forEach((l) => (l.necesita || []).concat(l.tiene_disponible || [], l.cubiertos || []).forEach((i) => i.categoria && cats.add(i.categoria)));
       const sortedCats = Array.from(cats).sort((a, b) => mostrarCategoria(a).localeCompare(mostrarCategoria(b), localeActual()));
-      $('#filtro-lugar-categoria').innerHTML = `<option value="">${e(t('common.allFemale'))}</option>` + sortedCats.map((cat) => `<option value="${e(cat)}">${e(mostrarCategoria(cat))}</option>`).join('');
-      $('#filtro-lugar-categoria').value = estado.filtros.lugarCategoria;
+      sel.innerHTML = `<option value="">${e(t('common.allFemale'))}</option>` + sortedCats.map((cat) => `<option value="${e(cat)}">${e(mostrarCategoria(cat))}</option>`).join('');
+      sel.value = estado.filtros.lugarCategoria;
     }
 
     function itemCantidad(item) {
