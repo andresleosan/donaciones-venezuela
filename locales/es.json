@@ -1193,6 +1193,7 @@
     "adminNote": "El módulo de administración (facturas, trazabilidad, verificación) se abre por acceso directo con clave."
   },
   "needs": {
+    "searchLabel": "Buscar necesidad",
     "title": "Necesidades abiertas",
     "copy": "Elige qué falta y a qué centro. Al donar recibes un código para seguir tu ayuda hasta que el centro la reciba.",
     "searchPlaceholder": "Insumo, centro o ciudad",

@@ -179,6 +179,7 @@
       setText('#necesidades-title', 'needs.title');
       setText('#necesidades-copy', 'needs.copy');
       setPlaceholder('#filtro-necesidad-q', 'needs.searchPlaceholder');
+      setText('#filtro-necesidad-q-label', 'needs.searchLabel');
       setText('#presupuestos-title', 'needs.budgetsTitle');
       setText('#presupuestos-copy', 'needs.budgetsCopy');
       setText('#necesidades-insumos-title', 'needs.inKindTitle');

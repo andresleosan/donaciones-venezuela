@@ -1193,6 +1193,7 @@
     "adminNote": "The admin module (invoices, traceability, verification) opens via direct access with a key."
   },
   "needs": {
+    "searchLabel": "Search a need",
     "title": "Open needs",
     "copy": "Pick what is missing and which center. When you donate you get a code to follow your help until the center receives it.",
     "searchPlaceholder": "Supply, center or city",
