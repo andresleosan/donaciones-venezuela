@@ -799,8 +799,8 @@
     .late-card { margin-top: 10px; }
     .late-card p { margin: 2px 0; }
 
-    .track-filtros { flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-    .track-card { margin-top: 10px; }
+    .track-filtros { flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .track-card { margin-top: 12px; }
     .track-card p { margin: 3px 0; }
 
     .admin-group { margin-bottom: 24px; }
@@ -1008,24 +1008,24 @@
     .evidence-item a:hover { text-decoration: underline; }
 
     .donation-hero-block {
-      padding: 18px;
+      padding: 16px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background:
         linear-gradient(135deg, rgba(234, 240, 255, 0.74), rgba(255, 255, 255, 0.92) 48%, rgba(255, 241, 232, 0.78)),
-        #fff;
+        var(--surface);
       box-shadow: var(--shadow-soft);
     }
     .donation-hero-block .section-header { margin-bottom: 0; }
     .donation-panel {
       margin-top: 16px;
-      padding: 15px;
+      padding: 16px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background: rgba(255,255,255,0.9);
       box-shadow: var(--shadow-soft);
     }
-    .donation-panel h3 { margin: 0 0 6px; color: var(--ink); font-size: 1.06rem; line-height: 1.25; }
+    .donation-panel h3 { margin: 0 0 8px; color: var(--ink); font-size: 1.06rem; line-height: 1.25; }
     .donation-kpi-grid, .donation-map-grid, .donation-section-grid, .donation-category-grid, .donation-impact-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1034,10 +1034,10 @@
     .donation-kpi-grid { margin-top: 12px; }
     .donation-kpi-card, .donation-impact-card, .donation-map-item, .donation-history-item, .donation-category-card {
       min-width: 0;
-      padding: 13px;
+      padding: 12px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      background: #fff;
+      background: var(--surface);
     }
     .donation-kpi-card {
       min-height: 112px;
@@ -1045,7 +1045,7 @@
       align-content: space-between;
       --accent: var(--primary);
       border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
-      background: color-mix(in srgb, var(--accent) 6%, #fff);
+      background: color-mix(in srgb, var(--accent) 6%, var(--surface));
     }
     .donation-kpi-card.critical { --accent: var(--critical); }
     .donation-kpi-card.green { --accent: var(--volunteer); }
@@ -1059,7 +1059,7 @@
       line-height: 1;
     }
     .donation-kpi-value { font-size: clamp(1.62rem, 6vw, 2.45rem); }
-    .donation-kpi-label, .donation-impact-label { display: block; margin-top: 7px; color: var(--muted); font-size: 0.8rem; font-weight: 800; }
+    .donation-kpi-label, .donation-impact-label { display: block; margin-top: 8px; color: var(--muted); font-size: 0.8rem; font-weight: 800; }
     .donation-kpi-meta { margin: 8px 0 0; color: var(--muted); font-size: 0.8rem; }
     .donation-filters { grid-template-columns: 1fr; }
     .donation-filter-toggles {
@@ -1082,14 +1082,14 @@
       font-weight: 820;
     }
     .check-option input { width: auto; min-height: auto; box-shadow: none; }
-    .donation-urgent-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .donation-urgent-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .donation-urgent-card {
       display: grid;
       gap: 8px;
-      padding: 13px;
+      padding: 12px;
       border: 1px solid color-mix(in srgb, var(--critical) 42%, var(--border));
       border-radius: var(--radius);
-      background: color-mix(in srgb, var(--critical) 6%, #fff);
+      background: color-mix(in srgb, var(--critical) 6%, var(--surface));
       box-shadow: var(--shadow-soft);
     }
     .donation-map-item {
@@ -1097,17 +1097,17 @@
       gap: 8px;
       --accent: var(--primary);
       border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
-      background: color-mix(in srgb, var(--accent) 6%, #fff);
+      background: color-mix(in srgb, var(--accent) 6%, var(--surface));
     }
     .donation-map-item.critical { --accent: var(--critical); }
     .donation-map-item.high { --accent: var(--warning); }
-    .donation-card { --accent: var(--primary); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); background: color-mix(in srgb, var(--accent) 6%, #fff); }
+    .donation-card { --accent: var(--primary); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
     .donation-card.hospital { --accent: var(--critical); }
     .donation-card.volunteer { --accent: var(--volunteer); }
     .donation-card.rescue { --accent: var(--rescue); }
     .donation-card .meta-grid { margin-top: 2px; }
-    .donation-status-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .need-ranking-list, .donation-history-list { display: grid; gap: 10px; margin-top: 12px; }
+    .donation-status-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .need-ranking-list, .donation-history-list { display: grid; gap: 12px; margin-top: 12px; }
     .need-row { display: grid; gap: 7px; }
     .need-row .supply-line strong { color: var(--ink); }
     .need-row .progress span { background: var(--bar, var(--primary)); }
@@ -1118,10 +1118,10 @@
     .donation-impact-value { font-size: clamp(1.45rem, 5vw, 2.15rem); }
     .donation-history-item {
       display: grid;
-      gap: 7px;
+      gap: 8px;
       --accent: var(--primary);
       border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
-      background: color-mix(in srgb, var(--accent) 6%, #fff);
+      background: color-mix(in srgb, var(--accent) 6%, var(--surface));
     }
     .donation-history-item.pending { --accent: var(--warning); }
     .donation-history-item.process { --accent: var(--primary); }
@@ -2254,7 +2254,7 @@
     .cam-guia-marco {
       width: 82%;
       aspect-ratio: 856 / 540;
-      border: 2px dashed #fff;
+      border: 2px dashed var(--surface);
       border-radius: var(--radius);
       box-shadow: 0 0 0 999px rgba(10, 37, 64, 0.45);
     }
@@ -2263,7 +2263,7 @@
       bottom: 12px;
       margin: 0;
       padding: 0 16px;
-      color: #fff;
+      color: var(--surface);
       font-size: 0.85rem;
       font-weight: 700;
       text-align: center;
@@ -2288,12 +2288,18 @@
     .of-thumbs:not(:empty) { margin-top: 12px; }
     .of-thumb { position: relative; margin: 0; }
     .of-thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border); display: block; }
+    /* Círculo visible de 26px dentro de un área táctil de 44px: el borde
+       transparente recibe el toque (RQ-DIS-3), background-clip recorta el fondo
+       a la caja de padding y el aro blanco pasa a sombra interior para no
+       dibujarse en el borde exterior. top/right compensan los 9px. */
     .of-thumb-x {
-      position: absolute; top: -6px; right: -6px;
-      width: 26px; height: 26px;
+      position: absolute; top: -15px; right: -15px;
+      box-sizing: border-box; width: 44px; height: 44px; padding: 0;
       display: grid; place-items: center;
-      border-radius: 999px; border: 2px solid var(--surface);
-      background: var(--ink); color: #fff;
+      border-radius: 999px; border: 9px solid transparent;
+      background: var(--ink); background-clip: padding-box;
+      box-shadow: inset 0 0 0 2px var(--surface);
+      color: var(--surface);
       font-size: 0.72rem; line-height: 1; cursor: pointer;
     }
     .of-cam-message:not(.visible) { display: none; }
@@ -2351,3 +2357,24 @@
     .datos-pag { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
     .datos-fotos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
     .datos-fotos h4 { margin: 0; flex-basis: 100%; font-size: .95rem; }
+
+    /* [hidden] gana a display:grid/flex en las clases de S5 (RQ-DIS-4).
+       Van al final del archivo para quedar después de toda declaración de
+       display, incluidas las de las media queries. */
+    .donation-category-card[hidden] { display: none; }
+    .donation-category-grid[hidden] { display: none; }
+    .donation-filter-toggles[hidden] { display: none; }
+    .donation-history-item[hidden] { display: none; }
+    .donation-history-list[hidden] { display: none; }
+    .donation-impact-grid[hidden] { display: none; }
+    .donation-kpi-card[hidden] { display: none; }
+    .donation-kpi-grid[hidden] { display: none; }
+    .donation-map-grid[hidden] { display: none; }
+    .donation-map-item[hidden] { display: none; }
+    .donation-section-grid[hidden] { display: none; }
+    .donation-status-row[hidden] { display: none; }
+    .donation-urgent-card[hidden] { display: none; }
+    .donation-urgent-grid[hidden] { display: none; }
+    .of-geo-actions[hidden] { display: none; }
+    .of-thumbs[hidden] { display: none; }
+    .of-thumb-x[hidden] { display: none; }

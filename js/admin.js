@@ -1051,7 +1051,7 @@
       // el usuario coloque bien el documento. Solo se ve con la cámara abierta
       // (CSS: .offer-camera.is-live .cam-guia).
       const guia = opts && opts.guia
-        ? `<div class="cam-guia cam-guia-${e(opts.guia)}" aria-hidden="true"><div class="cam-guia-marco"></div><p class="cam-guia-texto">${e(t('offer.idGuide'))}</p></div>`
+        ? `<div class="cam-guia cam-guia-${e(opts.guia)}" aria-hidden="true"><div class="cam-guia-marco"></div><p class="cam-guia-texto">${e(t('modal.idGuide'))}</p></div>`
         : '';
       return `<div class="of-cam" id="${prefijo}-cam">
         <div class="offer-camera">

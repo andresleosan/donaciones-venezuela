@@ -309,7 +309,7 @@
       // se re-rotulan al cambiar de idioma, sin perder la foto tomada (R1.3/R1.4).
       setText('#vol-cedula-field > label', 'volunteers.idPhoto');
       setText('#vol-cedula-field > .section-copy', 'volunteers.idPhotoHelp');
-      setText('#vol-cedula-field .cam-guia-texto', 'offer.idGuide');
+      setText('#vol-cedula-field .cam-guia-texto', 'modal.idGuide');
       setText('label[for="vol-ciudad"]', 'volunteers.parish');
       setPlaceholder('#vol-ciudad', 'volunteers.parishPlaceholder');
       setText('label[for="vol-estado"]', 'common.state');
