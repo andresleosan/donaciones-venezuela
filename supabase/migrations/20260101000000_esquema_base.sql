@@ -23,7 +23,10 @@ create schema if not exists extensions;
 
 do $$
 begin
-  create extension if not exists postgis with schema public;
+  -- postgis RETIRADO el 2026-08-04 (decisión D8): traía public.spatial_ref_sys,
+  -- escribible por anon, y la app no la usaba (0 columnas geometry). Si algún día
+  -- hace falta: `create extension postgis schema extensions;` — nunca en public.
+  -- create extension if not exists postgis with schema public;
 exception when others then
   raise notice 'postgis no disponible: %', sqlerrm;
 end $$;
