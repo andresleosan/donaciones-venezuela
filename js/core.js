@@ -501,7 +501,10 @@
       });
       const form = dialog.querySelector('form');
       const paso = form && form.__wiz ? form.__wiz.pasoActual() : null;
-      return { valores, fotos, paso };
+      // Estado que no vive en un control con id (fotos de un cierre, coordenadas,
+      // filas añadidas a mano). El modal que lo tenga publica __estadoExtra.
+      const extra = dialog.__estadoExtra ? dialog.__estadoExtra.guardar() : null;
+      return { valores, fotos, paso, extra };
     }
 
     function restaurarEstadoModal(estado) {
@@ -518,6 +521,9 @@
           cam.__camara.pintar();
         }
       });
+      // Después de los valores por id (el gancho puede rehacer filas que aún no
+      // existían) y antes de mover el asistente de paso.
+      if (dialog.__estadoExtra && estado.extra) dialog.__estadoExtra.restaurar(estado.extra);
       const form = dialog.querySelector('form');
       if (form && form.__wiz && estado.paso != null) form.__wiz.irA(estado.paso);
     }
