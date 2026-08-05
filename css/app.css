@@ -575,7 +575,7 @@
     .check-inline { display: inline-flex; align-items: center; gap: 8px; margin: 4px 0 10px; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
     .check-inline input { width: 18px; height: 18px; }
     .chip-btn {
-      min-height: 38px;
+      min-height: 44px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 0 11px;
