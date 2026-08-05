@@ -35,5 +35,6 @@ No se requiere rollback de base de datos porque esta release no modifica Supabas
 - Produccion sirve `css/app.css?v=106`, `VERSION = '106'` y el precache de los tres modulos de admin.
 - Produccion conserva CSP, HSTS y `X-Frame-Options`.
 - QA navegador contra produccion: idioma `ok: true` en 390 px, sin desbordes en 1440 px, ventana de formularios cargada y cero errores de consola.
+- Edge function: contrato anonimo responde HTTP 400 controlado ante una accion invalida; la version/hash desplegados requieren Supabase CLI o panel.
 
 Estado: desplegada y verificada.

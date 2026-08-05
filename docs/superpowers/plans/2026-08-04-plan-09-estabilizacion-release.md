@@ -33,7 +33,7 @@
 - Consumes: los seis cambios locales existentes y los modulos declarados por `index.html` y `ventana.html`.
 - Produces: worktree coherente, assets versionados a `106` y service worker capaz de precachear los modulos de admin.
 
-- [ ] **Step 1: Registrar el estado antes de tocar nada**
+- [x] **Step 1: Registrar el estado antes de tocar nada**
 
 ```powershell
 git status --short
@@ -43,11 +43,11 @@ git diff --check
 
 Esperado: identificar explicitamente los seis archivos modificados. No borrar ni revertir archivos no relacionados.
 
-- [ ] **Step 2: Alinear el CSS de `ventana.html`**
+- [x] **Step 2: Alinear el CSS de `ventana.html`**
 
 Cambiar solamente `css/app.css?v=105` a `css/app.css?v=106` en `ventana.html`. No cambiar rutas ni orden de scripts.
 
-- [ ] **Step 3: Completar el precache PWA**
+- [x] **Step 3: Completar el precache PWA**
 
 En `sw.js`, despues de `'/js/admin.js' + V`, agregar:
 
@@ -55,7 +55,7 @@ En `sw.js`, despues de `'/js/admin.js' + V`, agregar:
   '/js/admin-datos.js' + V, '/js/admin-personas.js' + V, '/js/admin-centros.js' + V,
 ```
 
-- [ ] **Step 4: Verificar versionado y referencias**
+- [x] **Step 4: Verificar versionado y referencias**
 
 ```powershell
 python scripts/verificar-idioma.py
@@ -67,7 +67,7 @@ git diff --check
 
 Ademas, comprobar que `index.html`, `ventana.html` y `sw.js` solo usan `v106`/`VERSION = '106'`, y que todas las referencias locales existen.
 
-- [ ] **Step 5: Revisar el diff para commit**
+- [x] **Step 5: Revisar el diff para commit**
 
 Confirmar que los cambios son solo: areas tactiles, categorias nuevas, version 106, precache y sus locales. No incluir `graphify-out/`, `opencode.json` ni `.agencia-version` en el commit de la app.
 
@@ -83,7 +83,7 @@ Confirmar que los cambios son solo: areas tactiles, categorias nuevas, version 1
 - Consumes: `DV_PUBLISHABLE_KEY` desde un gestor seguro y el commit aprobado.
 - Produces: evidencia fechada de Vercel, Supabase REST y edge function alineados.
 
-- [ ] **Step 1: Verificar resolucion DNS y Vercel**
+- [x] **Step 1: Verificar resolucion DNS y Vercel**
 
 ```powershell
 Resolve-DnsName donacionesvenezuela.vercel.app
@@ -94,7 +94,7 @@ Invoke-WebRequest https://donacionesvenezuela.vercel.app/sw.js -UseBasicParsing
 
 Esperado: HTTP 200, scripts en `v106` y `VERSION = '106'`.
 
-- [ ] **Step 2: Verificar lectura publica de Supabase**
+- [x] **Step 2: Verificar lectura publica de Supabase**
 
 ```powershell
 $headers = @{ apikey = $env:DV_PUBLISHABLE_KEY; Authorization = "Bearer $env:DV_PUBLISHABLE_KEY" }
@@ -107,7 +107,9 @@ Esperado: JSON valido con cero secretos y al menos una fila o un estado vacio va
 
 Desde el panel o CLI de Supabase, registrar version activa, fecha de despliegue y hash/commit asociado. Confirmar que contiene `reserva_detalle`, `admin_datos_borrar`, la validacion de reserva viva y el prefijo `admin_`.
 
-- [ ] **Step 4: Guardar evidencia de release**
+**Bloqueo actual:** el CLI de Supabase no está instalado en este entorno y no se dispone de acceso al panel para obtener la versión/hash desplegados. La función sí respondió HTTP 400 con `{"success":false,"error":"accion desconocida"}` ante una acción inválida; el código del repositorio contiene las acciones requeridas, pero eso no demuestra identidad del despliegue.
+
+- [x] **Step 4: Guardar evidencia de release**
 
 Registrar URL, HTTP status, version frontend, version edge function, commit y hora UTC. Si DNS falla, marcar el release como bloqueado; no sustituirlo por una suposicion.
 
