@@ -28,4 +28,12 @@ No se requiere rollback de base de datos porque esta release no modifica Supabas
 
 ## Estado
 
-Esta checklist registra la evidencia previa al push. La confirmacion de produccion se completa despues de verificar que Vercel sirve `v106` y que las cabeceras de seguridad permanecen activas.
+## Verificacion post-deploy
+
+- Push aceptado: `e7a8137..9a8c089` en `main`.
+- Vercel: `index.html`, `ventana.html` y `sw.js` responden HTTP 200.
+- Produccion sirve `css/app.css?v=106`, `VERSION = '106'` y el precache de los tres modulos de admin.
+- Produccion conserva CSP, HSTS y `X-Frame-Options`.
+- QA navegador contra produccion: idioma `ok: true` en 390 px, sin desbordes en 1440 px, ventana de formularios cargada y cero errores de consola.
+
+Estado: desplegada y verificada.
