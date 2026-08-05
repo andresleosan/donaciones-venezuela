@@ -7,7 +7,7 @@ Aplicación estática para coordinar centros de ayuda, hospitales, refugios, vol
 La única fuente operativa es Google Sheets mediante este Google Apps Script:
 
 ```text
-https://script.google.com/macros/s/AKfycbzY39NEDPZrRZTtu7zLfuURf_bTnYXLAhjokfOzWq80H8yzrqe_TL7Y2vp-9LpgiU2GDg/exec
+https://script.google.com/macros/s/AKfycbzIzkckhq_hur34K0JJZqyMG20QXnFXSHqa_CWhYITCMdCY6-e1GbhW99n0POsmtf0Q9g/exec
 ```
 
 Spreadsheet principal:
@@ -76,7 +76,7 @@ Abrir `http://127.0.0.1:8000/`.
 ## Verificación rápida
 
 ```bash
-curl -sL "https://script.google.com/macros/s/AKfycbzY39NEDPZrRZTtu7zLfuURf_bTnYXLAhjokfOzWq80H8yzrqe_TL7Y2vp-9LpgiU2GDg/exec"
+curl -sL "https://script.google.com/macros/s/AKfycbzIzkckhq_hur34K0JJZqyMG20QXnFXSHqa_CWhYITCMdCY6-e1GbhW99n0POsmtf0Q9g/exec"
 ```
 
 Debe devolver JSON con `lugares`, `voluntarios`, `rescatistas`, `motorizados` y `estadisticas`.

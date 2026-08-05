@@ -80,5 +80,41 @@ jobs:
             echo "expected=$expected" >&2
             exit 1
           fi
-          echo "Public /exec endpoint kept: $APPS_SCRIPT_EXEC_URL"
-          curl --location --silent --show-error --output /dev/null --write-out "Endpoint HTTP status: %{http_code}\n" "$APPS_SCRIPT_EXEC_URL" || true
+          response_body="$(mktemp)"
+          response_headers="$(mktemp)"
+          trap 'rm -f "$response_body" "$response_headers"' EXIT
+          http_status="$(curl --location --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --dump-header "$response_headers" \
+            --output "$response_body" \
+            --write-out "%{http_code}" \
+            "$APPS_SCRIPT_EXEC_URL")"
+          if [[ "$http_status" != "200" ]]; then
+            echo "Public /exec endpoint returned HTTP $http_status" >&2
+            exit 1
+          fi
+          content_type="$(awk -F': ' 'tolower($1) == "content-type" {print tolower($2)}' "$response_headers" | tr -d '\r' | tail -n 1)"
+          media_type="${content_type%%;*}"
+          if [[ "$media_type" != "application/json" ]]; then
+            echo "Public /exec endpoint returned Content-Type: $content_type" >&2
+            exit 1
+          fi
+          RESPONSE_BODY="$response_body" node <<'NODE'
+          const fs = require('node:fs');
+          const body = fs.readFileSync(process.env.RESPONSE_BODY, 'utf8');
+          let data;
+          try {
+            data = JSON.parse(body);
+          } catch {
+            console.error('Public /exec endpoint did not return valid JSON');
+            process.exit(1);
+          }
+          const required = ['lugares', 'voluntarios', 'rescatistas', 'motorizados', 'estadisticas'];
+          const missing = required.filter((key) => !(key in data));
+          if (missing.length) {
+            console.error(`Public /exec endpoint is missing keys: ${missing.join(', ')}`);
+            process.exit(1);
+          }
+          NODE
+          echo "Public /exec endpoint healthy: $APPS_SCRIPT_EXEC_URL"
