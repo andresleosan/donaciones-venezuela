@@ -1,4 +1,6 @@
+import { spawn as nodeSpawn } from 'node:child_process';
 import { accessSync, constants, existsSync, realpathSync, statSync } from 'node:fs';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 
 export const EXPECTED_PROJECT_REF = 'zryfwbjvlacorryzdaod';
@@ -21,6 +23,16 @@ export const PREFLIGHT_TOOLS = Object.freeze([
   'tar',
   'age',
 ]);
+
+export const RUN_DIRECTORY_NAMES = Object.freeze([
+  'postgres',
+  'auth',
+  'storage',
+  'reconciliation',
+  'temp',
+]);
+
+export const RUN_STATUSES = Object.freeze(['prepared', 'completed', 'failed']);
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -138,6 +150,292 @@ function parseDatabaseUrl(value) {
     return value.trim();
   } catch {
     throw new Error('SUPABASE_DB_URL must be a valid PostgreSQL URL');
+  }
+}
+
+function decodeConnectionPart(value, label) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new Error(`SUPABASE_DB_URL contains an invalid encoded ${label}`);
+  }
+}
+
+export function parsePostgresConnection(value) {
+  if (!isNonEmptyString(value)) {
+    throw new Error('SUPABASE_DB_URL must be a valid PostgreSQL URL');
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(value.trim());
+    if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || !parsed.hostname || !parsed.pathname) {
+      throw new Error('invalid PostgreSQL URL');
+    }
+  } catch {
+    throw new Error('SUPABASE_DB_URL must be a valid PostgreSQL URL');
+  }
+
+  const database = decodeConnectionPart(parsed.pathname.slice(1), 'database name');
+  const username = decodeConnectionPart(parsed.username, 'username');
+  const password = decodeConnectionPart(parsed.password, 'password');
+  if (!database || !username) {
+    throw new Error('SUPABASE_DB_URL must include a PostgreSQL username and database');
+  }
+
+  return Object.freeze({
+    PGHOST: parsed.hostname,
+    PGPORT: parsed.port || '5432',
+    PGUSER: username,
+    PGDATABASE: database,
+    PGPASSWORD: password,
+    PGSSLMODE: 'require',
+  });
+}
+
+export function buildPostgresInvocation(connection, outputPath) {
+  const parsedConnection = typeof connection === 'string'
+    ? parsePostgresConnection(connection)
+    : connection;
+
+  if (!parsedConnection || typeof parsedConnection !== 'object') {
+    throw new Error('A PostgreSQL connection is required');
+  }
+  if (!isNonEmptyString(outputPath) || outputPath.includes('\0')) {
+    throw new Error('A PostgreSQL output path is required');
+  }
+
+  const requiredFields = ['PGHOST', 'PGPORT', 'PGUSER', 'PGDATABASE', 'PGPASSWORD', 'PGSSLMODE'];
+  if (requiredFields.some((field) => !isNonEmptyString(parsedConnection[field]))) {
+    throw new Error('The PostgreSQL connection is incomplete');
+  }
+
+  return Object.freeze({
+    command: 'pg_dump',
+    args: Object.freeze([
+      '--host', parsedConnection.PGHOST,
+      '--port', parsedConnection.PGPORT,
+      '--username', parsedConnection.PGUSER,
+      '--dbname', parsedConnection.PGDATABASE,
+      '--file', outputPath,
+    ]),
+    env: Object.freeze({ ...parsedConnection }),
+  });
+}
+
+function collectSensitiveValues(env, options = {}) {
+  const values = new Set();
+  const addValue = (value) => {
+    if (isNonEmptyString(value)) values.add(value);
+  };
+
+  for (const [name, value] of Object.entries(env || {})) {
+    if (/pass|secret|token|key|credential|db_url/i.test(name)) addValue(value);
+  }
+  for (const value of options.redact || []) addValue(value);
+  return [...values].sort((left, right) => right.length - left.length);
+}
+
+function redactText(value, sensitiveValues) {
+  let redacted = String(value ?? '');
+  for (const secret of sensitiveValues) redacted = redacted.split(secret).join('[redacted]');
+  return redacted.replace(/((?:postgres(?:ql)?):\/\/)[^@\s/]+@/gi, '$1[redacted]@');
+}
+
+function commandError(command, message, code, sensitiveValues) {
+  const error = new Error(`Command ${command} ${message}`);
+  error.code = typeof code === 'string' && /^[A-Z][A-Z0-9_.-]{0,63}$/.test(code)
+    ? code
+    : 'COMMAND_SPAWN_FAILED';
+  error.message = redactText(error.message, sensitiveValues);
+  return error;
+}
+
+function hasSensitiveArgument(args, sensitiveValues) {
+  return args.some((argument) => sensitiveValues.some((secret) => argument.includes(secret)) ||
+    /postgres(?:ql)?:\/\/[^@\s/]+@/i.test(argument));
+}
+
+export function runCommand(command, args = [], options = {}) {
+  if (!isNonEmptyString(command) || command.includes('\0')) {
+    return Promise.reject(new Error('Command name is required'));
+  }
+  if (!Array.isArray(args) || args.some((argument) => typeof argument !== 'string' || argument.includes('\0'))) {
+    return Promise.reject(new Error('Command arguments must be strings'));
+  }
+
+  const commandOptions = options && typeof options === 'object' ? options : {};
+  const childEnv = { ...process.env, ...(commandOptions.env || {}) };
+  const sensitiveValues = collectSensitiveValues(childEnv, commandOptions);
+  const spawnImpl = commandOptions.spawnImpl || commandOptions.spawn || nodeSpawn;
+  const timeout = commandOptions.timeoutMs ?? commandOptions.timeout ?? 120000;
+
+  if (hasSensitiveArgument(args, sensitiveValues)) {
+    return Promise.reject(commandError(
+      command,
+      'refused sensitive command arguments',
+      'COMMAND_ARGUMENT_SECRET',
+      sensitiveValues,
+    ));
+  }
+
+  if (!Number.isFinite(timeout) || timeout <= 0) {
+    return Promise.reject(new Error('Command timeout must be a positive number'));
+  }
+
+  return new Promise((resolveResult, reject) => {
+    let child;
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    let timer;
+
+    const settle = (callback) => {
+      if (settled) return false;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      callback();
+      return true;
+    };
+
+    const rejectWith = (error) => settle(() => reject(error));
+    const resolveWith = (code) => settle(() => resolveResult({
+      stdout: redactText(stdout, sensitiveValues),
+      stderr: redactText(stderr, sensitiveValues),
+      code: Number.isInteger(code) ? code : null,
+    }));
+
+    try {
+      child = spawnImpl(command, args, {
+        cwd: commandOptions.cwd,
+        env: childEnv,
+        shell: false,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (error) {
+      rejectWith(commandError(
+        command,
+        `could not start: ${error instanceof Error ? error.message : 'unknown error'}`,
+        'COMMAND_SPAWN_FAILED',
+        sensitiveValues,
+      ));
+      return;
+    }
+
+    child.stdout?.on('data', (chunk) => {
+      stdout += chunk instanceof Buffer ? chunk.toString('utf8') : String(chunk);
+    });
+    child.stderr?.on('data', (chunk) => {
+      stderr += chunk instanceof Buffer ? chunk.toString('utf8') : String(chunk);
+    });
+    child.once('error', (error) => {
+      rejectWith(commandError(
+        command,
+        `could not start: ${error instanceof Error ? error.message : 'unknown error'}`,
+        error?.code || 'COMMAND_SPAWN_FAILED',
+        sensitiveValues,
+      ));
+    });
+    child.once('close', (code) => resolveWith(code));
+
+    timer = setTimeout(() => {
+      try {
+        child.kill?.('SIGTERM');
+      } catch {
+        // The timeout result is authoritative even if termination races with close.
+      }
+      rejectWith(commandError(command, `timed out after ${timeout}ms`, 'COMMAND_TIMEOUT', sensitiveValues));
+    }, timeout);
+    timer.unref?.();
+  });
+}
+
+function runTimestamp(timestamp) {
+  const date = timestamp === undefined ? new Date() : new Date(timestamp);
+  if (Number.isNaN(date.getTime())) throw new Error('Run timestamp must be a valid date');
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/:/g, '');
+}
+
+function runStatusPath(paths) {
+  if (!paths || !isNonEmptyString(paths.root)) throw new Error('Run paths are required');
+  return join(paths.root, 'run.json');
+}
+
+function safeErrorCode(error) {
+  const candidate = typeof error === 'string' ? error : error?.code;
+  if (typeof candidate === 'number' && Number.isInteger(candidate)) return `COMMAND_EXIT_${candidate}`;
+  if (typeof candidate === 'string' && /^[A-Z][A-Z0-9_.-]{0,63}$/.test(candidate)) return candidate;
+  return 'EXPORT_FAILED';
+}
+
+async function readSafeRunRecord(paths) {
+  try {
+    const parsed = JSON.parse(await readFile(runStatusPath(paths), 'utf8'));
+    return {
+      createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+export async function writeRunStatus(paths, status, details = {}) {
+  if (!RUN_STATUSES.includes(status)) throw new Error('Invalid run status');
+  const existing = await readSafeRunRecord(paths);
+  const now = new Date().toISOString();
+  const record = {
+    status,
+    createdAt: existing.createdAt || now,
+    updatedAt: now,
+  };
+
+  if (status === 'failed') record.errorCode = safeErrorCode(details);
+  await writeFile(runStatusPath(paths), `${JSON.stringify(record, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  return record;
+}
+
+export async function cleanupFailedRun(paths) {
+  if (!paths || !isNonEmptyString(paths.temp)) return;
+  await rm(paths.temp, { recursive: true, force: true });
+  await mkdir(paths.temp, { recursive: true });
+}
+
+export async function markRunFailed(paths, error) {
+  const record = await writeRunStatus(paths, 'failed', error);
+  await cleanupFailedRun(paths);
+  return record;
+}
+
+export async function markRunCompleted(paths) {
+  return writeRunStatus(paths, 'completed');
+}
+
+export async function createRunDirectory(outputRoot, timestamp, repoRoot = process.cwd()) {
+  if (!isNonEmptyString(outputRoot) || outputRoot.includes('\0')) {
+    throw new Error('Export output root is required');
+  }
+
+  const validatedOutputRoot = assertSafeOutputRoot(outputRoot.trim(), repoRoot);
+  const runName = runTimestamp(timestamp);
+  const resolvedOutputRoot = validatedOutputRoot;
+  await mkdir(resolvedOutputRoot, { recursive: true, mode: 0o700 });
+  const root = join(resolvedOutputRoot, runName);
+  const paths = { root };
+  for (const name of RUN_DIRECTORY_NAMES) paths[name] = join(root, name);
+
+  let createdRoot = false;
+  try {
+    await mkdir(root, { mode: 0o700 });
+    createdRoot = true;
+    for (const name of RUN_DIRECTORY_NAMES) await mkdir(paths[name], { mode: 0o700 });
+    await writeRunStatus(paths, 'prepared');
+    return Object.freeze(paths);
+  } catch (error) {
+    if (createdRoot) await rm(root, { recursive: true, force: true }).catch(() => {});
+    throw error;
   }
 }
 

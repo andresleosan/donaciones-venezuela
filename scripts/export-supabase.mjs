@@ -6,6 +6,7 @@ import {
   EXPECTED_PROJECT_REF,
   PREFLIGHT_TOOLS,
   REQUIRED_EXPORT_VARIABLES,
+  createRunDirectory,
   readExportConfig,
   resolvePreflightTools,
 } from './export-supabase-lib.mjs';
@@ -99,6 +100,14 @@ function formatSummary({ mode, tools = [], missingVariables = [], runDir }) {
   return lines.join('\n');
 }
 
+function formatCliError(error) {
+  if (error?.code === 'EEXIST') return 'Run directory already exists';
+  if (['EACCES', 'EPERM', 'ENOTDIR', 'EROFS'].includes(error?.code)) {
+    return 'Unable to prepare the external run directory';
+  }
+  return error instanceof Error ? error.message : 'Export preflight failed';
+}
+
 export function formatDryRunSummary(input = {}) {
   return formatSummary({ ...input, mode: 'dry-run' });
 }
@@ -110,11 +119,11 @@ const HELP = [
   '  --dry-run                 Validate configuration without remote or data actions (default)',
   '  --execute                 Select execute mode for future data-producing actions',
   '  --project-ref <ref>       Require the approved Supabase project reference',
-  '  --run-dir <path>          Use an external run directory without creating it',
+  '  --run-dir <path>          Use an external staging root for the run',
   '  --help                    Show this help',
 ].join('\n');
 
-export async function main(args = process.argv.slice(2), env = process.env, io = console) {
+export async function main(args = process.argv.slice(2), env = process.env, io = console, dependencies = {}) {
   try {
     const options = parseCliArgs(args);
     if (options.help) {
@@ -142,11 +151,14 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
     io.log(summary);
 
     if (options.mode === 'execute') {
+      const stagingRoot = config.runDir || config.outputRoot;
+      await createRunDirectory(stagingRoot, dependencies?.now);
+      io.log('Run status: prepared');
       io.log('Execute mode is reserved for a later task; no export action was run.');
     }
     return 0;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Export preflight failed';
+    const message = formatCliError(error);
     io.error(`Export preflight error: ${message}`);
     return error?.code === 2 ? 2 : 1;
   }

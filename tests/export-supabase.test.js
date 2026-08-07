@@ -1,8 +1,18 @@
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
+import { EventEmitter } from 'node:events';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { assertSafeOutputRoot, readExportConfig } from '../scripts/export-supabase-lib.mjs';
+import {
+  assertSafeOutputRoot,
+  buildPostgresInvocation,
+  cleanupFailedRun,
+  createRunDirectory,
+  markRunFailed,
+  parsePostgresConnection,
+  readExportConfig,
+  runCommand,
+} from '../scripts/export-supabase-lib.mjs';
 import { formatDryRunSummary, main, parseCliArgs } from '../scripts/export-supabase.mjs';
 
 const EXPECTED_PROJECT_REF = 'zryfwbjvlacorryzdaod';
@@ -17,6 +27,21 @@ function completeExportEnv(overrides = {}) {
     EXPORT_ROOT: 'C:/secure/donaciones-export',
     EXPORT_AGE_RECIPIENT: 'age1test',
     ...overrides,
+  };
+}
+
+function fakeSuccessfulSpawn(calls, { code = 0, stderr = '', stdout = '' } = {}) {
+  return (command, args, options) => {
+    calls.push({ command, args, options });
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    queueMicrotask(() => {
+      if (stdout) child.stdout.emit('data', Buffer.from(stdout));
+      if (stderr) child.stderr.emit('data', Buffer.from(stderr));
+      child.emit('close', code);
+    });
+    return child;
   };
 }
 
@@ -184,6 +209,297 @@ describe('export config', () => {
       expect(() => assertSafeOutputRoot(join(linkRoot, 'run'), repoRoot)).toThrow(/outside/i);
     } finally {
       rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('export staging and command runner', () => {
+  it('passes PostgreSQL credentials through the environment, never pg_dump argv', async () => {
+    const calls = [];
+    const connectionUrl = 'postgresql://exporter:db-password@db.example.test:5432/postgres';
+    const invocation = buildPostgresInvocation(
+      parsePostgresConnection(connectionUrl),
+      'C:/secure/run/postgres/data.dump',
+    );
+
+    await runCommand(invocation.command, invocation.args, {
+      env: invocation.env,
+      spawnImpl: fakeSuccessfulSpawn(calls),
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].command).toBe('pg_dump');
+    expect(calls[0].args).toEqual([
+      '--host', 'db.example.test',
+      '--port', '5432',
+      '--username', 'exporter',
+      '--dbname', 'postgres',
+      '--file', 'C:/secure/run/postgres/data.dump',
+    ]);
+    expect(calls[0].args.join(' ')).not.toContain('db-password');
+    expect(calls[0].args.join(' ')).not.toContain(connectionUrl);
+    expect(calls[0].options.env).toMatchObject({
+      PGHOST: 'db.example.test',
+      PGPORT: '5432',
+      PGUSER: 'exporter',
+      PGDATABASE: 'postgres',
+      PGPASSWORD: 'db-password',
+      PGSSLMODE: 'require',
+    });
+  });
+
+  it('captures command output and returns the child exit code', async () => {
+    const calls = [];
+    const result = await runCommand('pg_dump', ['--version'], {
+      spawnImpl: fakeSuccessfulSpawn(calls, { code: 3, stdout: 'version\n', stderr: 'failed\n' }),
+    });
+
+    expect(result).toEqual({ stdout: 'version\n', stderr: 'failed\n', code: 3 });
+    expect(calls[0].options.shell).toBe(false);
+    expect(calls[0].options.stdio).toEqual(['ignore', 'pipe', 'pipe']);
+  });
+
+  it('redacts sensitive command output', async () => {
+    const result = await runCommand('pg_dump', ['--version'], {
+      env: { PGPASSWORD: 'db-password' },
+      spawnImpl: fakeSuccessfulSpawn([], { stderr: 'password=db-password\n' }),
+    });
+
+    expect(result.stderr).toBe('password=[redacted]\n');
+  });
+
+  it('refuses to spawn when command arguments contain a credential', async () => {
+    const calls = [];
+
+    await expect(runCommand('pg_dump', [
+      '--dbname',
+      'postgresql://exporter:db-password@db.example.test:5432/postgres',
+    ], {
+      env: { PGPASSWORD: 'db-password' },
+      spawnImpl: fakeSuccessfulSpawn(calls),
+    })).rejects.toMatchObject({ code: 'COMMAND_ARGUMENT_SECRET' });
+    expect(calls).toEqual([]);
+  });
+
+  it('fails timed-out commands without exposing their environment', async () => {
+    const calls = [];
+    const spawnImpl = (command, args, options) => {
+      calls.push({ command, args, options });
+      const child = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = () => {};
+      return child;
+    };
+
+    await expect(runCommand('pg_dump', ['--version'], {
+      env: { PGPASSWORD: 'db-password' },
+      timeout: 1,
+      spawnImpl,
+    })).rejects.toMatchObject({ code: 'COMMAND_TIMEOUT' });
+    expect(calls[0].args.join(' ')).not.toContain('db-password');
+  });
+
+  it('does not persist an untrusted child error code', async () => {
+    const spawnImpl = () => {
+      const child = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      queueMicrotask(() => child.emit('error', { code: 'db-password', message: 'secret=db-password' }));
+      return child;
+    };
+
+    await expect(runCommand('pg_dump', [], { spawnImpl })).rejects.toMatchObject({
+      code: 'COMMAND_SPAWN_FAILED',
+    });
+  });
+
+  it('creates an exclusive UTC run directory with protected staging paths', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-staging-'));
+    const timestamp = '2026-08-06T12:00:00.000Z';
+
+    try {
+      const paths = await createRunDirectory(outputRoot, timestamp);
+
+      expect(paths.root).toContain('2026-08-06T120000Z');
+      for (const name of ['root', 'postgres', 'auth', 'storage', 'reconciliation', 'temp']) {
+        expect(paths[name]).toBeDefined();
+        if (name !== 'root') expect(paths[name].startsWith(paths.root + '\\')).toBe(true);
+        expect(existsSync(paths[name])).toBe(true);
+      }
+      expect(JSON.parse(readFileSync(join(paths.root, 'run.json'), 'utf8'))).toMatchObject({
+        status: 'prepared',
+      });
+
+      await expect(createRunDirectory(outputRoot, timestamp)).rejects.toMatchObject({ code: 'EEXIST' });
+      expect(readdirSync(outputRoot)).toEqual(['2026-08-06T120000Z']);
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an invalid timestamp before creating an output root', async () => {
+    const parentRoot = mkdtempSync(join(tmpdir(), 'export-invalid-parent-'));
+    const outputRoot = join(parentRoot, 'not-created');
+
+    try {
+      await expect(createRunDirectory(outputRoot, 'not-a-timestamp')).rejects.toThrow(/timestamp/i);
+      expect(existsSync(outputRoot)).toBe(false);
+    } finally {
+      rmSync(parentRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a staging root inside the supplied repository boundary', async () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), 'export-root-boundary-'));
+    const repoRoot = join(fixtureRoot, 'repo');
+    const outputRoot = join(repoRoot, 'exports');
+    mkdirSync(repoRoot);
+
+    try {
+      await expect(createRunDirectory(
+        outputRoot,
+        '2026-08-06T12:00:00.000Z',
+        repoRoot,
+      )).rejects.toThrow(/outside/i);
+      expect(existsSync(outputRoot)).toBe(false);
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('marks failed runs safely and cleans only temporary files', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-failed-'));
+    const previousRun = join(outputRoot, '2026-08-05T120000Z');
+    mkdirSync(previousRun);
+
+    try {
+      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z');
+      writeFileSync(join(paths.temp, 'partial.tmp'), 'temporary');
+      writeFileSync(join(paths.postgres, 'partial.dump'), 'diagnostic');
+
+      await markRunFailed(paths, { code: 'COMMAND_EXIT_7', message: 'password=db-password' });
+      await cleanupFailedRun(paths);
+
+      expect(JSON.parse(readFileSync(join(paths.root, 'run.json'), 'utf8'))).toMatchObject({
+        status: 'failed',
+        errorCode: 'COMMAND_EXIT_7',
+      });
+      expect(readdirSync(paths.temp)).toEqual([]);
+      expect(existsSync(join(paths.postgres, 'partial.dump'))).toBe(true);
+      expect(existsSync(previousRun)).toBe(true);
+      expect(readFileSync(join(paths.root, 'run.json'), 'utf8')).not.toContain('db-password');
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('normalizes untrusted failure codes before writing run.json', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-error-code-'));
+
+    try {
+      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z');
+      await markRunFailed(paths, { code: 'db-password', message: 'secret=db-password' });
+
+      const run = readFileSync(join(paths.root, 'run.json'), 'utf8');
+      expect(JSON.parse(run)).toMatchObject({ status: 'failed', errorCode: 'EXPORT_FAILED' });
+      expect(run).not.toContain('db-password');
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('does not invoke commands or write artifacts during dry-run', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-dry-run-'));
+    const before = readdirSync(outputRoot);
+    const output = [];
+    const calls = [];
+
+    try {
+      const code = await main(
+        ['--dry-run', '--project-ref', EXPECTED_PROJECT_REF],
+        completeExportEnv({ EXPORT_ROOT: outputRoot, PATH: '' }),
+        {
+          log: (message) => output.push(message),
+          error: (message) => output.push(message),
+        },
+        {
+          fetchImpl: () => { throw new Error('dry-run called fetch'); },
+          runner: (...args) => {
+            calls.push(args);
+            throw new Error('dry-run invoked command');
+          },
+        },
+      );
+
+      expect(code).toBe(0);
+      expect(calls).toEqual([]);
+      expect(readdirSync(outputRoot)).toEqual(before);
+      expect(output.join('\n')).toContain('dry-run');
+      expect(output.join('\n')).not.toContain('dry-run called fetch');
+      expect(output.join('\n')).not.toContain('dry-run invoked command');
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('prepares execute staging without invoking export or sealing commands', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-execute-'));
+    const output = [];
+    const calls = [];
+
+    try {
+      const code = await main(
+        ['--execute', '--project-ref', EXPECTED_PROJECT_REF],
+        completeExportEnv({ EXPORT_ROOT: outputRoot }),
+        {
+          log: (message) => output.push(message),
+          error: (message) => output.push(message),
+        },
+        {
+          runner: (...args) => {
+            calls.push(args);
+            throw new Error('execute attempted a command before later task');
+          },
+          fetchImpl: () => { throw new Error('execute attempted fetch before later task'); },
+          now: '2026-08-06T12:00:00.000Z',
+        },
+      );
+
+      expect(code).toBe(0);
+      expect(calls).toEqual([]);
+      expect(readdirSync(outputRoot)).toEqual(['2026-08-06T120000Z']);
+      expect(JSON.parse(readFileSync(join(outputRoot, '2026-08-06T120000Z', 'run.json'), 'utf8'))).toMatchObject({
+        status: 'prepared',
+      });
+      expect(output.join('\n')).toContain('prepared');
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('does not print the configured staging path when exclusive creation fails', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-collision-'));
+    const configuredRunRoot = join(outputRoot, '2026-08-06T120000Z');
+    mkdirSync(configuredRunRoot);
+    const output = [];
+
+    try {
+      const code = await main(
+        ['--execute', '--project-ref', EXPECTED_PROJECT_REF],
+        completeExportEnv({ EXPORT_ROOT: outputRoot }),
+        {
+          log: (message) => output.push(message),
+          error: (message) => output.push(message),
+        },
+        { now: '2026-08-06T12:00:00.000Z' },
+      );
+
+      expect(code).toBe(1);
+      expect(output.join('\n')).not.toContain(configuredRunRoot);
+      expect(output.join('\n')).toContain('already exists');
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
     }
   });
 });
