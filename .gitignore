@@ -10,6 +10,10 @@
 *.cer
 secrets/
 credentials/
+credentials.json
+token.json
+oauth.json
+service-account.json
 
 # Google Cloud / Firebase / Apps Script
 *-firebase-adminsdk-*.json

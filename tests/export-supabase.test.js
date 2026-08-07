@@ -2504,6 +2504,11 @@ describe('runbook documentation', () => {
     expect(runbook).toContain('# detenerse y obtener confirmacion explicita del operador');
     expect(runbook).toContain('npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod');
     expect(runbook).toContain('npm.cmd run verify:export -- --run-dir "C:\\\\secure\\\\donaciones-export\\\\2026-08-06T120000Z"');
+    const checkpointIndex = runbook.indexOf('# detenerse y obtener confirmacion explicita del operador');
+    const approvalIndex = runbook.indexOf("$env:EXPORT_EXECUTION_APPROVED = 'YES'");
+    const executeIndex = runbook.indexOf('npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod');
+    expect(approvalIndex).toBeGreaterThan(checkpointIndex);
+    expect(executeIndex).toBeGreaterThan(approvalIndex);
 
     for (const control of [
       /estructura.*completitud/i,
@@ -2523,10 +2528,18 @@ describe('runbook documentation', () => {
     expect(runbook).toMatch(/Blaze/);
     expect(runbook).toMatch(/migraci[oó]n destructiva/i);
     expect(runbook).toMatch(/export(?:ar|aci[oó]n).*credencial|credencial.*export/i);
+    expect(runbook).toMatch(/restore local.*opcional.*verificaci[oó]n general/i);
+    expect(runbook).toMatch(/not-run[\s\S]*motivo|motivo[\s\S]*not-run/i);
+    expect(runbook).toMatch(/completed[\s\S]*(?:evidencia local|checksum)[\s\S]*(?:habilita|permite).*sellado/i);
+    expect(runbook).toMatch(/archive status[\s\S]*control separado|control separado[\s\S]*archive status/i);
+    expect(runbook).toMatch(/temp\/run\.tar[\s\S]*solo\s+se\s+elimina[\s\S]*sellado\s+exitoso/i);
+    expect(runbook).toMatch(/temp\/[\s\S]*(?:fuera|excluid)[\s\S]*(?:artifacts|artefactos)/i);
+    expect(runbook).toMatch(/temporales\s+diagn[oó]sticos[\s\S]*(?:conservar|preserv)/i);
 
     expect(backupPlan).toContain('docs/runbooks/export-supabase.md');
     expect(backupPlan).toMatch(/plan escrito.*(?:no equivale|no es igual).*gate/i);
     expect(backupPlan).toMatch(/manifest.*checksum.*evidencia/i);
+    expect(backupPlan).toMatch(/Gate previo a T06[\s\S]*restore local[\s\S]*(?:requisito|requerido|obligatorio)/i);
 
     for (const entry of [
       'backups/',
@@ -2535,6 +2548,10 @@ describe('runbook documentation', () => {
       '*.age',
       '/exports/**/*.jsonl',
       '/exports/**/*.sql',
+      'credentials.json',
+      'token.json',
+      'oauth.json',
+      'service-account.json',
     ]) {
       expect(gitignore).toContain(entry);
     }

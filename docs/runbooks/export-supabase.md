@@ -11,8 +11,9 @@ aplicacion:
 - `postgres/object-counts.json`: conteo exacto por tabla base de `public`.
 - `reconciliation/financial-totals.json`: agregados financieros sin filas ni PII.
 - `run.json`: estado `prepared` y versiones de `pg_dump`/`psql`, sin datos de
-  conexion. `completed` solo es valido despues de generar el manifiesto, los
-  checksums y el archivo cifrado.
+  conexion. `completed` significa que la evidencia local, el manifest y los
+  checksums estan completos y habilita el sellado; no confirma que exista el
+  archivo cifrado.
 
 Auth y Storage no se leen desde schemas internos. Se exportan mediante sus APIs
 soportadas. El CLI no ejecuta `pg_restore` contra una base remota.
@@ -171,18 +172,31 @@ ejecutar `--execute` sin una confirmacion fresca inmediatamente antes.
 ```powershell
 npm.cmd run export:supabase:dry-run
 # detenerse y obtener confirmacion explicita del operador
+$env:EXPORT_EXECUTION_APPROVED = 'YES'
 npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod
 npm.cmd run verify:export -- --run-dir "C:\\secure\\donaciones-export\\2026-08-06T120000Z"
 ```
 
-En una sesion PowerShell del operador, el checkpoint puede prepararse con
-`$env:EXPORT_EXECUTION_APPROVED = 'YES'` despues de la confirmacion y no antes.
-Si la confirmacion cambia, se debe retirar la variable y repetir el checkpoint.
-En estas Tasks 3 a 7 las pruebas usan runners, streams de Node y `fetchImpl` falsos y no ejecutan
+La asignacion solo se realiza despues de una confirmacion fresca del operador
+para el target, la ruta externa y la ventana. Si la confirmacion cambia, se debe
+retirar la variable y repetir el checkpoint. En estas Tasks 3 a 7 las pruebas usan runners, streams de Node y `fetchImpl` falsos y no ejecutan
 `pg_dump`, `psql`, Auth remoto, Storage remoto, Firebase remoto, migraciones ni
-comandos que creen artefactos fuera de fixtures. Los runs de `--execute` siguen
-en `completed` solo despues de terminar el manifiesto, los checksums y el
-sellado cifrado.
+comandos que creen artefactos fuera de fixtures. Los runs de `--execute` pasan a
+`completed` al terminar la evidencia local y los checksums; el archive status es
+un control separado que se comprueba despues del sellado.
+
+## Lifecycle del run y temporales
+
+El estado `completed` habilita `sealRun` porque indica que el manifest,
+reconciliacion, artefactos requeridos y `checksums.sha256` ya fueron verificados
+localmente. No implica que el archivo `.tar.age` exista todavía. El archive
+status se aprueba por separado cuando el archivo cifrado existe, no esta vacio y
+la verificacion lo encuentra.
+
+`temp/` queda fuera de `artifacts` y del archive cifrado. `temp/run.tar` solo se
+elimina despues de un sellado exitoso. `temp/counts.sql` y otros temporales
+diagnosticos pueden conservarse segun el resultado para investigar un fallo;
+no se debe exigir que `temp/` este vacio para aprobar los controles de evidencia.
 
 ## Desencriptado, verificacion y evidencia
 
@@ -213,8 +227,8 @@ El paquete no se aprueba hasta que los seis controles tengan resultado y
 evidencia:
 
 1. **Estructura y completitud:** el directorio desencriptado contiene
-   `run.json` con estado `completed`, todos los artefactos requeridos y ningun
-   temporal pendiente.
+   `run.json` con estado `completed` y todos los artefactos requeridos. `temp/`
+   queda fuera de este control y puede conservar temporales diagnosticos.
 2. **Manifest:** `run.json` enumera los artefactos finales y
    `storage/manifest.jsonl` tiene una fila por objeto, buckets consistentes y
    ninguna fila duplicada o ruta insegura.
@@ -226,9 +240,11 @@ evidencia:
    aceptan diferencias sin explicar.
 5. **Archive status:** existe un archivo `.tar.age` no vacio junto al run y el
    verificador informa el archive status como aprobado.
-6. **Restore local opcional (localhost):** si se hace un ensayo, usar solo una
+6. **Restore local opcional para la verificacion general (localhost):** para la
+   verificacion general se puede omitir, pero si se hace un ensayo usar solo una
    base aislada en `localhost` o `127.0.0.1`, con el target local
-   `demo-donaciones-venezuela`; nunca una base remota. Ejemplo sin credencial:
+   `demo-donaciones-venezuela`; nunca una base remota. Si no se ejecuta, registrar
+   `restore: not-run` y el motivo. Ejemplo sin credencial:
 
    ```powershell
    npm.cmd run verify:export -- --run-dir "C:\\secure\\donaciones-export\\2026-08-06T120000Z" --restore-db "postgres://restore@127.0.0.1/demo_restore" --project-target demo-donaciones-venezuela
@@ -275,9 +291,13 @@ individuales en esta evidencia.
 
 ## Fallos y verificacion
 
-Un codigo de salida distinto de cero bloquea la exportacion. El run queda
-`failed`, conserva solo un codigo seguro y se limpia `temp/`; no se borran
-runs anteriores ni dumps parciales de diagnostico. Antes de aprobar un paquete,
-el operador debe comprobar los checksums, restaurar en una base local aislada,
-comparar conteos y totales, verificar Auth/Storage cuando existan sus tareas,
-y registrar cualquier diferencia sin explicar.
+Un codigo de salida distinto de cero bloquea la exportacion. Un fallo antes del
+sellado deja el run en `failed`, conserva solo un codigo seguro y puede limpiar
+el staging temporal de esa fase; no se borran runs anteriores ni dumps parciales
+de diagnostico. Un fallo de `age` durante el sellado elimina el archivo cifrado
+parcial, conserva cualquier `temp/run.tar` existente y otros temporales diagnosticos para investigar,
+y deja el run en `failed`; solo un sellado exitoso elimina `temp/run.tar`.
+Antes de aprobar un paquete, el operador debe comprobar los checksums, el
+archive status, restaurar en una base local aislada cuando corresponda,
+comparar conteos y totales, verificar Auth/Storage cuando existan sus tareas, y
+registrar cualquier diferencia sin explicar.

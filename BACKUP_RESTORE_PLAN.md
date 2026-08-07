@@ -48,6 +48,10 @@ documentos o Git.
 
 Antes de iniciar repositorios Firestore contra datos migrados se debe restaurar un respaldo reciente en un entorno aislado y comprobar conteos, relaciones, totales financieros, una muestra de RPC y checksums de objetos. RPO objetivo del ensayo: 24 horas. RTO objetivo del ensayo: 4 horas.
 
+Para aprobar este Gate, el restore local es un requisito obligatorio, no una
+opcion de la verificacion general. Un resultado `restore: not-run` debe incluir
+el motivo y deja el gate pendiente.
+
 El gate requiere evidencia del responsable, fecha, manifest generado, checksum y evidencia
 de cada control, ademas del tratamiento de diferencias. La evidencia
 debe corresponder a una ejecucion real del runbook, no a una lectura del plan.
