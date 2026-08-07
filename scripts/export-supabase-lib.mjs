@@ -1071,11 +1071,43 @@ function recordStorageFailure(report, operation, status, retries) {
   });
 }
 
-function storageRequestHeaders(serviceRoleKey) {
-  return {
+function storageRequestHeaders(serviceRoleKey, options = {}) {
+  const headers = {
     apikey: serviceRoleKey,
     Authorization: `Bearer ${serviceRoleKey}`,
   };
+  if (options.method === 'POST' || options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+  return headers;
+}
+
+const STORAGE_NETWORK_ERROR_CODES = new Set([
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EAI_AGAIN',
+  'EHOSTUNREACH',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'FETCH_ERR',
+  'ERR_NETWORK',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_SOCKET',
+]);
+
+function isStorageNetworkError(error) {
+  const visited = new Set();
+  let current = error;
+  for (let depth = 0; current && depth < 8 && !visited.has(current); depth += 1) {
+    visited.add(current);
+    const code = typeof current.code === 'string' ? current.code.toUpperCase() : undefined;
+    if (code && STORAGE_NETWORK_ERROR_CODES.has(code)) return true;
+    current = current.cause;
+  }
+  return false;
 }
 
 async function fetchStorageResponse(context, endpoint, options, operation, report, retryState = { used: 0 }) {
@@ -1084,9 +1116,13 @@ async function fetchStorageResponse(context, endpoint, options, operation, repor
     try {
       response = await context.fetchImpl(endpoint, {
         ...options,
-        headers: storageRequestHeaders(context.serviceRoleKey),
+        headers: storageRequestHeaders(context.serviceRoleKey, options),
       });
-    } catch {
+    } catch (error) {
+      if (!isStorageNetworkError(error)) {
+        recordStorageFailure(report, operation, 'unknown', retryState.used);
+        throw storageSafeError(`Supabase Storage ${operation} request failed`);
+      }
       if (retryState.used < 1) {
         retryState.used += 1;
         recordStorageFailure(report, operation, 'network', retryState.used);
@@ -1115,10 +1151,40 @@ async function parseStorageJson(response, operation) {
   if (!response || typeof response.json !== 'function') {
     throw storageSafeError(`Supabase Storage ${operation} response JSON is invalid`);
   }
-  try {
-    return await response.json();
-  } catch {
-    throw storageSafeError(`Supabase Storage ${operation} response JSON is invalid`);
+  return response.json();
+}
+
+async function fetchStorageJson(context, endpoint, options, operation, report) {
+  const retryState = { used: 0 };
+  while (true) {
+    const { response } = await fetchStorageResponse(
+      context,
+      endpoint,
+      options,
+      operation,
+      report,
+      retryState,
+    );
+    try {
+      return { payload: await parseStorageJson(response, operation), response };
+    } catch (error) {
+      const networkFailure = isStorageNetworkError(error);
+      if (networkFailure && retryState.used < 1) {
+        retryState.used += 1;
+        recordStorageFailure(report, operation, 'network', retryState.used);
+        continue;
+      }
+      recordStorageFailure(
+        report,
+        operation,
+        networkFailure ? 'network' : response?.status,
+        retryState.used,
+      );
+      if (networkFailure) {
+        throw storageSafeError(`Supabase Storage ${operation} request failed`);
+      }
+      throw storageSafeError(`Supabase Storage ${operation} response JSON is invalid`);
+    }
   }
 }
 
@@ -1130,14 +1196,13 @@ async function listStorageBuckets(context, pageSize, report) {
     const endpoint = new URL('/storage/v1/bucket', `${context.supabaseUrl}/`);
     endpoint.searchParams.set('limit', String(pageSize));
     endpoint.searchParams.set('offset', String(page * pageSize));
-    const { response } = await fetchStorageResponse(
+    const { payload } = await fetchStorageJson(
       context,
       endpoint.toString(),
       { method: 'GET' },
       'bucket list',
       report,
     );
-    const payload = await parseStorageJson(response, 'bucket list');
     if (!Array.isArray(payload) || payload.length > pageSize) {
       throw storageSafeError('Supabase Storage bucket list page is invalid');
     }
@@ -1193,7 +1258,7 @@ async function listStorageObjectsWithContext(context, bucket, pageSize, report) 
         prefix,
         sortBy: { column: 'name', order: 'asc' },
       };
-      const { response } = await fetchStorageResponse(
+      const { payload } = await fetchStorageJson(
         context,
         endpoint.toString(),
         {
@@ -1203,7 +1268,6 @@ async function listStorageObjectsWithContext(context, bucket, pageSize, report) 
         'object list',
         report,
       );
-      const payload = await parseStorageJson(response, 'object list');
       if (!Array.isArray(payload) || payload.length > pageSize) {
         throw storageSafeError('Supabase Storage object list page is invalid');
       }
@@ -1272,21 +1336,6 @@ function toNodeReadable(body) {
   throw storageSafeError('Supabase Storage object response stream is invalid');
 }
 
-function isStorageNetworkError(error) {
-  const code = typeof error?.code === 'string' ? error.code.toUpperCase() : '';
-  return [
-    'ECONNRESET',
-    'ECONNREFUSED',
-    'EAI_AGAIN',
-    'ENETDOWN',
-    'ENETUNREACH',
-    'ETIMEDOUT',
-    'FETCH_ERR',
-    'UND_ERR_CONNECT_TIMEOUT',
-    'UND_ERR_SOCKET',
-  ].includes(code) || error?.name === 'AbortError';
-}
-
 async function streamStorageObject(body, temporaryFile) {
   const hash = createHash('sha256');
   let bytes = 0;
@@ -1324,7 +1373,23 @@ async function streamStorageObject(body, temporaryFile) {
   return { bytes, sha256: hash.digest('hex') };
 }
 
-async function downloadStorageObjectWithContext(context, storagePaths, bucket, object, report, sequence) {
+async function rollbackStorageArtifacts(createdDestinations, temporaryFiles) {
+  await Promise.all([
+    ...createdDestinations,
+    ...temporaryFiles,
+  ].map((filePath) => rm(filePath, { force: true }).catch(() => {})));
+}
+
+async function downloadStorageObjectWithContext(
+  context,
+  storagePaths,
+  bucket,
+  object,
+  report,
+  sequence,
+  createdDestinations = [],
+  temporaryFiles = new Set(),
+) {
   const safeBucket = safeStorageSegment(bucket, 'bucket');
   if (!object || typeof object !== 'object' || Array.isArray(object)) {
     throw storageSafeError('Supabase Storage object is invalid');
@@ -1373,6 +1438,7 @@ async function downloadStorageObjectWithContext(context, storagePaths, bucket, o
     storagePaths.tempRoot,
     `storage-object-${String(sequence).padStart(12, '0')}.tmp`,
   );
+  temporaryFiles.add(temporaryFile);
   assertStorageChild(
     temporaryFile,
     storagePaths.canonicalTempRoot,
@@ -1397,6 +1463,8 @@ async function downloadStorageObjectWithContext(context, storagePaths, bucket, o
       const streamed = await streamStorageObject(response.body, temporaryFile);
       const mime = listedMime || responseContentType(response);
       await rename(temporaryFile, destination);
+      temporaryFiles.delete(temporaryFile);
+      createdDestinations.push(destination);
       return {
         bucket: safeBucket,
         bytes: streamed.bytes,
@@ -1417,7 +1485,7 @@ async function downloadStorageObjectWithContext(context, storagePaths, bucket, o
   }
 }
 
-async function writeStorageErrorReport(storagePaths, report) {
+async function writeStorageErrorReport(storagePaths, report, temporaryFiles = new Set()) {
   if (report.length === 0) return;
   const reportFile = join(storagePaths.storageRoot, 'error-report.json');
   assertStorageChild(
@@ -1427,6 +1495,7 @@ async function writeStorageErrorReport(storagePaths, report) {
     'Supabase Storage error report path escapes the storage directory',
   );
   const temporaryFile = join(storagePaths.tempRoot, 'storage-error-report.json.tmp');
+  temporaryFiles.add(temporaryFile);
   try {
     await rm(temporaryFile, { force: true });
     await writeFile(temporaryFile, `${JSON.stringify({ errors: report })}\n`, {
@@ -1435,8 +1504,10 @@ async function writeStorageErrorReport(storagePaths, report) {
       mode: 0o600,
     });
     await rename(temporaryFile, reportFile);
+    temporaryFiles.delete(temporaryFile);
   } catch {
     await rm(temporaryFile, { force: true }).catch(() => {});
+    temporaryFiles.delete(temporaryFile);
     throw storageSafeError('Supabase Storage error report could not be published');
   }
 }
@@ -1461,6 +1532,8 @@ export async function exportStorage(config, paths, fetchImpl) {
   const storagePaths = await prepareStoragePaths(config, paths);
   const context = storageContextWithSecret(config, validated);
   const report = [];
+  const createdDestinations = [];
+  const temporaryFiles = new Set();
   const manifestFile = join(storagePaths.storageRoot, 'manifest.jsonl');
   const temporaryManifest = join(storagePaths.tempRoot, 'storage-manifest.jsonl.tmp');
   assertStorageChild(
@@ -1476,6 +1549,7 @@ export async function exportStorage(config, paths, fetchImpl) {
 
   try {
     await writeFile(temporaryManifest, '', { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    temporaryFiles.add(temporaryManifest);
     const buckets = await listStorageBuckets(context, pageSize, report);
     let objectCount = 0;
 
@@ -1489,6 +1563,8 @@ export async function exportStorage(config, paths, fetchImpl) {
           object,
           report,
           objectCount + 1,
+          createdDestinations,
+          temporaryFiles,
         );
         await writeFile(temporaryManifest, `${JSON.stringify({
           bucket: evidence.bucket,
@@ -1501,12 +1577,13 @@ export async function exportStorage(config, paths, fetchImpl) {
       }
     }
 
-    await writeStorageErrorReport(storagePaths, report);
+    await writeStorageErrorReport(storagePaths, report, temporaryFiles);
     await rename(temporaryManifest, manifestFile);
+    temporaryFiles.delete(temporaryManifest);
     return { bucketCount: buckets.length, manifestFile, objectCount };
   } catch (error) {
-    await rm(temporaryManifest, { force: true }).catch(() => {});
-    if (report.length > 0) await writeStorageErrorReport(storagePaths, report).catch(() => {});
+    await rollbackStorageArtifacts(createdDestinations, temporaryFiles);
+    if (report.length > 0) await writeStorageErrorReport(storagePaths, report, temporaryFiles).catch(() => {});
     if (error?.storageSafe) throw error;
     throw storageSafeError('Supabase Storage export failed');
   }

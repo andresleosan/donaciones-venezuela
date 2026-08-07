@@ -93,8 +93,12 @@ escriben objetos directamente en su destino final:
   reintentos. Nunca contiene cabeceras, cuerpos remotos, claves ni rutas de
   objetos.
 
-Solo se reintenta una vez un fallo de red o HTTP `408`, `429` o `5xx`. Un fallo
-de stream elimina el temporal del objeto y no agrega una linea al manifiesto.
+Solo se reintenta una vez un fallo de red identificado por codigo (incluido un
+codigo en `cause`) o HTTP `408`, `429` o `5xx`. Las excepciones de programacion
+o configuracion y el JSON invalido fallan sin retry. Un fallo de stream elimina
+el temporal del objeto; si falla un objeto posterior, tambien se eliminan todos
+los objetos publicados por ese mismo export antes de propagar el error. No se
+tocan runs anteriores y no se agrega una linea al manifiesto.
 El helper valida el proyecto exacto `zryfwbjvlacorryzdaod`, el origen HTTPS
 exacto y `mode=execute` antes de leer `SUPABASE_SERVICE_ROLE_KEY`.
 

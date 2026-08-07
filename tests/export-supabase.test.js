@@ -1408,6 +1408,12 @@ describe('Supabase Storage export', () => {
       }
 
       if (parsed.pathname.startsWith('/storage/v1/object/list/')) {
+        expect(options.method).toBe('POST');
+        expect(options.headers).toMatchObject({
+          apikey: 'placeholder-service-key',
+          Authorization: 'Bearer placeholder-service-key',
+          'Content-Type': 'application/json',
+        });
         const bucket = decodeURIComponent(parsed.pathname.split('/').pop());
         const request = JSON.parse(options.body);
         if (bucket === 'alpha' && request.prefix === '') {
@@ -1598,6 +1604,71 @@ describe('Supabase Storage export', () => {
     }
   });
 
+  it('does not retry a non-network fetch exception', async () => {
+    const paths = createStoragePaths();
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      throw new Error('programming failure with secret detail');
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).rejects.toThrow(/request failed/i);
+      expect(calls).toBe(1);
+      expect(existsSync(join(paths.storage, 'manifest.jsonl'))).toBe(false);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('retries a list JSON body network failure once through a nested cause code', async () => {
+    const paths = createStoragePaths();
+    let bucketCalls = 0;
+    const fetchImpl = async (url) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        bucketCalls += 1;
+        const response = fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+        if (bucketCalls === 1) {
+          response.json = async () => {
+            throw Object.assign(new Error('body network detail'), { cause: { code: 'ECONNRESET' } });
+          };
+        }
+        return response;
+      }
+      return fakeStorageResponse({ body: [] });
+    };
+
+    try {
+      const evidence = await exportStorage(storageConfig(), paths, fetchImpl);
+      expect(evidence).toMatchObject({ bucketCount: 1, objectCount: 0 });
+      expect(bucketCalls).toBe(2);
+      expect(readFileSync(join(paths.storage, 'error-report.json'), 'utf8')).not.toContain('body network detail');
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not retry invalid list JSON', async () => {
+    const paths = createStoragePaths();
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      const response = fakeStorageResponse({ body: [] });
+      response.json = async () => {
+        throw new SyntaxError('invalid remote JSON');
+      };
+      return response;
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).rejects.toThrow(/JSON is invalid/i);
+      expect(calls).toBe(1);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
   it('retries one transient download and records no response body or headers in the manifest', async () => {
     const paths = createStoragePaths();
     let downloadCalls = 0;
@@ -1653,7 +1724,9 @@ describe('Supabase Storage export', () => {
         return fakeStorageResponse({ body: [{ name: 'file.txt', id: 'object-id', metadata: { mimetype: 'text/plain' } }] });
       }
       downloadCalls += 1;
-      if (downloadCalls === 1) throw new Error('network PII and key must not escape');
+      if (downloadCalls === 1) {
+        throw Object.assign(new Error('network PII and key must not escape'), { code: 'ECONNRESET' });
+      }
       return fakeStorageResponse({ stream: Readable.from([Buffer.from('network-retry')]) });
     };
 
@@ -1662,6 +1735,36 @@ describe('Supabase Storage export', () => {
       expect(downloadCalls).toBe(2);
       expect(readFileSync(join(paths.storage, 'error-report.json'), 'utf8')).toContain('"status":"network"');
       expect(readFileSync(join(paths.storage, 'error-report.json'), 'utf8')).not.toContain('network PII');
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('retries a streamed body failure when its nested cause is a network code', async () => {
+    const paths = createStoragePaths();
+    let downloadCalls = 0;
+    async function* failingBody() {
+      yield Buffer.from('partial');
+      throw Object.assign(new Error('stream network detail'), { cause: { code: 'ECONNRESET' } });
+    }
+    const fetchImpl = async (url) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+      }
+      if (pathname.includes('/object/list/')) {
+        return fakeStorageResponse({ body: [{ name: 'file.txt', id: 'object-id', metadata: { mimetype: 'text/plain' } }] });
+      }
+      downloadCalls += 1;
+      return fakeStorageResponse({
+        stream: downloadCalls === 1 ? Readable.from(failingBody()) : Readable.from([Buffer.from('retry-success')]),
+      });
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).resolves.toMatchObject({ objectCount: 1 });
+      expect(downloadCalls).toBe(2);
+      expect(readFileSync(join(paths.storage, 'manifest.jsonl'), 'utf8')).not.toContain('stream network detail');
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }
@@ -1687,6 +1790,41 @@ describe('Supabase Storage export', () => {
       expect(downloadCalls).toBe(2);
       expect(existsSync(join(paths.storage, 'manifest.jsonl'))).toBe(false);
       expect(existsSync(join(paths.storage, 'objects', 'safe-bucket', 'file.txt'))).toBe(false);
+      expect(readdirSync(paths.temp)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rolls back every object already published when a later object fails', async () => {
+    const paths = createStoragePaths();
+    let downloadCalls = 0;
+    const fetchImpl = async (url, options = {}) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+      }
+      if (pathname.includes('/object/list/')) {
+        const request = JSON.parse(options.body);
+        return fakeStorageResponse({
+          body: request.offset === 0
+            ? [
+              { name: 'first.txt', id: 'first', metadata: { mimetype: 'text/plain' } },
+              { name: 'second.txt', id: 'second', metadata: { mimetype: 'text/plain' } },
+            ]
+            : [],
+        });
+      }
+      downloadCalls += 1;
+      if (downloadCalls === 1) return fakeStorageResponse({ stream: Readable.from([Buffer.from('first')]) });
+      return fakeStorageResponse({ status: 503, body: { error: 'later failure body' } });
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).rejects.toThrow(/HTTP status 503/);
+      expect(existsSync(join(paths.storage, 'objects', 'safe-bucket', 'first.txt'))).toBe(false);
+      expect(existsSync(join(paths.storage, 'objects', 'safe-bucket', 'second.txt'))).toBe(false);
+      expect(existsSync(join(paths.storage, 'manifest.jsonl'))).toBe(false);
       expect(readdirSync(paths.temp)).toEqual([]);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
