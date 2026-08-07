@@ -1,6 +1,24 @@
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { assertSafeOutputRoot, readExportConfig } from '../scripts/export-supabase-lib.mjs';
-import { formatDryRunSummary, parseCliArgs } from '../scripts/export-supabase.mjs';
+import { formatDryRunSummary, main, parseCliArgs } from '../scripts/export-supabase.mjs';
+
+const EXPECTED_PROJECT_REF = 'zryfwbjvlacorryzdaod';
+const EXPECTED_SUPABASE_URL = `https://${EXPECTED_PROJECT_REF}.supabase.co`;
+
+function completeExportEnv(overrides = {}) {
+  return {
+    SUPABASE_PROJECT_REF: EXPECTED_PROJECT_REF,
+    SUPABASE_URL: EXPECTED_SUPABASE_URL,
+    SUPABASE_DB_URL: 'postgres://user:placeholder@example/db',
+    SUPABASE_SERVICE_ROLE_KEY: 'placeholder-service-key',
+    EXPORT_ROOT: 'C:/secure/donaciones-export',
+    EXPORT_AGE_RECIPIENT: 'age1test',
+    ...overrides,
+  };
+}
 
 describe('export config', () => {
   it('requires the exact Supabase project reference', () => {
@@ -56,14 +74,14 @@ describe('export config', () => {
       SUPABASE_PROJECT_REF: 'zryfwbjvlacorryzdaod',
       SUPABASE_URL: 'https://zryfwbjvlacorryzdaod.supabase.co',
       SUPABASE_DB_URL: 'not-a-postgres-url-password',
-    }, 'F:/repo')).toThrowError(/database|postgres/i);
+    }, 'F:/repo', { mode: 'execute' })).toThrowError(/database|postgres/i);
 
     try {
       readExportConfig({
         SUPABASE_PROJECT_REF: 'zryfwbjvlacorryzdaod',
         SUPABASE_URL: 'https://zryfwbjvlacorryzdaod.supabase.co',
         SUPABASE_DB_URL: 'not-a-postgres-url-password',
-      }, 'F:/repo');
+      }, 'F:/repo', { mode: 'execute' });
     } catch (error) {
       expect(error.message).not.toContain('not-a-postgres-url-password');
     }
@@ -102,5 +120,70 @@ describe('export config', () => {
 
     expect(summary).toContain('dry-run');
     expect(summary).toContain('Missing variables:');
+  });
+
+  it('does not read credential values in dry-run', () => {
+    const env = {
+      SUPABASE_PROJECT_REF: EXPECTED_PROJECT_REF,
+      SUPABASE_URL: EXPECTED_SUPABASE_URL,
+      EXPORT_ROOT: 'C:/secure/donaciones-export',
+      EXPORT_AGE_RECIPIENT: 'age1test',
+      get SUPABASE_DB_URL() {
+        throw new Error('dry-run read database credential');
+      },
+      get SUPABASE_SERVICE_ROLE_KEY() {
+        throw new Error('dry-run read service credential');
+      },
+    };
+
+    const config = readExportConfig(env, 'F:/repo');
+
+    expect(config.dbUrl).toBeUndefined();
+    expect(config.serviceRoleKey).toBeUndefined();
+    expect(config.missingVariables).not.toContain('SUPABASE_DB_URL');
+    expect(config.missingVariables).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+  });
+
+  it('materializes credential values only in execute mode', () => {
+    const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+
+    expect(config.dbUrl).toBe('postgres://user:placeholder@example/db');
+    expect(config.serviceRoleKey).toBe('placeholder-service-key');
+  });
+
+  it('rejects an HTTPS URL belonging to another project', () => {
+    expect(() => readExportConfig(completeExportEnv({
+      SUPABASE_URL: 'https://otro-proyecto.supabase.co',
+    }), 'F:/repo')).toThrow(/project|host|URL/i);
+  });
+
+  it('keeps run-dir in main preflight state without printing its value', async () => {
+    const output = [];
+    const code = await main(
+      ['--dry-run', '--project-ref', EXPECTED_PROJECT_REF, '--run-dir', 'C:/secure/run-dir'],
+      completeExportEnv(),
+      {
+        log: (message) => output.push(message),
+        error: (message) => output.push(message),
+      },
+    );
+
+    expect(code).toBe(0);
+    expect(output.join('\n')).toContain('Run directory: configured');
+    expect(output.join('\n')).not.toContain('C:/secure/run-dir');
+  });
+
+  it('rejects a run directory whose symlink resolves inside the repository', () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), 'export-preflight-'));
+    const repoRoot = join(fixtureRoot, 'repo');
+    const linkRoot = join(fixtureRoot, 'external-link');
+    mkdirSync(repoRoot);
+
+    try {
+      symlinkSync(repoRoot, linkRoot, process.platform === 'win32' ? 'junction' : 'dir');
+      expect(() => assertSafeOutputRoot(join(linkRoot, 'run'), repoRoot)).toThrow(/outside/i);
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 });

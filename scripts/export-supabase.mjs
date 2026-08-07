@@ -6,7 +6,6 @@ import {
   EXPECTED_PROJECT_REF,
   PREFLIGHT_TOOLS,
   REQUIRED_EXPORT_VARIABLES,
-  assertSafeOutputRoot,
   readExportConfig,
   resolvePreflightTools,
 } from './export-supabase-lib.mjs';
@@ -79,11 +78,12 @@ export function parseCliArgs(args = []) {
   return { help, mode, projectRef, runDir };
 }
 
-function formatSummary({ mode, tools = [], missingVariables = [] }) {
+function formatSummary({ mode, tools = [], missingVariables = [], runDir }) {
   const safeTools = tools.filter((tool) => tool && PREFLIGHT_TOOLS.includes(tool.name));
   const safeMissingVariables = missingVariables.filter((name) => REQUIRED_EXPORT_VARIABLES.includes(name));
   const lines = [
     `Supabase export preflight (${mode})`,
+    `Run directory: ${runDir ? 'configured' : 'not configured'}`,
     'Local tools:',
     ...safeTools.map((tool) => `- ${tool.name}: ${tool.available ? 'available' : 'not found'}`),
     'Missing variables:',
@@ -129,15 +129,15 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
     const config = readExportConfig(env, process.cwd(), {
       mode: options.mode,
       projectRef: options.projectRef,
+      runDir: options.runDir,
     });
-
-    if (options.runDir) assertSafeOutputRoot(options.runDir, config.repoRoot);
 
     const tools = resolvePreflightTools(env);
     const summary = formatSummary({
       mode: options.mode,
       tools,
       missingVariables: config.missingVariables,
+      runDir: config.runDir,
     });
     io.log(summary);
 

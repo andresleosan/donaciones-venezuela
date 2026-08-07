@@ -1,7 +1,9 @@
-import { accessSync, constants, statSync } from 'node:fs';
-import { delimiter, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
+import { accessSync, constants, existsSync, realpathSync, statSync } from 'node:fs';
+import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 
 export const EXPECTED_PROJECT_REF = 'zryfwbjvlacorryzdaod';
+export const EXPECTED_SUPABASE_URL = `https://${EXPECTED_PROJECT_REF}.supabase.co`;
+export const ALLOWED_SUPABASE_ORIGINS = Object.freeze([EXPECTED_SUPABASE_URL]);
 
 export const REQUIRED_EXPORT_VARIABLES = Object.freeze([
   'SUPABASE_PROJECT_REF',
@@ -52,6 +54,31 @@ function isInsideOrEqual(candidate, parent, pathApi) {
   );
 }
 
+function canonicalizeExistingPath(candidate) {
+  try {
+    return realpathSync(candidate);
+  } catch {
+    return candidate;
+  }
+}
+
+function canonicalizeWithExistingAncestor(candidate, pathApi) {
+  const missingSegments = [];
+  let existingAncestor = candidate;
+
+  while (!existsSync(existingAncestor)) {
+    const parent = pathApi.dirname(existingAncestor);
+    if (parent === existingAncestor) return candidate;
+    missingSegments.unshift(pathApi.basename(existingAncestor));
+    existingAncestor = parent;
+  }
+
+  const canonicalAncestor = canonicalizeExistingPath(existingAncestor);
+  return missingSegments.length === 0
+    ? canonicalAncestor
+    : pathApi.resolve(canonicalAncestor, ...missingSegments);
+}
+
 function hasProtectedSegment(candidate) {
   const protectedSegments = new Set(['.git', 'node_modules', 'dist', 'graphify-out']);
   return candidate
@@ -69,13 +96,18 @@ export function assertSafeOutputRoot(outputRoot, repoRoot) {
   const repository = resolvePathForInput(repoRoot.trim());
   const useWindowsPaths = /^[A-Za-z]:[\\/]/.test(outputRoot) ||
     /^[A-Za-z]:[\\/]/.test(repoRoot) || outputRoot.includes('\\') || repoRoot.includes('\\');
-  const pathApi = useWindowsPaths ? win32 : { relative, isAbsolute, sep };
+  const pathApi = useWindowsPaths
+    ? win32
+    : { basename, dirname, relative, isAbsolute, resolve, sep };
+  const canonicalRepository = canonicalizeExistingPath(repository);
+  const canonicalCandidate = canonicalizeWithExistingAncestor(candidate, pathApi);
 
-  if (isInsideOrEqual(candidate, repository, pathApi) || hasProtectedSegment(candidate)) {
+  if (isInsideOrEqual(canonicalCandidate, canonicalRepository, pathApi) ||
+    hasProtectedSegment(candidate) || hasProtectedSegment(canonicalCandidate)) {
     throw new Error('Export output root must be outside the repository and protected directories');
   }
 
-  return candidate;
+  return canonicalCandidate;
 }
 
 function parseSupabaseUrl(value) {
@@ -86,9 +118,12 @@ function parseSupabaseUrl(value) {
     if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password) {
       throw new Error('invalid URL');
     }
+    if (!ALLOWED_SUPABASE_ORIGINS.includes(parsed.origin)) {
+      throw new Error('unapproved Supabase host');
+    }
     return parsed.origin;
   } catch {
-    throw new Error('SUPABASE_URL must be a valid HTTPS URL');
+    throw new Error('SUPABASE_URL must be the approved HTTPS Supabase project URL');
   }
 }
 
@@ -113,6 +148,7 @@ function safeConfigSummary(config) {
     dbUrl: config.dbUrl ? '[redacted]' : undefined,
     serviceRoleKey: config.serviceRoleKey ? '[redacted]' : undefined,
     outputRoot: config.outputRoot,
+    runDir: config.runDir,
     ageRecipient: config.ageRecipient,
     repoRoot: config.repoRoot,
     missingVariables: config.missingVariables,
@@ -124,6 +160,7 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
   const source = env || {};
   const execute = isExecuteMode(options);
   const requestedProjectRef = options && typeof options === 'object' ? options.projectRef : undefined;
+  const requestedRunDir = options && typeof options === 'object' ? options.runDir : undefined;
   const environmentProjectRef = valueOrUndefined(source.SUPABASE_PROJECT_REF);
 
   if (environmentProjectRef && environmentProjectRef !== EXPECTED_PROJECT_REF) {
@@ -135,14 +172,15 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
 
   const projectRef = requestedProjectRef || environmentProjectRef;
   const supabaseUrl = parseSupabaseUrl(source.SUPABASE_URL);
-  const dbUrl = parseDatabaseUrl(source.SUPABASE_DB_URL);
-  const serviceRoleKey = valueOrUndefined(source.SUPABASE_SERVICE_ROLE_KEY);
+  const dbUrl = execute ? parseDatabaseUrl(source.SUPABASE_DB_URL) : undefined;
+  const serviceRoleKey = execute ? valueOrUndefined(source.SUPABASE_SERVICE_ROLE_KEY) : undefined;
   const outputValue = valueOrUndefined(source.EXPORT_ROOT);
   const outputRoot = outputValue ? assertSafeOutputRoot(outputValue, repoRoot) : undefined;
-  const ageRecipient = valueOrUndefined(source.EXPORT_AGE_RECIPIENT);
+  const runDirValue = valueOrUndefined(requestedRunDir);
+  const runDir = runDirValue ? assertSafeOutputRoot(runDirValue, repoRoot) : undefined;
   const missingVariables = REQUIRED_EXPORT_VARIABLES.filter((name) => {
     if (name === 'SUPABASE_PROJECT_REF') return !projectRef;
-    return !valueOrUndefined(source[name]);
+    return execute ? !valueOrUndefined(source[name]) : !Object.prototype.hasOwnProperty.call(source, name);
   });
 
   if (execute && missingVariables.length > 0) {
@@ -153,8 +191,9 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
     projectRef,
     supabaseUrl,
     outputRoot,
-    ageRecipient,
-    repoRoot: resolvePathForInput(repoRoot),
+    runDir,
+    ageRecipient: execute ? valueOrUndefined(source.EXPORT_AGE_RECIPIENT) : undefined,
+    repoRoot: canonicalizeExistingPath(resolvePathForInput(repoRoot)),
     missingVariables,
     mode: execute ? 'execute' : 'dry-run',
   };
