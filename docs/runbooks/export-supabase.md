@@ -1,6 +1,6 @@
 # Runbook de exportacion Supabase
 
-## Alcance de Tasks 3 y 4
+## Alcance de Tasks 3 a 5
 
 El exportador prepara evidencia de PostgreSQL para el proyecto Supabase
 `zryfwbjvlacorryzdaod`. Esta tarea solo exporta el schema `public` de la
@@ -13,9 +13,8 @@ aplicacion:
 - `run.json`: estado `prepared` y versiones de `pg_dump`/`psql`, sin datos de
   conexion. `completed` queda reservado para el sellado de Task 6.
 
-Auth y Storage no se leen desde schemas internos. Se exportaran mediante sus
-APIs soportadas en tareas separadas. El CLI no ejecuta `pg_restore` contra una
-base remota.
+Auth y Storage no se leen desde schemas internos. Se exportan mediante sus APIs
+soportadas. El CLI no ejecuta `pg_restore` contra una base remota.
 
 ### Auth metadata
 
@@ -60,6 +59,45 @@ La publicacion usa primero `temp/auth-users.json.tmp` y
 se eliminan los temporales y los dos finales; el flujo del CLI marca el run
 como `failed` y limpia el resto de `temp/`.
 
+### Storage de objetos
+
+En `--execute`, despues de Auth, el exportador consulta solo la API soportada
+de Storage con la clave administrativa en cabeceras de memoria:
+
+- `GET <SUPABASE_URL>/storage/v1/bucket?limit=100&offset=<offset>` para
+  descubrir todos los buckets.
+- `POST <SUPABASE_URL>/storage/v1/object/list/<bucket>` con `prefix`, `limit`,
+  `offset` y orden por nombre para listar cada pagina.
+- `GET <SUPABASE_URL>/storage/v1/object/authenticated/<bucket>/<path>` para
+  descargar cada objeto.
+
+Cada bucket y cada prefijo tiene un limite de paginas. Los nombres repetidos o
+solapados entre paginas, los prefijos repetidos y una respuesta mayor al limite
+seguro detienen la exportacion. Las carpetas se recorren hasta agotar sus
+paginas. Los buckets, segmentos de objeto y rutas absolutas se validan antes de
+usarse en el filesystem; se rechazan `..`, `.` ambiguo, slash inverso,
+separadores vacios, nombres reservados de Windows, caracteres de control y
+destinos que no permanezcan dentro de `storage/objects/<bucket>`.
+
+La respuesta de cada objeto se procesa como stream con SHA-256 y conteo de
+bytes. No se usa `arrayBuffer`, no se guarda el payload en memoria y no se
+escriben objetos directamente en su destino final:
+
+- `storage/objects/<bucket>/<path>`: objeto publicado solo despues de cerrar
+  correctamente el stream.
+- `storage/manifest.jsonl`: una linea por objeto con `bucket`, `path`, `bytes`,
+  `mime` y `sha256`; se construye en `temp/` y se renombra solo al completar
+  todos los objetos.
+- `storage/error-report.json`: solo si hubo reintentos o fallos; contiene
+  unicamente la operacion, el estado HTTP (o `network`) y el numero de
+  reintentos. Nunca contiene cabeceras, cuerpos remotos, claves ni rutas de
+  objetos.
+
+Solo se reintenta una vez un fallo de red o HTTP `408`, `429` o `5xx`. Un fallo
+de stream elimina el temporal del objeto y no agrega una linea al manifiesto.
+El helper valida el proyecto exacto `zryfwbjvlacorryzdaod`, el origen HTTPS
+exacto y `mode=execute` antes de leer `SUPABASE_SERVICE_ROLE_KEY`.
+
 ## Variables y rutas
 
 Entregar los valores solo por el entorno seguro del operador. Nunca escribirlos
@@ -97,10 +135,11 @@ npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod
 ```
 
 El modo predeterminado es `--dry-run`; valida nombres de variables, rutas y
-herramientas locales sin red, dumps ni artefactos de datos. En estas Tasks 3 y 4
-las pruebas usan runners y `fetchImpl` falsos y no ejecutan `pg_dump`, `psql`,
-Auth remoto, Firebase remoto, migraciones ni comandos que creen artefactos fuera
-de fixtures.
+herramientas locales sin red, dumps ni artefactos de datos. En estas Tasks 3 a 5
+las pruebas usan runners, streams de Node y `fetchImpl` falsos y no ejecutan
+`pg_dump`, `psql`, Auth remoto, Storage remoto, Firebase remoto, migraciones ni
+comandos que creen artefactos fuera de fixtures. Los runs de `--execute` siguen
+en `prepared`; `completed` queda reservado para el sellado de Task 6.
 
 ## Conteos y reconciliacion
 

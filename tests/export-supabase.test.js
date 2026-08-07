@@ -1,7 +1,9 @@
 import { EventEmitter } from 'node:events';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import {
   assertSafeOutputRoot,
@@ -10,6 +12,7 @@ import {
   createRunDirectory,
   exportAuth,
   exportPostgres,
+  exportStorage,
   markRunFailed,
   parsePostgresConnection,
   quoteIdentifier,
@@ -66,6 +69,46 @@ function fakeAuthResponse(body, status = 200) {
       return body;
     },
   };
+}
+
+function createStoragePaths() {
+  const root = mkdtempSync(join(tmpdir(), 'export-storage-'));
+  const storage = join(root, 'storage');
+  const temp = join(root, 'temp');
+  mkdirSync(storage);
+  mkdirSync(temp);
+  return { root, storage, temp };
+}
+
+function storageConfig(overrides = {}) {
+  return {
+    projectRef: EXPECTED_PROJECT_REF,
+    supabaseUrl: EXPECTED_SUPABASE_URL,
+    mode: 'execute',
+    serviceRoleKey: 'placeholder-service-key',
+    storagePageSize: 2,
+    ...overrides,
+  };
+}
+
+function fakeStorageResponse({ status = 200, body, stream, contentType } = {}) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get(name) {
+        return name.toLowerCase() === 'content-type' ? contentType : null;
+      },
+    },
+    async json() {
+      return body;
+    },
+    body: stream,
+  };
+}
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 function authUser(overrides = {}) {
@@ -1033,11 +1076,11 @@ describe('export staging and command runner', () => {
               stderr: '',
             };
           },
-          fetchImpl: async () => ({
+          fetchImpl: async (url) => ({
             ok: true,
             status: 200,
             async json() {
-              return { users: [] };
+              return url.includes('/storage/v1/bucket') ? [] : { users: [] };
             },
           }),
           now: '2026-08-06T12:00:00.000Z',
@@ -1057,7 +1100,9 @@ describe('export staging and command runner', () => {
       expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'postgres', 'object-counts.json'))).toBe(true);
       expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'auth', 'users.json'))).toBe(true);
       expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'auth', 'metadata.json'))).toBe(true);
+      expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'storage', 'manifest.jsonl'))).toBe(true);
       expect(output.join('\n')).toContain('PostgreSQL export prepared');
+      expect(output.join('\n')).toContain('Storage export prepared (0 objects, 0 buckets)');
       expect(output.join('\n')).not.toContain('completed');
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
@@ -1333,6 +1378,343 @@ describe('PostgreSQL export', () => {
       await expect(exportPostgres(config, paths, runner)).rejects.toMatchObject({ code: 'COMMAND_EXIT' });
       expect(calls.some(({ command, args }) => command === 'psql' && args[0] === '--set=ON_ERROR_STOP=1')).toBe(false);
       expect(calls.some(({ args }) => args.join(' ').includes('remote detail'))).toBe(false);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Supabase Storage export', () => {
+  it('discovers every bucket, paginates objects, recurses folders and writes hashed manifest rows', async () => {
+    const paths = createStoragePaths();
+    const calls = [];
+    const files = {
+      'alpha/top.txt': Buffer.from('alpha top'),
+      'alpha/folder/child.txt': Buffer.from('alpha child'),
+      'beta/report.csv': Buffer.from('beta report'),
+    };
+
+    const fetchImpl = async (url, options = {}) => {
+      const parsed = new URL(url);
+      calls.push({ url, options });
+
+      if (parsed.pathname === '/storage/v1/bucket') {
+        const offset = Number(parsed.searchParams.get('offset'));
+        return fakeStorageResponse({
+          body: offset === 0
+            ? [{ id: 'alpha', name: 'alpha' }, { id: 'beta', name: 'beta' }]
+            : [{ id: 'gamma', name: 'gamma' }],
+        });
+      }
+
+      if (parsed.pathname.startsWith('/storage/v1/object/list/')) {
+        const bucket = decodeURIComponent(parsed.pathname.split('/').pop());
+        const request = JSON.parse(options.body);
+        if (bucket === 'alpha' && request.prefix === '') {
+          return fakeStorageResponse({
+            body: request.offset === 0
+              ? [
+                { name: 'folder', id: null, metadata: null },
+                { name: 'top.txt', id: 'alpha-top', metadata: { mimetype: 'text/plain' } },
+              ]
+              : [],
+          });
+        }
+        if (bucket === 'alpha' && request.prefix === 'folder') {
+          return fakeStorageResponse({
+            body: [{ name: 'child.txt', id: 'alpha-child', metadata: { mimetype: 'text/plain' } }],
+          });
+        }
+        if (bucket === 'beta' && request.prefix === '') {
+          return fakeStorageResponse({
+            body: [{ name: 'report.csv', id: 'beta-report', metadata: { mimetype: 'text/csv' } }],
+          });
+        }
+        if (bucket === 'gamma' && request.prefix === '') {
+          return fakeStorageResponse({ body: [] });
+        }
+        throw new Error('unexpected list fixture');
+      }
+
+      if (parsed.pathname.startsWith('/storage/v1/object/authenticated/')) {
+        const encoded = parsed.pathname.split('/storage/v1/object/authenticated/')[1];
+        const [bucket, ...encodedPath] = encoded.split('/');
+        const objectPath = [bucket, ...encodedPath].map((part) => decodeURIComponent(part)).join('/');
+        return fakeStorageResponse({ stream: Readable.from([files[objectPath]]) });
+      }
+
+      throw new Error('unexpected Storage endpoint');
+    };
+
+    try {
+      const evidence = await exportStorage(storageConfig(), paths, fetchImpl);
+      const manifest = readFileSync(evidence.manifestFile, 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line));
+
+      expect(evidence).toEqual({
+        manifestFile: join(paths.storage, 'manifest.jsonl'),
+        objectCount: 3,
+        bucketCount: 3,
+      });
+      expect(manifest).toEqual(expect.arrayContaining([
+        { bucket: 'alpha', path: 'top.txt', bytes: 9, mime: 'text/plain', sha256: sha256(files['alpha/top.txt']) },
+        { bucket: 'alpha', path: 'folder/child.txt', bytes: 11, mime: 'text/plain', sha256: sha256(files['alpha/folder/child.txt']) },
+        { bucket: 'beta', path: 'report.csv', bytes: 11, mime: 'text/csv', sha256: sha256(files['beta/report.csv']) },
+      ]));
+      expect(existsSync(join(paths.storage, 'objects', 'alpha', 'top.txt'))).toBe(true);
+      expect(existsSync(join(paths.storage, 'objects', 'alpha', 'folder', 'child.txt'))).toBe(true);
+      expect(existsSync(join(paths.storage, 'objects', 'beta', 'report.csv'))).toBe(true);
+      expect(calls.filter(({ url }) => url.includes('/storage/v1/object/list/'))).toHaveLength(5);
+      expect(calls.filter(({ url }) => url.includes('/storage/v1/object/authenticated/'))).toHaveLength(3);
+      expect(calls.filter(({ url }) => url.includes('/storage/v1/bucket'))).toHaveLength(2);
+      expect(calls.every(({ options }) => JSON.stringify(options).includes('placeholder-service-key'))).toBe(true);
+      expect(readFileSync(evidence.manifestFile, 'utf8')).not.toContain('placeholder-service-key');
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['absolute object path', '/absolute.txt'],
+    ['parent object path', '../escape.txt'],
+    ['backslash traversal', 'nested\\escape.txt'],
+    ['parent traversal in nested path', 'nested/../escape.txt'],
+    ['ambiguous dot path', './escape.txt'],
+  ])('rejects %s without publishing a manifest', async (_name, objectPath) => {
+    const paths = createStoragePaths();
+    const fetchImpl = async (url, options = {}) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+      }
+      if (parsed.pathname.includes('/object/list/')) {
+        const request = JSON.parse(options.body);
+        return fakeStorageResponse({
+          body: request.prefix === ''
+            ? [{ name: objectPath, id: 'object-id', metadata: { mimetype: 'text/plain' } }]
+            : [],
+        });
+      }
+      throw new Error('download must not run');
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).rejects.toThrow(/path|safe|storage/i);
+      expect(existsSync(join(paths.storage, 'manifest.jsonl'))).toBe(false);
+      expect(readdirSync(paths.temp)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['parent bucket name', '../bucket'],
+    ['bucket separator', 'bucket/name'],
+    ['Windows absolute bucket name', 'C:/bucket'],
+  ])('rejects %s before creating Storage object output', async (_name, bucketName) => {
+    const paths = createStoragePaths();
+    const config = storageConfig();
+
+    try {
+      await expect(exportStorage(config, paths, async () => fakeStorageResponse({
+        body: [{ id: bucketName, name: bucketName }],
+      }))).rejects.toThrow(/bucket|path|safe/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects repeated bucket pages and object pages before publishing evidence', async () => {
+    const bucketPaths = createStoragePaths();
+    let bucketCalls = 0;
+    const repeatedBucketFetch = async (url) => {
+      if (new URL(url).pathname !== '/storage/v1/bucket') throw new Error('object listing must not run');
+      bucketCalls += 1;
+      return fakeStorageResponse({
+        body: bucketCalls === 1
+          ? [{ id: 'bucket-a', name: 'bucket-a' }, { id: 'bucket-b', name: 'bucket-b' }]
+          : [{ id: 'bucket-b', name: 'bucket-b' }],
+      });
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), bucketPaths, repeatedBucketFetch)).rejects.toThrow(/repeated|overlap/i);
+      expect(existsSync(join(bucketPaths.storage, 'manifest.jsonl'))).toBe(false);
+    } finally {
+      rmSync(bucketPaths.root, { recursive: true, force: true });
+    }
+
+    const objectPaths = createStoragePaths();
+    let objectCalls = 0;
+    const repeatedObjectFetch = async (url, options = {}) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'bucket-a', name: 'bucket-a' }] });
+      }
+      if (pathname.includes('/object/list/')) {
+        objectCalls += 1;
+        return fakeStorageResponse({
+          body: objectCalls === 1
+            ? [
+              { name: 'a.txt', id: 'a', metadata: { mimetype: 'text/plain' } },
+              { name: 'b.txt', id: 'b', metadata: { mimetype: 'text/plain' } },
+            ]
+            : [{ name: 'b.txt', id: 'b', metadata: { mimetype: 'text/plain' } }],
+        });
+      }
+      throw new Error(`download must not run: ${options.method}`);
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), objectPaths, repeatedObjectFetch)).rejects.toThrow(/repeated|overlap/i);
+      expect(existsSync(join(objectPaths.storage, 'manifest.jsonl'))).toBe(false);
+    } finally {
+      rmSync(objectPaths.root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['wrong project', { projectRef: 'another-project' }],
+    ['wrong origin', { supabaseUrl: 'https://attacker.example.test' }],
+    ['dry-run mode', { mode: 'dry-run' }],
+  ])('rejects %s before reading the Storage service key', async (_name, overrides) => {
+    const paths = createStoragePaths();
+    const config = storageConfig(overrides);
+    Object.defineProperty(config, 'serviceRoleKey', {
+      configurable: true,
+      get() {
+        throw new Error('service key was read');
+      },
+    });
+
+    try {
+      await expect(exportStorage(config, paths, async () => {
+        throw new Error('fetch must not run');
+      })).rejects.toThrow(/project|origin|execute|mode/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('retries one transient download and records no response body or headers in the manifest', async () => {
+    const paths = createStoragePaths();
+    let downloadCalls = 0;
+    const fetchImpl = async (url, options = {}) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+      }
+      if (parsed.pathname.includes('/object/list/')) {
+        return fakeStorageResponse({ body: [{ name: 'file.txt', id: 'object-id', metadata: { mimetype: 'text/plain' } }] });
+      }
+      if (parsed.pathname.includes('/object/authenticated/')) {
+        downloadCalls += 1;
+        if (downloadCalls === 1) {
+          return fakeStorageResponse({ status: 503, body: { error: 'remote body must not escape' } });
+        }
+        expect(options.headers.Authorization).toBe('Bearer placeholder-service-key');
+        return fakeStorageResponse({
+          stream: Readable.from([Buffer.from('payload-secret')]),
+          contentType: 'secret-header-value',
+        });
+      }
+      throw new Error('unexpected Storage endpoint');
+    };
+
+    try {
+      const evidence = await exportStorage(storageConfig(), paths, fetchImpl);
+      const manifest = readFileSync(evidence.manifestFile, 'utf8');
+      expect(downloadCalls).toBe(2);
+      expect(manifest).toContain('"bytes":14');
+      expect(manifest).not.toContain('payload-secret');
+      expect(manifest).not.toContain('secret-header-value');
+      expect(manifest).not.toContain('remote body must not escape');
+      expect(JSON.parse(readFileSync(join(paths.storage, 'error-report.json'), 'utf8'))).toEqual({
+        errors: expect.arrayContaining([
+          { operation: 'download', retries: 1, status: 503 },
+        ]),
+      });
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('retries one network failure without exposing the thrown error', async () => {
+    const paths = createStoragePaths();
+    let downloadCalls = 0;
+    const fetchImpl = async (url) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+      }
+      if (pathname.includes('/object/list/')) {
+        return fakeStorageResponse({ body: [{ name: 'file.txt', id: 'object-id', metadata: { mimetype: 'text/plain' } }] });
+      }
+      downloadCalls += 1;
+      if (downloadCalls === 1) throw new Error('network PII and key must not escape');
+      return fakeStorageResponse({ stream: Readable.from([Buffer.from('network-retry')]) });
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).resolves.toMatchObject({ objectCount: 1 });
+      expect(downloadCalls).toBe(2);
+      expect(readFileSync(join(paths.storage, 'error-report.json'), 'utf8')).toContain('"status":"network"');
+      expect(readFileSync(join(paths.storage, 'error-report.json'), 'utf8')).not.toContain('network PII');
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fails after one transient retry and leaves no successful manifest', async () => {
+    const paths = createStoragePaths();
+    let downloadCalls = 0;
+    const fetchImpl = async (url) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+      }
+      if (pathname.includes('/object/list/')) {
+        return fakeStorageResponse({ body: [{ name: 'file.txt', id: 'object-id', metadata: { mimetype: 'text/plain' } }] });
+      }
+      downloadCalls += 1;
+      return fakeStorageResponse({ status: 503, body: { error: 'must not escape' } });
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).rejects.toThrow(/HTTP status 503/);
+      expect(downloadCalls).toBe(2);
+      expect(existsSync(join(paths.storage, 'manifest.jsonl'))).toBe(false);
+      expect(existsSync(join(paths.storage, 'objects', 'safe-bucket', 'file.txt'))).toBe(false);
+      expect(readdirSync(paths.temp)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('removes a partial streamed object and never publishes its manifest row', async () => {
+    const paths = createStoragePaths();
+    async function* partialBody() {
+      yield Buffer.from('partial-data');
+      throw new Error('remote PII must not escape');
+    }
+    const fetchImpl = async (url) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        return fakeStorageResponse({ body: [{ id: 'safe-bucket', name: 'safe-bucket' }] });
+      }
+      if (pathname.includes('/object/list/')) {
+        return fakeStorageResponse({ body: [{ name: 'file.txt', id: 'object-id', metadata: { mimetype: 'text/plain' } }] });
+      }
+      return fakeStorageResponse({ stream: Readable.from(partialBody()) });
+    };
+
+    try {
+      await expect(exportStorage(storageConfig(), paths, fetchImpl)).rejects.toThrow(/download|stream|Storage/i);
+      expect(existsSync(join(paths.storage, 'manifest.jsonl'))).toBe(false);
+      expect(existsSync(join(paths.storage, 'objects', 'safe-bucket', 'file.txt'))).toBe(false);
+      expect(readdirSync(paths.temp)).toEqual([]);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }

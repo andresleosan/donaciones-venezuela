@@ -9,6 +9,7 @@ import {
   createRunDirectory,
   exportAuth,
   exportPostgres,
+  exportStorage,
   markRunFailed,
   readExportConfig,
   resolveLocalExecutable,
@@ -136,7 +137,7 @@ const HELP = [
   '',
   'Options:',
   '  --dry-run                 Validate configuration without remote or data actions (default)',
-  '  --execute                 Run the prepared PostgreSQL and Auth export actions',
+  '  --execute                 Run the prepared PostgreSQL, Auth and Storage export actions',
   '  --project-ref <ref>       Require the approved Supabase project reference',
   '  --run-dir <path>          Use an external staging root for the run',
   '  --help                    Show this help',
@@ -180,6 +181,8 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
           now: dependencies.now,
         });
         io.log(`Auth export prepared (${authEvidence.userCount} users, ${authEvidence.pages} pages)`);
+        const storageEvidence = await exportStorage(config, paths, dependencies.fetchImpl || globalThis.fetch);
+        io.log(`Storage export prepared (${storageEvidence.objectCount} objects, ${storageEvidence.bucketCount} buckets)`);
         io.log('Run status: prepared');
       } catch (error) {
         await markRunFailed(paths, error).catch(() => {});

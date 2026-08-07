@@ -1,7 +1,10 @@
+import { createHash } from 'node:crypto';
 import { spawn as nodeSpawn } from 'node:child_process';
-import { accessSync, constants, existsSync, realpathSync, statSync } from 'node:fs';
+import { accessSync, constants, createWriteStream, existsSync, realpathSync, statSync } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 export const EXPECTED_PROJECT_REF = 'zryfwbjvlacorryzdaod';
 export const EXPECTED_SUPABASE_URL = `https://${EXPECTED_PROJECT_REF}.supabase.co`;
@@ -35,6 +38,9 @@ export const RUN_DIRECTORY_NAMES = Object.freeze([
 export const RUN_STATUSES = Object.freeze(['prepared', 'completed', 'failed']);
 export const AUTH_PAGE_SIZE = 100;
 export const AUTH_MAX_PAGES = 100;
+export const STORAGE_PAGE_SIZE = 100;
+export const STORAGE_MAX_PAGES = 1000;
+export const STORAGE_MAX_PREFIXES = 10000;
 
 const AUTH_USER_METADATA_FIELDS = Object.freeze([
   'display_name',
@@ -839,6 +845,671 @@ export async function exportAuth(config, paths, fetchImpl, options = {}) {
   }
 
   throw new Error('Supabase Auth pagination exceeded the safe page limit');
+}
+
+function storageSafeError(message) {
+  const error = new Error(message);
+  error.storageSafe = true;
+  return error;
+}
+
+function storagePageSize(config) {
+  const configured = config?.storagePageSize;
+  if (configured === undefined) return STORAGE_PAGE_SIZE;
+  if (!Number.isSafeInteger(configured) || configured < 1 || configured > STORAGE_PAGE_SIZE) {
+    throw storageSafeError('Supabase Storage page size is invalid');
+  }
+  return configured;
+}
+
+function validateStorageConfig(config, fetchImpl) {
+  if (!config || typeof config !== 'object') {
+    throw storageSafeError('A Supabase Storage export configuration is required');
+  }
+  if (config.projectRef !== EXPECTED_PROJECT_REF) {
+    throw storageSafeError('Supabase Storage export project is not approved');
+  }
+  if (config.supabaseUrl !== EXPECTED_SUPABASE_URL) {
+    throw storageSafeError('Supabase Storage export origin is not approved');
+  }
+  if (config.mode !== 'execute') {
+    throw storageSafeError('Supabase Storage export requires execute mode');
+  }
+  if (typeof fetchImpl !== 'function') {
+    throw storageSafeError('A Supabase Storage fetch implementation is required');
+  }
+
+  return Object.freeze({
+    fetchImpl,
+    supabaseUrl: config.supabaseUrl,
+  });
+}
+
+function storageContextWithSecret(config, validated) {
+  let serviceRoleKey;
+  try {
+    serviceRoleKey = config.serviceRoleKey;
+  } catch {
+    throw storageSafeError('A Supabase Storage export configuration is required');
+  }
+  if (!isNonEmptyString(serviceRoleKey)) {
+    throw storageSafeError('A Supabase Storage export configuration is required');
+  }
+  return Object.freeze({ ...validated, serviceRoleKey });
+}
+
+function storageUsesWindowsPaths(values) {
+  return values.some((value) => typeof value === 'string' && (
+    /^[A-Za-z]:[\\/]/.test(value) || value.includes('\\')
+  ));
+}
+
+function storagePathApi(...values) {
+  return storageUsesWindowsPaths(values)
+    ? win32
+    : { basename, dirname, relative, isAbsolute, resolve, sep };
+}
+
+function safeStorageExternalPath(value, repoRoot) {
+  if (!isNonEmptyString(value) || value.includes('\0') || value !== value.trim()) {
+    throw storageSafeError('Supabase Storage paths must be external protected paths');
+  }
+
+  try {
+    return assertSafeOutputRoot(value, isNonEmptyString(repoRoot) ? repoRoot : process.cwd());
+  } catch {
+    throw storageSafeError('Supabase Storage paths must be external protected paths');
+  }
+}
+
+function storagePathsOverlap(left, right, pathApi) {
+  return isInsideOrEqual(left, right, pathApi) || isInsideOrEqual(right, left, pathApi);
+}
+
+function assertStorageChild(candidate, parent, pathApi, message) {
+  const canonicalParent = canonicalizeExistingPath(parent);
+  const canonicalCandidate = canonicalizeWithExistingAncestor(pathApi.resolve(candidate), pathApi);
+  if (!isInsideOrEqual(canonicalCandidate, canonicalParent, pathApi)) {
+    throw storageSafeError(message);
+  }
+  return canonicalCandidate;
+}
+
+async function prepareStoragePaths(config, paths) {
+  if (!paths || !isNonEmptyString(paths.storage) || !isNonEmptyString(paths.temp)) {
+    throw storageSafeError('Supabase Storage export paths are required');
+  }
+
+  const storageRoot = safeStorageExternalPath(paths.storage, config.repoRoot);
+  const tempRoot = safeStorageExternalPath(paths.temp, config.repoRoot);
+  const pathApi = storagePathApi(storageRoot, tempRoot, config.repoRoot);
+
+  if (storagePathsOverlap(storageRoot, tempRoot, pathApi)) {
+    throw storageSafeError('Supabase Storage paths must be separate');
+  }
+
+  try {
+    await mkdir(storageRoot, { recursive: true, mode: 0o700 });
+    await mkdir(tempRoot, { recursive: true, mode: 0o700 });
+  } catch {
+    throw storageSafeError('Supabase Storage paths could not be prepared');
+  }
+
+  const canonicalStorageRoot = canonicalizeExistingPath(storageRoot);
+  const canonicalTempRoot = canonicalizeExistingPath(tempRoot);
+  if (storagePathsOverlap(canonicalStorageRoot, canonicalTempRoot, pathApi)) {
+    throw storageSafeError('Supabase Storage paths must be separate');
+  }
+
+  const objectsRoot = join(storageRoot, 'objects');
+  try {
+    await mkdir(objectsRoot, { recursive: true, mode: 0o700 });
+  } catch {
+    throw storageSafeError('Supabase Storage object path could not be prepared');
+  }
+  const canonicalObjectsRoot = assertStorageChild(
+    objectsRoot,
+    canonicalStorageRoot,
+    pathApi,
+    'Supabase Storage object path escapes the storage directory',
+  );
+
+  return Object.freeze({
+    canonicalObjectsRoot,
+    canonicalStorageRoot,
+    canonicalTempRoot,
+    objectsRoot,
+    pathApi,
+    storageRoot,
+    tempRoot,
+  });
+}
+
+const WINDOWS_RESERVED_STORAGE_NAMES = new Set([
+  'AUX', 'CLOCK$', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+  'CON', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9', 'NUL', 'PRN',
+]);
+
+function safeStorageSegment(value, label) {
+  if (typeof value !== 'string' || value.length === 0 || value !== value.trim() || value.includes('\0')) {
+    throw storageSafeError(`Supabase Storage ${label} name is invalid`);
+  }
+  if (value === '.' || value === '..' || value.includes('/') || value.includes('\\') ||
+    value.includes(':') || isAbsolute(value) || win32.isAbsolute(value) ||
+    /%(?:2e|2f|5c)/i.test(value) || /[<>"|?*\u0000-\u001f\u007f]/.test(value) ||
+    value.endsWith('.') || value.endsWith(' ')) {
+    throw storageSafeError(`Supabase Storage ${label} name is invalid`);
+  }
+
+  const windowsName = value.split('.', 1)[0].toUpperCase();
+  if (WINDOWS_RESERVED_STORAGE_NAMES.has(windowsName)) {
+    throw storageSafeError(`Supabase Storage ${label} name is invalid`);
+  }
+  return value;
+}
+
+function safeStorageObjectPath(value) {
+  if (typeof value !== 'string' || value.length === 0 || value !== value.trim() || value.includes('\\') ||
+    value.includes('\0') || value.startsWith('/') || value.startsWith('\\') ||
+    /^[A-Za-z]:[\\/]/.test(value) || /%(?:2e|2f|5c)/i.test(value)) {
+    throw storageSafeError('Supabase Storage object path is invalid');
+  }
+
+  const segments = value.split('/');
+  if (segments.some((segment) => segment.length === 0)) {
+    throw storageSafeError('Supabase Storage object path is invalid');
+  }
+  return segments.map((segment) => safeStorageSegment(segment, 'object'));
+}
+
+function combinedStoragePath(prefix, name) {
+  const base = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix;
+  if (!base) return name;
+  if (name === base || name.startsWith(`${base}/`)) return name;
+  return `${base}/${name}`;
+}
+
+function storageMime(value, label = 'metadata') {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') throw storageSafeError(`Supabase Storage ${label} is invalid`);
+  const normalized = value.trim();
+  if (!normalized) return null;
+  if (normalized.length > 255 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw storageSafeError(`Supabase Storage ${label} is invalid`);
+  }
+  return normalized;
+}
+
+function normalizeStorageListEntry(entry, prefix) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.name !== 'string') {
+    throw storageSafeError('Supabase Storage object listing is invalid');
+  }
+
+  const folder = entry.id === null || entry.name.endsWith('/');
+  const entryName = folder && entry.name.endsWith('/') ? entry.name.slice(0, -1) : entry.name;
+  const path = safeStorageObjectPath(combinedStoragePath(prefix, entryName)).join('/');
+  return {
+    folder,
+    mime: folder ? null : storageMime(entry.metadata?.mimetype),
+    path,
+  };
+}
+
+function retryableStorageStatus(status) {
+  return status === 408 || status === 429 || (status >= 500 && status <= 599);
+}
+
+function validStorageStatus(status) {
+  return Number.isInteger(status) && status >= 100 && status <= 599 ? status : 'unknown';
+}
+
+function recordStorageFailure(report, operation, status, retries) {
+  report.push({
+    operation,
+    retries,
+    status: status === 'network' ? 'network' : validStorageStatus(status),
+  });
+}
+
+function storageRequestHeaders(serviceRoleKey) {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+  };
+}
+
+async function fetchStorageResponse(context, endpoint, options, operation, report, retryState = { used: 0 }) {
+  while (true) {
+    let response;
+    try {
+      response = await context.fetchImpl(endpoint, {
+        ...options,
+        headers: storageRequestHeaders(context.serviceRoleKey),
+      });
+    } catch {
+      if (retryState.used < 1) {
+        retryState.used += 1;
+        recordStorageFailure(report, operation, 'network', retryState.used);
+        continue;
+      }
+      recordStorageFailure(report, operation, 'network', retryState.used);
+      throw storageSafeError(`Supabase Storage ${operation} request failed`);
+    }
+
+    const status = validStorageStatus(response?.status);
+    const ok = status !== 'unknown' && status >= 200 && status < 300 && response?.ok !== false;
+    if (ok) return { response, retries: retryState.used };
+
+    if (retryableStorageStatus(status) && retryState.used < 1) {
+      retryState.used += 1;
+      recordStorageFailure(report, operation, status, retryState.used);
+      continue;
+    }
+
+    recordStorageFailure(report, operation, status, retryState.used);
+    throw storageSafeError(`Supabase Storage ${operation} request failed with HTTP status ${status}`);
+  }
+}
+
+async function parseStorageJson(response, operation) {
+  if (!response || typeof response.json !== 'function') {
+    throw storageSafeError(`Supabase Storage ${operation} response JSON is invalid`);
+  }
+  try {
+    return await response.json();
+  } catch {
+    throw storageSafeError(`Supabase Storage ${operation} response JSON is invalid`);
+  }
+}
+
+async function listStorageBuckets(context, pageSize, report) {
+  const buckets = [];
+  const seenBuckets = new Set();
+
+  for (let page = 0; page < STORAGE_MAX_PAGES; page += 1) {
+    const endpoint = new URL('/storage/v1/bucket', `${context.supabaseUrl}/`);
+    endpoint.searchParams.set('limit', String(pageSize));
+    endpoint.searchParams.set('offset', String(page * pageSize));
+    const { response } = await fetchStorageResponse(
+      context,
+      endpoint.toString(),
+      { method: 'GET' },
+      'bucket list',
+      report,
+    );
+    const payload = await parseStorageJson(response, 'bucket list');
+    if (!Array.isArray(payload) || payload.length > pageSize) {
+      throw storageSafeError('Supabase Storage bucket list page is invalid');
+    }
+
+    for (const bucket of payload) {
+      if (!bucket || typeof bucket !== 'object' || Array.isArray(bucket)) {
+        throw storageSafeError('Supabase Storage bucket list is invalid');
+      }
+      const bucketId = typeof bucket.id === 'string' && bucket.id.length > 0
+        ? bucket.id
+        : bucket.name;
+      const safeBucket = safeStorageSegment(bucketId, 'bucket');
+      if (bucket.name !== undefined) safeStorageSegment(bucket.name, 'bucket');
+      if (seenBuckets.has(safeBucket)) {
+        throw storageSafeError('Supabase Storage bucket pagination returned a repeated or overlapping bucket');
+      }
+      seenBuckets.add(safeBucket);
+      buckets.push(safeBucket);
+    }
+
+    if (payload.length < pageSize) return buckets;
+  }
+
+  throw storageSafeError('Supabase Storage bucket pagination exceeded the safe page limit');
+}
+
+async function listStorageObjectsWithContext(context, bucket, pageSize, report) {
+  const safeBucket = safeStorageSegment(bucket, 'bucket');
+  const objects = [];
+  const seenEntries = new Set();
+  const visitedPrefixes = new Set();
+  const pendingPrefixes = [''];
+
+  while (pendingPrefixes.length > 0) {
+    const prefix = pendingPrefixes.shift();
+    if (visitedPrefixes.has(prefix)) {
+      throw storageSafeError('Supabase Storage object listing returned a repeated folder');
+    }
+    visitedPrefixes.add(prefix);
+    if (visitedPrefixes.size > STORAGE_MAX_PREFIXES) {
+      throw storageSafeError('Supabase Storage folder recursion exceeded the safe limit');
+    }
+
+    const folders = [];
+    for (let page = 0; page < STORAGE_MAX_PAGES; page += 1) {
+      const endpoint = new URL(
+        `/storage/v1/object/list/${encodeURIComponent(safeBucket)}`,
+        `${context.supabaseUrl}/`,
+      );
+      const request = {
+        limit: pageSize,
+        offset: page * pageSize,
+        prefix,
+        sortBy: { column: 'name', order: 'asc' },
+      };
+      const { response } = await fetchStorageResponse(
+        context,
+        endpoint.toString(),
+        {
+          body: JSON.stringify(request),
+          method: 'POST',
+        },
+        'object list',
+        report,
+      );
+      const payload = await parseStorageJson(response, 'object list');
+      if (!Array.isArray(payload) || payload.length > pageSize) {
+        throw storageSafeError('Supabase Storage object list page is invalid');
+      }
+
+      for (const entry of payload) {
+        const normalized = normalizeStorageListEntry(entry, prefix);
+        if (seenEntries.has(normalized.path)) {
+          throw storageSafeError('Supabase Storage object pagination returned a repeated or overlapping path');
+        }
+        seenEntries.add(normalized.path);
+        if (normalized.folder) {
+          folders.push(normalized.path);
+        } else {
+          objects.push({
+            bucket: safeBucket,
+            mime: normalized.mime,
+            path: normalized.path,
+          });
+        }
+      }
+
+      if (payload.length < pageSize) break;
+      if (page === STORAGE_MAX_PAGES - 1) {
+        throw storageSafeError('Supabase Storage object pagination exceeded the safe page limit');
+      }
+    }
+
+    for (const folder of folders) pendingPrefixes.push(folder);
+  }
+
+  return objects;
+}
+
+export async function listStorageObjects(config, bucket, fetchImpl) {
+  const validated = validateStorageConfig(config, fetchImpl);
+  const context = storageContextWithSecret(config, validated);
+  return listStorageObjectsWithContext(context, bucket, storagePageSize(config), []);
+}
+
+function storageObjectEndpoint(context, bucket, objectPath) {
+  const segments = [bucket, ...safeStorageObjectPath(objectPath)];
+  const encodedPath = segments.map((segment) => encodeURIComponent(segment)).join('/');
+  return new URL(
+    `/storage/v1/object/authenticated/${encodedPath}`,
+    `${context.supabaseUrl}/`,
+  ).toString();
+}
+
+function responseContentType(response) {
+  try {
+    return storageMime(response?.headers?.get?.('content-type'), 'content type');
+  } catch {
+    return null;
+  }
+}
+
+function toNodeReadable(body) {
+  if (body && typeof body.getReader === 'function') {
+    try {
+      return Readable.fromWeb(body);
+    } catch {
+      throw storageSafeError('Supabase Storage object response stream is invalid');
+    }
+  }
+  if (body && typeof body[Symbol.asyncIterator] === 'function') return body;
+  throw storageSafeError('Supabase Storage object response stream is invalid');
+}
+
+function isStorageNetworkError(error) {
+  const code = typeof error?.code === 'string' ? error.code.toUpperCase() : '';
+  return [
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'EAI_AGAIN',
+    'ENETDOWN',
+    'ENETUNREACH',
+    'ETIMEDOUT',
+    'FETCH_ERR',
+    'UND_ERR_CONNECT_TIMEOUT',
+    'UND_ERR_SOCKET',
+  ].includes(code) || error?.name === 'AbortError';
+}
+
+async function streamStorageObject(body, temporaryFile) {
+  const hash = createHash('sha256');
+  let bytes = 0;
+  const hashingTransform = new Transform({
+    transform(chunk, _encoding, callback) {
+      try {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        if (bytes > Number.MAX_SAFE_INTEGER - buffer.byteLength) {
+          callback(storageSafeError('Supabase Storage object is too large to count safely'));
+          return;
+        }
+        bytes += buffer.byteLength;
+        hash.update(buffer);
+        callback(null, buffer);
+      } catch {
+        callback(storageSafeError('Supabase Storage object stream is invalid'));
+      }
+    },
+  });
+
+  try {
+    await pipeline(
+      toNodeReadable(body),
+      hashingTransform,
+      createWriteStream(temporaryFile, { flags: 'wx', mode: 0o600 }),
+    );
+  } catch (error) {
+    const safeError = error?.storageSafe
+      ? error
+      : storageSafeError('Supabase Storage object stream failed');
+    safeError.retryable = isStorageNetworkError(error);
+    throw safeError;
+  }
+
+  return { bytes, sha256: hash.digest('hex') };
+}
+
+async function downloadStorageObjectWithContext(context, storagePaths, bucket, object, report, sequence) {
+  const safeBucket = safeStorageSegment(bucket, 'bucket');
+  if (!object || typeof object !== 'object' || Array.isArray(object)) {
+    throw storageSafeError('Supabase Storage object is invalid');
+  }
+  const objectSegments = safeStorageObjectPath(object.path);
+  const objectPath = objectSegments.join('/');
+  const listedMime = storageMime(object.mime, 'object MIME');
+  const bucketRoot = join(storagePaths.objectsRoot, safeBucket);
+
+  try {
+    await mkdir(bucketRoot, { recursive: true, mode: 0o700 });
+  } catch {
+    throw storageSafeError('Supabase Storage bucket path could not be prepared');
+  }
+  const canonicalBucketRoot = assertStorageChild(
+    bucketRoot,
+    storagePaths.canonicalObjectsRoot,
+    storagePaths.pathApi,
+    'Supabase Storage bucket path escapes the objects directory',
+  );
+  const destination = join(bucketRoot, ...objectSegments);
+  assertStorageChild(
+    destination,
+    canonicalBucketRoot,
+    storagePaths.pathApi,
+    'Supabase Storage object path escapes its bucket directory',
+  );
+  if (existsSync(destination)) {
+    throw storageSafeError('Supabase Storage object destination already exists');
+  }
+
+  try {
+    await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
+    assertStorageChild(
+      destination,
+      canonicalBucketRoot,
+      storagePaths.pathApi,
+      'Supabase Storage object path escapes its bucket directory',
+    );
+  } catch (error) {
+    if (error?.storageSafe) throw error;
+    throw storageSafeError('Supabase Storage object path could not be prepared');
+  }
+
+  const temporaryFile = join(
+    storagePaths.tempRoot,
+    `storage-object-${String(sequence).padStart(12, '0')}.tmp`,
+  );
+  assertStorageChild(
+    temporaryFile,
+    storagePaths.canonicalTempRoot,
+    storagePaths.pathApi,
+    'Supabase Storage temporary path escapes the temporary directory',
+  );
+  const retryState = { used: 0 };
+
+  while (true) {
+    await rm(temporaryFile, { force: true }).catch(() => {});
+    try {
+      const endpoint = storageObjectEndpoint(context, safeBucket, objectPath);
+      const { response } = await fetchStorageResponse(
+        context,
+        endpoint,
+        { method: 'GET' },
+        'download',
+        report,
+        retryState,
+      );
+      if (!response.body) throw storageSafeError('Supabase Storage object response stream is invalid');
+      const streamed = await streamStorageObject(response.body, temporaryFile);
+      const mime = listedMime || responseContentType(response);
+      await rename(temporaryFile, destination);
+      return {
+        bucket: safeBucket,
+        bytes: streamed.bytes,
+        mime,
+        path: objectPath,
+        sha256: streamed.sha256,
+      };
+    } catch (error) {
+      await rm(temporaryFile, { force: true }).catch(() => {});
+      if (error?.retryable && retryState.used < 1) {
+        retryState.used += 1;
+        recordStorageFailure(report, 'download stream', 'network', retryState.used);
+        continue;
+      }
+      if (error?.storageSafe) throw error;
+      throw storageSafeError('Supabase Storage object download failed');
+    }
+  }
+}
+
+async function writeStorageErrorReport(storagePaths, report) {
+  if (report.length === 0) return;
+  const reportFile = join(storagePaths.storageRoot, 'error-report.json');
+  assertStorageChild(
+    reportFile,
+    storagePaths.canonicalStorageRoot,
+    storagePaths.pathApi,
+    'Supabase Storage error report path escapes the storage directory',
+  );
+  const temporaryFile = join(storagePaths.tempRoot, 'storage-error-report.json.tmp');
+  try {
+    await rm(temporaryFile, { force: true });
+    await writeFile(temporaryFile, `${JSON.stringify({ errors: report })}\n`, {
+      encoding: 'utf8',
+      flag: 'wx',
+      mode: 0o600,
+    });
+    await rename(temporaryFile, reportFile);
+  } catch {
+    await rm(temporaryFile, { force: true }).catch(() => {});
+    throw storageSafeError('Supabase Storage error report could not be published');
+  }
+}
+
+export async function downloadStorageObject(config, paths, bucket, object, fetchImpl) {
+  const validated = validateStorageConfig(config, fetchImpl);
+  const storagePaths = await prepareStoragePaths(config, paths);
+  const context = storageContextWithSecret(config, validated);
+  const report = [];
+  try {
+    return await downloadStorageObjectWithContext(context, storagePaths, bucket, object, report, 1);
+  } catch (error) {
+    if (report.length > 0) await writeStorageErrorReport(storagePaths, report).catch(() => {});
+    if (error?.storageSafe) throw error;
+    throw storageSafeError('Supabase Storage object download failed');
+  }
+}
+
+export async function exportStorage(config, paths, fetchImpl) {
+  const validated = validateStorageConfig(config, fetchImpl);
+  const pageSize = storagePageSize(config);
+  const storagePaths = await prepareStoragePaths(config, paths);
+  const context = storageContextWithSecret(config, validated);
+  const report = [];
+  const manifestFile = join(storagePaths.storageRoot, 'manifest.jsonl');
+  const temporaryManifest = join(storagePaths.tempRoot, 'storage-manifest.jsonl.tmp');
+  assertStorageChild(
+    manifestFile,
+    storagePaths.canonicalStorageRoot,
+    storagePaths.pathApi,
+    'Supabase Storage manifest path escapes the storage directory',
+  );
+
+  if (existsSync(manifestFile)) {
+    throw storageSafeError('Supabase Storage manifest already exists');
+  }
+
+  try {
+    await writeFile(temporaryManifest, '', { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    const buckets = await listStorageBuckets(context, pageSize, report);
+    let objectCount = 0;
+
+    for (const bucket of buckets) {
+      const objects = await listStorageObjectsWithContext(context, bucket, pageSize, report);
+      for (const object of objects) {
+        const evidence = await downloadStorageObjectWithContext(
+          context,
+          storagePaths,
+          bucket,
+          object,
+          report,
+          objectCount + 1,
+        );
+        await writeFile(temporaryManifest, `${JSON.stringify({
+          bucket: evidence.bucket,
+          path: evidence.path,
+          bytes: evidence.bytes,
+          mime: evidence.mime,
+          sha256: evidence.sha256,
+        })}\n`, { encoding: 'utf8', flag: 'a', mode: 0o600 });
+        objectCount += 1;
+      }
+    }
+
+    await writeStorageErrorReport(storagePaths, report);
+    await rename(temporaryManifest, manifestFile);
+    return { bucketCount: buckets.length, manifestFile, objectCount };
+  } catch (error) {
+    await rm(temporaryManifest, { force: true }).catch(() => {});
+    if (report.length > 0) await writeStorageErrorReport(storagePaths, report).catch(() => {});
+    if (error?.storageSafe) throw error;
+    throw storageSafeError('Supabase Storage export failed');
+  }
 }
 
 function collectSensitiveValues(env, options = {}) {
