@@ -8,8 +8,10 @@ import {
   buildPostgresInvocation,
   cleanupFailedRun,
   createRunDirectory,
+  exportPostgres,
   markRunFailed,
   parsePostgresConnection,
+  quoteIdentifier,
   readExportConfig,
   runCommand,
 } from '../scripts/export-supabase-lib.mjs';
@@ -534,7 +536,7 @@ describe('export staging and command runner', () => {
     }
   });
 
-  it('prepares execute staging without invoking export or sealing commands', async () => {
+  it('coordinates the PostgreSQL export with the injected runner', async () => {
     const outputRoot = mkdtempSync(join(tmpdir(), 'export-execute-'));
     const output = [];
     const calls = [];
@@ -548,9 +550,19 @@ describe('export staging and command runner', () => {
           error: (message) => output.push(message),
         },
         {
-          runner: (...args) => {
+          runner: async (...args) => {
             calls.push(args);
-            throw new Error('execute attempted a command before later task');
+            const [command, commandArgs] = args;
+            if (commandArgs.includes('--version')) {
+              return { code: 0, stdout: `${command} (PostgreSQL) 16.1\n`, stderr: '' };
+            }
+            return {
+              code: 0,
+              stdout: command === 'psql'
+                ? `${JSON.stringify({ relation: 'public.facturas', count: 1 })}\n`
+                : '',
+              stderr: '',
+            };
           },
           fetchImpl: () => { throw new Error('execute attempted fetch before later task'); },
           now: '2026-08-06T12:00:00.000Z',
@@ -558,12 +570,15 @@ describe('export staging and command runner', () => {
       );
 
       expect(code).toBe(0);
-      expect(calls).toEqual([]);
+      expect(calls).toHaveLength(5);
+      expect(calls.filter(([command, commandArgs]) => command === 'pg_dump' && !commandArgs.includes('--version'))).toHaveLength(2);
+      expect(calls.filter(([command, commandArgs]) => command === 'psql' && !commandArgs.includes('--version'))).toHaveLength(1);
       expect(readdirSync(outputRoot)).toEqual(['2026-08-06T120000Z']);
       expect(JSON.parse(readFileSync(join(outputRoot, '2026-08-06T120000Z', 'run.json'), 'utf8'))).toMatchObject({
-        status: 'prepared',
+        status: 'completed',
       });
-      expect(output.join('\n')).toContain('prepared');
+      expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'postgres', 'object-counts.json'))).toBe(true);
+      expect(output.join('\n')).toContain('completed');
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
     }
@@ -591,6 +606,171 @@ describe('export staging and command runner', () => {
       expect(output.join('\n')).toContain('already exists');
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('PostgreSQL export', () => {
+  function createPostgresPaths() {
+    const root = mkdtempSync(join(tmpdir(), 'export-postgres-'));
+    const paths = {
+      root,
+      postgres: join(root, 'postgres'),
+      reconciliation: join(root, 'reconciliation'),
+      temp: join(root, 'temp'),
+    };
+    for (const path of [paths.postgres, paths.reconciliation, paths.temp]) mkdirSync(path);
+    writeFileSync(join(root, 'run.json'), JSON.stringify({ status: 'prepared' }));
+    return paths;
+  }
+
+  it('runs public schema, custom data and exact count exports with redacted connection args', async () => {
+    const paths = createPostgresPaths();
+    const calls = [];
+    const countOutput = [
+      JSON.stringify({ relation: 'public.facturas', count: 3 }),
+      JSON.stringify({ relation: 'public.donaciones', count: 4 }),
+      JSON.stringify({
+        facturas: {
+          count: 3,
+          abiertas: 2,
+          monto_requerido: 100,
+          monto_recaudado: 75,
+        },
+        donaciones: {
+          count: 4,
+          confirmadas_count: 3,
+          confirmadas_monto: 50,
+        },
+        movimientos_factura: {
+          count: 5,
+          monto: 20,
+        },
+      }),
+    ].join('\n');
+    const runner = async (command, args, options) => {
+      calls.push({ command, args, options });
+      if (args.includes('--version')) return { code: 0, stdout: `${command} (PostgreSQL) 16.1\n`, stderr: '' };
+      return { code: 0, stdout: command === 'psql' ? countOutput : '', stderr: '' };
+    };
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      const evidence = await exportPostgres(config, paths, runner);
+      const pgDumpCalls = calls.filter(({ command, args }) => command === 'pg_dump' && !args.includes('--version'));
+      const psqlCall = calls.find(({ command, args }) => command === 'psql' && args[0] === '--set=ON_ERROR_STOP=1');
+      const countsSql = readFileSync(join(paths.temp, 'counts.sql'), 'utf8');
+
+      expect(pgDumpCalls).toHaveLength(2);
+      expect(pgDumpCalls[0].args).toEqual([
+        '--schema=public',
+        '--schema-only',
+        '--no-owner',
+        '--no-privileges',
+        `--file=${join(paths.postgres, 'schema.sql')}`,
+      ]);
+      expect(pgDumpCalls[1].args).toEqual([
+        '--schema=public',
+        '--data-only',
+        '--format=custom',
+        '--no-owner',
+        '--no-privileges',
+        `--file=${join(paths.postgres, 'data.dump')}`,
+      ]);
+      expect(psqlCall.args).toEqual([
+        '--set=ON_ERROR_STOP=1',
+        `--file=${join(paths.temp, 'counts.sql')}`,
+      ]);
+      expect(psqlCall.options.env).toEqual({
+        PGHOST: 'example',
+        PGPORT: '5432',
+        PGUSER: 'user',
+        PGDATABASE: 'db',
+        PGPASSWORD: 'placeholder',
+        PGSSLMODE: 'require',
+      });
+      expect(JSON.stringify(psqlCall.args)).not.toContain('placeholder');
+      expect(evidence).toEqual({
+        schemaFile: join(paths.postgres, 'schema.sql'),
+        dataFile: join(paths.postgres, 'data.dump'),
+        countsFile: join(paths.postgres, 'object-counts.json'),
+        tableCount: 2,
+      });
+      expect(JSON.parse(readFileSync(evidence.countsFile, 'utf8'))).toEqual({
+        schema: 'public',
+        tableCount: 2,
+        tables: [
+          { relation: 'public.donaciones', count: 4 },
+          { relation: 'public.facturas', count: 3 },
+        ],
+      });
+      expect(JSON.parse(readFileSync(join(paths.reconciliation, 'financial-totals.json'), 'utf8'))).toEqual({
+        query: 'financial_totals',
+        schema: 'public',
+        totals: {
+          facturas: {
+            count: 3,
+            abiertas: 2,
+            monto_requerido: 100,
+            monto_recaudado: 75,
+          },
+          donaciones: {
+            count: 4,
+            confirmadas_count: 3,
+            confirmadas_monto: 50,
+          },
+          movimientos_factura: {
+            count: 5,
+            monto: 20,
+          },
+        },
+      });
+      expect(countsSql).toContain('"information_schema"."tables"');
+      expect(countsSql).toContain("table_type = 'BASE TABLE'");
+      expect(countsSql).toContain("table_schema || '.' || table_name");
+      expect(countsSql).toContain('count(*)');
+      expect(countsSql).toContain('"public"."facturas"');
+      expect(countsSql).toContain('monto_requerido');
+      expect(countsSql).toContain('monto_recaudado');
+      expect(countsSql).toContain('confirmadas_monto');
+      expect(countsSql).not.toContain('nombre_donante');
+      expect(JSON.parse(readFileSync(join(paths.root, 'run.json'), 'utf8')).commandVersions).toEqual({
+        pg_dump: 'pg_dump (PostgreSQL) 16.1',
+        psql: 'psql (PostgreSQL) 16.1',
+      });
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('quotes PostgreSQL identifiers without allowing embedded SQL', () => {
+    expect(quoteIdentifier('column"name')).toBe('"column""name"');
+    expect(quoteIdentifier('public')).toBe('"public"');
+    expect(() => quoteIdentifier('bad\0name')).toThrow(/identifier/i);
+  });
+
+  it('rejects a non-zero PostgreSQL command and stops before later exports', async () => {
+    const paths = createPostgresPaths();
+    const calls = [];
+    let dumpCalls = 0;
+    const runner = async (command, args) => {
+      calls.push({ command, args });
+      if (args.includes('--version')) return { code: 0, stdout: `${command} (PostgreSQL) 16.1\n`, stderr: '' };
+      if (command === 'pg_dump') {
+        dumpCalls += 1;
+        if (dumpCalls === 1) return { code: 7, stdout: '', stderr: 'remote detail must not escape' };
+      }
+      return { code: 0, stdout: '', stderr: '' };
+    };
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+
+      await expect(exportPostgres(config, paths, runner)).rejects.toMatchObject({ code: 'COMMAND_EXIT' });
+      expect(calls.some(({ command, args }) => command === 'psql' && args[0] === '--set=ON_ERROR_STOP=1')).toBe(false);
+      expect(calls.some(({ args }) => args.join(' ').includes('remote detail'))).toBe(false);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
     }
   });
 });

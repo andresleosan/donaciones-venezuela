@@ -266,6 +266,286 @@ export function buildPostgresInvocation(connection, outputPath) {
   });
 }
 
+export function quoteIdentifier(value) {
+  if (!isNonEmptyString(value) || value.includes('\0')) {
+    throw new Error('PostgreSQL identifier must be a non-empty string without NUL bytes');
+  }
+
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function qualifiedIdentifier(schema, table) {
+  return `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+}
+
+const FINANCIAL_TOTALS_QUERY = `select json_build_object(
+  'facturas', json_build_object(
+    'count', (select count(*) from ${qualifiedIdentifier('public', 'facturas')}),
+    'abiertas', (select count(*) from ${qualifiedIdentifier('public', 'facturas')} where estado = 'Abierta'),
+    'monto_requerido', (select coalesce(sum(monto_requerido), 0) from ${qualifiedIdentifier('public', 'facturas')}),
+    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0) from ${qualifiedIdentifier('public', 'facturas')})
+  ),
+  'donaciones', json_build_object(
+    'count', (select count(*) from ${qualifiedIdentifier('public', 'donaciones')}),
+    'confirmadas_count', (select count(*) from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada'),
+    'confirmadas_monto', (select coalesce(sum(monto), 0) from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada')
+  ),
+  'movimientos_factura', json_build_object(
+    'count', (select count(*) from ${qualifiedIdentifier('public', 'movimientos_factura')}),
+    'monto', (select coalesce(sum(monto), 0) from ${qualifiedIdentifier('public', 'movimientos_factura')})
+  )
+);`;
+
+export function buildPostgresCountsQuery() {
+  const informationSchemaTables = qualifiedIdentifier('information_schema', 'tables');
+
+  return `\\pset tuples_only on
+\\pset format unaligned
+\\pset pager off
+SELECT format(
+  'SELECT json_build_object(''relation'', %L, ''count'', count(*)::text)::text FROM %I.%I;',
+  table_schema || '.' || table_name,
+  table_schema,
+  table_name
+)
+FROM ${informationSchemaTables}
+WHERE table_schema = 'public'
+  AND table_type = 'BASE TABLE'
+ORDER BY table_name
+\\gexec
+${FINANCIAL_TOTALS_QUERY}`;
+}
+
+function commandInvocationRunner(runner) {
+  if (typeof runner === 'function') return runner;
+  if (runner && typeof runner.runCommand === 'function') return runner.runCommand.bind(runner);
+  if (runner && typeof runner.run === 'function') return runner.run.bind(runner);
+  return runCommand;
+}
+
+function commandExecutable(command, runner) {
+  if (runner && typeof runner === 'object') {
+    const configured = runner.commands?.[command] || runner[command];
+    if (isNonEmptyString(configured)) return configured;
+  }
+
+  if (runner && runner !== runCommand) return command;
+  const resolved = resolveLocalExecutable(command, process.env);
+  if (!resolved) {
+    const error = new Error(`Local executable not found: ${command}`);
+    error.code = 'ENOENT';
+    throw error;
+  }
+  return resolved;
+}
+
+function commandFailure(command, result) {
+  const code = Number.isInteger(result?.code) ? result.code : 'unknown';
+  const error = new Error(`Command ${commandName(command)} exited with code ${code}`);
+  error.code = 'COMMAND_EXIT';
+  return error;
+}
+
+async function invokeExportCommand(runner, command, args, options) {
+  try {
+    const invoke = commandInvocationRunner(runner);
+    const result = await invoke(commandExecutable(command, runner), args, options);
+    if (!result || result.code !== 0) throw commandFailure(command, result);
+    return result;
+  } catch (error) {
+    const safeError = new Error(redactText(
+      error instanceof Error ? error.message : 'PostgreSQL command failed',
+      collectSensitiveValues(options?.env),
+    ));
+    safeError.code = ALLOWED_ERROR_CODES.has(error?.code) ? error.code : 'COMMAND_SPAWN_FAILED';
+    throw safeError;
+  }
+}
+
+function versionText(command, result, env) {
+  const firstLine = String(result?.stdout ?? '').split(/\r?\n/, 1)[0].trim();
+  if (!firstLine) return `${command} version unavailable`;
+  return redactText(firstLine.slice(0, 200), collectSensitiveValues(env));
+}
+
+function exactCount(value) {
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error('PostgreSQL row count must be a non-negative integer');
+    }
+    return value;
+  }
+
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const number = Number(value);
+    return Number.isSafeInteger(number) ? number : value;
+  }
+
+  throw new Error('PostgreSQL row count must be an exact non-negative integer');
+}
+
+function isFinancialTotals(value) {
+  return value && typeof value === 'object' &&
+    value.facturas && value.donaciones && value.movimientos_factura;
+}
+
+function normalizeFinancialTotals(value) {
+  const fields = {
+    facturas: ['count', 'abiertas', 'monto_requerido', 'monto_recaudado'],
+    donaciones: ['count', 'confirmadas_count', 'confirmadas_monto'],
+    movimientos_factura: ['count', 'monto'],
+  };
+
+  const result = {};
+  for (const [section, names] of Object.entries(fields)) {
+    result[section] = {};
+    for (const name of names) {
+      const field = value[section][name];
+      if (field === null || ['number', 'string'].includes(typeof field)) {
+        result[section][name] = field;
+      } else {
+        throw new Error('Financial totals must contain only primitive values');
+      }
+    }
+  }
+  return result;
+}
+
+function parseCountsOutput(stdout) {
+  const tables = [];
+  let financialTotals;
+  const seenRelations = new Set();
+
+  for (const line of String(stdout ?? '').split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean)) {
+    let value;
+    try {
+      value = JSON.parse(line);
+    } catch {
+      continue;
+    }
+
+    if (typeof value?.relation === 'string' && Object.prototype.hasOwnProperty.call(value, 'count')) {
+      if (!value.relation.startsWith('public.') || seenRelations.has(value.relation)) {
+        throw new Error('PostgreSQL counts contain an invalid relation');
+      }
+      seenRelations.add(value.relation);
+      tables.push({ relation: value.relation, count: exactCount(value.count) });
+    } else if (isFinancialTotals(value)) {
+      financialTotals = normalizeFinancialTotals(value);
+    } else if (value && typeof value === 'object' && value.tables) {
+      for (const table of value.tables) {
+        if (typeof table?.relation !== 'string' || !table.relation.startsWith('public.')) {
+          throw new Error('PostgreSQL counts contain an invalid relation');
+        }
+        tables.push({ relation: table.relation, count: exactCount(table.count) });
+      }
+      if (isFinancialTotals(value.financialTotals)) financialTotals = normalizeFinancialTotals(value.financialTotals);
+    }
+  }
+
+  tables.sort((left, right) => left.relation.localeCompare(right.relation));
+  return { tables, financialTotals };
+}
+
+async function writeJsonArtifact(filePath, value) {
+  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+}
+
+async function writeCommandVersions(paths, commandVersions) {
+  const runPath = runStatusPath(paths);
+  let current;
+  try {
+    current = JSON.parse(await readFile(runPath, 'utf8'));
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw error;
+  }
+
+  current.commandVersions = commandVersions;
+  await writeFile(runPath, `${JSON.stringify(current, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+}
+
+export async function exportPostgres(config, paths, runner = runCommand) {
+  if (!config || typeof config !== 'object' || !isNonEmptyString(config.dbUrl)) {
+    throw new Error('A PostgreSQL export configuration is required');
+  }
+  if (!paths || !isNonEmptyString(paths.postgres) || !isNonEmptyString(paths.reconciliation) ||
+    !isNonEmptyString(paths.temp)) {
+    throw new Error('PostgreSQL export paths are required');
+  }
+
+  const connection = parsePostgresConnection(config.dbUrl);
+  const connectionEnv = buildPostgresInvocation(connection, join(paths.postgres, 'schema.sql')).env;
+  const schemaFile = join(paths.postgres, 'schema.sql');
+  const dataFile = join(paths.postgres, 'data.dump');
+  const countsFile = join(paths.postgres, 'object-counts.json');
+  const countsSqlFile = join(paths.temp, 'counts.sql');
+
+  await mkdir(paths.postgres, { recursive: true, mode: 0o700 });
+  await mkdir(paths.reconciliation, { recursive: true, mode: 0o700 });
+  await mkdir(paths.temp, { recursive: true, mode: 0o700 });
+  await writeFile(countsSqlFile, buildPostgresCountsQuery(), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+
+  const versions = {};
+  for (const command of ['pg_dump', 'psql']) {
+    const result = await invokeExportCommand(runner, command, ['--version'], { env: connectionEnv });
+    versions[command] = versionText(command, result, connectionEnv);
+  }
+
+  await invokeExportCommand(runner, 'pg_dump', [
+    '--schema=public',
+    '--schema-only',
+    '--no-owner',
+    '--no-privileges',
+    `--file=${schemaFile}`,
+  ], { env: connectionEnv });
+
+  await invokeExportCommand(runner, 'pg_dump', [
+    '--schema=public',
+    '--data-only',
+    '--format=custom',
+    '--no-owner',
+    '--no-privileges',
+    `--file=${dataFile}`,
+  ], { env: connectionEnv });
+
+  const countsResult = await invokeExportCommand(runner, 'psql', [
+    '--set=ON_ERROR_STOP=1',
+    `--file=${countsSqlFile}`,
+  ], { env: connectionEnv });
+  const parsedCounts = parseCountsOutput(countsResult.stdout);
+  const evidence = {
+    schemaFile,
+    dataFile,
+    countsFile,
+    tableCount: parsedCounts.tables.length,
+  };
+
+  await writeJsonArtifact(countsFile, {
+    schema: 'public',
+    tableCount: parsedCounts.tables.length,
+    tables: parsedCounts.tables,
+  });
+  if (parsedCounts.financialTotals) {
+    await writeJsonArtifact(join(paths.reconciliation, 'financial-totals.json'), {
+      query: 'financial_totals',
+      schema: 'public',
+      totals: parsedCounts.financialTotals,
+    });
+  }
+  await writeCommandVersions(paths, versions);
+  return evidence;
+}
+
 function collectSensitiveValues(env, options = {}) {
   const values = new Set();
   const addValue = (value) => {
@@ -506,6 +786,11 @@ async function readSafeRunRecord(paths) {
     const parsed = JSON.parse(await readFile(runStatusPath(paths), 'utf8'));
     return {
       createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
+      commandVersions: parsed.commandVersions && typeof parsed.commandVersions === 'object'
+        ? Object.fromEntries(Object.entries(parsed.commandVersions)
+          .filter(([name, version]) => ['pg_dump', 'psql'].includes(name) && typeof version === 'string')
+          .map(([name, version]) => [name, version.slice(0, 200)]))
+        : undefined,
     };
   } catch {
     return {};
@@ -522,6 +807,7 @@ export async function writeRunStatus(paths, status, details = {}) {
     updatedAt: now,
   };
 
+  if (existing.commandVersions) record.commandVersions = existing.commandVersions;
   if (status === 'failed') record.errorCode = safeErrorCode(details);
   await writeFile(runStatusPath(paths), `${JSON.stringify(record, null, 2)}\n`, {
     encoding: 'utf8',
@@ -672,10 +958,11 @@ export function resolveLocalExecutable(name, env = process.env) {
   if (!/^[A-Za-z0-9_.-]+$/.test(name)) return undefined;
 
   for (const candidate of executableCandidates(name, env || {})) {
+    const absoluteCandidate = process.platform === 'win32' ? win32.resolve(candidate) : resolve(candidate);
     try {
-      if (!statSync(candidate).isFile()) continue;
-      if (process.platform !== 'win32') accessSync(candidate, constants.X_OK);
-      return candidate;
+      if (!statSync(absoluteCandidate).isFile()) continue;
+      if (process.platform !== 'win32') accessSync(absoluteCandidate, constants.X_OK);
+      return absoluteCandidate;
     } catch {
       // An unavailable or non-executable PATH entry is not a preflight failure.
     }

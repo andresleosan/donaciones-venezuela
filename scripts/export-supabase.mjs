@@ -7,8 +7,13 @@ import {
   PREFLIGHT_TOOLS,
   REQUIRED_EXPORT_VARIABLES,
   createRunDirectory,
+  exportPostgres,
+  markRunCompleted,
+  markRunFailed,
   readExportConfig,
+  resolveLocalExecutable,
   resolvePreflightTools,
+  runCommand,
 } from './export-supabase-lib.mjs';
 
 export class CliUsageError extends Error {
@@ -112,12 +117,26 @@ export function formatDryRunSummary(input = {}) {
   return formatSummary({ ...input, mode: 'dry-run' });
 }
 
+function createExportRunner(env, dependencies = {}) {
+  if (dependencies.runner) return dependencies.runner;
+
+  return (command, args, options) => {
+    const executable = resolveLocalExecutable(command, env);
+    if (!executable) {
+      const error = new Error(`Local executable not found: ${command}`);
+      error.code = 'ENOENT';
+      return Promise.reject(error);
+    }
+    return runCommand(executable, args, options);
+  };
+}
+
 const HELP = [
   'Usage: node scripts/export-supabase.mjs [options]',
   '',
   'Options:',
   '  --dry-run                 Validate configuration without remote or data actions (default)',
-  '  --execute                 Select execute mode for future data-producing actions',
+  '  --execute                 Run the prepared PostgreSQL export action',
   '  --project-ref <ref>       Require the approved Supabase project reference',
   '  --run-dir <path>          Use an external staging root for the run',
   '  --help                    Show this help',
@@ -152,9 +171,17 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
 
     if (options.mode === 'execute') {
       const stagingRoot = config.runDir || config.outputRoot;
-      await createRunDirectory(stagingRoot, dependencies?.now);
+      const paths = await createRunDirectory(stagingRoot, dependencies?.now);
       io.log('Run status: prepared');
-      io.log('Execute mode is reserved for a later task; no export action was run.');
+      try {
+        const evidence = await exportPostgres(config, paths, createExportRunner(env, dependencies));
+        await markRunCompleted(paths);
+        io.log(`PostgreSQL export completed (${evidence.tableCount} public tables)`);
+        io.log('Run status: completed');
+      } catch (error) {
+        await markRunFailed(paths, error).catch(() => {});
+        throw error;
+      }
     }
     return 0;
   } catch (error) {
