@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import {
   EXPECTED_PROJECT_REF,
   PREFLIGHT_TOOLS,
@@ -15,6 +16,8 @@ import {
   resolveLocalExecutable,
   resolvePreflightTools,
   runCommand,
+  sealRun,
+  writeRunManifest,
 } from './export-supabase-lib.mjs';
 
 export class CliUsageError extends Error {
@@ -175,7 +178,8 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
       const paths = await createRunDirectory(stagingRoot, dependencies?.now);
       io.log('Run status: prepared');
       try {
-        const evidence = await exportPostgres(config, paths, createExportRunner(env, dependencies));
+        const exportRunner = createExportRunner(env, dependencies);
+        const evidence = await exportPostgres(config, paths, exportRunner);
         io.log(`PostgreSQL export prepared (${evidence.tableCount} public tables)`);
         const authEvidence = await exportAuth(config, paths, dependencies.fetchImpl || globalThis.fetch, {
           now: dependencies.now,
@@ -183,9 +187,26 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
         io.log(`Auth export prepared (${authEvidence.userCount} users, ${authEvidence.pages} pages)`);
         const storageEvidence = await exportStorage(config, paths, dependencies.fetchImpl || globalThis.fetch);
         io.log(`Storage export prepared (${storageEvidence.objectCount} objects, ${storageEvidence.bucketCount} buckets)`);
-        io.log('Run status: prepared');
+        await writeRunManifest(paths, {
+          projectRef: config.projectRef,
+          postgres: evidence,
+          auth: authEvidence,
+          storage: storageEvidence,
+          now: dependencies.now,
+          secretValues: [config.dbUrl, config.serviceRoleKey, config.ageRecipient],
+        });
+        const sealRunner = dependencies.sealRunner || (dependencies.runner ? dependencies.runner : undefined);
+        await sealRun(paths, config.ageRecipient, sealRunner);
+        io.log('Run status: completed');
+        io.log('Encrypted archive: prepared');
       } catch (error) {
-        await markRunFailed(paths, error).catch(() => {});
+        let alreadyFailed = false;
+        try {
+          alreadyFailed = JSON.parse(await readFile(join(paths.root, 'run.json'), 'utf8')).status === 'failed';
+        } catch {
+          alreadyFailed = false;
+        }
+        if (!alreadyFailed) await markRunFailed(paths, error).catch(() => {});
         throw error;
       }
     }

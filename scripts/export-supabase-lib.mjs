@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { spawn as nodeSpawn } from 'node:child_process';
 import { accessSync, constants, createWriteStream, existsSync, realpathSync, statSync } from 'node:fs';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -36,6 +36,23 @@ export const RUN_DIRECTORY_NAMES = Object.freeze([
 ]);
 
 export const RUN_STATUSES = Object.freeze(['prepared', 'completed', 'failed']);
+export const REQUIRED_RUN_ARTIFACTS = Object.freeze([
+  'postgres/schema.sql',
+  'postgres/data.dump',
+  'postgres/object-counts.json',
+  'auth/users.json',
+  'auth/metadata.json',
+  'storage/manifest.jsonl',
+  'reconciliation/source-counts.json',
+  'reconciliation/financial-totals.json',
+  'reconciliation/rpc-samples.json',
+]);
+export const REQUIRED_RPC_NAMES = Object.freeze([
+  'estadisticas',
+  'seguimiento_factura',
+  'seguimiento_donaciones',
+]);
+export const CHECKSUM_FILE_NAME = 'checksums.sha256';
 export const AUTH_PAGE_SIZE = 100;
 export const AUTH_MAX_PAGES = 100;
 export const STORAGE_PAGE_SIZE = 100;
@@ -89,7 +106,7 @@ const SAFE_COMMAND_OPTIONS = Object.freeze({
   psql: Object.freeze(['--dbname', '--file', '--host', '--port', '--set', '--user', '--username', '--version']),
   pg_restore: Object.freeze(['--clean', '--dbname', '--exit-on-error', '--file', '--host', '--if-exists',
     '--no-owner', '--no-privileges', '--port', '--single-transaction', '--user', '--username', '--version']),
-  tar: Object.freeze(['--create', '--directory', '--file', '--no-recursion', '-C', '-c', '-f']),
+  tar: Object.freeze(['--create', '--directory', '--exclude', '--file', '--no-recursion', '-C', '-c', '-f']),
   age: Object.freeze(['--output', '--recipient', '--version', '-o', '-r']),
 });
 
@@ -97,7 +114,7 @@ const COMMAND_OPTIONS_WITH_VALUES = Object.freeze({
   pg_dump: Object.freeze(['--dbname', '--file', '--format', '--host', '--port', '--schema', '--user', '--username']),
   psql: Object.freeze(['--dbname', '--file', '--host', '--port', '--set', '--user', '--username']),
   pg_restore: Object.freeze(['--dbname', '--file', '--host', '--port', '--user', '--username']),
-  tar: Object.freeze(['--directory', '--file', '-C', '-f']),
+  tar: Object.freeze(['--directory', '--exclude', '--file', '-C', '-f']),
   age: Object.freeze(['--output', '--recipient', '-o', '-r']),
 });
 
@@ -311,21 +328,21 @@ function qualifiedIdentifier(schema, table) {
   return `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
 }
 
-const FINANCIAL_TOTALS_QUERY = `select json_build_object(
+export const FINANCIAL_TOTALS_QUERY = `select json_build_object(
   'facturas', json_build_object(
-    'count', (select count(*)::text from ${qualifiedIdentifier('public', 'facturas')}),
-    'abiertas', (select count(*)::text from ${qualifiedIdentifier('public', 'facturas')} where estado = 'Abierta'),
-    'monto_requerido', (select coalesce(sum(monto_requerido), 0)::text from ${qualifiedIdentifier('public', 'facturas')}),
-    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0)::text from ${qualifiedIdentifier('public', 'facturas')})
+    'count', (select count(*) from public.facturas),
+    'abiertas', (select count(*) from public.facturas where estado = 'Abierta'),
+    'monto_requerido', (select coalesce(sum(monto_requerido), 0) from public.facturas),
+    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0) from public.facturas)
   ),
   'donaciones', json_build_object(
-    'count', (select count(*)::text from ${qualifiedIdentifier('public', 'donaciones')}),
-    'confirmadas_count', (select count(*)::text from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada'),
-    'confirmadas_monto', (select coalesce(sum(monto), 0)::text from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada')
+    'count', (select count(*) from public.donaciones),
+    'confirmadas_count', (select count(*) from public.donaciones where estado = 'Confirmada'),
+    'confirmadas_monto', (select coalesce(sum(monto), 0) from public.donaciones where estado = 'Confirmada')
   ),
   'movimientos_factura', json_build_object(
-    'count', (select count(*)::text from ${qualifiedIdentifier('public', 'movimientos_factura')}),
-    'monto', (select coalesce(sum(monto), 0)::text from ${qualifiedIdentifier('public', 'movimientos_factura')})
+    'count', (select count(*) from public.movimientos_factura),
+    'monto', (select coalesce(sum(monto), 0) from public.movimientos_factura)
   )
 );`;
 
@@ -420,6 +437,12 @@ function exactCount(value) {
 const EXACT_DECIMAL_PATTERN = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
 
 function exactCountText(value, label) {
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error(`${label} must be an exact decimal integer string`);
+    }
+    return String(value);
+  }
   if (typeof value !== 'string' || !/^(?:0|[1-9]\d*)$/.test(value)) {
     throw new Error(`${label} must be an exact decimal integer string`);
   }
@@ -427,6 +450,12 @@ function exactCountText(value, label) {
 }
 
 function exactDecimalText(value, label) {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || !Number.isSafeInteger(value) && !Number.isSafeInteger(Math.round(value))) {
+      throw new Error(`${label} must be an exact decimal string`);
+    }
+    value = String(value);
+  }
   if (typeof value !== 'string' || !EXACT_DECIMAL_PATTERN.test(value)) {
     throw new Error(`${label} must be an exact decimal string`);
   }
@@ -1640,7 +1669,10 @@ function validateCommandArguments(command, args) {
       continue;
     }
 
-    if (!argument.startsWith('-')) return 'COMMAND_ARGUMENT_NOT_ALLOWED';
+    if (!argument.startsWith('-')) {
+      if (name === 'tar' && argument === '.') continue;
+      return 'COMMAND_ARGUMENT_NOT_ALLOWED';
+    }
     if (sensitiveArgumentName(argument)) return 'COMMAND_ARGUMENT_SECRET';
 
     const separator = argument.indexOf('=');
@@ -1873,6 +1905,717 @@ export async function markRunFailed(paths, error) {
 
 export async function markRunCompleted(paths) {
   return writeRunStatus(paths, 'completed');
+}
+
+function manifestNow(value) {
+  const candidate = value === undefined ? new Date() : new Date(value);
+  if (Number.isNaN(candidate.getTime())) throw new Error('Run manifest timestamp must be a valid date');
+  return candidate.toISOString();
+}
+
+function bytewiseCompare(left, right) {
+  return Buffer.from(left).compare(Buffer.from(right));
+}
+
+async function listFinalArtifacts(root) {
+  const files = [];
+
+  async function visit(directory, relativeDirectory = '') {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      throw new Error('Export artifacts could not be enumerated');
+    }
+
+    entries.sort((left, right) => bytewiseCompare(left.name, right.name));
+    for (const entry of entries) {
+      const entryRelativePath = relativeDirectory
+        ? `${relativeDirectory}/${entry.name}`
+        : entry.name;
+      const entryPath = join(directory, entry.name);
+
+      if (!relativeDirectory && entry.name === 'temp') continue;
+      if (!relativeDirectory && entry.name === CHECKSUM_FILE_NAME) continue;
+      if (entry.isSymbolicLink()) throw new Error('Export artifacts may not contain symbolic links');
+      if (entry.isDirectory()) {
+        await visit(entryPath, entryRelativePath);
+      } else if (entry.isFile()) {
+        files.push(entryRelativePath);
+      } else {
+        throw new Error('Export artifacts contain an unsupported file type');
+      }
+    }
+  }
+
+  await visit(root);
+  files.sort(bytewiseCompare);
+  return files;
+}
+
+function artifactPath(paths, relativePath) {
+  return join(paths.root, ...relativePath.split('/'));
+}
+
+function assertRequiredArtifactFiles(paths) {
+  for (const relativePath of REQUIRED_RUN_ARTIFACTS) {
+    const filePath = artifactPath(paths, relativePath);
+    try {
+      if (!statSync(filePath).isFile()) throw new Error('not a file');
+    } catch {
+      throw new Error(`Required export evidence is missing: ${relativePath}`);
+    }
+  }
+}
+
+async function readJsonFile(filePath, label) {
+  try {
+    const value = JSON.parse(await readFile(filePath, 'utf8'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('not an object');
+    }
+    return value;
+  } catch {
+    throw new Error(`${label} is invalid or unavailable`);
+  }
+}
+
+function evidenceSecretValues(evidence = {}) {
+  return collectSensitiveValues({
+    ageRecipient: evidence.ageRecipient,
+    dbUrl: evidence.dbUrl,
+    serviceRoleKey: evidence.serviceRoleKey,
+  }, {
+    redact: Array.isArray(evidence.secretValues) ? evidence.secretValues : [],
+  });
+}
+
+function safeCommandVersions(value, sensitiveValues) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+  const allowed = new Set(['pg_dump', 'psql', 'pg_restore', 'tar', 'age']);
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([name, version]) => allowed.has(name) && typeof version === 'string')
+      .map(([name, version]) => [name, redactText(version.slice(0, 200), sensitiveValues)]),
+  );
+}
+
+function primitiveType(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value === 'object' ? 'object' : typeof value;
+}
+
+function safeRpcStatus(value) {
+  if (value === 'ok' || value === 'error' || value === 'skipped' || value === 'not-run') return value;
+  return 'unknown';
+}
+
+function rpcOutputSchema(output) {
+  if (!output || typeof output !== 'object' || Array.isArray(output)) {
+    return { outputKeys: [], primitiveTypes: {} };
+  }
+
+  const outputKeys = Object.keys(output)
+    .filter((key) => !/buscar_familiar/i.test(key))
+    .sort(bytewiseCompare);
+  const primitiveTypes = Object.fromEntries(outputKeys.map((key) => [key, primitiveType(output[key])]));
+  return { outputKeys, primitiveTypes };
+}
+
+function normalizeRpcSamples(value) {
+  const input = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object' && Array.isArray(value.samples)
+      ? value.samples
+      : [];
+  const byName = new Map();
+
+  for (const sample of input) {
+    if (!sample || typeof sample !== 'object' || typeof sample.name !== 'string' ||
+      !REQUIRED_RPC_NAMES.includes(sample.name) || byName.has(sample.name)) continue;
+
+    const schema = rpcOutputSchema(sample.output);
+    byName.set(sample.name, {
+      name: sample.name,
+      status: safeRpcStatus(sample.status),
+      outputKeys: schema.outputKeys,
+      primitiveTypes: schema.primitiveTypes,
+    });
+  }
+
+  return REQUIRED_RPC_NAMES.map((name) => byName.get(name) || {
+    name,
+    status: 'not-run',
+    outputKeys: [],
+    primitiveTypes: {},
+  });
+}
+
+function normalizeSourceCounts(counts, evidence) {
+  const postgres = counts && typeof counts.postgres === 'object' ? counts.postgres : {};
+  const authCount = evidence.auth?.userCount;
+  const storageCount = evidence.storage || {};
+  return {
+    postgres: {
+      tableCount: exactCount(postgres.tableCount ?? evidence.postgres?.tableCount ?? 0),
+      tables: Array.isArray(postgres.tables) ? postgres.tables : [],
+    },
+    auth: {
+      userCount: exactCount(authCount ?? 0),
+    },
+    storage: {
+      bucketCount: exactCount(storageCount.bucketCount ?? 0),
+      objectCount: exactCount(storageCount.objectCount ?? 0),
+    },
+  };
+}
+
+async function readPostgresObjectCounts(paths) {
+  const value = await readJsonFile(join(paths.postgres, 'object-counts.json'), 'PostgreSQL object counts');
+  if (value.schema !== 'public' || !Array.isArray(value.tables)) {
+    throw new Error('PostgreSQL object counts are incomplete');
+  }
+  const tables = value.tables.map((table) => {
+    if (!table || typeof table.relation !== 'string') throw new Error('PostgreSQL object counts are invalid');
+    return { relation: table.relation, count: exactCount(table.count) };
+  });
+  const tableCount = exactCount(value.tableCount ?? tables.length);
+  if (tableCount !== tables.length) throw new Error('PostgreSQL object counts are incomplete');
+  return { tableCount, tables };
+}
+
+async function readFinancialTotals(paths, evidence) {
+  let value = evidence.postgres?.financialTotals || evidence.financialTotals;
+  if (!value) {
+    const existing = await readJsonFile(
+      join(paths.reconciliation, 'financial-totals.json'),
+      'Financial totals',
+    );
+    value = existing.totals;
+  }
+  return normalizeFinancialTotals(value);
+}
+
+async function buildChecksumLines(root, artifacts) {
+  const lines = [];
+  for (const relativePath of artifacts) {
+    try {
+      const content = await readFile(join(root, ...relativePath.split('/')));
+      const digest = createHash('sha256').update(content).digest('hex');
+      lines.push(`${digest}  ${relativePath}`);
+    } catch {
+      throw new Error(`Export artifact could not be checksummed: ${relativePath}`);
+    }
+  }
+  return lines;
+}
+
+function manifestRunRecord({ existing, evidence, now, sourceCounts, artifacts, sensitiveValues }) {
+  const projectRef = evidence.projectRef || EXPECTED_PROJECT_REF;
+  if (projectRef !== EXPECTED_PROJECT_REF) throw new Error('Export project reference is not approved');
+  return {
+    projectRef,
+    createdAt: existing.createdAt || now,
+    updatedAt: now,
+    commandVersions: safeCommandVersions(evidence.commandVersions || existing.commandVersions, sensitiveValues),
+    artifacts,
+    counts: sourceCounts,
+    status: 'completed',
+  };
+}
+
+export async function writeRunManifest(paths, evidence = {}) {
+  if (!paths || !isNonEmptyString(paths.root) || !isNonEmptyString(paths.postgres) ||
+    !isNonEmptyString(paths.auth) || !isNonEmptyString(paths.storage) ||
+    !isNonEmptyString(paths.reconciliation) || !isNonEmptyString(paths.temp)) {
+    throw new Error('Complete export run paths are required');
+  }
+
+  const now = manifestNow(evidence.now);
+  const existing = await readSafeRunRecord(paths);
+  const sensitiveValues = evidenceSecretValues(evidence);
+  const postgresCounts = await readPostgresObjectCounts(paths);
+  const financialTotals = await readFinancialTotals(paths, evidence);
+  const sourceCounts = normalizeSourceCounts({ postgres: postgresCounts }, {
+    ...evidence,
+    postgres: { ...evidence.postgres, tableCount: postgresCounts.tableCount },
+  });
+
+  await writeJsonArtifact(join(paths.reconciliation, 'source-counts.json'), sourceCounts);
+  await writeJsonArtifact(join(paths.reconciliation, 'financial-totals.json'), {
+    query: 'financial_totals',
+    schema: 'public',
+    totals: financialTotals,
+  });
+  await writeJsonArtifact(join(paths.reconciliation, 'rpc-samples.json'), normalizeRpcSamples(evidence.rpcSamples));
+
+  assertRequiredArtifactFiles(paths);
+  const artifacts = [...new Set(['run.json', ...(await listFinalArtifacts(paths.root))])].sort(bytewiseCompare);
+  const record = manifestRunRecord({
+    existing,
+    evidence,
+    now,
+    sourceCounts,
+    artifacts,
+    sensitiveValues,
+  });
+  await writeJsonArtifact(runStatusPath(paths), record);
+
+  const finalArtifacts = await listFinalArtifacts(paths.root);
+  if (finalArtifacts.join('\n') !== artifacts.join('\n')) {
+    throw new Error('Export artifact list changed while writing the manifest');
+  }
+  const checksumLines = await buildChecksumLines(paths.root, finalArtifacts);
+  await writeFile(join(paths.root, CHECKSUM_FILE_NAME), `${checksumLines.join('\n')}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  return {
+    manifestFile: runStatusPath(paths),
+    checksumFile: join(paths.root, CHECKSUM_FILE_NAME),
+    sourceCountsFile: join(paths.reconciliation, 'source-counts.json'),
+    financialTotalsFile: join(paths.reconciliation, 'financial-totals.json'),
+    rpcSamplesFile: join(paths.reconciliation, 'rpc-samples.json'),
+  };
+}
+
+function checksumPathIsSafe(value) {
+  return isNonEmptyString(value) && !value.startsWith('/') && !/^[A-Za-z]:[\\/]/.test(value) &&
+    !value.split('/').includes('..') && value !== CHECKSUM_FILE_NAME && !value.startsWith('temp/');
+}
+
+async function readChecksumEntries(runDir) {
+  let content;
+  try {
+    content = await readFile(join(runDir, CHECKSUM_FILE_NAME), 'utf8');
+  } catch {
+    throw new Error('Checksum file is missing or unavailable');
+  }
+
+  const entries = new Map();
+  const lines = content.split(/\r?\n/).filter(Boolean);
+  if (lines.length === 0) throw new Error('Checksum file is empty');
+  for (const line of lines) {
+    const match = /^([a-f0-9]{64})  (.+)$/.exec(line);
+    if (!match || !checksumPathIsSafe(match[2]) || entries.has(match[2])) {
+      throw new Error('Checksum file contains an invalid entry');
+    }
+    entries.set(match[2], match[1]);
+  }
+  return entries;
+}
+
+function setDifference(left, right) {
+  const rightSet = new Set(right);
+  return left.filter((value) => !rightSet.has(value));
+}
+
+function validIsoTimestamp(value) {
+  return typeof value === 'string' && !Number.isNaN(new Date(value).getTime()) && value.endsWith('Z');
+}
+
+function validateRpcSamples(value) {
+  if (!Array.isArray(value) || value.length !== REQUIRED_RPC_NAMES.length) {
+    throw new Error('RPC samples are incomplete');
+  }
+
+  const names = [];
+  for (const sample of value) {
+    if (!sample || typeof sample !== 'object' || Array.isArray(sample) ||
+      !REQUIRED_RPC_NAMES.includes(sample.name) || names.includes(sample.name)) {
+      throw new Error('RPC samples contain an unapproved name');
+    }
+    const keys = Object.keys(sample).sort(bytewiseCompare);
+    const allowedKeys = ['name', 'status', 'outputKeys', 'primitiveTypes'].sort(bytewiseCompare);
+    if (keys.join('\n') !== allowedKeys.join('\n') || !Array.isArray(sample.outputKeys) ||
+      !sample.primitiveTypes || typeof sample.primitiveTypes !== 'object' ||
+      Array.isArray(sample.primitiveTypes)) {
+      throw new Error('RPC samples contain raw output values');
+    }
+    if (sample.outputKeys.some((key) => typeof key !== 'string' || /buscar_familiar/i.test(key)) ||
+      Object.keys(sample.primitiveTypes).some((key) => typeof sample.primitiveTypes[key] !== 'string')) {
+      throw new Error('RPC sample output types are invalid');
+    }
+    const outputKeys = [...sample.outputKeys].sort(bytewiseCompare);
+    if (outputKeys.join('\n') !== sample.outputKeys.join('\n') ||
+      outputKeys.join('\n') !== Object.keys(sample.primitiveTypes).sort(bytewiseCompare).join('\n')) {
+      throw new Error('RPC sample output keys are invalid');
+    }
+    const primitiveTypes = new Set(['string', 'number', 'boolean', 'object', 'array', 'null', 'undefined']);
+    if (Object.values(sample.primitiveTypes).some((type) => !primitiveTypes.has(type))) {
+      throw new Error('RPC sample primitive types are invalid');
+    }
+    names.push(sample.name);
+  }
+
+  if (names.slice().sort(bytewiseCompare).join('\n') !== REQUIRED_RPC_NAMES.slice().sort(bytewiseCompare).join('\n')) {
+    throw new Error('RPC samples are incomplete');
+  }
+}
+
+async function validateReconciliation(runDir, run) {
+  const sourceCounts = await readJsonFile(
+    join(runDir, 'reconciliation', 'source-counts.json'),
+    'Source counts',
+  );
+  const financialTotals = await readJsonFile(
+    join(runDir, 'reconciliation', 'financial-totals.json'),
+    'Financial totals',
+  );
+  let rpcSamples;
+  try {
+    rpcSamples = JSON.parse(await readFile(join(runDir, 'reconciliation', 'rpc-samples.json'), 'utf8'));
+  } catch {
+    throw new Error('RPC samples are invalid or unavailable');
+  }
+
+  if (financialTotals.query !== 'financial_totals' || financialTotals.schema !== 'public') {
+    throw new Error('Financial totals query metadata is invalid');
+  }
+  const totals = normalizeFinancialTotals(financialTotals.totals);
+  validateRpcSamples(rpcSamples);
+  if (!sourceCounts.postgres || !sourceCounts.auth || !sourceCounts.storage ||
+    !run.counts || JSON.stringify(sourceCounts) !== JSON.stringify(run.counts)) {
+    throw new Error('Source counts do not match the run manifest');
+  }
+  return { sourceCounts, financialTotals: totals, rpcSamples };
+}
+
+function restoreTargetError(message) {
+  const error = new Error(message);
+  error.code = 'EXPORT_FAILED';
+  return error;
+}
+
+export function assertSafeRestoreTarget(restoreDb, projectTarget) {
+  if (projectTarget !== 'demo-donaciones-venezuela') {
+    throw restoreTargetError('Restore project target is not approved');
+  }
+  let connection;
+  try {
+    connection = parsePostgresConnection(restoreDb);
+  } catch {
+    throw restoreTargetError('Restore database must be a valid PostgreSQL URL');
+  }
+  if (!['localhost', '127.0.0.1'].includes(connection.PGHOST.toLowerCase())) {
+    throw restoreTargetError('Restore database host must be localhost or 127.0.0.1');
+  }
+  return connection;
+}
+
+function buildRestoreInvocation(connection, dataFile) {
+  return {
+    args: [
+      '--host', connection.PGHOST,
+      '--port', connection.PGPORT,
+      '--username', connection.PGUSER,
+      '--dbname', connection.PGDATABASE,
+      '--no-owner',
+      '--no-privileges',
+      '--exit-on-error',
+      '--single-transaction',
+      '--file', dataFile,
+    ],
+    env: {
+      PGHOST: connection.PGHOST,
+      PGPORT: connection.PGPORT,
+      PGUSER: connection.PGUSER,
+      PGDATABASE: connection.PGDATABASE,
+      PGPASSWORD: connection.PGPASSWORD,
+      PGSSLMODE: 'require',
+    },
+  };
+}
+
+export async function verifyRun(runDir, options = {}) {
+  const checks = {
+    structure: false,
+    completeness: false,
+    manifest: false,
+    checksums: false,
+    reconciliation: false,
+    archive: false,
+    restore: true,
+  };
+  const errors = [];
+  const counts = {};
+  let run;
+  let actualArtifacts = [];
+
+  if (!isNonEmptyString(runDir) || runDir.includes('\0')) {
+    errors.push('Run directory is required');
+  } else {
+    try {
+      if (!statSync(runDir).isDirectory()) throw new Error('not a directory');
+      checks.structure = true;
+    } catch {
+      errors.push('Run directory is unavailable');
+    }
+  }
+
+  if (checks.structure) {
+    try {
+      run = await readJsonFile(join(runDir, 'run.json'), 'Run manifest');
+      if (run.status !== 'completed') throw new Error('Run status is not completed');
+      if (run.projectRef !== EXPECTED_PROJECT_REF) throw new Error('Run project reference is not approved');
+      if (!validIsoTimestamp(run.createdAt) || !validIsoTimestamp(run.updatedAt)) {
+        throw new Error('Run timestamps are invalid');
+      }
+      if (!Array.isArray(run.artifacts) || run.artifacts.length === 0 ||
+        new Set(run.artifacts).size !== run.artifacts.length ||
+        run.artifacts.includes(CHECKSUM_FILE_NAME) ||
+        run.artifacts.some((value) => !checksumPathIsSafe(value))) {
+        throw new Error('Run manifest artifact list is invalid');
+      }
+      checks.manifest = true;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : 'Run manifest is invalid');
+    }
+
+    try {
+      actualArtifacts = await listFinalArtifacts(runDir);
+      const missing = setDifference(REQUIRED_RUN_ARTIFACTS, actualArtifacts);
+      const unlisted = run?.artifacts ? setDifference(actualArtifacts, run.artifacts) : [];
+      const listedMissing = run?.artifacts ? setDifference(run.artifacts, actualArtifacts) : REQUIRED_RUN_ARTIFACTS;
+      if (missing.length > 0 || unlisted.length > 0 || listedMissing.length > 0) {
+        throw new Error(`Required export evidence or manifest artifacts are missing: ${[
+          ...missing,
+          ...listedMissing,
+          ...unlisted,
+        ].join(', ')}`);
+      }
+      checks.completeness = true;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : 'Export evidence is incomplete');
+    }
+
+    try {
+      const entries = await readChecksumEntries(runDir);
+      const checksumPaths = [...entries.keys()].sort(bytewiseCompare);
+      if (checksumPaths.join('\n') !== actualArtifacts.join('\n')) {
+        throw new Error('Checksum entries do not match final artifacts');
+      }
+      for (const [relativePath, expected] of entries) {
+        const content = await readFile(join(runDir, ...relativePath.split('/')));
+        const actual = createHash('sha256').update(content).digest('hex');
+        if (actual !== expected) throw new Error(`Checksum mismatch: ${relativePath}`);
+      }
+      checks.checksums = true;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : 'Checksum verification failed');
+    }
+
+    try {
+      const reconciliation = await validateReconciliation(runDir, run);
+      Object.assign(counts, reconciliation.sourceCounts);
+      checks.reconciliation = true;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : 'Reconciliation evidence is invalid');
+    }
+
+    if (options.archivePath !== undefined) {
+      try {
+        if (!statSync(options.archivePath).isFile() || statSync(options.archivePath).size === 0) {
+          throw new Error('Encrypted archive is missing or empty');
+        }
+        checks.archive = true;
+      } catch {
+        errors.push('Encrypted archive is missing or empty');
+      }
+    } else {
+      checks.archive = run?.status === 'completed';
+    }
+
+    if (options.restoreDb !== undefined) {
+      try {
+        const connection = assertSafeRestoreTarget(options.restoreDb, options.projectTarget);
+        const invocation = buildRestoreInvocation(connection, join(runDir, 'postgres', 'data.dump'));
+        const result = await invokeExportCommand(
+          options.runner || runCommand,
+          'pg_restore',
+          invocation.args,
+          { env: invocation.env },
+        );
+        if (result.code !== 0) throw commandFailure('pg_restore', result);
+      } catch (error) {
+        checks.restore = false;
+        errors.push(redactText(
+          error instanceof Error ? error.message : 'Local restore failed',
+          collectSensitiveValues({ PGPASSWORD: options.restoreDb }),
+        ));
+      }
+    }
+  }
+
+  return {
+    ok: errors.length === 0 && Object.values(checks).every(Boolean),
+    checks,
+    errors,
+    counts,
+  };
+}
+
+function sealEnvironment(recipient) {
+  const environment = {};
+  for (const name of ['PATH', 'Path', 'PATHEXT', 'SystemRoot']) {
+    if (isNonEmptyString(process.env[name])) environment[name] = process.env[name];
+  }
+  environment.EXPORT_AGE_RECIPIENT = recipient;
+  return environment;
+}
+
+function sealError(error, recipient) {
+  const safe = new Error(redactText(
+    error instanceof Error ? error.message : 'Export sealing failed',
+    [recipient],
+  ));
+  safe.code = ALLOWED_ERROR_CODES.has(error?.code) ? error.code : 'EXPORT_FAILED';
+  return safe;
+}
+
+function childProcessResult(child, label) {
+  return new Promise((resolveResult, reject) => {
+    let stderr = '';
+    let settled = false;
+    const finish = (callback) => {
+      if (settled) return;
+      settled = true;
+      callback();
+    };
+    child.stderr?.on('data', (chunk) => {
+      stderr += chunk instanceof Buffer ? chunk.toString('utf8') : String(chunk);
+    });
+    child.once('error', (error) => finish(() => reject(new Error(
+      `${label} could not start: ${error instanceof Error ? error.message : 'unknown error'}`,
+    ))));
+    child.once('close', (code) => finish(() => {
+      if (code !== 0) {
+        const error = new Error(`${label} exited with code ${Number.isInteger(code) ? code : 'unknown'}`);
+        error.code = 'COMMAND_EXIT';
+        error.stderr = stderr;
+        reject(error);
+        return;
+      }
+      resolveResult();
+    }));
+  });
+}
+
+async function nativeSealPipeline(spec, runner) {
+  const spawnImpl = runner && typeof runner === 'object' && typeof runner.spawnImpl === 'function'
+    ? runner.spawnImpl
+    : nodeSpawn;
+  const environment = spec.env;
+  let tarChild;
+  let ageChild;
+  try {
+    tarChild = spawnImpl(spec.tar.command, spec.tar.args, {
+      cwd: spec.paths.root,
+      env: environment,
+      shell: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    ageChild = spawnImpl(spec.age.command, spec.age.args, {
+      cwd: spec.paths.root,
+      env: environment,
+      shell: false,
+      stdio: ['pipe', 'ignore', 'pipe'],
+    });
+    tarChild.stdout?.pipe(ageChild.stdin);
+    const tarResult = childProcessResult(tarChild, 'tar');
+    const ageResult = childProcessResult(ageChild, 'age');
+    await Promise.all([tarResult, ageResult]);
+  } catch (error) {
+    try { tarChild?.kill?.('SIGTERM'); } catch { /* Keep the original sealing error. */ }
+    try { ageChild?.kill?.('SIGTERM'); } catch { /* Keep the original sealing error. */ }
+    throw error;
+  }
+}
+
+async function invokeInjectedSealRunner(runner, spec) {
+  if (runner && typeof runner.runPipeline === 'function') {
+    await runner.runPipeline(spec);
+    return;
+  }
+
+  if (typeof runner !== 'function' || runner === runCommand) {
+    await nativeSealPipeline(spec, runner);
+    return;
+  }
+
+  const tarResult = await runner(spec.tar.command, spec.tar.args, {
+    env: spec.env,
+    shell: false,
+    streamTo: spec.age.command,
+  });
+  if (!tarResult || tarResult.code !== 0) throw commandFailure('tar', tarResult);
+  const ageResult = await runner(spec.age.command, spec.age.args, {
+    env: spec.env,
+    shell: false,
+    input: tarResult.stdout,
+  });
+  if (!ageResult || ageResult.code !== 0) throw commandFailure('age', ageResult);
+}
+
+export async function sealRun(paths, recipient, runner) {
+  const temporaryArchive = paths && isNonEmptyString(paths.temp) && isNonEmptyString(paths.root)
+    ? join(paths.temp, 'run.tar')
+    : undefined;
+  const archivePath = paths && isNonEmptyString(paths.root)
+    ? join(dirname(paths.root), `${basename(paths.root)}.tar.age`)
+    : undefined;
+
+  try {
+    if (!paths || !isNonEmptyString(paths.root) || !isNonEmptyString(paths.temp) ||
+      !isNonEmptyString(recipient)) {
+      throw new Error('A complete run and an age recipient are required for sealing');
+    }
+    if (existsSync(archivePath)) throw new Error('Encrypted archive already exists');
+    let status;
+    try {
+      status = JSON.parse(await readFile(runStatusPath(paths), 'utf8')).status;
+    } catch {
+      throw new Error('Run status is unavailable; sealing refused');
+    }
+    if (status !== 'completed') throw new Error(`Run status ${status || 'unknown'} cannot be sealed`);
+
+    const verification = await verifyRun(paths.root);
+    if (!verification.ok) throw new Error('Run evidence is incomplete; sealing refused');
+
+    const spec = {
+      paths,
+      temporaryArchive,
+      archivePath,
+      env: sealEnvironment(recipient),
+      tar: {
+        command: commandExecutable('tar', runner),
+        args: ['--create', '--directory', paths.root, '--exclude=./temp', '--file=-', '.'],
+        options: { env: sealEnvironment(recipient), shell: false },
+      },
+      age: {
+        command: commandExecutable('age', runner),
+        args: ['--recipient', recipient, '--output', archivePath],
+        options: { env: sealEnvironment(recipient), shell: false },
+      },
+    };
+
+    await invokeInjectedSealRunner(runner, spec);
+    try {
+      if (!statSync(archivePath).isFile() || statSync(archivePath).size === 0) {
+        throw new Error('Encrypted archive was not created');
+      }
+    } catch {
+      throw new Error('Encrypted archive was not created');
+    }
+    await rm(temporaryArchive, { force: true });
+    return archivePath;
+  } catch (error) {
+    const safe = sealError(error, recipient);
+    await writeRunStatus(paths, 'failed', safe).catch(() => {});
+    throw safe;
+  }
 }
 
 export async function createRunDirectory(outputRoot, timestamp, repoRoot = process.cwd()) {
