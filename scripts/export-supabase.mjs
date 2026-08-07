@@ -176,7 +176,9 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
       try {
         const evidence = await exportPostgres(config, paths, createExportRunner(env, dependencies));
         io.log(`PostgreSQL export prepared (${evidence.tableCount} public tables)`);
-        const authEvidence = await exportAuth(config, paths, dependencies.fetchImpl || globalThis.fetch);
+        const authEvidence = await exportAuth(config, paths, dependencies.fetchImpl || globalThis.fetch, {
+          now: dependencies.now,
+        });
         io.log(`Auth export prepared (${authEvidence.userCount} users, ${authEvidence.pages} pages)`);
         io.log('Run status: prepared');
       } catch (error) {

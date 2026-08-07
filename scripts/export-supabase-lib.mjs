@@ -1,6 +1,6 @@
 import { spawn as nodeSpawn } from 'node:child_process';
 import { accessSync, constants, existsSync, realpathSync, statSync } from 'node:fs';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 
 export const EXPECTED_PROJECT_REF = 'zryfwbjvlacorryzdaod';
@@ -545,6 +545,24 @@ function authTimestamp(value, label) {
   return parsed.toISOString();
 }
 
+function authNow(value) {
+  let candidate;
+  try {
+    candidate = typeof value === 'function' ? value() : value;
+  } catch {
+    throw new Error('Supabase Auth reference time is invalid');
+  }
+
+  if (candidate === null) throw new Error('Supabase Auth reference time is invalid');
+  const parsed = candidate === undefined
+    ? new Date()
+    : candidate instanceof Date
+      ? new Date(candidate.getTime())
+      : new Date(candidate);
+  if (Number.isNaN(parsed.getTime())) throw new Error('Supabase Auth reference time is invalid');
+  return parsed;
+}
+
 function authMetadata(value, allowedFields) {
   if (value === undefined || value === null) return {};
   if (typeof value !== 'object' || Array.isArray(value)) {
@@ -568,13 +586,19 @@ function authMetadata(value, allowedFields) {
   return result;
 }
 
-function normalizeAuthUser(user) {
+function normalizeAuthUser(user, now) {
   if (!user || typeof user !== 'object' || Array.isArray(user)) {
     throw new Error('Supabase Auth user record is invalid');
   }
 
-  const disabled = user.disabled === undefined || user.disabled === null ? false : user.disabled;
-  if (typeof disabled !== 'boolean') throw new Error('Supabase Auth user disabled flag is invalid');
+  const explicitDisabled = user.disabled;
+  if (explicitDisabled !== undefined && explicitDisabled !== null && typeof explicitDisabled !== 'boolean') {
+    throw new Error('Supabase Auth user disabled flag is invalid');
+  }
+  const bannedUntil = authTimestamp(user.banned_until, 'ban timestamp');
+  const disabled = bannedUntil && new Date(bannedUntil).getTime() > now.getTime()
+    ? true
+    : explicitDisabled ?? false;
 
   return {
     id: authString(user.id, 'id', { required: true }),
@@ -590,11 +614,7 @@ function normalizeAuthUser(user) {
   };
 }
 
-function authPageSignature(users) {
-  return JSON.stringify(users.map((user) => user.id));
-}
-
-async function fetchAuthPage(fetchImpl, endpoint, serviceRoleKey) {
+async function fetchAuthPage(fetchImpl, endpoint, serviceRoleKey, now) {
   let response;
   try {
     response = await fetchImpl(endpoint, {
@@ -623,8 +643,11 @@ async function fetchAuthPage(fetchImpl, endpoint, serviceRoleKey) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload) || !Array.isArray(payload.users)) {
     throw new Error('Supabase Auth response JSON is invalid');
   }
+  if (payload.users.length > AUTH_PAGE_SIZE) {
+    throw new Error('Supabase Auth page exceeds the safe page size');
+  }
 
-  return payload.users.map(normalizeAuthUser);
+  return payload.users.map((user) => normalizeAuthUser(user, now));
 }
 
 function authFieldPolicy() {
@@ -737,41 +760,80 @@ export async function exportPostgres(config, paths, runner = runCommand) {
   return evidence;
 }
 
-export async function exportAuth(config, paths, fetchImpl) {
-  if (!config || typeof config !== 'object' || !isNonEmptyString(config.supabaseUrl) ||
-    !isNonEmptyString(config.serviceRoleKey)) {
+export async function exportAuth(config, paths, fetchImpl, options = {}) {
+  if (!config || typeof config !== 'object') {
+    throw new Error('A Supabase Auth export configuration is required');
+  }
+  if (config.projectRef !== EXPECTED_PROJECT_REF) {
+    throw new Error('Supabase Auth export project is not approved');
+  }
+  if (config.supabaseUrl !== EXPECTED_SUPABASE_URL) {
+    throw new Error('Supabase Auth export origin is not approved');
+  }
+  if (config.mode !== 'execute') {
+    throw new Error('Supabase Auth export requires execute mode');
+  }
+  if (!isNonEmptyString(config.serviceRoleKey)) {
     throw new Error('A Supabase Auth export configuration is required');
   }
   if (!paths || !isNonEmptyString(paths.auth)) {
     throw new Error('Supabase Auth export paths are required');
   }
+  if (!isNonEmptyString(paths.temp)) {
+    throw new Error('Supabase Auth temporary export path is required');
+  }
   if (typeof fetchImpl !== 'function') {
     throw new Error('A Supabase Auth fetch implementation is required');
   }
 
+  const authOptions = options && typeof options === 'object' ? options : {};
+  const now = authNow(authOptions.now);
+  const writeArtifact = typeof authOptions.writer === 'function'
+    ? authOptions.writer
+    : writeJsonArtifact;
+  const renameArtifact = typeof authOptions.renameImpl === 'function'
+    ? authOptions.renameImpl
+    : rename;
   const usersFile = join(paths.auth, 'users.json');
   const metadataFile = join(paths.auth, 'metadata.json');
+  const temporaryUsersFile = join(paths.temp, 'auth-users.json.tmp');
+  const temporaryMetadataFile = join(paths.temp, 'auth-metadata.json.tmp');
   const users = [];
-  const seenPages = new Set();
+  const seenUserIds = new Set();
 
   for (let page = 1; page <= AUTH_MAX_PAGES; page += 1) {
     const endpoint = new URL('/auth/v1/admin/users', `${config.supabaseUrl}/`);
     endpoint.searchParams.set('page', String(page));
     endpoint.searchParams.set('per_page', String(AUTH_PAGE_SIZE));
-    const pageUsers = await fetchAuthPage(fetchImpl, endpoint.toString(), config.serviceRoleKey);
-    const signature = authPageSignature(pageUsers);
+    const pageUsers = await fetchAuthPage(fetchImpl, endpoint.toString(), config.serviceRoleKey, now);
 
-    if (seenPages.has(signature)) throw new Error('Supabase Auth pagination returned a repeated page');
-    seenPages.add(signature);
+    for (const user of pageUsers) {
+      if (seenUserIds.has(user.id)) {
+        throw new Error('Supabase Auth pagination returned a repeated or overlapping user ID');
+      }
+      seenUserIds.add(user.id);
+    }
     users.push(...pageUsers);
 
     if (pageUsers.length < AUTH_PAGE_SIZE) {
-      await writeJsonArtifact(usersFile, users);
-      await writeJsonArtifact(metadataFile, {
-        count: users.length,
-        pages: page,
-        fieldPolicy: authFieldPolicy(),
-      });
+      try {
+        await writeArtifact(temporaryUsersFile, users);
+        await writeArtifact(temporaryMetadataFile, {
+          count: users.length,
+          pages: page,
+          fieldPolicy: authFieldPolicy(),
+        });
+        await renameArtifact(temporaryUsersFile, usersFile);
+        await renameArtifact(temporaryMetadataFile, metadataFile);
+      } catch {
+        await Promise.all([
+          temporaryUsersFile,
+          temporaryMetadataFile,
+          usersFile,
+          metadataFile,
+        ].map((filePath) => rm(filePath, { force: true }).catch(() => {})));
+        throw new Error('Supabase Auth artifacts could not be published');
+      }
       return { usersFile, userCount: users.length, pages: page };
     }
   }

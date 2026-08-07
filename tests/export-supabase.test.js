@@ -52,8 +52,10 @@ function fakeSuccessfulSpawn(calls, { code = 0, stderr = '', stdout = '' } = {})
 function createAuthPaths() {
   const root = mkdtempSync(join(tmpdir(), 'export-auth-'));
   const auth = join(root, 'auth');
+  const temp = join(root, 'temp');
   mkdirSync(auth);
-  return { root, auth };
+  mkdirSync(temp);
+  return { root, auth, temp };
 }
 
 function fakeAuthResponse(body, status = 200) {
@@ -84,6 +86,7 @@ function authUser(overrides = {}) {
       role: 'admin',
       secret: 'app-metadata-secret',
     },
+    banned_until: null,
     disabled: true,
     identities: [{ identity_id: 'identity-secret' }],
     access_token: 'access-token-secret',
@@ -276,6 +279,56 @@ describe('export config', () => {
 });
 
 describe('Supabase Auth export', () => {
+  it('rejects direct calls with an unapproved host before reading the service key', async () => {
+    const paths = createAuthPaths();
+    const config = {
+      projectRef: EXPECTED_PROJECT_REF,
+      supabaseUrl: 'https://attacker.example.test',
+      mode: 'execute',
+    };
+    Object.defineProperty(config, 'serviceRoleKey', {
+      get() {
+        throw new Error('service key was read');
+      },
+    });
+
+    try {
+      await expect(exportAuth(config, paths, async () => {
+        throw new Error('fetch must not run');
+      })).rejects.toThrow(/approved|origin|URL/i);
+      expect(readdirSync(paths.auth)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['wrong project', { projectRef: 'another-project' }],
+    ['dry-run mode', { mode: 'dry-run' }],
+  ])('rejects direct Auth export with %s before using the service key', async (_name, overrides) => {
+    const paths = createAuthPaths();
+    const config = {
+      projectRef: EXPECTED_PROJECT_REF,
+      supabaseUrl: EXPECTED_SUPABASE_URL,
+      mode: 'execute',
+      ...overrides,
+    };
+    Object.defineProperty(config, 'serviceRoleKey', {
+      get() {
+        throw new Error('service key was read');
+      },
+    });
+
+    try {
+      await expect(exportAuth(config, paths, async () => {
+        throw new Error('fetch must not run');
+      })).rejects.toThrow(/project|execute|mode/i);
+      expect(readdirSync(paths.auth)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
   it('fetches bounded pages and writes only the approved redacted user fields', async () => {
     const paths = createAuthPaths();
     const calls = [];
@@ -302,7 +355,9 @@ describe('Supabase Auth export', () => {
 
     try {
       const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
-      const evidence = await exportAuth(config, paths, fetchImpl);
+      const evidence = await exportAuth(config, paths, fetchImpl, {
+        now: '2026-01-10T00:00:00Z',
+      });
       const usersFile = join(paths.auth, 'users.json');
       const metadataFile = join(paths.auth, 'metadata.json');
       const users = JSON.parse(readFileSync(usersFile, 'utf8'));
@@ -433,6 +488,121 @@ describe('Supabase Auth export', () => {
       })).rejects.toThrow(/repeated|repeat/i);
       expect(calls).toBe(2);
       expect(readdirSync(paths.auth)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an overlapping user ID across pages before writing Auth evidence', async () => {
+    const paths = createAuthPaths();
+    const firstPage = Array.from({ length: 100 }, (_, index) => authUser({ id: `user-${index + 1}` }));
+    const secondPage = [authUser({ id: 'user-100' })];
+    let calls = 0;
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      await expect(exportAuth(config, paths, async () => {
+        calls += 1;
+        return fakeAuthResponse({ users: calls === 1 ? firstPage : secondPage });
+      })).rejects.toThrow(/overlap|repeated|duplicate/i);
+      expect(calls).toBe(2);
+      expect(readdirSync(paths.auth)).toEqual([]);
+      expect(readdirSync(paths.temp)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a page larger than the bounded page size before writing evidence', async () => {
+    const paths = createAuthPaths();
+    let calls = 0;
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      const oversizedPage = Array.from({ length: 101 }, (_, index) => authUser({ id: `user-${index}` }));
+      await expect(exportAuth(config, paths, async () => {
+        calls += 1;
+        return fakeAuthResponse({ users: oversizedPage });
+      })).rejects.toThrow(/safe page size/i);
+      expect(calls).toBe(1);
+      expect(readdirSync(paths.auth)).toEqual([]);
+      expect(readdirSync(paths.temp)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an invalid Supabase ban timestamp without writing evidence', async () => {
+    const paths = createAuthPaths();
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      await expect(exportAuth(config, paths, async () => fakeAuthResponse({ users: [authUser({
+        banned_until: 'not-a-timestamp',
+      })] }), { now: '2026-01-10T00:00:00Z' })).rejects.toThrow(/timestamp|ban/i);
+      expect(readdirSync(paths.auth)).toEqual([]);
+      expect(readdirSync(paths.temp)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('maps future and expired Supabase bans to the approved disabled field', async () => {
+    const paths = createAuthPaths();
+    const responseUsers = [
+      authUser({
+        id: 'future-ban',
+        disabled: false,
+        banned_until: '2026-01-11T00:00:00Z',
+      }),
+      authUser({
+        id: 'expired-ban',
+        disabled: false,
+        banned_until: '2026-01-09T00:00:00Z',
+      }),
+      authUser({
+        id: 'explicit-disabled',
+        disabled: true,
+        banned_until: '2026-01-09T00:00:00Z',
+      }),
+    ];
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      await exportAuth(config, paths, async () => fakeAuthResponse({ users: responseUsers }), {
+        now: '2026-01-10T00:00:00Z',
+      });
+      const users = JSON.parse(readFileSync(join(paths.auth, 'users.json'), 'utf8'));
+
+      expect(users.map(({ id, disabled }) => ({ id, disabled }))).toEqual([
+        { id: 'future-ban', disabled: true },
+        { id: 'expired-ban', disabled: false },
+        { id: 'explicit-disabled', disabled: true },
+      ]);
+      expect(readFileSync(join(paths.auth, 'users.json'), 'utf8')).not.toContain('banned_until');
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('removes temporary and final Auth artifacts when publication fails', async () => {
+    const paths = createAuthPaths();
+    const writes = [];
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      await expect(exportAuth(config, paths, async () => fakeAuthResponse({ users: [authUser()] }), {
+        now: '2026-01-10T00:00:00Z',
+        writer: async (filePath, value) => {
+          writes.push({ filePath, value });
+        },
+        renameImpl: async () => {
+          throw new Error('publish failure');
+        },
+      })).rejects.toThrow(/publish|artifact/i);
+      expect(writes).toHaveLength(2);
+      expect(readdirSync(paths.auth)).toEqual([]);
+      expect(readdirSync(paths.temp)).toEqual([]);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }

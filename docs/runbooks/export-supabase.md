@@ -27,10 +27,15 @@ administrativo paginado:
 ```
 
 La paginacion empieza en la pagina 1, termina cuando una respuesta trae menos
-de 100 usuarios y tiene un limite seguro de 100 paginas. Una pagina repetida,
-una secuencia que alcanza el limite, una respuesta HTTP fuera de 2xx o JSON
-invalido falla el run antes de escribir evidencia Auth exitosa. Las pruebas
-inyectan `fetchImpl`; no necesitan red ni credenciales reales.
+de 100 usuarios y tiene un limite seguro de 100 paginas. Una respuesta con mas
+de 100 usuarios, un ID solapado entre paginas, una pagina repetida, una
+secuencia que alcanza el limite, una respuesta HTTP fuera de 2xx o JSON
+invalido falla el run antes de escribir evidencia Auth exitosa. La validacion
+del helper exige, independientemente del CLI, el origen exacto aprobado, el
+project reference aprobado y modo `execute` antes de leer la clave.
+
+Las pruebas inyectan `fetchImpl` y el tiempo de referencia; no necesitan red ni
+credenciales reales.
 
 Los artefactos se escriben en el staging externo del run:
 
@@ -39,12 +44,21 @@ Los artefactos se escriben en el staging externo del run:
   `userMetadata`, `appMetadata` y `disabled`.
 - `auth/metadata.json`: conteo, paginas y la whitelist de campos aplicada.
 
-Las fechas se normalizan a ISO. `userMetadata` solo admite
+Las fechas se normalizan a ISO. `disabled` conserva el booleano entregado por
+Supabase y tambien se activa si `banned_until` es un timestamp futuro respecto
+al tiempo de referencia del run; un baneo vencido no desactiva el usuario. El
+campo `banned_until` nunca se escribe. `userMetadata` solo admite
 `display_name`, `full_name`, `name` y `avatar_url`; `appMetadata` solo admite
 `provider`, `providers`, `role` y `roles`. Identidades, tokens de acceso y
 refresco, hashes de contrasena, cabeceras sin procesar y cualquier otro campo
 se descartan. El email es PII y solo puede permanecer en el paquete externo
 protegido; nunca se imprime en logs, Git o metadata.
+
+La publicacion usa primero `temp/auth-users.json.tmp` y
+`temp/auth-metadata.json.tmp`. Solo despues de completar ambos se renombran a
+`auth/users.json` y `auth/metadata.json`. Si una escritura o renombrado falla,
+se eliminan los temporales y los dos finales; el flujo del CLI marca el run
+como `failed` y limpia el resto de `temp/`.
 
 ## Variables y rutas
 
