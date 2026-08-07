@@ -34,6 +34,40 @@ export const RUN_DIRECTORY_NAMES = Object.freeze([
 
 export const RUN_STATUSES = Object.freeze(['prepared', 'completed', 'failed']);
 
+const ALLOWED_ERROR_CODES = new Set([
+  'COMMAND_ARGUMENT_NOT_ALLOWED',
+  'COMMAND_ARGUMENT_SECRET',
+  'COMMAND_EXIT',
+  'COMMAND_NOT_ALLOWED',
+  'COMMAND_SPAWN_FAILED',
+  'COMMAND_TIMEOUT',
+  'EACCES',
+  'EEXIST',
+  'ENOENT',
+  'ENOTDIR',
+  'EPERM',
+  'EROFS',
+  'EXPORT_FAILED',
+]);
+
+const SAFE_COMMAND_OPTIONS = Object.freeze({
+  pg_dump: Object.freeze(['--data-only', '--dbname', '--file', '--format', '--host', '--no-owner',
+    '--no-privileges', '--port', '--schema', '--schema-only', '--user', '--username', '--version']),
+  psql: Object.freeze(['--dbname', '--file', '--host', '--port', '--set', '--user', '--username', '--version']),
+  pg_restore: Object.freeze(['--clean', '--dbname', '--exit-on-error', '--file', '--host', '--if-exists',
+    '--no-owner', '--no-privileges', '--port', '--single-transaction', '--user', '--username', '--version']),
+  tar: Object.freeze(['--create', '--directory', '--file', '--no-recursion', '-C', '-c', '-f']),
+  age: Object.freeze(['--output', '--recipient', '--version', '-o', '-r']),
+});
+
+const COMMAND_OPTIONS_WITH_VALUES = Object.freeze({
+  pg_dump: Object.freeze(['--dbname', '--file', '--format', '--host', '--port', '--schema', '--user', '--username']),
+  psql: Object.freeze(['--dbname', '--file', '--host', '--port', '--set', '--user', '--username']),
+  pg_restore: Object.freeze(['--dbname', '--file', '--host', '--port', '--user', '--username']),
+  tar: Object.freeze(['--directory', '--file', '-C', '-f']),
+  age: Object.freeze(['--output', '--recipient', '-o', '-r']),
+});
+
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -205,10 +239,19 @@ export function buildPostgresInvocation(connection, outputPath) {
     throw new Error('A PostgreSQL output path is required');
   }
 
-  const requiredFields = ['PGHOST', 'PGPORT', 'PGUSER', 'PGDATABASE', 'PGPASSWORD', 'PGSSLMODE'];
+  const requiredFields = ['PGHOST', 'PGPORT', 'PGUSER', 'PGDATABASE', 'PGPASSWORD'];
   if (requiredFields.some((field) => !isNonEmptyString(parsedConnection[field]))) {
     throw new Error('The PostgreSQL connection is incomplete');
   }
+
+  const env = Object.freeze({
+    PGHOST: parsedConnection.PGHOST,
+    PGPORT: parsedConnection.PGPORT,
+    PGUSER: parsedConnection.PGUSER,
+    PGDATABASE: parsedConnection.PGDATABASE,
+    PGPASSWORD: parsedConnection.PGPASSWORD,
+    PGSSLMODE: 'require',
+  });
 
   return Object.freeze({
     command: 'pg_dump',
@@ -219,7 +262,7 @@ export function buildPostgresInvocation(connection, outputPath) {
       '--dbname', parsedConnection.PGDATABASE,
       '--file', outputPath,
     ]),
-    env: Object.freeze({ ...parsedConnection }),
+    env,
   });
 }
 
@@ -244,11 +287,51 @@ function redactText(value, sensitiveValues) {
 
 function commandError(command, message, code, sensitiveValues) {
   const error = new Error(`Command ${command} ${message}`);
-  error.code = typeof code === 'string' && /^[A-Z][A-Z0-9_.-]{0,63}$/.test(code)
-    ? code
-    : 'COMMAND_SPAWN_FAILED';
+  error.code = ALLOWED_ERROR_CODES.has(code) ? code : 'COMMAND_SPAWN_FAILED';
   error.message = redactText(error.message, sensitiveValues);
   return error;
+}
+
+function commandName(command) {
+  const executable = command.includes('\\') ? win32.basename(command) : basename(command);
+  return executable.replace(/\.(?:bat|cmd|exe)$/i, '').toLowerCase();
+}
+
+function sensitiveArgumentName(argument) {
+  const optionName = argument.split('=', 1)[0].toLowerCase();
+  return optionName === '-w' || /^(?:--?)(?:pass(?:word|file)?|secret|token|key|credential)$/.test(optionName);
+}
+
+function validateCommandArguments(command, args) {
+  const name = commandName(command);
+  const allowedOptions = SAFE_COMMAND_OPTIONS[name];
+  if (!allowedOptions) return 'COMMAND_NOT_ALLOWED';
+
+  const optionsWithValues = COMMAND_OPTIONS_WITH_VALUES[name];
+  let expectedValueFor;
+
+  for (const argument of args) {
+    if (expectedValueFor) {
+      if (argument.startsWith('-')) return 'COMMAND_ARGUMENT_NOT_ALLOWED';
+      expectedValueFor = undefined;
+      continue;
+    }
+
+    if (!argument.startsWith('-')) return 'COMMAND_ARGUMENT_NOT_ALLOWED';
+    if (sensitiveArgumentName(argument)) return 'COMMAND_ARGUMENT_SECRET';
+
+    const separator = argument.indexOf('=');
+    const optionName = separator === -1 ? argument : argument.slice(0, separator);
+    if (!allowedOptions.includes(optionName)) return 'COMMAND_ARGUMENT_NOT_ALLOWED';
+
+    if (separator === -1 && optionsWithValues.includes(optionName)) {
+      expectedValueFor = optionName;
+    } else if (separator !== -1 && !argument.slice(separator + 1)) {
+      return 'COMMAND_ARGUMENT_NOT_ALLOWED';
+    }
+  }
+
+  return expectedValueFor ? 'COMMAND_ARGUMENT_NOT_ALLOWED' : undefined;
 }
 
 function hasSensitiveArgument(args, sensitiveValues) {
@@ -269,6 +352,16 @@ export function runCommand(command, args = [], options = {}) {
   const sensitiveValues = collectSensitiveValues(childEnv, commandOptions);
   const spawnImpl = commandOptions.spawnImpl || commandOptions.spawn || nodeSpawn;
   const timeout = commandOptions.timeoutMs ?? commandOptions.timeout ?? 120000;
+  const invalidArgumentCode = validateCommandArguments(command, args);
+
+  if (invalidArgumentCode) {
+    return Promise.reject(commandError(
+      command,
+      'refused command arguments',
+      invalidArgumentCode,
+      sensitiveValues,
+    ));
+  }
 
   if (hasSensitiveArgument(args, sensitiveValues)) {
     return Promise.reject(commandError(
@@ -282,28 +375,57 @@ export function runCommand(command, args = [], options = {}) {
   if (!Number.isFinite(timeout) || timeout <= 0) {
     return Promise.reject(new Error('Command timeout must be a positive number'));
   }
+  const terminationGraceMs = commandOptions.terminationGraceMs ?? commandOptions.killGraceMs ?? 250;
+  if (!Number.isFinite(terminationGraceMs) || terminationGraceMs <= 0) {
+    return Promise.reject(new Error('Command termination grace must be a positive number'));
+  }
 
   return new Promise((resolveResult, reject) => {
     let child;
     let stdout = '';
     let stderr = '';
     let settled = false;
-    let timer;
+    let timeoutTimer;
+    let terminationTimer;
+    let timedOut = false;
+    let timeoutError;
+
+    const clearTimers = () => {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      if (terminationTimer) clearTimeout(terminationTimer);
+    };
+
+    const closeStreams = () => {
+      for (const stream of [child?.stdout, child?.stderr]) {
+        try {
+          stream?.destroy?.();
+        } catch {
+          // Stream cleanup must not replace the command result.
+        }
+      }
+    };
 
     const settle = (callback) => {
       if (settled) return false;
       settled = true;
-      if (timer) clearTimeout(timer);
+      clearTimers();
       callback();
       return true;
     };
 
     const rejectWith = (error) => settle(() => reject(error));
-    const resolveWith = (code) => settle(() => resolveResult({
-      stdout: redactText(stdout, sensitiveValues),
-      stderr: redactText(stderr, sensitiveValues),
-      code: Number.isInteger(code) ? code : null,
-    }));
+    const resolveWith = (code) => {
+      if (timedOut) {
+        closeStreams();
+        settle(() => reject(timeoutError));
+        return;
+      }
+      settle(() => resolveResult({
+        stdout: redactText(stdout, sensitiveValues),
+        stderr: redactText(stderr, sensitiveValues),
+        code: Number.isInteger(code) ? code : null,
+      }));
+    };
 
     try {
       child = spawnImpl(command, args, {
@@ -329,6 +451,7 @@ export function runCommand(command, args = [], options = {}) {
       stderr += chunk instanceof Buffer ? chunk.toString('utf8') : String(chunk);
     });
     child.once('error', (error) => {
+      if (timedOut) return;
       rejectWith(commandError(
         command,
         `could not start: ${error instanceof Error ? error.message : 'unknown error'}`,
@@ -338,15 +461,24 @@ export function runCommand(command, args = [], options = {}) {
     });
     child.once('close', (code) => resolveWith(code));
 
-    timer = setTimeout(() => {
+    timeoutTimer = setTimeout(() => {
+      if (settled || timedOut) return;
+      timedOut = true;
+      timeoutError = commandError(command, `timed out after ${timeout}ms`, 'COMMAND_TIMEOUT', sensitiveValues);
+      terminationTimer = setTimeout(() => {
+        if (settled) return;
+        try {
+          child.kill?.('SIGKILL');
+        } catch {
+          // The close event remains the source of truth for timeout completion.
+        }
+      }, terminationGraceMs);
       try {
         child.kill?.('SIGTERM');
       } catch {
-        // The timeout result is authoritative even if termination races with close.
+        // Escalation still runs if graceful termination is unavailable.
       }
-      rejectWith(commandError(command, `timed out after ${timeout}ms`, 'COMMAND_TIMEOUT', sensitiveValues));
     }, timeout);
-    timer.unref?.();
   });
 }
 
@@ -363,8 +495,8 @@ function runStatusPath(paths) {
 
 function safeErrorCode(error) {
   const candidate = typeof error === 'string' ? error : error?.code;
-  if (typeof candidate === 'number' && Number.isInteger(candidate)) return `COMMAND_EXIT_${candidate}`;
-  if (typeof candidate === 'string' && /^[A-Z][A-Z0-9_.-]{0,63}$/.test(candidate)) return candidate;
+  if (typeof candidate === 'number' && Number.isInteger(candidate)) return 'COMMAND_EXIT';
+  if (typeof candidate === 'string' && ALLOWED_ERROR_CODES.has(candidate)) return candidate;
   return 'EXPORT_FAILED';
 }
 
@@ -400,7 +532,7 @@ export async function writeRunStatus(paths, status, details = {}) {
 export async function cleanupFailedRun(paths) {
   if (!paths || !isNonEmptyString(paths.temp)) return;
   await rm(paths.temp, { recursive: true, force: true });
-  await mkdir(paths.temp, { recursive: true });
+  await mkdir(paths.temp, { recursive: true, mode: 0o700 });
 }
 
 export async function markRunFailed(paths, error) {

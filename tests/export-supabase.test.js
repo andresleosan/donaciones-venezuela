@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -248,6 +248,28 @@ describe('export staging and command runner', () => {
     });
   });
 
+  it('forces TLS and only passes the six approved PostgreSQL environment fields', () => {
+    const invocation = buildPostgresInvocation({
+      PGHOST: 'db.example.test',
+      PGPORT: '5432',
+      PGUSER: 'exporter',
+      PGDATABASE: 'postgres',
+      PGPASSWORD: 'DB_PASSWORD',
+      PGSSLMODE: 'disable',
+      PGOPTIONS: '--search_path=private',
+      PATH: 'C:/attacker/bin',
+    }, 'C:/secure/run/postgres/data.dump');
+
+    expect(invocation.env).toEqual({
+      PGHOST: 'db.example.test',
+      PGPORT: '5432',
+      PGUSER: 'exporter',
+      PGDATABASE: 'postgres',
+      PGPASSWORD: 'DB_PASSWORD',
+      PGSSLMODE: 'require',
+    });
+  });
+
   it('captures command output and returns the child exit code', async () => {
     const calls = [];
     const result = await runCommand('pg_dump', ['--version'], {
@@ -271,33 +293,52 @@ describe('export staging and command runner', () => {
   it('refuses to spawn when command arguments contain a credential', async () => {
     const calls = [];
 
-    await expect(runCommand('pg_dump', [
-      '--dbname',
-      'postgresql://exporter:db-password@db.example.test:5432/postgres',
-    ], {
-      env: { PGPASSWORD: 'db-password' },
+    for (const args of [
+      ['--dbname', 'postgresql://exporter:db-password@db.example.test:5432/postgres'],
+      ['--password', 'DB_PASSWORD'],
+      ['--password=DB_PASSWORD'],
+      ['-W', 'DB_PASSWORD'],
+      ['--pass-file', 'C:/secure/secret-file'],
+    ]) {
+      await expect(runCommand('pg_dump', args, {
+        env: { PGPASSWORD: 'db-password' },
+        spawnImpl: fakeSuccessfulSpawn(calls),
+      })).rejects.toMatchObject({ code: expect.stringMatching(/^COMMAND_ARGUMENT_/) });
+    }
+
+    await expect(runCommand('pg_dump', ['--unapproved-option'], {
       spawnImpl: fakeSuccessfulSpawn(calls),
-    })).rejects.toMatchObject({ code: 'COMMAND_ARGUMENT_SECRET' });
+    })).rejects.toMatchObject({ code: 'COMMAND_ARGUMENT_NOT_ALLOWED' });
     expect(calls).toEqual([]);
   });
 
   it('fails timed-out commands without exposing their environment', async () => {
     const calls = [];
+    const signals = [];
+    const destroyedStreams = [];
     const spawnImpl = (command, args, options) => {
       calls.push({ command, args, options });
       const child = new EventEmitter();
       child.stdout = new EventEmitter();
       child.stderr = new EventEmitter();
-      child.kill = () => {};
+      child.stdout.destroy = () => destroyedStreams.push('stdout');
+      child.stderr.destroy = () => destroyedStreams.push('stderr');
+      child.kill = (signal) => {
+        signals.push(signal);
+        if (signal === 'SIGKILL') queueMicrotask(() => child.emit('close', null));
+      };
       return child;
     };
 
     await expect(runCommand('pg_dump', ['--version'], {
       env: { PGPASSWORD: 'db-password' },
       timeout: 1,
+      terminationGraceMs: 1,
       spawnImpl,
     })).rejects.toMatchObject({ code: 'COMMAND_TIMEOUT' });
     expect(calls[0].args.join(' ')).not.toContain('db-password');
+    expect(signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(destroyedStreams).toEqual(['stdout', 'stderr']);
   });
 
   it('does not persist an untrusted child error code', async () => {
@@ -305,7 +346,7 @@ describe('export staging and command runner', () => {
       const child = new EventEmitter();
       child.stdout = new EventEmitter();
       child.stderr = new EventEmitter();
-      queueMicrotask(() => child.emit('error', { code: 'db-password', message: 'secret=db-password' }));
+      queueMicrotask(() => child.emit('error', { code: 'DB_PASSWORD', message: 'secret=DB_PASSWORD' }));
       return child;
     };
 
@@ -378,12 +419,12 @@ describe('export staging and command runner', () => {
       writeFileSync(join(paths.temp, 'partial.tmp'), 'temporary');
       writeFileSync(join(paths.postgres, 'partial.dump'), 'diagnostic');
 
-      await markRunFailed(paths, { code: 'COMMAND_EXIT_7', message: 'password=db-password' });
+      await markRunFailed(paths, { code: 7, message: 'password=db-password' });
       await cleanupFailedRun(paths);
 
       expect(JSON.parse(readFileSync(join(paths.root, 'run.json'), 'utf8'))).toMatchObject({
         status: 'failed',
-        errorCode: 'COMMAND_EXIT_7',
+        errorCode: 'COMMAND_EXIT',
       });
       expect(readdirSync(paths.temp)).toEqual([]);
       expect(existsSync(join(paths.postgres, 'partial.dump'))).toBe(true);
@@ -394,16 +435,32 @@ describe('export staging and command runner', () => {
     }
   });
 
+  it('recreates failed-run temp staging with restrictive permissions where supported', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-temp-mode-'));
+
+    try {
+      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z');
+      await markRunFailed(paths, { code: 'COMMAND_TIMEOUT' });
+
+      expect(existsSync(paths.temp)).toBe(true);
+      if (process.platform !== 'win32') {
+        expect(statSync(paths.temp).mode & 0o777).toBe(0o700);
+      }
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
   it('normalizes untrusted failure codes before writing run.json', async () => {
     const outputRoot = mkdtempSync(join(tmpdir(), 'export-error-code-'));
 
     try {
       const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z');
-      await markRunFailed(paths, { code: 'db-password', message: 'secret=db-password' });
+      await markRunFailed(paths, { code: 'DB_PASSWORD', message: 'secret=DB_PASSWORD' });
 
       const run = readFileSync(join(paths.root, 'run.json'), 'utf8');
       expect(JSON.parse(run)).toMatchObject({ status: 'failed', errorCode: 'EXPORT_FAILED' });
-      expect(run).not.toContain('db-password');
+      expect(run).not.toContain('DB_PASSWORD');
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
     }
