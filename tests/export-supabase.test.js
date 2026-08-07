@@ -1493,6 +1493,9 @@ describe('Supabase Storage export', () => {
         objectCount: 3,
         bucketCount: 3,
       });
+      expect(JSON.parse(readFileSync(join(paths.storage, 'buckets.json'), 'utf8'))).toEqual({
+        buckets: ['alpha', 'beta', 'gamma'],
+      });
       expect(manifest).toEqual(expect.arrayContaining([
         { bucket: 'alpha', path: 'top.txt', bytes: 9, mime: 'text/plain', sha256: sha256(files['alpha/top.txt']) },
         { bucket: 'alpha', path: 'folder/child.txt', bytes: 11, mime: 'text/plain', sha256: sha256(files['alpha/folder/child.txt']) },
@@ -1920,6 +1923,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       mime: 'text/plain',
       sha256: sha256('evidence'),
     }) + '\n');
+    writeFileSync(join(paths.storage, 'buckets.json'), JSON.stringify({ buckets: ['private'] }));
     mkdirSync(join(paths.storage, 'objects', 'private'), { recursive: true });
     writeFileSync(join(paths.storage, 'objects', 'private', 'evidence.txt'), 'evidence');
   }
@@ -1936,6 +1940,21 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     const lineIndex = lines.findIndex((line) => line.endsWith(`  ${relativePath}`));
     if (lineIndex < 0) throw new Error(`Checksum entry not found: ${relativePath}`);
     lines[lineIndex] = `${digest}  ${relativePath}`;
+    writeFileSync(checksumPath, `${lines.join('\n')}\n`);
+  }
+
+  function addTask6Artifact(paths, relativePath) {
+    const runPath = join(paths.root, 'run.json');
+    const run = JSON.parse(readFileSync(runPath, 'utf8'));
+    run.artifacts = [...new Set([...run.artifacts, relativePath])].sort();
+    writeFileSync(runPath, `${JSON.stringify(run, null, 2)}\n`);
+
+    const checksumPath = join(paths.root, 'checksums.sha256');
+    const lines = readFileSync(checksumPath, 'utf8').trim().split('\n')
+      .filter((line) => !line.endsWith(`  ${relativePath}`) && !line.endsWith('  run.json'));
+    lines.push(`${sha256(readFileSync(join(paths.root, ...relativePath.split('/'))))}  ${relativePath}`);
+    lines.push(`${sha256(readFileSync(runPath))}  run.json`);
+    lines.sort((left, right) => left.slice(66).localeCompare(right.slice(66)));
     writeFileSync(checksumPath, `${lines.join('\n')}\n`);
   }
 
@@ -2216,6 +2235,68 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       expect(report.checks.checksums).toBe(true);
       expect(report.checks.reconciliation).toBe(false);
       expect(report.errors.join('\n')).toMatch(/PostgreSQL|relation|count/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an orphan physical Storage object even when manifest and checksums include it', async () => {
+    const paths = await createCompleteTask6Run();
+
+    try {
+      const orphanPath = join(paths.storage, 'objects', 'private', 'orphan.txt');
+      writeFileSync(orphanPath, 'orphan');
+      addTask6Artifact(paths, 'storage/objects/private/orphan.txt');
+
+      const report = await verifyRun(paths.root, { requireArchive: false });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.checksums).toBe(true);
+      expect(report.errors.join('\n')).toMatch(/orphan|physical|manifest|object/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves and verifies empty Storage buckets through bucket metadata', async () => {
+    const paths = createTask6Paths();
+
+    try {
+      seedTask6Artifacts(paths);
+      writeFileSync(join(paths.storage, 'buckets.json'), JSON.stringify({ buckets: ['private', 'empty'] }));
+      await writeRunManifest(paths, completeTask6Evidence(paths, {
+        storage: {
+          manifestFile: join(paths.storage, 'manifest.jsonl'),
+          objectCount: 1,
+          bucketCount: 2,
+        },
+      }));
+
+      const report = await verifyRun(paths.root, { requireArchive: false });
+
+      expect(report.ok).toBe(true);
+      expect(report.counts.storage.bucketCount).toBe(2);
+      expect(JSON.parse(readFileSync(join(paths.storage, 'buckets.json'), 'utf8'))).toEqual({
+        buckets: ['private', 'empty'],
+      });
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects inconsistent bucket metadata with a refreshed checksum', async () => {
+    const paths = await createCompleteTask6Run();
+
+    try {
+      writeFileSync(join(paths.storage, 'buckets.json'), JSON.stringify({ buckets: ['empty'] }));
+      refreshTask6Checksum(paths, 'storage/buckets.json');
+
+      const report = await verifyRun(paths.root, { requireArchive: false });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.checksums).toBe(true);
+      expect(report.checks.reconciliation).toBe(false);
+      expect(report.errors.join('\n')).toMatch(/bucket|Storage|metadata|count/i);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }

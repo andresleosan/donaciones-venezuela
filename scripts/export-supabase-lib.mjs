@@ -43,6 +43,7 @@ export const REQUIRED_RUN_ARTIFACTS = Object.freeze([
   'auth/users.json',
   'auth/metadata.json',
   'storage/manifest.jsonl',
+  'storage/buckets.json',
   'reconciliation/source-counts.json',
   'reconciliation/financial-totals.json',
   'reconciliation/rpc-samples.json',
@@ -1681,15 +1682,23 @@ export async function exportStorage(config, paths, fetchImpl) {
   const createdDestinations = [];
   const temporaryFiles = new Set();
   const manifestFile = join(storagePaths.storageRoot, 'manifest.jsonl');
+  const bucketsFile = join(storagePaths.storageRoot, 'buckets.json');
   const temporaryManifest = join(storagePaths.tempRoot, 'storage-manifest.jsonl.tmp');
+  const temporaryBuckets = join(storagePaths.tempRoot, 'storage-buckets.json.tmp');
   assertStorageChild(
     manifestFile,
     storagePaths.canonicalStorageRoot,
     storagePaths.pathApi,
     'Supabase Storage manifest path escapes the storage directory',
   );
+  assertStorageChild(
+    bucketsFile,
+    storagePaths.canonicalStorageRoot,
+    storagePaths.pathApi,
+    'Supabase Storage bucket metadata path escapes the storage directory',
+  );
 
-  if (existsSync(manifestFile)) {
+  if (existsSync(manifestFile) || existsSync(bucketsFile)) {
     throw storageSafeError('Supabase Storage manifest already exists');
   }
 
@@ -1724,6 +1733,15 @@ export async function exportStorage(config, paths, fetchImpl) {
     }
 
     await writeStorageErrorReport(storagePaths, report, temporaryFiles);
+    temporaryFiles.add(temporaryBuckets);
+    await writeFile(temporaryBuckets, `${JSON.stringify({ buckets })}\n`, {
+      encoding: 'utf8',
+      flag: 'wx',
+      mode: 0o600,
+    });
+    await rename(temporaryBuckets, bucketsFile);
+    temporaryFiles.delete(temporaryBuckets);
+    createdDestinations.push(bucketsFile);
     await rename(temporaryManifest, manifestFile);
     temporaryFiles.delete(temporaryManifest);
     return { bucketCount: buckets.length, manifestFile, objectCount };
@@ -2410,7 +2428,58 @@ async function validatePostgresEvidence(runDir, expectedCounts) {
   return objectCounts;
 }
 
-async function validateStorageEvidence(runDir, expectedObjectCount) {
+async function inventoryStorageObjects(objectsRoot) {
+  const objectKeys = new Set();
+  const physicalBuckets = new Set();
+
+  async function visitBucket(bucket, directory, segments = []) {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      throw new Error('Storage objects could not be enumerated');
+    }
+    entries.sort((left, right) => bytewiseCompare(left.name, right.name));
+
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) throw new Error('Storage objects may not contain symbolic links');
+      const safeSegment = safeStorageSegment(entry.name, 'object');
+      const nextSegments = [...segments, safeSegment];
+      const candidate = join(directory, entry.name);
+      const candidateRelative = relative(objectsRoot, candidate);
+      if (candidateRelative === '..' || candidateRelative.startsWith(`..${sep}`) || isAbsolute(candidateRelative)) {
+        throw new Error('Storage object path escapes the objects directory');
+      }
+      if (entry.isDirectory()) {
+        await visitBucket(bucket, candidate, nextSegments);
+      } else if (entry.isFile()) {
+        safeStorageObjectPath(nextSegments.join('/'));
+        objectKeys.add(`${bucket}/${nextSegments.join('/')}`);
+      } else {
+        throw new Error('Storage objects contain an unsupported file type');
+      }
+    }
+  }
+
+  let bucketEntries;
+  try {
+    bucketEntries = await readdir(objectsRoot, { withFileTypes: true });
+  } catch {
+    throw new Error('Storage objects could not be enumerated');
+  }
+  bucketEntries.sort((left, right) => bytewiseCompare(left.name, right.name));
+  for (const entry of bucketEntries) {
+    if (entry.isSymbolicLink()) throw new Error('Storage objects may not contain symbolic links');
+    if (!entry.isDirectory()) throw new Error('Storage objects contain an invalid bucket entry');
+    const bucket = safeStorageSegment(entry.name, 'bucket');
+    physicalBuckets.add(bucket);
+    await visitBucket(bucket, join(objectsRoot, entry.name));
+  }
+
+  return { objectKeys, physicalBuckets };
+}
+
+async function validateStorageEvidence(runDir, expectedObjectCount, expectedBucketCount) {
   let content;
   try {
     content = await readFile(join(runDir, 'storage', 'manifest.jsonl'), 'utf8');
@@ -2422,6 +2491,30 @@ async function validateStorageEvidence(runDir, expectedObjectCount) {
   const objectCount = exactCount(expectedObjectCount);
   if (lines.length !== objectCount) {
     throw new Error('Storage manifest row count does not match source counts');
+  }
+
+  let bucketMetadata;
+  try {
+    bucketMetadata = JSON.parse(await readFile(join(runDir, 'storage', 'buckets.json'), 'utf8'));
+  } catch {
+    throw new Error('Storage bucket metadata is invalid or unavailable');
+  }
+  if (!bucketMetadata || typeof bucketMetadata !== 'object' || Array.isArray(bucketMetadata) ||
+    !Array.isArray(bucketMetadata.buckets)) {
+    throw new Error('Storage bucket metadata is invalid');
+  }
+  const approvedBuckets = new Set();
+  for (const bucket of bucketMetadata.buckets) {
+    approvedBuckets.add(safeStorageSegment(bucket, 'bucket'));
+  }
+  if (approvedBuckets.size !== bucketMetadata.buckets.length ||
+    exactCount(expectedBucketCount) !== approvedBuckets.size) {
+    throw new Error('Storage bucket metadata does not match source counts');
+  }
+
+  const inventory = await inventoryStorageObjects(join(runDir, 'storage', 'objects'));
+  if ([...inventory.physicalBuckets].some((bucket) => !approvedBuckets.has(bucket))) {
+    throw new Error('Storage objects contain an unapproved bucket');
   }
 
   const objectsRoot = join(runDir, 'storage', 'objects');
@@ -2445,6 +2538,7 @@ async function validateStorageEvidence(runDir, expectedObjectCount) {
       const bucket = safeStorageSegment(entry.bucket, 'bucket');
       const segments = safeStorageObjectPath(entry.path);
       const objectKey = `${bucket}/${segments.join('/')}`;
+      if (!approvedBuckets.has(bucket)) throw new Error('unapproved bucket');
       if (seen.has(objectKey)) throw new Error('duplicate object');
       seen.add(objectKey);
       objectPath = join(objectsRoot, bucket, ...segments);
@@ -2467,6 +2561,12 @@ async function validateStorageEvidence(runDir, expectedObjectCount) {
     if (contentBuffer.byteLength !== entry.bytes || digest !== entry.sha256) {
       throw new Error('Storage manifest object bytes or checksum do not match');
     }
+  }
+  const manifestKeys = new Set(seen);
+  const physicalOnly = [...inventory.objectKeys].filter((key) => !manifestKeys.has(key));
+  const manifestOnly = [...manifestKeys].filter((key) => !inventory.objectKeys.has(key));
+  if (physicalOnly.length > 0 || manifestOnly.length > 0) {
+    throw new Error('Storage physical objects and manifest do not match');
   }
   return lines.length;
 }
@@ -2498,7 +2598,11 @@ async function validateReconciliation(runDir, run) {
   }
   await validateAuthEvidence(runDir, run.counts.auth.userCount);
   await validatePostgresEvidence(runDir, run.counts.postgres);
-  await validateStorageEvidence(runDir, run.counts.storage.objectCount);
+  await validateStorageEvidence(
+    runDir,
+    run.counts.storage.objectCount,
+    run.counts.storage.bucketCount,
+  );
   return { sourceCounts, financialTotals: totals, rpcSamples };
 }
 
