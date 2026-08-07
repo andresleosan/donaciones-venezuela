@@ -8,7 +8,6 @@ import {
   REQUIRED_EXPORT_VARIABLES,
   createRunDirectory,
   exportPostgres,
-  markRunCompleted,
   markRunFailed,
   readExportConfig,
   resolveLocalExecutable,
@@ -175,9 +174,8 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
       io.log('Run status: prepared');
       try {
         const evidence = await exportPostgres(config, paths, createExportRunner(env, dependencies));
-        await markRunCompleted(paths);
-        io.log(`PostgreSQL export completed (${evidence.tableCount} public tables)`);
-        io.log('Run status: completed');
+        io.log(`PostgreSQL export prepared (${evidence.tableCount} public tables)`);
+        io.log('Run status: prepared');
       } catch (error) {
         await markRunFailed(paths, error).catch(() => {});
         throw error;

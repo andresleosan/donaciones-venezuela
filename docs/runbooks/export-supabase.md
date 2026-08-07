@@ -10,7 +10,8 @@ aplicacion:
 - `postgres/data.dump`: dump data-only en formato custom.
 - `postgres/object-counts.json`: conteo exacto por tabla base de `public`.
 - `reconciliation/financial-totals.json`: agregados financieros sin filas ni PII.
-- `run.json`: estado y versiones de `pg_dump`/`psql`, sin datos de conexion.
+- `run.json`: estado `prepared` y versiones de `pg_dump`/`psql`, sin datos de
+  conexion. `completed` queda reservado para el sellado de Task 6.
 
 Auth y Storage no se leen desde schemas internos. Se exportaran mediante sus
 APIs soportadas en tareas separadas. El CLI no ejecuta `pg_restore` contra una
@@ -28,6 +29,7 @@ SUPABASE_DB_URL
 SUPABASE_SERVICE_ROLE_KEY
 EXPORT_ROOT
 EXPORT_AGE_RECIPIENT
+EXPORT_EXECUTION_APPROVED
 ```
 
 `EXPORT_ROOT` o `--run-dir` debe ser una ruta absoluta externa al repositorio,
@@ -39,11 +41,15 @@ localmente a rutas absolutas antes de invocarlos.
 ## Secuencia segura
 
 El agente no ejecuta la secuencia `--execute` sin un checkpoint nuevo y
-confirmacion explicita del operador inmediatamente antes de abrir red.
+confirmacion explicita del operador inmediatamente antes de abrir red. El modo
+`--execute` exige que el entorno contenga exactamente
+`EXPORT_EXECUTION_APPROVED=YES`; el modo `--dry-run` no lee ni exige esta
+variable.
 
 ```powershell
 npm.cmd run export:supabase:dry-run
 # detenerse y obtener confirmacion explicita del operador
+$env:EXPORT_EXECUTION_APPROVED = 'YES'
 npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod
 ```
 
@@ -62,22 +68,28 @@ conteos. La consulta financiera ejecutable es:
 ```sql
 select json_build_object(
   'facturas', json_build_object(
-    'count', (select count(*) from "public"."facturas"),
-    'abiertas', (select count(*) from "public"."facturas" where estado = 'Abierta'),
-    'monto_requerido', (select coalesce(sum(monto_requerido), 0) from "public"."facturas"),
-    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0) from "public"."facturas")
+    'count', (select count(*)::text from "public"."facturas"),
+    'abiertas', (select count(*)::text from "public"."facturas" where estado = 'Abierta'),
+    'monto_requerido', (select coalesce(sum(monto_requerido), 0)::text from "public"."facturas"),
+    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0)::text from "public"."facturas")
   ),
   'donaciones', json_build_object(
-    'count', (select count(*) from "public"."donaciones"),
-    'confirmadas_count', (select count(*) from "public"."donaciones" where estado = 'Confirmada'),
-    'confirmadas_monto', (select coalesce(sum(monto), 0) from "public"."donaciones" where estado = 'Confirmada')
+    'count', (select count(*)::text from "public"."donaciones"),
+    'confirmadas_count', (select count(*)::text from "public"."donaciones" where estado = 'Confirmada'),
+    'confirmadas_monto', (select coalesce(sum(monto), 0)::text from "public"."donaciones" where estado = 'Confirmada')
   ),
   'movimientos_factura', json_build_object(
-    'count', (select count(*) from "public"."movimientos_factura"),
-    'monto', (select coalesce(sum(monto), 0) from "public"."movimientos_factura")
+    'count', (select count(*)::text from "public"."movimientos_factura"),
+    'monto', (select coalesce(sum(monto), 0)::text from "public"."movimientos_factura")
   )
 );
 ```
+
+Cada linea no vacia de `psql` debe ser JSON valido. La salida debe contener al
+menos una relacion `public` sin duplicados y exactamente un bloque financiero
+con todos los campos aprobados. Conteos e importes se serializan como strings
+decimales exactos; una salida vacia, parcial, duplicada o con un decimal invalido
+rechaza el run antes de escribir la evidencia final.
 
 No se guardan nombres de donantes, comprobantes, tokens, cabeceras ni filas
 individuales en esta evidencia.

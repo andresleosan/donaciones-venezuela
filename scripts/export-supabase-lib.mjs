@@ -280,19 +280,19 @@ function qualifiedIdentifier(schema, table) {
 
 const FINANCIAL_TOTALS_QUERY = `select json_build_object(
   'facturas', json_build_object(
-    'count', (select count(*) from ${qualifiedIdentifier('public', 'facturas')}),
-    'abiertas', (select count(*) from ${qualifiedIdentifier('public', 'facturas')} where estado = 'Abierta'),
-    'monto_requerido', (select coalesce(sum(monto_requerido), 0) from ${qualifiedIdentifier('public', 'facturas')}),
-    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0) from ${qualifiedIdentifier('public', 'facturas')})
+    'count', (select count(*)::text from ${qualifiedIdentifier('public', 'facturas')}),
+    'abiertas', (select count(*)::text from ${qualifiedIdentifier('public', 'facturas')} where estado = 'Abierta'),
+    'monto_requerido', (select coalesce(sum(monto_requerido), 0)::text from ${qualifiedIdentifier('public', 'facturas')}),
+    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0)::text from ${qualifiedIdentifier('public', 'facturas')})
   ),
   'donaciones', json_build_object(
-    'count', (select count(*) from ${qualifiedIdentifier('public', 'donaciones')}),
-    'confirmadas_count', (select count(*) from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada'),
-    'confirmadas_monto', (select coalesce(sum(monto), 0) from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada')
+    'count', (select count(*)::text from ${qualifiedIdentifier('public', 'donaciones')}),
+    'confirmadas_count', (select count(*)::text from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada'),
+    'confirmadas_monto', (select coalesce(sum(monto), 0)::text from ${qualifiedIdentifier('public', 'donaciones')} where estado = 'Confirmada')
   ),
   'movimientos_factura', json_build_object(
-    'count', (select count(*) from ${qualifiedIdentifier('public', 'movimientos_factura')}),
-    'monto', (select coalesce(sum(monto), 0) from ${qualifiedIdentifier('public', 'movimientos_factura')})
+    'count', (select count(*)::text from ${qualifiedIdentifier('public', 'movimientos_factura')}),
+    'monto', (select coalesce(sum(monto), 0)::text from ${qualifiedIdentifier('public', 'movimientos_factura')})
   )
 );`;
 
@@ -384,28 +384,67 @@ function exactCount(value) {
   throw new Error('PostgreSQL row count must be an exact non-negative integer');
 }
 
+const EXACT_DECIMAL_PATTERN = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
+
+function exactCountText(value, label) {
+  if (typeof value !== 'string' || !/^(?:0|[1-9]\d*)$/.test(value)) {
+    throw new Error(`${label} must be an exact decimal integer string`);
+  }
+  return value;
+}
+
+function exactDecimalText(value, label) {
+  if (typeof value !== 'string' || !EXACT_DECIMAL_PATTERN.test(value)) {
+    throw new Error(`${label} must be an exact decimal string`);
+  }
+  return value;
+}
+
 function isFinancialTotals(value) {
   return value && typeof value === 'object' &&
-    value.facturas && value.donaciones && value.movimientos_factura;
+    ['facturas', 'donaciones', 'movimientos_factura']
+      .every((section) => Object.prototype.hasOwnProperty.call(value, section));
 }
 
 function normalizeFinancialTotals(value) {
   const fields = {
-    facturas: ['count', 'abiertas', 'monto_requerido', 'monto_recaudado'],
-    donaciones: ['count', 'confirmadas_count', 'confirmadas_monto'],
-    movimientos_factura: ['count', 'monto'],
+    facturas: {
+      count: exactCountText,
+      abiertas: exactCountText,
+      monto_requerido: exactDecimalText,
+      monto_recaudado: exactDecimalText,
+    },
+    donaciones: {
+      count: exactCountText,
+      confirmadas_count: exactCountText,
+      confirmadas_monto: exactDecimalText,
+    },
+    movimientos_factura: {
+      count: exactCountText,
+      monto: exactDecimalText,
+    },
   };
 
+  const rootKeys = Object.keys(value);
+  if (rootKeys.length !== Object.keys(fields).length ||
+    Object.keys(fields).some((section) => !rootKeys.includes(section))) {
+    throw new Error('Financial totals contain an unapproved section');
+  }
+
   const result = {};
-  for (const [section, names] of Object.entries(fields)) {
+  for (const [section, validators] of Object.entries(fields)) {
+    const names = Object.keys(validators);
+    const sectionValue = value[section];
+    const sectionKeys = sectionValue && typeof sectionValue === 'object'
+      ? Object.keys(sectionValue)
+      : [];
+    if (sectionKeys.length !== names.length || names.some((name) => !sectionKeys.includes(name))) {
+      throw new Error(`Financial totals section ${section} is incomplete`);
+    }
+
     result[section] = {};
     for (const name of names) {
-      const field = value[section][name];
-      if (field === null || ['number', 'string'].includes(typeof field)) {
-        result[section][name] = field;
-      } else {
-        throw new Error('Financial totals must contain only primitive values');
-      }
+      result[section][name] = validators[name](sectionValue[name], `${section}.${name}`);
     }
   }
   return result;
@@ -414,33 +453,39 @@ function normalizeFinancialTotals(value) {
 function parseCountsOutput(stdout) {
   const tables = [];
   let financialTotals;
+  let financialBlockCount = 0;
   const seenRelations = new Set();
+  const lines = String(stdout ?? '').split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean);
 
-  for (const line of String(stdout ?? '').split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean)) {
+  if (lines.length === 0) throw new Error('PostgreSQL counts output is empty');
+
+  for (const line of lines) {
     let value;
     try {
       value = JSON.parse(line);
     } catch {
-      continue;
+      throw new Error('PostgreSQL counts output contains invalid JSON');
     }
 
     if (typeof value?.relation === 'string' && Object.prototype.hasOwnProperty.call(value, 'count')) {
-      if (!value.relation.startsWith('public.') || seenRelations.has(value.relation)) {
+      if (Object.keys(value).length !== 2 || !value.relation.startsWith('public.') ||
+        value.relation.length <= 'public.'.length || seenRelations.has(value.relation)) {
         throw new Error('PostgreSQL counts contain an invalid relation');
       }
       seenRelations.add(value.relation);
       tables.push({ relation: value.relation, count: exactCount(value.count) });
     } else if (isFinancialTotals(value)) {
+      financialBlockCount += 1;
+      if (financialBlockCount > 1) throw new Error('PostgreSQL counts contain multiple financial blocks');
       financialTotals = normalizeFinancialTotals(value);
-    } else if (value && typeof value === 'object' && value.tables) {
-      for (const table of value.tables) {
-        if (typeof table?.relation !== 'string' || !table.relation.startsWith('public.')) {
-          throw new Error('PostgreSQL counts contain an invalid relation');
-        }
-        tables.push({ relation: table.relation, count: exactCount(table.count) });
-      }
-      if (isFinancialTotals(value.financialTotals)) financialTotals = normalizeFinancialTotals(value.financialTotals);
+    } else {
+      throw new Error('PostgreSQL counts output contains an unexpected record');
     }
+  }
+
+  if (tables.length === 0) throw new Error('PostgreSQL counts contain no public relations');
+  if (financialBlockCount !== 1 || !financialTotals) {
+    throw new Error('PostgreSQL counts contain an incomplete financial block');
   }
 
   tables.sort((left, right) => left.relation.localeCompare(right.relation));
@@ -452,6 +497,14 @@ async function writeJsonArtifact(filePath, value) {
     encoding: 'utf8',
     mode: 0o600,
   });
+}
+
+function assertCreatedDump(filePath, label) {
+  try {
+    if (!statSync(filePath).isFile()) throw new Error('not a file');
+  } catch {
+    throw new Error(`${label} was not created by pg_dump`);
+  }
 }
 
 async function writeCommandVersions(paths, commandVersions) {
@@ -508,6 +561,7 @@ export async function exportPostgres(config, paths, runner = runCommand) {
     '--no-privileges',
     `--file=${schemaFile}`,
   ], { env: connectionEnv });
+  assertCreatedDump(schemaFile, 'schema.sql');
 
   await invokeExportCommand(runner, 'pg_dump', [
     '--schema=public',
@@ -517,6 +571,7 @@ export async function exportPostgres(config, paths, runner = runCommand) {
     '--no-privileges',
     `--file=${dataFile}`,
   ], { env: connectionEnv });
+  assertCreatedDump(dataFile, 'data.dump');
 
   const countsResult = await invokeExportCommand(runner, 'psql', [
     '--set=ON_ERROR_STOP=1',
@@ -885,6 +940,10 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
   }
   if (requestedProjectRef && requestedProjectRef !== EXPECTED_PROJECT_REF) {
     throw new Error('Invalid Supabase project reference');
+  }
+
+  if (execute && valueOrUndefined(source.EXPORT_EXECUTION_APPROVED) !== 'YES') {
+    throw new Error('EXPORT_EXECUTION_APPROVED=YES is required for execute mode');
   }
 
   const projectRef = requestedProjectRef || environmentProjectRef;
