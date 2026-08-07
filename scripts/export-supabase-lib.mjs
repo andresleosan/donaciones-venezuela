@@ -348,7 +348,8 @@ export function runCommand(command, args = [], options = {}) {
   }
 
   const commandOptions = options && typeof options === 'object' ? options : {};
-  const childEnv = { ...process.env, ...(commandOptions.env || {}) };
+  const hasExplicitEnv = Object.prototype.hasOwnProperty.call(commandOptions, 'env');
+  const childEnv = hasExplicitEnv ? { ...(commandOptions.env || {}) } : { ...process.env };
   const sensitiveValues = collectSensitiveValues(childEnv, commandOptions);
   const spawnImpl = commandOptions.spawnImpl || commandOptions.spawn || nodeSpawn;
   const timeout = commandOptions.timeoutMs ?? commandOptions.timeout ?? 120000;

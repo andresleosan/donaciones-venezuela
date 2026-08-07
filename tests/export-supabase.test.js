@@ -248,6 +248,39 @@ describe('export staging and command runner', () => {
     });
   });
 
+  it('uses the explicit PostgreSQL environment without inheriting process variables', async () => {
+    const calls = [];
+    const invocation = buildPostgresInvocation(
+      parsePostgresConnection('postgresql://exporter:DB_PASSWORD@db.example.test:5432/postgres'),
+      'C:/secure/run/postgres/data.dump',
+    );
+
+    await runCommand(invocation.command, invocation.args, {
+      env: invocation.env,
+      spawnImpl: fakeSuccessfulSpawn(calls),
+    });
+
+    expect(Object.keys(calls[0].options.env).sort()).toEqual([
+      'PGDATABASE',
+      'PGHOST',
+      'PGPASSWORD',
+      'PGPORT',
+      'PGSSLMODE',
+      'PGUSER',
+    ]);
+    expect(calls[0].options.env).toEqual({
+      PGHOST: 'db.example.test',
+      PGPORT: '5432',
+      PGUSER: 'exporter',
+      PGDATABASE: 'postgres',
+      PGPASSWORD: 'DB_PASSWORD',
+      PGSSLMODE: 'require',
+    });
+    expect(calls[0].options.env).not.toHaveProperty('SUPABASE_SERVICE_ROLE_KEY');
+    expect(calls[0].options.env).not.toHaveProperty('SUPABASE_DB_URL');
+    expect(calls[0].options.env).not.toHaveProperty('PATH');
+  });
+
   it('forces TLS and only passes the six approved PostgreSQL environment fields', () => {
     const invocation = buildPostgresInvocation({
       PGHOST: 'db.example.test',
@@ -279,6 +312,7 @@ describe('export staging and command runner', () => {
     expect(result).toEqual({ stdout: 'version\n', stderr: 'failed\n', code: 3 });
     expect(calls[0].options.shell).toBe(false);
     expect(calls[0].options.stdio).toEqual(['ignore', 'pipe', 'pipe']);
+    expect(calls[0].options.env.PATH).toBe(process.env.PATH);
   });
 
   it('redacts sensitive command output', async () => {
