@@ -7,6 +7,7 @@ import {
   PREFLIGHT_TOOLS,
   REQUIRED_EXPORT_VARIABLES,
   createRunDirectory,
+  exportAuth,
   exportPostgres,
   markRunFailed,
   readExportConfig,
@@ -135,7 +136,7 @@ const HELP = [
   '',
   'Options:',
   '  --dry-run                 Validate configuration without remote or data actions (default)',
-  '  --execute                 Run the prepared PostgreSQL export action',
+  '  --execute                 Run the prepared PostgreSQL and Auth export actions',
   '  --project-ref <ref>       Require the approved Supabase project reference',
   '  --run-dir <path>          Use an external staging root for the run',
   '  --help                    Show this help',
@@ -175,6 +176,8 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
       try {
         const evidence = await exportPostgres(config, paths, createExportRunner(env, dependencies));
         io.log(`PostgreSQL export prepared (${evidence.tableCount} public tables)`);
+        const authEvidence = await exportAuth(config, paths, dependencies.fetchImpl || globalThis.fetch);
+        io.log(`Auth export prepared (${authEvidence.userCount} users, ${authEvidence.pages} pages)`);
         io.log('Run status: prepared');
       } catch (error) {
         await markRunFailed(paths, error).catch(() => {});

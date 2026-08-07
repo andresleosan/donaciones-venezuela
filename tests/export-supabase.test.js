@@ -8,6 +8,7 @@ import {
   buildPostgresInvocation,
   cleanupFailedRun,
   createRunDirectory,
+  exportAuth,
   exportPostgres,
   markRunFailed,
   parsePostgresConnection,
@@ -45,6 +46,52 @@ function fakeSuccessfulSpawn(calls, { code = 0, stderr = '', stdout = '' } = {})
       child.emit('close', code);
     });
     return child;
+  };
+}
+
+function createAuthPaths() {
+  const root = mkdtempSync(join(tmpdir(), 'export-auth-'));
+  const auth = join(root, 'auth');
+  mkdirSync(auth);
+  return { root, auth };
+}
+
+function fakeAuthResponse(body, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async json() {
+      return body;
+    },
+  };
+}
+
+function authUser(overrides = {}) {
+  return {
+    id: 'user-1',
+    email: 'alice@example.com',
+    email_confirmed_at: '2026-01-01T00:00:00Z',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-02T00:00:00Z',
+    last_sign_in_at: '2026-01-03T00:00:00Z',
+    phone: '+584120000000',
+    user_metadata: {
+      display_name: 'Alice',
+      secret: 'user-metadata-secret',
+    },
+    app_metadata: {
+      provider: 'email',
+      role: 'admin',
+      secret: 'app-metadata-secret',
+    },
+    disabled: true,
+    identities: [{ identity_id: 'identity-secret' }],
+    access_token: 'access-token-secret',
+    refresh_token: 'refresh-token-secret',
+    encrypted_password: 'password-hash-secret',
+    raw_headers: { authorization: 'raw-header-secret' },
+    unsupported_field: 'must-not-be-exported',
+    ...overrides,
   };
 }
 
@@ -224,6 +271,189 @@ describe('export config', () => {
       expect(() => assertSafeOutputRoot(join(linkRoot, 'run'), repoRoot)).toThrow(/outside/i);
     } finally {
       rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Supabase Auth export', () => {
+  it('fetches bounded pages and writes only the approved redacted user fields', async () => {
+    const paths = createAuthPaths();
+    const calls = [];
+    const firstPage = Array.from({ length: 100 }, (_, index) => authUser({
+      id: `user-${index + 1}`,
+      email: index === 0 ? 'alice@example.com' : `user-${index + 1}@example.com`,
+    }));
+    const secondPage = [authUser({
+      id: 'user-101',
+      email: 'last@example.com',
+      email_confirmed_at: null,
+      last_sign_in_at: null,
+      phone: null,
+      disabled: false,
+    })];
+    const responses = [
+      fakeAuthResponse({ users: firstPage }),
+      fakeAuthResponse({ users: secondPage }),
+    ];
+    const fetchImpl = async (...args) => {
+      calls.push(args);
+      return responses.shift();
+    };
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      const evidence = await exportAuth(config, paths, fetchImpl);
+      const usersFile = join(paths.auth, 'users.json');
+      const metadataFile = join(paths.auth, 'metadata.json');
+      const users = JSON.parse(readFileSync(usersFile, 'utf8'));
+      const metadata = JSON.parse(readFileSync(metadataFile, 'utf8'));
+
+      expect(evidence).toEqual({ usersFile, userCount: 101, pages: 2 });
+      expect(calls).toHaveLength(2);
+      expect(calls[0][0]).toBe(`${EXPECTED_SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=100`);
+      expect(calls[1][0]).toBe(`${EXPECTED_SUPABASE_URL}/auth/v1/admin/users?page=2&per_page=100`);
+      expect(calls[0][1]).toEqual({
+        headers: {
+          apikey: 'placeholder-service-key',
+          Authorization: 'Bearer placeholder-service-key',
+        },
+      });
+      expect(Object.keys(users[0]).sort()).toEqual([
+        'appMetadata',
+        'createdAt',
+        'disabled',
+        'email',
+        'emailConfirmedAt',
+        'id',
+        'lastSignInAt',
+        'phone',
+        'updatedAt',
+        'userMetadata',
+      ].sort());
+      expect(users[0]).toEqual({
+        id: 'user-1',
+        email: 'alice@example.com',
+        emailConfirmedAt: '2026-01-01T00:00:00.000Z',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        lastSignInAt: '2026-01-03T00:00:00.000Z',
+        phone: '+584120000000',
+        userMetadata: { display_name: 'Alice' },
+        appMetadata: { provider: 'email', role: 'admin' },
+        disabled: true,
+      });
+      expect(users[100]).toMatchObject({
+        id: 'user-101',
+        emailConfirmedAt: null,
+        lastSignInAt: null,
+        phone: null,
+        disabled: false,
+      });
+      expect(metadata).toMatchObject({ count: 101, pages: 2 });
+      expect(metadata.fieldPolicy).toMatchObject({
+        userMetadata: ['display_name', 'full_name', 'name', 'avatar_url'],
+        appMetadata: ['provider', 'providers', 'role', 'roles'],
+      });
+
+      const written = `${readFileSync(usersFile, 'utf8')}\n${readFileSync(metadataFile, 'utf8')}`;
+      for (const secret of [
+        'identity-secret',
+        'access-token-secret',
+        'refresh-token-secret',
+        'password-hash-secret',
+        'raw-header-secret',
+        'must-not-be-exported',
+        'user-metadata-secret',
+        'app-metadata-secret',
+        'placeholder-service-key',
+      ]) {
+        expect(written).not.toContain(secret);
+      }
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an HTTP error without writing Auth evidence or exposing the key', async () => {
+    const paths = createAuthPaths();
+    const serviceRoleKey = 'placeholder-service-key';
+
+    try {
+      const config = readExportConfig(completeExportEnv({
+        SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+      }), 'F:/repo', { mode: 'execute' });
+
+      await expect(exportAuth(config, paths, async () => fakeAuthResponse({
+        error: 'remote detail with access-token-secret',
+      }, 503))).rejects.toThrow(/HTTP/);
+      expect(readdirSync(paths.auth)).toEqual([]);
+      try {
+        await exportAuth(config, paths, async () => fakeAuthResponse({
+          error: 'remote detail with access-token-secret',
+        }, 503));
+      } catch (error) {
+        expect(error.message).not.toContain(serviceRoleKey);
+        expect(error.message).not.toContain('access-token-secret');
+      }
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects malformed JSON without writing Auth evidence', async () => {
+    const paths = createAuthPaths();
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      const response = {
+        ok: true,
+        status: 200,
+        async json() {
+          throw new SyntaxError('malformed response access-token-secret');
+        },
+      };
+
+      await expect(exportAuth(config, paths, async () => response)).rejects.toThrow(/JSON/);
+      expect(readdirSync(paths.auth)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a repeated page before writing Auth evidence', async () => {
+    const paths = createAuthPaths();
+    const page = Array.from({ length: 100 }, (_, index) => authUser({ id: `user-${index + 1}` }));
+    let calls = 0;
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      await expect(exportAuth(config, paths, async () => {
+        calls += 1;
+        return fakeAuthResponse({ users: page });
+      })).rejects.toThrow(/repeated|repeat/i);
+      expect(calls).toBe(2);
+      expect(readdirSync(paths.auth)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an unbounded full-page sequence at the page limit', async () => {
+    const paths = createAuthPaths();
+    let calls = 0;
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      await expect(exportAuth(config, paths, async () => {
+        calls += 1;
+        return fakeAuthResponse({ users: Array.from({ length: 100 }, (_, index) => authUser({
+          id: `page-${calls}-user-${index}`,
+        })) });
+      })).rejects.toThrow(/limit|bounded|pagination/i);
+      expect(calls).toBeLessThanOrEqual(100);
+      expect(readdirSync(paths.auth)).toEqual([]);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
     }
   });
 });
@@ -633,7 +863,13 @@ describe('export staging and command runner', () => {
               stderr: '',
             };
           },
-          fetchImpl: () => { throw new Error('execute attempted fetch before later task'); },
+          fetchImpl: async () => ({
+            ok: true,
+            status: 200,
+            async json() {
+              return { users: [] };
+            },
+          }),
           now: '2026-08-06T12:00:00.000Z',
         },
       );
@@ -649,6 +885,8 @@ describe('export staging and command runner', () => {
       expect(readFileSync(join(outputRoot, '2026-08-06T120000Z', 'postgres', 'schema.sql'), 'utf8')).toBe('schema fixture');
       expect(readFileSync(join(outputRoot, '2026-08-06T120000Z', 'postgres', 'data.dump'), 'utf8')).toBe('data fixture');
       expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'postgres', 'object-counts.json'))).toBe(true);
+      expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'auth', 'users.json'))).toBe(true);
+      expect(existsSync(join(outputRoot, '2026-08-06T120000Z', 'auth', 'metadata.json'))).toBe(true);
       expect(output.join('\n')).toContain('PostgreSQL export prepared');
       expect(output.join('\n')).not.toContain('completed');
     } finally {

@@ -33,6 +33,33 @@ export const RUN_DIRECTORY_NAMES = Object.freeze([
 ]);
 
 export const RUN_STATUSES = Object.freeze(['prepared', 'completed', 'failed']);
+export const AUTH_PAGE_SIZE = 100;
+export const AUTH_MAX_PAGES = 100;
+
+const AUTH_USER_METADATA_FIELDS = Object.freeze([
+  'display_name',
+  'full_name',
+  'name',
+  'avatar_url',
+]);
+const AUTH_APP_METADATA_FIELDS = Object.freeze([
+  'provider',
+  'providers',
+  'role',
+  'roles',
+]);
+const AUTH_USER_FIELDS = Object.freeze([
+  'id',
+  'email',
+  'emailConfirmedAt',
+  'createdAt',
+  'updatedAt',
+  'lastSignInAt',
+  'phone',
+  'userMetadata',
+  'appMetadata',
+  'disabled',
+]);
 
 const ALLOWED_ERROR_CODES = new Set([
   'COMMAND_ARGUMENT_NOT_ALLOWED',
@@ -499,6 +526,115 @@ async function writeJsonArtifact(filePath, value) {
   });
 }
 
+function authString(value, label, { required = false } = {}) {
+  if (value === undefined || value === null) {
+    if (required) throw new Error(`Supabase Auth user ${label} is invalid`);
+    return null;
+  }
+  if (typeof value !== 'string' || (required && value.length === 0)) {
+    throw new Error(`Supabase Auth user ${label} is invalid`);
+  }
+  return value;
+}
+
+function authTimestamp(value, label) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string') throw new Error(`Supabase Auth user ${label} is invalid`);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) throw new Error(`Supabase Auth user ${label} is invalid`);
+  return parsed.toISOString();
+}
+
+function authMetadata(value, allowedFields) {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Supabase Auth metadata is invalid');
+  }
+
+  const result = {};
+  for (const field of allowedFields) {
+    if (!Object.prototype.hasOwnProperty.call(value, field)) continue;
+    const fieldValue = value[field];
+    if (field === 'providers' || field === 'roles') {
+      if (!Array.isArray(fieldValue) || fieldValue.some((entry) => typeof entry !== 'string')) {
+        throw new Error('Supabase Auth metadata is invalid');
+      }
+      result[field] = [...fieldValue];
+      continue;
+    }
+    if (typeof fieldValue !== 'string') throw new Error('Supabase Auth metadata is invalid');
+    result[field] = fieldValue;
+  }
+  return result;
+}
+
+function normalizeAuthUser(user) {
+  if (!user || typeof user !== 'object' || Array.isArray(user)) {
+    throw new Error('Supabase Auth user record is invalid');
+  }
+
+  const disabled = user.disabled === undefined || user.disabled === null ? false : user.disabled;
+  if (typeof disabled !== 'boolean') throw new Error('Supabase Auth user disabled flag is invalid');
+
+  return {
+    id: authString(user.id, 'id', { required: true }),
+    email: authString(user.email, 'email'),
+    emailConfirmedAt: authTimestamp(user.email_confirmed_at, 'email confirmation timestamp'),
+    createdAt: authTimestamp(user.created_at, 'creation timestamp'),
+    updatedAt: authTimestamp(user.updated_at, 'update timestamp'),
+    lastSignInAt: authTimestamp(user.last_sign_in_at, 'last sign-in timestamp'),
+    phone: authString(user.phone, 'phone'),
+    userMetadata: authMetadata(user.user_metadata, AUTH_USER_METADATA_FIELDS),
+    appMetadata: authMetadata(user.app_metadata, AUTH_APP_METADATA_FIELDS),
+    disabled,
+  };
+}
+
+function authPageSignature(users) {
+  return JSON.stringify(users.map((user) => user.id));
+}
+
+async function fetchAuthPage(fetchImpl, endpoint, serviceRoleKey) {
+  let response;
+  try {
+    response = await fetchImpl(endpoint, {
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+    });
+  } catch {
+    throw new Error('Supabase Auth request failed');
+  }
+
+  const status = response?.status;
+  if (!response || !Number.isInteger(status) || status < 200 || status >= 300 || response.ok === false) {
+    const safeStatus = Number.isInteger(status) && status >= 100 && status <= 599 ? status : 'unknown';
+    throw new Error(`Supabase Auth request failed with HTTP status ${safeStatus}`);
+  }
+
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error('Supabase Auth response JSON is invalid');
+  }
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload) || !Array.isArray(payload.users)) {
+    throw new Error('Supabase Auth response JSON is invalid');
+  }
+
+  return payload.users.map(normalizeAuthUser);
+}
+
+function authFieldPolicy() {
+  return {
+    user: [...AUTH_USER_FIELDS],
+    userMetadata: [...AUTH_USER_METADATA_FIELDS],
+    appMetadata: [...AUTH_APP_METADATA_FIELDS],
+  };
+}
+
 function assertCreatedDump(filePath, label) {
   try {
     if (!statSync(filePath).isFile()) throw new Error('not a file');
@@ -599,6 +735,48 @@ export async function exportPostgres(config, paths, runner = runCommand) {
   }
   await writeCommandVersions(paths, versions);
   return evidence;
+}
+
+export async function exportAuth(config, paths, fetchImpl) {
+  if (!config || typeof config !== 'object' || !isNonEmptyString(config.supabaseUrl) ||
+    !isNonEmptyString(config.serviceRoleKey)) {
+    throw new Error('A Supabase Auth export configuration is required');
+  }
+  if (!paths || !isNonEmptyString(paths.auth)) {
+    throw new Error('Supabase Auth export paths are required');
+  }
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('A Supabase Auth fetch implementation is required');
+  }
+
+  const usersFile = join(paths.auth, 'users.json');
+  const metadataFile = join(paths.auth, 'metadata.json');
+  const users = [];
+  const seenPages = new Set();
+
+  for (let page = 1; page <= AUTH_MAX_PAGES; page += 1) {
+    const endpoint = new URL('/auth/v1/admin/users', `${config.supabaseUrl}/`);
+    endpoint.searchParams.set('page', String(page));
+    endpoint.searchParams.set('per_page', String(AUTH_PAGE_SIZE));
+    const pageUsers = await fetchAuthPage(fetchImpl, endpoint.toString(), config.serviceRoleKey);
+    const signature = authPageSignature(pageUsers);
+
+    if (seenPages.has(signature)) throw new Error('Supabase Auth pagination returned a repeated page');
+    seenPages.add(signature);
+    users.push(...pageUsers);
+
+    if (pageUsers.length < AUTH_PAGE_SIZE) {
+      await writeJsonArtifact(usersFile, users);
+      await writeJsonArtifact(metadataFile, {
+        count: users.length,
+        pages: page,
+        fieldPolicy: authFieldPolicy(),
+      });
+      return { usersFile, userCount: users.length, pages: page };
+    }
+  }
+
+  throw new Error('Supabase Auth pagination exceeded the safe page limit');
 }
 
 function collectSensitiveValues(env, options = {}) {

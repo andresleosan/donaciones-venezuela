@@ -1,6 +1,6 @@
 # Runbook de exportacion Supabase
 
-## Alcance de Task 3
+## Alcance de Tasks 3 y 4
 
 El exportador prepara evidencia de PostgreSQL para el proyecto Supabase
 `zryfwbjvlacorryzdaod`. Esta tarea solo exporta el schema `public` de la
@@ -16,6 +16,35 @@ aplicacion:
 Auth y Storage no se leen desde schemas internos. Se exportaran mediante sus
 APIs soportadas en tareas separadas. El CLI no ejecuta `pg_restore` contra una
 base remota.
+
+### Auth metadata
+
+En `--execute`, despues de PostgreSQL, el exportador consulta el endpoint
+administrativo paginado:
+
+```text
+<SUPABASE_URL>/auth/v1/admin/users?page=<page>&per_page=100
+```
+
+La paginacion empieza en la pagina 1, termina cuando una respuesta trae menos
+de 100 usuarios y tiene un limite seguro de 100 paginas. Una pagina repetida,
+una secuencia que alcanza el limite, una respuesta HTTP fuera de 2xx o JSON
+invalido falla el run antes de escribir evidencia Auth exitosa. Las pruebas
+inyectan `fetchImpl`; no necesitan red ni credenciales reales.
+
+Los artefactos se escriben en el staging externo del run:
+
+- `auth/users.json`: una lista de usuarios con solo `id`, `email`,
+  `emailConfirmedAt`, `createdAt`, `updatedAt`, `lastSignInAt`, `phone`,
+  `userMetadata`, `appMetadata` y `disabled`.
+- `auth/metadata.json`: conteo, paginas y la whitelist de campos aplicada.
+
+Las fechas se normalizan a ISO. `userMetadata` solo admite
+`display_name`, `full_name`, `name` y `avatar_url`; `appMetadata` solo admite
+`provider`, `providers`, `role` y `roles`. Identidades, tokens de acceso y
+refresco, hashes de contrasena, cabeceras sin procesar y cualquier otro campo
+se descartan. El email es PII y solo puede permanecer en el paquete externo
+protegido; nunca se imprime en logs, Git o metadata.
 
 ## Variables y rutas
 
@@ -54,9 +83,10 @@ npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod
 ```
 
 El modo predeterminado es `--dry-run`; valida nombres de variables, rutas y
-herramientas locales sin red, dumps ni artefactos de datos. En esta Task 3 las
-pruebas usan runners falsos y no ejecutan `pg_dump`, `psql`, Firebase remoto,
-migraciones ni comandos que creen artefactos fuera de fixtures.
+herramientas locales sin red, dumps ni artefactos de datos. En estas Tasks 3 y 4
+las pruebas usan runners y `fetchImpl` falsos y no ejecutan `pg_dump`, `psql`,
+Auth remoto, Firebase remoto, migraciones ni comandos que creen artefactos fuera
+de fixtures.
 
 ## Conteos y reconciliacion
 
