@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { spawn as nodeSpawn } from 'node:child_process';
-import { accessSync, constants, createWriteStream, existsSync, realpathSync, statSync } from 'node:fs';
+import { accessSync, closeSync, constants, createWriteStream, existsSync, openSync, readSync, realpathSync, statSync } from 'node:fs';
 import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 import { Readable, Transform } from 'node:stream';
@@ -119,6 +119,8 @@ const COMMAND_OPTIONS_WITH_VALUES = Object.freeze({
   age: Object.freeze(['--output', '--recipient', '-o', '-r']),
 });
 
+const APPROVED_EXECUTION_CONFIGS = new WeakSet();
+
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -131,6 +133,30 @@ function isExecuteMode(options) {
   if (options === true || options === 'execute') return true;
   return Boolean(options && typeof options === 'object' &&
     (options.execute === true || options.mode === 'execute'));
+}
+
+function assertApprovedExecution(config, label) {
+  let current = config;
+  let hasPrivateCapability = false;
+  try {
+    while (current && typeof current === 'object') {
+      if (APPROVED_EXECUTION_CONFIGS.has(current)) {
+        hasPrivateCapability = true;
+        break;
+      }
+      current = Object.getPrototypeOf(current);
+    }
+  } catch {
+    hasPrivateCapability = false;
+  }
+
+  if (!config || typeof config !== 'object' ||
+    config.projectRef !== EXPECTED_PROJECT_REF ||
+    config.supabaseUrl !== EXPECTED_SUPABASE_URL ||
+    config.mode !== 'execute' ||
+    !hasPrivateCapability) {
+    throw new Error(`${label} requires the approved execute gate`);
+  }
 }
 
 function resolvePathForInput(value) {
@@ -813,9 +839,77 @@ function authFieldPolicy() {
 
 function assertCreatedDump(filePath, label) {
   try {
-    if (!statSync(filePath).isFile()) throw new Error('not a file');
+    const stats = statSync(filePath);
+    if (!stats.isFile() || stats.size === 0) throw new Error('empty file');
+    if (label === 'schema.sql' && !hasNonWhitespaceContent(filePath)) {
+      throw new Error('empty schema');
+    }
+    if (label === 'data.dump') {
+      const header = readFilePrefix(filePath, 6);
+      if (header.length <= 5 || header.subarray(0, 5).toString('ascii') !== 'PGDMP') {
+        throw new Error('truncated custom dump');
+      }
+    }
   } catch {
-    throw new Error(`${label} was not created by pg_dump`);
+    throw new Error(`${label} is empty, truncated, or was not created by pg_dump`);
+  }
+}
+
+function readFilePrefix(filePath, length) {
+  const descriptor = openSync(filePath, 'r');
+  try {
+    const buffer = Buffer.alloc(length);
+    const bytesRead = readSync(descriptor, buffer, 0, length, 0);
+    return buffer.subarray(0, bytesRead);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function hasNonWhitespaceContent(filePath) {
+  const descriptor = openSync(filePath, 'r');
+  const buffer = Buffer.alloc(64 * 1024);
+  let position = 0;
+  try {
+    while (true) {
+      const bytesRead = readSync(descriptor, buffer, 0, buffer.length, position);
+      if (bytesRead === 0) return false;
+      for (let index = 0; index < bytesRead; index += 1) {
+        if (buffer[index] > 32) return true;
+      }
+      position += bytesRead;
+    }
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function runPathApi(...values) {
+  return storageUsesWindowsPaths(values)
+    ? win32
+    : { basename, dirname, relative, isAbsolute, resolve, sep };
+}
+
+function assertRunPathLayout(paths, names) {
+  if (!paths || !isNonEmptyString(paths.root)) {
+    throw new Error('Export run root is required');
+  }
+
+  const values = [paths.root, ...names.map((name) => paths[name])];
+  const pathApi = runPathApi(...values);
+  const canonicalRoot = canonicalizeWithExistingAncestor(resolvePathForInput(paths.root), pathApi);
+  const canonicalChildren = [];
+
+  for (const name of names) {
+    if (!isNonEmptyString(paths[name])) {
+      throw new Error('Export paths must remain inside the run root');
+    }
+    const candidate = canonicalizeWithExistingAncestor(resolvePathForInput(paths[name]), pathApi);
+    if (!isInsideOrEqual(candidate, canonicalRoot, pathApi) || candidate === canonicalRoot ||
+      canonicalChildren.some((existing) => storagePathsOverlap(candidate, existing, pathApi))) {
+      throw new Error('Export paths must remain inside the run root');
+    }
+    canonicalChildren.push(candidate);
   }
 }
 
@@ -837,6 +931,7 @@ async function writeCommandVersions(paths, commandVersions) {
 }
 
 export async function exportPostgres(config, paths, runner = runCommand) {
+  assertApprovedExecution(config, 'PostgreSQL export');
   if (!config || typeof config !== 'object' || !isNonEmptyString(config.dbUrl)) {
     throw new Error('A PostgreSQL export configuration is required');
   }
@@ -844,6 +939,8 @@ export async function exportPostgres(config, paths, runner = runCommand) {
     !isNonEmptyString(paths.temp)) {
     throw new Error('PostgreSQL export paths are required');
   }
+
+  assertRunPathLayout(paths, ['postgres', 'reconciliation', 'temp']);
 
   const connection = parsePostgresConnection(config.dbUrl);
   const connectionEnv = buildPostgresInvocation(connection, join(paths.postgres, 'schema.sql')).env;
@@ -855,6 +952,13 @@ export async function exportPostgres(config, paths, runner = runCommand) {
   await mkdir(paths.postgres, { recursive: true, mode: 0o700 });
   await mkdir(paths.reconciliation, { recursive: true, mode: 0o700 });
   await mkdir(paths.temp, { recursive: true, mode: 0o700 });
+  assertRunPathLayout(paths, ['postgres', 'reconciliation', 'temp']);
+  await Promise.all([
+    rm(schemaFile, { force: true }),
+    rm(dataFile, { force: true }),
+    rm(countsFile, { force: true }),
+    rm(join(paths.reconciliation, 'financial-totals.json'), { force: true }),
+  ]);
   await writeFile(countsSqlFile, buildPostgresCountsQuery(), {
     encoding: 'utf8',
     mode: 0o600,
@@ -914,6 +1018,7 @@ export async function exportPostgres(config, paths, runner = runCommand) {
 }
 
 export async function exportAuth(config, paths, fetchImpl, options = {}) {
+  assertApprovedExecution(config, 'Supabase Auth export');
   if (!config || typeof config !== 'object') {
     throw new Error('A Supabase Auth export configuration is required');
   }
@@ -1010,6 +1115,7 @@ function storagePageSize(config) {
 }
 
 function validateStorageConfig(config, fetchImpl) {
+  assertApprovedExecution(config, 'Supabase Storage export');
   if (!config || typeof config !== 'object') {
     throw storageSafeError('A Supabase Storage export configuration is required');
   }
@@ -2093,6 +2199,19 @@ async function listFinalArtifacts(root) {
   return files;
 }
 
+function isAllowedFinalArtifact(relativePath) {
+  return relativePath === 'run.json' ||
+    REQUIRED_RUN_ARTIFACTS.includes(relativePath) ||
+    relativePath === 'storage/error-report.json' ||
+    (relativePath.startsWith('storage/objects/') && relativePath.length > 'storage/objects/'.length);
+}
+
+function assertAllowedFinalArtifacts(artifacts) {
+  if (artifacts.some((relativePath) => !isAllowedFinalArtifact(relativePath))) {
+    throw new Error('Export contains unexpected final artifacts');
+  }
+}
+
 function artifactPath(paths, relativePath) {
   return join(paths.root, ...relativePath.split('/'));
 }
@@ -2106,6 +2225,13 @@ function assertRequiredArtifactFiles(paths) {
       throw new Error(`Required export evidence is missing: ${relativePath}`);
     }
   }
+  assertCreatedDump(artifactPath(paths, 'postgres/schema.sql'), 'schema.sql');
+  assertCreatedDump(artifactPath(paths, 'postgres/data.dump'), 'data.dump');
+}
+
+function assertValidDumpArtifacts(runDir) {
+  assertCreatedDump(join(runDir, 'postgres', 'schema.sql'), 'schema.sql');
+  assertCreatedDump(join(runDir, 'postgres', 'data.dump'), 'data.dump');
 }
 
 async function readJsonFile(filePath, label) {
@@ -2292,7 +2418,9 @@ export async function writeRunManifest(paths, evidence = {}) {
   await writeJsonArtifact(join(paths.reconciliation, 'rpc-samples.json'), normalizeRpcSamples(evidence.rpcSamples));
 
   assertRequiredArtifactFiles(paths);
-  const artifacts = [...new Set(['run.json', ...(await listFinalArtifacts(paths.root))])].sort(bytewiseCompare);
+  const listedArtifacts = await listFinalArtifacts(paths.root);
+  assertAllowedFinalArtifacts(listedArtifacts);
+  const artifacts = [...new Set(['run.json', ...listedArtifacts])].sort(bytewiseCompare);
   const record = manifestRunRecord({
     existing,
     evidence,
@@ -2395,6 +2523,74 @@ function validateRpcSamples(value) {
   }
 }
 
+function hasExactObjectKeys(value, expectedKeys) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const actual = Object.keys(value).sort(bytewiseCompare);
+  const expected = [...expectedKeys].sort(bytewiseCompare);
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function hasOnlyObjectKeys(value, allowedKeys) {
+  return value && typeof value === 'object' && !Array.isArray(value) &&
+    Object.keys(value).every((key) => allowedKeys.includes(key));
+}
+
+function hasExactStringList(value, expectedValues) {
+  return Array.isArray(value) && value.length === expectedValues.length &&
+    value.every((entry, index) => entry === expectedValues[index]);
+}
+
+function validateAuthMetadataEvidence(value, allowedFields) {
+  if (!hasOnlyObjectKeys(value, allowedFields)) {
+    throw new Error('Auth metadata fields are not approved');
+  }
+
+  for (const field of Object.keys(value)) {
+    const fieldValue = value[field];
+    if (field === 'providers' || field === 'roles') {
+      if (!Array.isArray(fieldValue) || fieldValue.some((entry) => typeof entry !== 'string')) {
+        throw new Error('Auth metadata field types are invalid');
+      }
+    } else if (typeof fieldValue !== 'string') {
+      throw new Error('Auth metadata field types are invalid');
+    }
+  }
+}
+
+function validateAuthFieldPolicy(value) {
+  if (!hasExactObjectKeys(value, ['user', 'userMetadata', 'appMetadata']) ||
+    !hasExactStringList(value.user, AUTH_USER_FIELDS) ||
+    !hasExactStringList(value.userMetadata, AUTH_USER_METADATA_FIELDS) ||
+    !hasExactStringList(value.appMetadata, AUTH_APP_METADATA_FIELDS)) {
+    throw new Error('Auth field policy is invalid');
+  }
+}
+
+function validAuthEvidenceTimestamp(value) {
+  return value === null || (
+    typeof value === 'string' &&
+    validIsoTimestamp(value) &&
+    new Date(value).toISOString() === value
+  );
+}
+
+function validateAuthUserEvidence(user) {
+  if (!hasExactObjectKeys(user, AUTH_USER_FIELDS) ||
+    typeof user.id !== 'string' || user.id.length === 0 ||
+    (user.email !== null && typeof user.email !== 'string') ||
+    !validAuthEvidenceTimestamp(user.emailConfirmedAt) ||
+    !validAuthEvidenceTimestamp(user.createdAt) ||
+    !validAuthEvidenceTimestamp(user.updatedAt) ||
+    !validAuthEvidenceTimestamp(user.lastSignInAt) ||
+    (user.phone !== null && typeof user.phone !== 'string') ||
+    typeof user.disabled !== 'boolean') {
+    throw new Error('Auth user evidence fields are invalid');
+  }
+
+  validateAuthMetadataEvidence(user.userMetadata, AUTH_USER_METADATA_FIELDS);
+  validateAuthMetadataEvidence(user.appMetadata, AUTH_APP_METADATA_FIELDS);
+}
+
 async function validateAuthEvidence(runDir, expectedUserCount) {
   let users;
   try {
@@ -2405,7 +2601,23 @@ async function validateAuthEvidence(runDir, expectedUserCount) {
   if (!Array.isArray(users)) throw new Error('Auth users evidence must be a JSON array');
 
   const metadata = await readJsonFile(join(runDir, 'auth', 'metadata.json'), 'Auth metadata');
+  if (!hasExactObjectKeys(metadata, ['count', 'pages', 'fieldPolicy'])) {
+    throw new Error('Auth metadata shape is invalid');
+  }
   const metadataCount = exactCount(metadata.count);
+  const metadataPages = exactCount(metadata.pages);
+  if (metadataPages < 1 || metadataPages > AUTH_MAX_PAGES) {
+    throw new Error('Auth metadata page count is invalid');
+  }
+  validateAuthFieldPolicy(metadata.fieldPolicy);
+
+  const seenUserIds = new Set();
+  for (const user of users) {
+    validateAuthUserEvidence(user);
+    if (seenUserIds.has(user.id)) throw new Error('Auth user IDs are duplicated');
+    seenUserIds.add(user.id);
+  }
+
   if (metadataCount !== users.length || exactCount(expectedUserCount) !== users.length) {
     throw new Error('Auth users evidence does not match metadata or source counts');
   }
@@ -2479,6 +2691,56 @@ async function inventoryStorageObjects(objectsRoot) {
   return { objectKeys, physicalBuckets };
 }
 
+function validStorageManifestMime(value) {
+  if (value === null) return true;
+  if (typeof value !== 'string' || value.length === 0 || value !== value.trim()) return false;
+  if (!/^[^/\s]+\/[^/\s]+(?:\s*;.*)?$/.test(value)) return false;
+  try {
+    return storageMime(value, 'manifest MIME') === value;
+  } catch {
+    return false;
+  }
+}
+
+function validateStorageBucketMetadata(value, expectedBucketCount) {
+  if (!hasExactObjectKeys(value, ['buckets']) || !Array.isArray(value.buckets)) {
+    throw new Error('Storage bucket metadata shape is invalid');
+  }
+
+  const buckets = value.buckets.map((bucket) => safeStorageSegment(bucket, 'bucket'));
+  const uniqueBuckets = new Set(buckets);
+  if (uniqueBuckets.size !== buckets.length || exactCount(expectedBucketCount) !== uniqueBuckets.size) {
+    throw new Error('Storage bucket metadata does not match source counts');
+  }
+  return uniqueBuckets;
+}
+
+async function validateStorageErrorReport(runDir) {
+  const reportPath = join(runDir, 'storage', 'error-report.json');
+  if (!existsSync(reportPath)) return;
+
+  let report;
+  try {
+    report = JSON.parse(await readFile(reportPath, 'utf8'));
+  } catch {
+    throw new Error('Storage error report is invalid');
+  }
+  if (!hasExactObjectKeys(report, ['errors']) || !Array.isArray(report.errors) || report.errors.length === 0) {
+    throw new Error('Storage error report shape is invalid');
+  }
+
+  const operations = new Set(['list buckets', 'list objects', 'download', 'download stream']);
+  for (const error of report.errors) {
+    if (!hasExactObjectKeys(error, ['operation', 'retries', 'status']) ||
+      !operations.has(error.operation) ||
+      !Number.isSafeInteger(error.retries) || error.retries < 0 || error.retries > 1 ||
+      !(error.status === 'network' || error.status === 'unknown' ||
+        (Number.isInteger(error.status) && error.status >= 100 && error.status <= 599))) {
+      throw new Error('Storage error report entries are invalid');
+    }
+  }
+}
+
 async function validateStorageEvidence(runDir, expectedObjectCount, expectedBucketCount) {
   let content;
   try {
@@ -2499,18 +2761,8 @@ async function validateStorageEvidence(runDir, expectedObjectCount, expectedBuck
   } catch {
     throw new Error('Storage bucket metadata is invalid or unavailable');
   }
-  if (!bucketMetadata || typeof bucketMetadata !== 'object' || Array.isArray(bucketMetadata) ||
-    !Array.isArray(bucketMetadata.buckets)) {
-    throw new Error('Storage bucket metadata is invalid');
-  }
-  const approvedBuckets = new Set();
-  for (const bucket of bucketMetadata.buckets) {
-    approvedBuckets.add(safeStorageSegment(bucket, 'bucket'));
-  }
-  if (approvedBuckets.size !== bucketMetadata.buckets.length ||
-    exactCount(expectedBucketCount) !== approvedBuckets.size) {
-    throw new Error('Storage bucket metadata does not match source counts');
-  }
+  const approvedBuckets = validateStorageBucketMetadata(bucketMetadata, expectedBucketCount);
+  await validateStorageErrorReport(runDir);
 
   const inventory = await inventoryStorageObjects(join(runDir, 'storage', 'objects'));
   if ([...inventory.physicalBuckets].some((bucket) => !approvedBuckets.has(bucket))) {
@@ -2526,9 +2778,10 @@ async function validateStorageEvidence(runDir, expectedObjectCount, expectedBuck
     } catch {
       throw new Error('Storage manifest contains invalid JSON');
     }
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
+    if (!hasExactObjectKeys(entry, ['bucket', 'path', 'bytes', 'mime', 'sha256']) ||
       typeof entry.bucket !== 'string' || typeof entry.path !== 'string' ||
       !Number.isSafeInteger(entry.bytes) || entry.bytes < 0 ||
+      !validStorageManifestMime(entry.mime) ||
       typeof entry.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(entry.sha256)) {
       throw new Error('Storage manifest contains invalid object evidence');
     }
@@ -2628,26 +2881,41 @@ export function assertSafeRestoreTarget(restoreDb, projectTarget) {
   return connection;
 }
 
-function buildRestoreInvocation(connection, dataFile) {
+function buildRestoreInvocation(connection, schemaFile, dataFile) {
+  const env = {
+    PGHOST: connection.PGHOST,
+    PGPORT: connection.PGPORT,
+    PGUSER: connection.PGUSER,
+    PGDATABASE: connection.PGDATABASE,
+    PGPASSWORD: connection.PGPASSWORD,
+    PGSSLMODE: 'prefer',
+  };
+  const commonArgs = [
+    '--host', connection.PGHOST,
+    '--port', connection.PGPORT,
+    '--username', connection.PGUSER,
+    '--dbname', connection.PGDATABASE,
+  ];
+
   return {
-    args: [
-      '--host', connection.PGHOST,
-      '--port', connection.PGPORT,
-      '--username', connection.PGUSER,
-      '--dbname', connection.PGDATABASE,
-      '--no-owner',
-      '--no-privileges',
-      '--exit-on-error',
-      '--single-transaction',
-      dataFile,
-    ],
-    env: {
-      PGHOST: connection.PGHOST,
-      PGPORT: connection.PGPORT,
-      PGUSER: connection.PGUSER,
-      PGDATABASE: connection.PGDATABASE,
-      PGPASSWORD: connection.PGPASSWORD,
-      PGSSLMODE: 'require',
+    schema: {
+      args: [
+        ...commonArgs,
+        '--set=ON_ERROR_STOP=1',
+        '--file', schemaFile,
+      ],
+      env,
+    },
+    data: {
+      args: [
+        ...commonArgs,
+        '--no-owner',
+        '--no-privileges',
+        '--exit-on-error',
+        '--single-transaction',
+        dataFile,
+      ],
+      env,
     },
   };
 }
@@ -2704,16 +2972,14 @@ export async function verifyRun(runDir, options = {}) {
 
     try {
       actualArtifacts = await listFinalArtifacts(runDir);
+      assertAllowedFinalArtifacts(actualArtifacts);
       const missing = setDifference(REQUIRED_RUN_ARTIFACTS, actualArtifacts);
       const unlisted = run?.artifacts ? setDifference(actualArtifacts, run.artifacts) : [];
       const listedMissing = run?.artifacts ? setDifference(run.artifacts, actualArtifacts) : REQUIRED_RUN_ARTIFACTS;
       if (missing.length > 0 || unlisted.length > 0 || listedMissing.length > 0) {
-        throw new Error(`Required export evidence or manifest artifacts are missing: ${[
-          ...missing,
-          ...listedMissing,
-          ...unlisted,
-        ].join(', ')}`);
+        throw new Error('Required export evidence or manifest artifacts are missing');
       }
+      assertValidDumpArtifacts(runDir);
       checks.completeness = true;
     } catch (error) {
       errors.push(error instanceof Error ? error.message : 'Export evidence is incomplete');
@@ -2728,7 +2994,7 @@ export async function verifyRun(runDir, options = {}) {
       for (const [relativePath, expected] of entries) {
         const content = await readFile(join(runDir, ...relativePath.split('/')));
         const actual = createHash('sha256').update(content).digest('hex');
-        if (actual !== expected) throw new Error(`Checksum mismatch: ${relativePath}`);
+        if (actual !== expected) throw new Error('Checksum mismatch in export artifact');
       }
       checks.checksums = true;
     } catch (error) {
@@ -2759,22 +3025,49 @@ export async function verifyRun(runDir, options = {}) {
     }
 
     if (options.restoreDb !== undefined) {
+      let restoreConnection;
       try {
-        const connection = assertSafeRestoreTarget(options.restoreDb, options.projectTarget);
-        const invocation = buildRestoreInvocation(connection, join(runDir, 'postgres', 'data.dump'));
-        const result = await invokeExportCommand(
-          options.runner || runCommand,
-          'pg_restore',
-          invocation.args,
-          { env: invocation.env },
-        );
-        if (result.code !== 0) throw commandFailure('pg_restore', result);
+        restoreConnection = assertSafeRestoreTarget(options.restoreDb, options.projectTarget);
       } catch (error) {
         checks.restore = false;
         errors.push(redactText(
-          error instanceof Error ? error.message : 'Local restore failed',
+          error instanceof Error ? error.message : 'Local restore target is not approved',
           collectSensitiveValues({ PGPASSWORD: options.restoreDb }),
         ));
+      }
+
+      const restorePreconditions = restoreConnection && checks.structure && checks.manifest &&
+        checks.completeness && checks.checksums && checks.reconciliation &&
+        (options.requireArchive === false || checks.archive);
+      if (restoreConnection && !restorePreconditions) {
+        checks.restore = false;
+        errors.push('Local restore skipped because verification controls failed');
+      } else if (restoreConnection) {
+        try {
+          const invocations = buildRestoreInvocation(
+            restoreConnection,
+            join(runDir, 'postgres', 'schema.sql'),
+            join(runDir, 'postgres', 'data.dump'),
+          );
+          for (const [command, invocation] of [
+            ['psql', invocations.schema],
+            ['pg_restore', invocations.data],
+          ]) {
+            const result = await invokeExportCommand(
+              options.runner || runCommand,
+              command,
+              invocation.args,
+              { env: invocation.env },
+            );
+            if (result.code !== 0) throw commandFailure(command, result);
+          }
+        } catch (error) {
+          checks.restore = false;
+          errors.push(redactText(
+            error instanceof Error ? error.message : 'Local restore failed',
+            collectSensitiveValues({ PGPASSWORD: options.restoreDb }),
+          ));
+        }
       }
     }
   }
@@ -3008,7 +3301,61 @@ export async function sealRun(paths, recipient, runner) {
   }
 }
 
-export async function createRunDirectory(outputRoot, timestamp, repoRoot = process.cwd()) {
+function runWindowsAclCommand(command, args) {
+  return new Promise((resolveResult, reject) => {
+    let child;
+    let stdout = '';
+    let stderr = '';
+    try {
+      child = nodeSpawn(command, args, {
+        shell: false,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch {
+      reject(new Error('Windows export ACL command failed'));
+      return;
+    }
+
+    child.stdout?.on('data', (chunk) => { stdout += String(chunk); });
+    child.stderr?.on('data', (chunk) => { stderr += String(chunk); });
+    child.once('error', () => reject(new Error('Windows export ACL command failed')));
+    child.once('close', (code) => resolveResult({ code, stdout, stderr }));
+  });
+}
+
+async function applyAndVerifyWindowsAcl(runRoot, options = {}) {
+  const domain = valueOrUndefined(options.aclDomain) || valueOrUndefined(process.env.USERDOMAIN);
+  const username = valueOrUndefined(options.aclUsername) || valueOrUndefined(process.env.USERNAME);
+  const account = valueOrUndefined(options.aclAccount) || (domain && username ? `${domain}\\${username}` : username);
+  if (!account) throw new Error('Windows export ACL identity is unavailable');
+
+  const runner = typeof options.aclRunner === 'function' ? options.aclRunner : runWindowsAclCommand;
+  const grant = `${account}:(OI)(CI)(F)`;
+  const applyResult = await runner('icacls', [
+    runRoot,
+    '/inheritance:r',
+    '/grant:r', grant,
+    '/grant:r', 'SYSTEM:(OI)(CI)(F)',
+    '/T',
+  ]);
+  if (!applyResult || applyResult.code !== 0) {
+    throw new Error('Windows export ACL could not be applied');
+  }
+
+  const verifyResult = await runner('icacls', [runRoot, '/T']);
+  if (!verifyResult || verifyResult.code !== 0) {
+    throw new Error('Windows export ACL could not be verified');
+  }
+
+  const aclText = `${verifyResult.stdout || ''}\n${verifyResult.stderr || ''}`;
+  const normalized = aclText.toLowerCase();
+  if (!normalized.includes(account.toLowerCase()) || !/system/i.test(aclText) ||
+    /(?:everyone|builtin\\users|authenticated users|guests)\s*:/i.test(aclText)) {
+    throw new Error('Windows export ACL is not restricted to approved principals');
+  }
+}
+
+export async function createRunDirectory(outputRoot, timestamp, repoRoot = process.cwd(), options = {}) {
   if (!isNonEmptyString(outputRoot) || outputRoot.includes('\0')) {
     throw new Error('Export output root is required');
   }
@@ -3026,6 +3373,9 @@ export async function createRunDirectory(outputRoot, timestamp, repoRoot = proce
     await mkdir(root, { mode: 0o700 });
     createdRoot = true;
     for (const name of RUN_DIRECTORY_NAMES) await mkdir(paths[name], { mode: 0o700 });
+    if ((options.platform || process.platform) === 'win32') {
+      await applyAndVerifyWindowsAcl(root, options);
+    }
     await writeRunStatus(paths, 'prepared');
     return Object.freeze(paths);
   } catch (error) {
@@ -3063,7 +3413,8 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
     throw new Error('Invalid Supabase project reference');
   }
 
-  if (execute && valueOrUndefined(source.EXPORT_EXECUTION_APPROVED) !== 'YES') {
+  const executionApproved = execute && valueOrUndefined(source.EXPORT_EXECUTION_APPROVED) === 'YES';
+  if (execute && !executionApproved) {
     throw new Error('EXPORT_EXECUTION_APPROVED=YES is required for execute mode');
   }
 
@@ -3094,6 +3445,8 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
     missingVariables,
     mode: execute ? 'execute' : 'dry-run',
   };
+
+  if (execute) APPROVED_EXECUTION_CONFIGS.add(config);
 
   Object.defineProperties(config, {
     dbUrl: {

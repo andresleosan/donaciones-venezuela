@@ -250,6 +250,10 @@ evidencia:
    npm.cmd run verify:export -- --run-dir "C:\\secure\\donaciones-export\\2026-08-06T120000Z" --restore-db "postgres://restore@127.0.0.1/demo_restore" --project-target demo-donaciones-venezuela
    ```
 
+   El ensayo aislado restaura primero `postgres/schema.sql` con `psql` usando
+   `ON_ERROR_STOP=1` y solo despues carga `postgres/data.dump` con `pg_restore`.
+   Si falla cualquier control previo, no se invoca ningun comando de restore.
+
 Un control fallido bloquea la aprobacion del paquete y obliga a registrar el
 motivo antes de repetir la verificacion.
 
@@ -263,19 +267,19 @@ conteos. La consulta financiera ejecutable es:
 ```sql
 select json_build_object(
   'facturas', json_build_object(
-    'count', (select count(*)::text from "public"."facturas"),
-    'abiertas', (select count(*)::text from "public"."facturas" where estado = 'Abierta'),
-    'monto_requerido', (select coalesce(sum(monto_requerido), 0)::text from "public"."facturas"),
-    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0)::text from "public"."facturas")
+    'count', (select count(*) from public.facturas),
+    'abiertas', (select count(*) from public.facturas where estado = 'Abierta'),
+    'monto_requerido', (select coalesce(sum(monto_requerido), 0) from public.facturas),
+    'monto_recaudado', (select coalesce(sum(monto_recaudado), 0) from public.facturas)
   ),
   'donaciones', json_build_object(
-    'count', (select count(*)::text from "public"."donaciones"),
-    'confirmadas_count', (select count(*)::text from "public"."donaciones" where estado = 'Confirmada'),
-    'confirmadas_monto', (select coalesce(sum(monto), 0)::text from "public"."donaciones" where estado = 'Confirmada')
+    'count', (select count(*) from public.donaciones),
+    'confirmadas_count', (select count(*) from public.donaciones where estado = 'Confirmada'),
+    'confirmadas_monto', (select coalesce(sum(monto), 0) from public.donaciones where estado = 'Confirmada')
   ),
   'movimientos_factura', json_build_object(
-    'count', (select count(*)::text from "public"."movimientos_factura"),
-    'monto', (select coalesce(sum(monto), 0)::text from "public"."movimientos_factura")
+    'count', (select count(*) from public.movimientos_factura),
+    'monto', (select coalesce(sum(monto), 0) from public.movimientos_factura)
   )
 );
 ```
