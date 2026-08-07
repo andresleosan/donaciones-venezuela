@@ -8,6 +8,8 @@ aplicacion:
 
 - `postgres/schema.sql`: dump schema-only.
 - `postgres/data.dump`: dump data-only en formato custom.
+- `pg_restore --list postgres/data.dump`: validacion estructural local del dump
+  custom; se ejecuta sin `shell:true` y sin conectarse a una base.
 - `postgres/object-counts.json`: conteo exacto por tabla base de `public`.
 - `reconciliation/financial-totals.json`: agregados financieros sin filas ni PII.
 - `run.json`: estado `prepared` y versiones de `pg_dump`/`psql`, sin datos de
@@ -227,8 +229,9 @@ El paquete no se aprueba hasta que los seis controles tengan resultado y
 evidencia:
 
 1. **Estructura y completitud:** el directorio desencriptado contiene
-   `run.json` con estado `completed` y todos los artefactos requeridos. `temp/`
-   queda fuera de este control y puede conservar temporales diagnosticos.
+   `run.json` con estado `completed`, todos los artefactos requeridos y un
+   `postgres/data.dump` aceptado por `pg_restore --list`. `temp/` queda fuera de
+   este control y puede conservar temporales diagnosticos.
 2. **Manifest:** `run.json` enumera los artefactos finales y
    `storage/manifest.jsonl` tiene una fila por objeto, buckets consistentes y
    ninguna fila duplicada o ruta insegura.

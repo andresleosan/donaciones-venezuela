@@ -175,7 +175,12 @@ export async function main(args = process.argv.slice(2), env = process.env, io =
 
     if (options.mode === 'execute') {
       const stagingRoot = config.runDir || config.outputRoot;
-      const paths = await createRunDirectory(stagingRoot, dependencies?.now);
+      const paths = await createRunDirectory(stagingRoot, dependencies?.now, config.repoRoot, {
+        platform: dependencies?.platform,
+        systemRoot: dependencies?.systemRoot,
+        aclAccount: dependencies?.aclAccount,
+        aclRunner: dependencies?.aclRunner,
+      });
       io.log('Run status: prepared');
       try {
         const exportRunner = createExportRunner(env, dependencies);

@@ -86,13 +86,15 @@ function createStoragePaths() {
 }
 
 function storageConfig(overrides = {}) {
-  const approvedConfig = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+  const { storagePageSize = 2, ...configOverrides } = overrides;
+  const approvedConfig = readExportConfig(completeExportEnv(), 'F:/repo', {
+    mode: 'execute',
+    storagePageSize,
+  });
+  if (Object.keys(configOverrides).length === 0) return approvedConfig;
+
   const config = Object.create(approvedConfig);
-  const overridesWithDefaults = {
-    storagePageSize: 2,
-    ...overrides,
-  };
-  for (const [name, value] of Object.entries(overridesWithDefaults)) {
+  for (const [name, value] of Object.entries(configOverrides)) {
     Object.defineProperty(config, name, {
       configurable: true,
       enumerable: true,
@@ -305,6 +307,58 @@ describe('export config', () => {
     expect(Object.keys(approved)).not.toContain('executionApproved');
     expect(Object.getOwnPropertySymbols(approved)).toHaveLength(0);
     expect(JSON.stringify(approved)).not.toContain('EXPORT_EXECUTION_APPROVED');
+  });
+
+  it('rejects a prototype-derived config clone before reading altered destinations or secrets', async () => {
+    const approved = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+    const clone = Object.create(approved);
+    Object.defineProperties(clone, {
+      dbUrl: {
+        configurable: true,
+        enumerable: true,
+        value: 'postgres://attacker:other-secret@attacker.example.test/other-db',
+        writable: true,
+      },
+      serviceRoleKey: {
+        configurable: true,
+        enumerable: true,
+        value: 'attacker-service-role-key',
+        writable: true,
+      },
+    });
+    const postgresRoot = mkdtempSync(join(tmpdir(), 'export-prototype-postgres-'));
+    const postgresPaths = {
+      root: postgresRoot,
+      postgres: join(postgresRoot, 'postgres'),
+      reconciliation: join(postgresRoot, 'reconciliation'),
+      temp: join(postgresRoot, 'temp'),
+    };
+    mkdirSync(postgresPaths.postgres);
+    mkdirSync(postgresPaths.reconciliation);
+    mkdirSync(postgresPaths.temp);
+    writeFileSync(join(postgresRoot, 'run.json'), JSON.stringify({ status: 'prepared' }));
+    const storagePaths = createStoragePaths();
+    const runnerCalls = [];
+    const fetchCalls = [];
+
+    try {
+      await expect(exportPostgres(clone, postgresPaths, async (...args) => {
+        runnerCalls.push(args);
+        return { code: 0, stdout: '', stderr: '' };
+      })).rejects.toThrow(/approved|gate/i);
+      await expect(exportStorage(clone, storagePaths, async (...args) => {
+        fetchCalls.push(args);
+        return fakeStorageResponse({ body: [] });
+      })).rejects.toThrow(/approved|gate/i);
+
+      expect(runnerCalls).toEqual([]);
+      expect(fetchCalls).toEqual([]);
+      expect(readdirSync(postgresPaths.postgres)).toEqual([]);
+      expect(readdirSync(storagePaths.storage)).toEqual([]);
+    } finally {
+      rmSync(postgresRoot, { recursive: true, force: true });
+      rmSync(storagePaths.root, { recursive: true, force: true });
+    }
   });
 
   it('rejects an HTTPS URL belonging to another project', () => {
@@ -827,6 +881,16 @@ describe('export staging and command runner', () => {
     expect(calls).toEqual([]);
   });
 
+  it('allows pg_restore list validation with a positional dump path', async () => {
+    const calls = [];
+    const result = await runCommand('pg_restore', ['--list', 'C:/secure/run/postgres/data.dump'], {
+      spawnImpl: fakeSuccessfulSpawn(calls),
+    });
+
+    expect(result.code).toBe(0);
+    expect(calls[0].args).toEqual(['--list', 'C:/secure/run/postgres/data.dump']);
+  });
+
   it('fails timed-out commands without exposing their environment', async () => {
     const calls = [];
     const signals = [];
@@ -875,7 +939,7 @@ describe('export staging and command runner', () => {
     const timestamp = '2026-08-06T12:00:00.000Z';
 
     try {
-      const paths = await createRunDirectory(outputRoot, timestamp);
+      const paths = await createRunDirectory(outputRoot, timestamp, process.cwd(), { platform: 'test' });
 
       expect(paths.root).toContain('2026-08-06T120000Z');
       for (const name of ['root', 'postgres', 'auth', 'storage', 'reconciliation', 'temp']) {
@@ -887,7 +951,7 @@ describe('export staging and command runner', () => {
         status: 'prepared',
       });
 
-      await expect(createRunDirectory(outputRoot, timestamp)).rejects.toMatchObject({ code: 'EEXIST' });
+      await expect(createRunDirectory(outputRoot, timestamp, process.cwd(), { platform: 'test' })).rejects.toMatchObject({ code: 'EEXIST' });
       expect(readdirSync(outputRoot)).toEqual(['2026-08-06T120000Z']);
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
@@ -906,9 +970,10 @@ describe('export staging and command runner', () => {
         process.cwd(),
         {
           platform: 'win32',
+          systemRoot: 'C:\\Windows',
           aclAccount: account,
-          aclRunner: async (command, args) => {
-            calls.push({ command, args });
+          aclRunner: async (command, args, runnerOptions) => {
+            calls.push({ command, args, runnerOptions });
             return {
               code: 0,
               stdout: `${account}:(OI)(CI)(F)\nSYSTEM:(OI)(CI)(F)\n`,
@@ -921,13 +986,58 @@ describe('export staging and command runner', () => {
       expect(paths.root).toContain('2026-08-06T120000Z');
       expect(calls).toHaveLength(2);
       expect(calls[0]).toMatchObject({
-        command: 'icacls',
+        command: 'C:\\Windows\\System32\\icacls.exe',
         args: expect.arrayContaining(['/inheritance:r', '/grant:r', '/T']),
       });
       expect(calls[1]).toEqual({
-        command: 'icacls',
+        command: 'C:\\Windows\\System32\\icacls.exe',
         args: [paths.root, '/T'],
+        runnerOptions: expect.objectContaining({
+          shell: false,
+          env: { SystemRoot: 'C:\\Windows' },
+        }),
       });
+      expect(calls[0].runnerOptions).toMatchObject({
+        shell: false,
+        env: { SystemRoot: 'C:\\Windows' },
+      });
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects any Windows ACL principal outside the operator and SYSTEM', async () => {
+    const outputRoot = mkdtempSync(join(tmpdir(), 'export-acl-extra-'));
+    const account = 'TESTDOMAIN\\operator';
+    const calls = [];
+
+    try {
+      await expect(createRunDirectory(
+        outputRoot,
+        '2026-08-06T12:00:00.000Z',
+        process.cwd(),
+        {
+          platform: 'win32',
+          systemRoot: 'C:\\Windows',
+          aclAccount: account,
+          aclRunner: async (command, args, runnerOptions) => {
+            calls.push({ command, args, runnerOptions });
+            return {
+              code: 0,
+              stdout: `${account}:(OI)(CI)(F)\nSYSTEM:(OI)(CI)(F)\nTESTDOMAIN\\intruder:(OI)(CI)(F)\n`,
+              stderr: '',
+            };
+          },
+        },
+      )).rejects.toThrow(/ACL|principal|restricted/i);
+
+      expect(calls[0].command).toBe('C:\\Windows\\System32\\icacls.exe');
+      expect(calls[0].runnerOptions).toMatchObject({ shell: false });
+      expect(Object.keys(calls[0].runnerOptions.env)).toEqual(['SystemRoot']);
+      expect(calls[0].runnerOptions.env).not.toHaveProperty('SUPABASE_SERVICE_ROLE_KEY');
+      expect(calls[0].runnerOptions.env).not.toHaveProperty('SUPABASE_DB_URL');
+      expect(calls[0].runnerOptions.env).not.toHaveProperty('PGPASSWORD');
+      expect(calls[0].runnerOptions.env).not.toHaveProperty('ACCESS_TOKEN');
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
     }
@@ -969,7 +1079,7 @@ describe('export staging and command runner', () => {
     mkdirSync(previousRun);
 
     try {
-      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z');
+      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z', process.cwd(), { platform: 'test' });
       writeFileSync(join(paths.temp, 'partial.tmp'), 'temporary');
       writeFileSync(join(paths.postgres, 'partial.dump'), 'diagnostic');
 
@@ -993,7 +1103,7 @@ describe('export staging and command runner', () => {
     const outputRoot = mkdtempSync(join(tmpdir(), 'export-temp-mode-'));
 
     try {
-      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z');
+      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z', process.cwd(), { platform: 'test' });
       await markRunFailed(paths, { code: 'COMMAND_TIMEOUT' });
 
       expect(existsSync(paths.temp)).toBe(true);
@@ -1009,7 +1119,7 @@ describe('export staging and command runner', () => {
     const outputRoot = mkdtempSync(join(tmpdir(), 'export-error-code-'));
 
     try {
-      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z');
+      const paths = await createRunDirectory(outputRoot, '2026-08-06T12:00:00.000Z', process.cwd(), { platform: 'test' });
       await markRunFailed(paths, { code: 'DB_PASSWORD', message: 'secret=DB_PASSWORD' });
 
       const run = readFileSync(join(paths.root, 'run.json'), 'utf8');
@@ -1150,11 +1260,12 @@ describe('export staging and command runner', () => {
             },
           }),
           now: '2026-08-06T12:00:00.000Z',
+          platform: 'test',
         },
       );
 
       expect(code).toBe(0);
-      expect(calls).toHaveLength(7);
+       expect(calls).toHaveLength(9);
       expect(calls.filter(([command, commandArgs]) => command === 'pg_dump' && !commandArgs.includes('--version'))).toHaveLength(2);
       expect(calls.filter(([command, commandArgs]) => command === 'psql' && !commandArgs.includes('--version'))).toHaveLength(1);
       expect(readdirSync(outputRoot)).toEqual(expect.arrayContaining([
@@ -1410,6 +1521,65 @@ describe('PostgreSQL export', () => {
     }
   });
 
+  it('validates custom PostgreSQL dumps with pg_restore list mode', async () => {
+    const paths = createPostgresPaths();
+    const calls = [];
+    const countOutput = [
+      JSON.stringify({ relation: 'public.facturas', count: '1' }),
+      JSON.stringify(completeFinancialTotals()),
+    ].join('\n');
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      const runner = async (command, args, options) => {
+        calls.push({ command, args, options });
+        if (args.includes('--version')) return { code: 0, stdout: `${command} 16.1\n`, stderr: '' };
+        if (command === 'pg_dump') {
+          const outputPath = args.find((argument) => argument.startsWith('--file=')).slice('--file='.length);
+          writeFileSync(outputPath, args.includes('--schema-only') ? 'schema fixture' : 'PGDMP structurally valid fixture');
+        }
+        return { code: 0, stdout: command === 'psql' ? countOutput : '', stderr: '' };
+      };
+
+      await expect(exportPostgres(config, paths, runner)).resolves.toMatchObject({ tableCount: 1 });
+
+      expect(calls.find(({ command, args }) => command === 'pg_restore' && args[0] === '--list')).toMatchObject({
+        args: ['--list', join(paths.postgres, 'data.dump')],
+      });
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects PGDMP garbage when pg_restore list mode fails', async () => {
+    const paths = createPostgresPaths();
+    const calls = [];
+    const countOutput = [
+      JSON.stringify({ relation: 'public.facturas', count: '1' }),
+      JSON.stringify(completeFinancialTotals()),
+    ].join('\n');
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      const runner = async (command, args) => {
+        calls.push({ command, args });
+        if (args.includes('--version')) return { code: 0, stdout: `${command} 16.1\n`, stderr: '' };
+        if (command === 'pg_dump') {
+          const outputPath = args.find((argument) => argument.startsWith('--file=')).slice('--file='.length);
+          writeFileSync(outputPath, args.includes('--schema-only') ? 'schema fixture' : 'PGDMP garbage');
+        }
+        if (command === 'pg_restore') return { code: 1, stdout: '', stderr: 'invalid custom dump' };
+        return { code: 0, stdout: command === 'psql' ? countOutput : '', stderr: '' };
+      };
+
+      await expect(exportPostgres(config, paths, runner)).rejects.toMatchObject({ code: 'COMMAND_EXIT' });
+      expect(calls.map(({ command }) => command)).toContain('pg_restore');
+      expect(existsSync(join(paths.postgres, 'object-counts.json'))).toBe(false);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
   it('rejects PostgreSQL output paths outside the validated run root', async () => {
     const paths = createPostgresPaths();
     const outside = mkdtempSync(join(tmpdir(), 'export-postgres-outside-'));
@@ -1428,6 +1598,34 @@ describe('PostgreSQL export', () => {
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a PostgreSQL run root inside config.repoRoot before writing anything', async () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), 'export-postgres-repo-root-'));
+    const repoRoot = join(fixtureRoot, 'repo');
+    const runRoot = join(repoRoot, 'exports', '2026-08-06T120000Z');
+    const paths = {
+      root: runRoot,
+      postgres: join(runRoot, 'postgres'),
+      reconciliation: join(runRoot, 'reconciliation'),
+      temp: join(runRoot, 'temp'),
+    };
+    const calls = [];
+    mkdirSync(repoRoot);
+
+    try {
+      const config = readExportConfig(completeExportEnv(), repoRoot, { mode: 'execute' });
+
+      await expect(exportPostgres(config, paths, async (...args) => {
+        calls.push(args);
+        return { code: 0, stdout: '', stderr: '' };
+      })).rejects.toThrow(/outside|repository|root/i);
+
+      expect(calls).toEqual([]);
+      expect(existsSync(runRoot)).toBe(false);
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
     }
   });
 
@@ -2043,7 +2241,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     return paths;
   }
 
-  function seedTask6Artifacts(paths) {
+  function seedTask6Artifacts(paths, { includeStorage = true } = {}) {
     writeFileSync(join(paths.postgres, 'schema.sql'), 'create table public.facturas (id integer);\n');
     writeFileSync(join(paths.postgres, 'data.dump'), 'PGDMP custom dump fixture\n');
     writeFileSync(join(paths.postgres, 'object-counts.json'), JSON.stringify({
@@ -2075,16 +2273,18 @@ describe('Task 6 reconciliation, sealing and verification', () => {
         appMetadata: ['provider', 'providers', 'role', 'roles'],
       },
     }));
-    writeFileSync(join(paths.storage, 'manifest.jsonl'), JSON.stringify({
-      bucket: 'private',
-      path: 'evidence.txt',
-      bytes: 8,
-      mime: 'text/plain',
-      sha256: sha256('evidence'),
-    }) + '\n');
-    writeFileSync(join(paths.storage, 'buckets.json'), JSON.stringify({ buckets: ['private'] }));
-    mkdirSync(join(paths.storage, 'objects', 'private'), { recursive: true });
-    writeFileSync(join(paths.storage, 'objects', 'private', 'evidence.txt'), 'evidence');
+    if (includeStorage) {
+      writeFileSync(join(paths.storage, 'manifest.jsonl'), JSON.stringify({
+        bucket: 'private',
+        path: 'evidence.txt',
+        bytes: 8,
+        mime: 'text/plain',
+        sha256: sha256('evidence'),
+      }) + '\n');
+      writeFileSync(join(paths.storage, 'buckets.json'), JSON.stringify({ buckets: ['private'] }));
+      mkdirSync(join(paths.storage, 'objects', 'private'), { recursive: true });
+      writeFileSync(join(paths.storage, 'objects', 'private', 'evidence.txt'), 'evidence');
+    }
   }
 
   function task6ArchivePath(paths) {
@@ -2199,6 +2399,13 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     return paths;
   }
 
+  async function verifyTask6Run(paths, options = {}) {
+    return verifyRun(paths.root, {
+      dumpRunner: async () => ({ code: 0, stdout: '', stderr: '' }),
+      ...options,
+    });
+  }
+
   it('writes complete reconciliation metadata and checksums every final artifact except itself', async () => {
     const paths = createTask6Paths();
 
@@ -2272,7 +2479,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       expect(JSON.stringify(rpcSamples)).not.toContain('buscar_familiar');
       expect(JSON.stringify(rpcSamples)).not.toContain('rpc-secret-value');
 
-      await expect(verifyRun(paths.root, { requireArchive: false })).resolves.toMatchObject({ ok: true });
+      await expect(verifyTask6Run(paths, { requireArchive: false })).resolves.toMatchObject({ ok: true });
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }
@@ -2284,7 +2491,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     try {
       writeFileSync(join(paths.postgres, 'schema.sql'), 'xreate table public.facturas (id integer);\n');
 
-      const report = await verifyRun(paths.root);
+      const report = await verifyTask6Run(paths);
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(false);
@@ -2326,7 +2533,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.auth, 'users.json'), JSON.stringify(users));
       refreshTask6Checksum(paths, 'auth/users.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2347,7 +2554,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.auth, 'users.json'), JSON.stringify(users));
       refreshTask6Checksum(paths, 'auth/users.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2372,7 +2579,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.auth, 'metadata.json'), JSON.stringify(metadata));
       refreshTask6Checksum(paths, 'auth/metadata.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2390,7 +2597,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.storage, 'manifest.jsonl'), '');
       refreshTask6Checksum(paths, 'storage/manifest.jsonl');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2408,12 +2615,38 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.postgres, 'data.dump'), 'PGDMP');
       refreshTask6Checksum(paths, 'postgres/data.dump');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
       expect(report.checks.completeness).toBe(false);
       expect(report.errors.join('\n')).toMatch(/dump|empty|truncated|format/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects PGDMP garbage during independent verifier custom-format validation', async () => {
+    const paths = await createCompleteTask6Run();
+    const calls = [];
+
+    try {
+      writeFileSync(join(paths.postgres, 'data.dump'), 'PGDMP garbage');
+      refreshTask6Checksum(paths, 'postgres/data.dump');
+
+      const report = await verifyTask6Run(paths, {
+        requireArchive: false,
+        dumpRunner: async (...args) => {
+          calls.push(args);
+          return { code: 1, stdout: '', stderr: 'invalid custom dump' };
+        },
+      });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.completeness).toBe(false);
+      expect(calls).toHaveLength(1);
+      expect(calls[0][0]).toBe('pg_restore');
+      expect(calls[0][1]).toEqual(['--list', join(paths.postgres, 'data.dump')]);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }
@@ -2428,7 +2661,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       run.artifacts.push('service-role-secret.txt');
       writeFileSync(runPath, `${JSON.stringify(run, null, 2)}\n`);
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.errors.join('\n')).not.toContain('service-role-secret');
@@ -2450,7 +2683,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       })}\n`);
       refreshTask6Checksum(paths, 'storage/manifest.jsonl');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2475,7 +2708,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       })}\n`);
       refreshTask6Checksum(paths, 'storage/manifest.jsonl');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2500,7 +2733,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       })}\n`);
       refreshTask6Checksum(paths, 'storage/manifest.jsonl');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2520,7 +2753,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.postgres, 'object-counts.json'), JSON.stringify(objectCounts));
       refreshTask6Checksum(paths, 'postgres/object-counts.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2539,7 +2772,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(orphanPath, 'orphan');
       addTask6Artifact(paths, 'storage/objects/private/orphan.txt');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2563,7 +2796,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
         },
       }));
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(true);
       expect(report.counts.storage.bucketCount).toBe(2);
@@ -2582,7 +2815,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.storage, 'buckets.json'), JSON.stringify({ buckets: ['empty'] }));
       refreshTask6Checksum(paths, 'storage/buckets.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2603,7 +2836,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       }));
       refreshTask6Checksum(paths, 'storage/buckets.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2630,7 +2863,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       }));
       addTask6Artifact(paths, 'storage/error-report.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(true);
@@ -2652,7 +2885,52 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       }));
       addTask6Artifact(paths, 'storage/error-report.json');
 
-      await expect(verifyRun(paths.root, { requireArchive: false })).resolves.toMatchObject({ ok: true });
+      await expect(verifyTask6Run(paths, { requireArchive: false })).resolves.toMatchObject({ ok: true });
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('verifies a complete run after bucket and object listing retries publish an error report', async () => {
+    const paths = createTask6Paths();
+    let bucketCalls = 0;
+    let objectListCalls = 0;
+    const fetchImpl = async (url) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/storage/v1/bucket') {
+        bucketCalls += 1;
+        return bucketCalls === 1
+          ? fakeStorageResponse({ status: 503, body: { error: 'bucket retry body' } })
+          : fakeStorageResponse({ body: [{ id: 'private', name: 'private' }] });
+      }
+      if (pathname.includes('/storage/v1/object/list/')) {
+        objectListCalls += 1;
+        return objectListCalls === 1
+          ? fakeStorageResponse({ status: 503, body: { error: 'object retry body' } })
+          : fakeStorageResponse({ body: [{ name: 'evidence.txt', id: 'object-id', metadata: { mimetype: 'text/plain' } }] });
+      }
+      if (pathname.includes('/storage/v1/object/authenticated/')) {
+        return fakeStorageResponse({ stream: Readable.from([Buffer.from('evidence')]) });
+      }
+      throw new Error('unexpected Storage endpoint');
+    };
+
+    try {
+      seedTask6Artifacts(paths, { includeStorage: false });
+      const storageEvidence = await exportStorage(storageConfig(), paths, fetchImpl);
+      await writeRunManifest(paths, completeTask6Evidence(paths, { storage: storageEvidence }));
+
+      const report = await verifyTask6Run(paths, { requireArchive: false });
+
+      expect(report.ok).toBe(true);
+      expect(bucketCalls).toBe(2);
+      expect(objectListCalls).toBe(2);
+      expect(JSON.parse(readFileSync(join(paths.storage, 'error-report.json'), 'utf8'))).toEqual({
+        errors: expect.arrayContaining([
+          { operation: 'bucket list', retries: 1, status: 503 },
+          { operation: 'object list', retries: 1, status: 503 },
+        ]),
+      });
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }
@@ -2665,7 +2943,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.auth, 'unexpected.json'), JSON.stringify({ secret: 'must-not-pass' }));
       addTask6Artifact(paths, 'auth/unexpected.json');
 
-      const report = await verifyRun(paths.root, { requireArchive: false });
+      const report = await verifyTask6Run(paths, { requireArchive: false });
 
       expect(report.ok).toBe(false);
       expect(report.checks.completeness).toBe(false);
@@ -2688,7 +2966,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     try {
       rmSync(join(paths.root, relativePath));
 
-      const report = await verifyRun(paths.root);
+      const report = await verifyTask6Run(paths);
 
       expect(report.ok).toBe(false);
       expect(report.checks.completeness).toBe(false);
@@ -2725,6 +3003,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
 
     try {
       const archivePath = await sealRun(paths, 'age1test', {
+        runCommand: async () => ({ code: 0, stdout: '', stderr: '' }),
         runPipeline: async (spec) => {
           pipelineSpec = spec;
           writeFileSync(spec.archivePath, 'encrypted archive');
@@ -2754,6 +3033,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       let thrown;
       try {
         await sealRun(paths, secret, {
+          runCommand: async () => ({ code: 0, stdout: '', stderr: '' }),
           runPipeline: async () => {
             writeFileSync(task6ArchivePath(paths), 'partial encrypted archive');
             throw Object.assign(new Error(`age failed password=${secret}`), { code: 'COMMAND_EXIT' });
@@ -2793,7 +3073,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     const calls = [];
 
     try {
-      const report = await verifyRun(paths.root, {
+      const report = await verifyTask6Run(paths, {
         restoreDb: 'postgres://restore:db-password@remote.example.test/demo',
         projectTarget: 'demo-donaciones-venezuela',
         runner: async (...args) => {
@@ -2807,7 +3087,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       expect(report.errors.join('\n')).toMatch(/localhost|127\.0\.0\.1|restore|host/i);
       expect(report.errors.join('\n')).not.toContain('db-password');
 
-      const wrongProject = await verifyRun(paths.root, {
+      const wrongProject = await verifyTask6Run(paths, {
         restoreDb: 'postgres://restore@127.0.0.1/demo',
         projectTarget: 'other-project',
       });
@@ -2823,7 +3103,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     const calls = [];
 
     try {
-      const report = await verifyRun(paths.root, {
+      const report = await verifyTask6Run(paths, {
         requireArchive: false,
         restoreDb: 'postgres://restore:db-password@127.0.0.1/demo_restore',
         projectTarget: 'demo-donaciones-venezuela',
@@ -2871,7 +3151,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       writeFileSync(join(paths.storage, 'manifest.jsonl'), '');
       refreshTask6Checksum(paths, 'storage/manifest.jsonl');
 
-      const report = await verifyRun(paths.root, {
+      const report = await verifyTask6Run(paths, {
         requireArchive: false,
         restoreDb: 'postgres://restore:db-password@127.0.0.1/demo_restore',
         projectTarget: 'demo-donaciones-venezuela',
@@ -2896,7 +3176,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     const calls = [];
 
     try {
-      const report = await verifyRun(paths.root, {
+      const report = await verifyTask6Run(paths, {
         requireArchive: false,
         restoreDb: 'postgres://restore:db-password@127.0.0.1/demo_restore',
         projectTarget: 'demo-donaciones-venezuela',
@@ -2911,6 +3191,31 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       expect(calls.map(([command]) => command)).toEqual(['psql']);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports restore false and a safe not-run error for an unavailable run directory', async () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), 'export-invalid-restore-'));
+    const missingRun = join(fixtureRoot, 'missing-run');
+    const calls = [];
+
+    try {
+      const report = await verifyRun(missingRun, {
+        restoreDb: 'postgres://restore:db-password@127.0.0.1/demo_restore',
+        projectTarget: 'demo-donaciones-venezuela',
+        runner: async (...args) => {
+          calls.push(args);
+          return { code: 0, stdout: '', stderr: '' };
+        },
+      });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.restore).toBe(false);
+      expect(calls).toEqual([]);
+      expect(report.errors.join('\n')).toMatch(/restore|not-run|run directory/i);
+      expect(report.errors.join('\n')).not.toContain('db-password');
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
     }
   });
 });

@@ -105,7 +105,7 @@ const SAFE_COMMAND_OPTIONS = Object.freeze({
   pg_dump: Object.freeze(['--data-only', '--dbname', '--file', '--format', '--host', '--no-owner',
     '--no-privileges', '--port', '--schema', '--schema-only', '--user', '--username', '--version']),
   psql: Object.freeze(['--dbname', '--file', '--host', '--port', '--set', '--user', '--username', '--version']),
-  pg_restore: Object.freeze(['--clean', '--dbname', '--exit-on-error', '--host', '--if-exists',
+  pg_restore: Object.freeze(['--clean', '--dbname', '--exit-on-error', '--host', '--if-exists', '--list',
     '--no-owner', '--no-privileges', '--port', '--single-transaction', '--user', '--username', '--version']),
   tar: Object.freeze(['--create', '--directory', '--exclude', '--file', '--no-recursion', '-C', '-c', '-f']),
   age: Object.freeze(['--output', '--recipient', '--version', '-o', '-r']),
@@ -136,25 +136,11 @@ function isExecuteMode(options) {
 }
 
 function assertApprovedExecution(config, label) {
-  let current = config;
-  let hasPrivateCapability = false;
-  try {
-    while (current && typeof current === 'object') {
-      if (APPROVED_EXECUTION_CONFIGS.has(current)) {
-        hasPrivateCapability = true;
-        break;
-      }
-      current = Object.getPrototypeOf(current);
-    }
-  } catch {
-    hasPrivateCapability = false;
-  }
-
   if (!config || typeof config !== 'object' ||
+    !APPROVED_EXECUTION_CONFIGS.has(config) ||
     config.projectRef !== EXPECTED_PROJECT_REF ||
     config.supabaseUrl !== EXPECTED_SUPABASE_URL ||
-    config.mode !== 'execute' ||
-    !hasPrivateCapability) {
+    config.mode !== 'execute') {
     throw new Error(`${label} requires the approved execute gate`);
   }
 }
@@ -855,6 +841,12 @@ function assertCreatedDump(filePath, label) {
   }
 }
 
+async function validateCustomDump(filePath, runner) {
+  await invokeExportCommand(runner || runCommand, 'pg_restore', ['--list', filePath], {
+    env: {},
+  });
+}
+
 function readFilePrefix(filePath, length) {
   const descriptor = openSync(filePath, 'r');
   try {
@@ -935,10 +927,15 @@ export async function exportPostgres(config, paths, runner = runCommand) {
   if (!config || typeof config !== 'object' || !isNonEmptyString(config.dbUrl)) {
     throw new Error('A PostgreSQL export configuration is required');
   }
+  if (!isNonEmptyString(config.repoRoot)) {
+    throw new Error('A PostgreSQL export repository root is required');
+  }
   if (!paths || !isNonEmptyString(paths.postgres) || !isNonEmptyString(paths.reconciliation) ||
     !isNonEmptyString(paths.temp)) {
     throw new Error('PostgreSQL export paths are required');
   }
+
+  assertSafeOutputRoot(paths.root, config.repoRoot);
 
   assertRunPathLayout(paths, ['postgres', 'reconciliation', 'temp']);
 
@@ -988,6 +985,7 @@ export async function exportPostgres(config, paths, runner = runCommand) {
     `--file=${dataFile}`,
   ], { env: connectionEnv });
   assertCreatedDump(dataFile, 'data.dump');
+  await validateCustomDump(dataFile, runner);
 
   const countsResult = await invokeExportCommand(runner, 'psql', [
     '--set=ON_ERROR_STOP=1',
@@ -2229,9 +2227,11 @@ function assertRequiredArtifactFiles(paths) {
   assertCreatedDump(artifactPath(paths, 'postgres/data.dump'), 'data.dump');
 }
 
-function assertValidDumpArtifacts(runDir) {
+async function assertValidDumpArtifacts(runDir, runner) {
   assertCreatedDump(join(runDir, 'postgres', 'schema.sql'), 'schema.sql');
-  assertCreatedDump(join(runDir, 'postgres', 'data.dump'), 'data.dump');
+  const dataFile = join(runDir, 'postgres', 'data.dump');
+  assertCreatedDump(dataFile, 'data.dump');
+  await validateCustomDump(dataFile, runner);
 }
 
 async function readJsonFile(filePath, label) {
@@ -2729,7 +2729,7 @@ async function validateStorageErrorReport(runDir) {
     throw new Error('Storage error report shape is invalid');
   }
 
-  const operations = new Set(['list buckets', 'list objects', 'download', 'download stream']);
+  const operations = new Set(['bucket list', 'object list', 'download', 'download stream']);
   for (const error of report.errors) {
     if (!hasExactObjectKeys(error, ['operation', 'retries', 'status']) ||
       !operations.has(error.operation) ||
@@ -2933,7 +2933,7 @@ export async function verifyRun(runDir, options = {}) {
     checksums: false,
     reconciliation: false,
     archive: false,
-    restore: true,
+    restore: options.restoreDb === undefined,
   };
   const errors = [];
   const counts = {};
@@ -2979,7 +2979,7 @@ export async function verifyRun(runDir, options = {}) {
       if (missing.length > 0 || unlisted.length > 0 || listedMissing.length > 0) {
         throw new Error('Required export evidence or manifest artifacts are missing');
       }
-      assertValidDumpArtifacts(runDir);
+      await assertValidDumpArtifacts(runDir, options.dumpRunner || runCommand);
       checks.completeness = true;
     } catch (error) {
       errors.push(error instanceof Error ? error.message : 'Export evidence is incomplete');
@@ -3061,6 +3061,7 @@ export async function verifyRun(runDir, options = {}) {
             );
             if (result.code !== 0) throw commandFailure(command, result);
           }
+          checks.restore = true;
         } catch (error) {
           checks.restore = false;
           errors.push(redactText(
@@ -3070,6 +3071,10 @@ export async function verifyRun(runDir, options = {}) {
         }
       }
     }
+  }
+
+  if (options.restoreDb !== undefined && !checks.structure) {
+    errors.push('Local restore not-run because the run directory is unavailable');
   }
 
   return {
@@ -3262,7 +3267,15 @@ export async function sealRun(paths, recipient, runner) {
     }
     if (status !== 'completed') throw new Error(`Run status ${status || 'unknown'} cannot be sealed`);
 
-    const verification = await verifyRun(paths.root, { requireArchive: false });
+    const dumpRunner = typeof runner === 'function'
+      ? runner
+      : runner && typeof runner.runCommand === 'function'
+        ? runner.runCommand.bind(runner)
+        : undefined;
+    const verification = await verifyRun(paths.root, {
+      requireArchive: false,
+      dumpRunner,
+    });
     if (!verification.ok) throw new Error('Run evidence is incomplete; sealing refused');
 
     const spec = {
@@ -3301,7 +3314,7 @@ export async function sealRun(paths, recipient, runner) {
   }
 }
 
-function runWindowsAclCommand(command, args) {
+function runWindowsAclCommand(command, args, options = {}) {
   return new Promise((resolveResult, reject) => {
     let child;
     let stdout = '';
@@ -3309,6 +3322,7 @@ function runWindowsAclCommand(command, args) {
     try {
       child = nodeSpawn(command, args, {
         shell: false,
+        env: options.env || {},
         stdio: ['ignore', 'pipe', 'pipe'],
       });
     } catch {
@@ -3323,15 +3337,44 @@ function runWindowsAclCommand(command, args) {
   });
 }
 
+function normalizeWindowsAclPrincipal(value) {
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === 'nt authority\\system' ? 'system' : normalized;
+}
+
+function windowsAclPrincipals(value) {
+  const principals = new Set();
+  const pattern = /(?:^|\s)([^:\r\n]+):(?=\()/g;
+  for (const line of String(value || '').split(/\r?\n/)) {
+    for (const match of line.matchAll(pattern)) {
+      const principal = normalizeWindowsAclPrincipal(match[1]);
+      if (principal) principals.add(principal);
+    }
+  }
+  return principals;
+}
+
 async function applyAndVerifyWindowsAcl(runRoot, options = {}) {
   const domain = valueOrUndefined(options.aclDomain) || valueOrUndefined(process.env.USERDOMAIN);
   const username = valueOrUndefined(options.aclUsername) || valueOrUndefined(process.env.USERNAME);
   const account = valueOrUndefined(options.aclAccount) || (domain && username ? `${domain}\\${username}` : username);
   if (!account) throw new Error('Windows export ACL identity is unavailable');
 
+  const systemRoot = valueOrUndefined(options.systemRoot) || valueOrUndefined(process.env.SystemRoot);
+  if (!systemRoot || !win32.isAbsolute(systemRoot)) {
+    throw new Error('Windows export ACL system root is unavailable');
+  }
+  const icacls = win32.join(systemRoot, 'System32', 'icacls.exe');
+  const aclEnvironment = Object.freeze({ SystemRoot: systemRoot });
+
   const runner = typeof options.aclRunner === 'function' ? options.aclRunner : runWindowsAclCommand;
   const grant = `${account}:(OI)(CI)(F)`;
-  const applyResult = await runner('icacls', [
+  const runAcl = (args) => runner(icacls, args, {
+    env: aclEnvironment,
+    shell: false,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const applyResult = await runAcl([
     runRoot,
     '/inheritance:r',
     '/grant:r', grant,
@@ -3342,15 +3385,19 @@ async function applyAndVerifyWindowsAcl(runRoot, options = {}) {
     throw new Error('Windows export ACL could not be applied');
   }
 
-  const verifyResult = await runner('icacls', [runRoot, '/T']);
+  const verifyResult = await runAcl([runRoot, '/T']);
   if (!verifyResult || verifyResult.code !== 0) {
     throw new Error('Windows export ACL could not be verified');
   }
 
   const aclText = `${verifyResult.stdout || ''}\n${verifyResult.stderr || ''}`;
-  const normalized = aclText.toLowerCase();
-  if (!normalized.includes(account.toLowerCase()) || !/system/i.test(aclText) ||
-    /(?:everyone|builtin\\users|authenticated users|guests)\s*:/i.test(aclText)) {
+  const actualPrincipals = windowsAclPrincipals(aclText);
+  const expectedPrincipals = new Set([
+    normalizeWindowsAclPrincipal(account),
+    'system',
+  ]);
+  if (actualPrincipals.size !== expectedPrincipals.size ||
+    [...actualPrincipals].some((principal) => !expectedPrincipals.has(principal))) {
     throw new Error('Windows export ACL is not restricted to approved principals');
   }
 }
@@ -3404,6 +3451,9 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
   const execute = isExecuteMode(options);
   const requestedProjectRef = options && typeof options === 'object' ? options.projectRef : undefined;
   const requestedRunDir = options && typeof options === 'object' ? options.runDir : undefined;
+  const requestedStoragePageSize = options && typeof options === 'object'
+    ? options.storagePageSize
+    : undefined;
   const environmentProjectRef = valueOrUndefined(source.SUPABASE_PROJECT_REF);
 
   if (environmentProjectRef && environmentProjectRef !== EXPECTED_PROJECT_REF) {
@@ -3416,6 +3466,12 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
   const executionApproved = execute && valueOrUndefined(source.EXPORT_EXECUTION_APPROVED) === 'YES';
   if (execute && !executionApproved) {
     throw new Error('EXPORT_EXECUTION_APPROVED=YES is required for execute mode');
+  }
+
+  if (requestedStoragePageSize !== undefined &&
+    (!Number.isSafeInteger(requestedStoragePageSize) || requestedStoragePageSize < 1 ||
+      requestedStoragePageSize > STORAGE_PAGE_SIZE)) {
+    throw new Error('Supabase Storage page size is invalid');
   }
 
   const projectRef = requestedProjectRef || environmentProjectRef;
@@ -3444,6 +3500,7 @@ export function readExportConfig(env = process.env, repoRoot = process.cwd(), op
     repoRoot: canonicalizeExistingPath(resolvePathForInput(repoRoot)),
     missingVariables,
     mode: execute ? 'execute' : 'dry-run',
+    storagePageSize: requestedStoragePageSize,
   };
 
   if (execute) APPROVED_EXECUTION_CONFIGS.add(config);

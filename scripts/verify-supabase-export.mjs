@@ -129,6 +129,7 @@ export async function main(args = process.argv.slice(2), _env = process.env, io 
       restoreDb: options.restoreDb,
       projectTarget: options.projectTarget,
       runner: dependencies.runner,
+      dumpRunner: dependencies.dumpRunner || dependencies.runner,
     });
     io.log(formatVerificationSummary(report));
     return report.ok ? 0 : 1;
