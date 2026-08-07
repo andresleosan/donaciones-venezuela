@@ -24,6 +24,7 @@ import {
   writeRunManifest,
 } from '../scripts/export-supabase-lib.mjs';
 import { formatDryRunSummary, main, parseCliArgs } from '../scripts/export-supabase.mjs';
+import { main as verifyMain } from '../scripts/verify-supabase-export.mjs';
 
 const EXPECTED_PROJECT_REF = 'zryfwbjvlacorryzdaod';
 const EXPECTED_SUPABASE_URL = `https://${EXPECTED_PROJECT_REF}.supabase.co`;
@@ -1316,6 +1317,26 @@ describe('PostgreSQL export', () => {
     }
   });
 
+  it('preserves long financial numeric lexemes without Number rounding', async () => {
+    const paths = createPostgresPaths();
+    const longDecimal = '12345678901234567890.12345678901234567890';
+    const countOutput = [
+      JSON.stringify({ relation: 'public.facturas', count: 1 }),
+      `{"facturas":{"count":1,"abiertas":1,"monto_requerido":${longDecimal},"monto_recaudado":0},"donaciones":{"count":0,"confirmadas_count":0,"confirmadas_monto":0},"movimientos_factura":{"count":0,"monto":0}}`,
+    ].join('\n');
+
+    try {
+      const config = readExportConfig(completeExportEnv(), 'F:/repo', { mode: 'execute' });
+      await exportPostgres(config, paths, fakePostgresRunner([], countOutput));
+
+      const financial = JSON.parse(readFileSync(join(paths.reconciliation, 'financial-totals.json'), 'utf8'));
+
+      expect(financial.totals.facturas.monto_requerido).toBe(longDecimal);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
   it('quotes PostgreSQL identifiers without allowing embedded SQL', () => {
     expect(quoteIdentifier('column"name')).toBe('"column""name"');
     expect(quoteIdentifier('public')).toBe('"public"');
@@ -1903,6 +1924,21 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     writeFileSync(join(paths.storage, 'objects', 'private', 'evidence.txt'), 'evidence');
   }
 
+  function task6ArchivePath(paths) {
+    return join(paths.root, '..', `${basename(paths.root)}.tar.age`);
+  }
+
+  function refreshTask6Checksum(paths, relativePath) {
+    const artifactPath = join(paths.root, ...relativePath.split('/'));
+    const checksumPath = join(paths.root, 'checksums.sha256');
+    const digest = sha256(readFileSync(artifactPath));
+    const lines = readFileSync(checksumPath, 'utf8').trim().split('\n');
+    const lineIndex = lines.findIndex((line) => line.endsWith(`  ${relativePath}`));
+    if (lineIndex < 0) throw new Error(`Checksum entry not found: ${relativePath}`);
+    lines[lineIndex] = `${digest}  ${relativePath}`;
+    writeFileSync(checksumPath, `${lines.join('\n')}\n`);
+  }
+
   function completeTask6Evidence(paths, overrides = {}) {
     return {
       projectRef: EXPECTED_PROJECT_REF,
@@ -2058,7 +2094,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       expect(JSON.stringify(rpcSamples)).not.toContain('buscar_familiar');
       expect(JSON.stringify(rpcSamples)).not.toContain('rpc-secret-value');
 
-      await expect(verifyRun(paths.root)).resolves.toMatchObject({ ok: true });
+      await expect(verifyRun(paths.root, { requireArchive: false })).resolves.toMatchObject({ ok: true });
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }
@@ -2075,6 +2111,111 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       expect(report.ok).toBe(false);
       expect(report.checks.checksums).toBe(false);
       expect(report.errors.join('\n')).toMatch(/checksum|hash|integrity/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a complete CLI verification when the derived encrypted archive is absent', async () => {
+    const paths = await createCompleteTask6Run();
+    const output = [];
+
+    try {
+      const code = await verifyMain(
+        ['--run-dir', paths.root],
+        process.env,
+        {
+          log: (message) => output.push(message),
+          error: (message) => output.push(message),
+        },
+      );
+
+      expect(code).toBe(1);
+      expect(output.join('\n')).toContain('archive');
+      expect(existsSync(task6ArchivePath(paths))).toBe(false);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+      rmSync(task6ArchivePath(paths), { force: true });
+    }
+  });
+
+  it('rejects Auth metadata mismatches even when the changed artifact checksum is refreshed', async () => {
+    const paths = await createCompleteTask6Run();
+
+    try {
+      const users = JSON.parse(readFileSync(join(paths.auth, 'users.json'), 'utf8'));
+      users.push({ id: 'user-2', email: 'second@example.test' });
+      writeFileSync(join(paths.auth, 'users.json'), JSON.stringify(users));
+      refreshTask6Checksum(paths, 'auth/users.json');
+
+      const report = await verifyRun(paths.root, { requireArchive: false });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.checksums).toBe(true);
+      expect(report.checks.reconciliation).toBe(false);
+      expect(report.errors.join('\n')).toMatch(/Auth|user|metadata|count/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a truncated Storage manifest with coherent checksums', async () => {
+    const paths = await createCompleteTask6Run();
+
+    try {
+      writeFileSync(join(paths.storage, 'manifest.jsonl'), '');
+      refreshTask6Checksum(paths, 'storage/manifest.jsonl');
+
+      const report = await verifyRun(paths.root, { requireArchive: false });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.checksums).toBe(true);
+      expect(report.checks.reconciliation).toBe(false);
+      expect(report.errors.join('\n')).toMatch(/Storage|manifest|object/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects Storage manifest traversal and byte/hash mismatches', async () => {
+    const paths = await createCompleteTask6Run();
+
+    try {
+      writeFileSync(join(paths.storage, 'manifest.jsonl'), `${JSON.stringify({
+        bucket: 'private',
+        path: '../escape.txt',
+        bytes: 999,
+        mime: 'text/plain',
+        sha256: sha256('wrong'),
+      })}\n`);
+      refreshTask6Checksum(paths, 'storage/manifest.jsonl');
+
+      const report = await verifyRun(paths.root, { requireArchive: false });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.checksums).toBe(true);
+      expect(report.checks.reconciliation).toBe(false);
+      expect(report.errors.join('\n')).toMatch(/path|object|hash|bytes|Storage/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects PostgreSQL relation count mismatches with coherent checksums', async () => {
+    const paths = await createCompleteTask6Run();
+
+    try {
+      const objectCounts = JSON.parse(readFileSync(join(paths.postgres, 'object-counts.json'), 'utf8'));
+      objectCounts.tables[0].count = 3;
+      writeFileSync(join(paths.postgres, 'object-counts.json'), JSON.stringify(objectCounts));
+      refreshTask6Checksum(paths, 'postgres/object-counts.json');
+
+      const report = await verifyRun(paths.root, { requireArchive: false });
+
+      expect(report.ok).toBe(false);
+      expect(report.checks.checksums).toBe(true);
+      expect(report.checks.reconciliation).toBe(false);
+      expect(report.errors.join('\n')).toMatch(/PostgreSQL|relation|count/i);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }
@@ -2158,6 +2299,7 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       try {
         await sealRun(paths, secret, {
           runPipeline: async () => {
+            writeFileSync(task6ArchivePath(paths), 'partial encrypted archive');
             throw Object.assign(new Error(`age failed password=${secret}`), { code: 'COMMAND_EXIT' });
           },
         });
@@ -2166,14 +2308,27 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       }
 
       const runText = readFileSync(join(paths.root, 'run.json'), 'utf8');
+      const failedRun = JSON.parse(runText);
       expect(thrown).toBeInstanceOf(Error);
       expect(thrown.message).not.toContain(secret);
-      expect(JSON.parse(runText)).toMatchObject({ status: 'failed', errorCode: 'COMMAND_EXIT' });
+      expect(failedRun).toMatchObject({
+        status: 'failed',
+        errorCode: 'COMMAND_EXIT',
+        projectRef: EXPECTED_PROJECT_REF,
+        counts: expect.any(Object),
+      });
+      expect(failedRun.artifacts).toEqual(expect.arrayContaining(['run.json', 'postgres/schema.sql']));
       expect(runText).not.toContain(secret);
       expect(existsSync(paths.postgres)).toBe(true);
       expect(existsSync(temporaryArchive)).toBe(true);
+      expect(existsSync(task6ArchivePath(paths))).toBe(false);
+      const runChecksum = readFileSync(join(paths.root, 'checksums.sha256'), 'utf8')
+        .split('\n')
+        .find((line) => line.endsWith('  run.json'));
+      expect(runChecksum).toBe(`${sha256(runText)}  run.json`);
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
+      rmSync(task6ArchivePath(paths), { force: true });
     }
   });
 
@@ -2202,6 +2357,41 @@ describe('Task 6 reconciliation, sealing and verification', () => {
       });
       expect(wrongProject.ok).toBe(false);
       expect(wrongProject.errors.join('\n')).toMatch(/project|target/i);
+    } finally {
+      rmSync(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it('restores locally with the dump as the only pg_restore positional input', async () => {
+    const paths = await createCompleteTask6Run();
+    const calls = [];
+
+    try {
+      const report = await verifyRun(paths.root, {
+        requireArchive: false,
+        restoreDb: 'postgres://restore:db-password@127.0.0.1/demo_restore',
+        projectTarget: 'demo-donaciones-venezuela',
+        runner: async (...args) => {
+          calls.push(args);
+          return { code: 0, stdout: '', stderr: '' };
+        },
+      });
+
+      expect(report.ok).toBe(true);
+      expect(report.checks.restore).toBe(true);
+      expect(calls).toHaveLength(1);
+      expect(calls[0][0]).toBe('pg_restore');
+      expect(calls[0][1]).toEqual(expect.arrayContaining([
+        '--dbname', 'demo_restore',
+        '--exit-on-error',
+        '--single-transaction',
+        '--no-owner',
+        '--no-privileges',
+      ]));
+      expect(calls[0][1]).not.toContain('--file');
+      expect(calls[0][1].at(-1)).toBe(join(paths.root, 'postgres', 'data.dump'));
+      expect(calls[0][2].env.PGPASSWORD).toBe('db-password');
+      expect(calls[0][1].join(' ')).not.toContain('db-password');
     } finally {
       rmSync(paths.root, { recursive: true, force: true });
     }

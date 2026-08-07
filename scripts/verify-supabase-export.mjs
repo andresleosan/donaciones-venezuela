@@ -124,6 +124,7 @@ export async function main(args = process.argv.slice(2), _env = process.env, io 
     }
 
     const report = await verifyRun(options.runDir, {
+      requireArchive: true,
       archivePath: options.archivePath,
       restoreDb: options.restoreDb,
       projectTarget: options.projectTarget,

@@ -104,7 +104,7 @@ const SAFE_COMMAND_OPTIONS = Object.freeze({
   pg_dump: Object.freeze(['--data-only', '--dbname', '--file', '--format', '--host', '--no-owner',
     '--no-privileges', '--port', '--schema', '--schema-only', '--user', '--username', '--version']),
   psql: Object.freeze(['--dbname', '--file', '--host', '--port', '--set', '--user', '--username', '--version']),
-  pg_restore: Object.freeze(['--clean', '--dbname', '--exit-on-error', '--file', '--host', '--if-exists',
+  pg_restore: Object.freeze(['--clean', '--dbname', '--exit-on-error', '--host', '--if-exists',
     '--no-owner', '--no-privileges', '--port', '--single-transaction', '--user', '--username', '--version']),
   tar: Object.freeze(['--create', '--directory', '--exclude', '--file', '--no-recursion', '-C', '-c', '-f']),
   age: Object.freeze(['--output', '--recipient', '--version', '-o', '-r']),
@@ -113,7 +113,7 @@ const SAFE_COMMAND_OPTIONS = Object.freeze({
 const COMMAND_OPTIONS_WITH_VALUES = Object.freeze({
   pg_dump: Object.freeze(['--dbname', '--file', '--format', '--host', '--port', '--schema', '--user', '--username']),
   psql: Object.freeze(['--dbname', '--file', '--host', '--port', '--set', '--user', '--username']),
-  pg_restore: Object.freeze(['--dbname', '--file', '--host', '--port', '--user', '--username']),
+  pg_restore: Object.freeze(['--dbname', '--host', '--port', '--user', '--username']),
   tar: Object.freeze(['--directory', '--exclude', '--file', '-C', '-f']),
   age: Object.freeze(['--output', '--recipient', '-o', '-r']),
 });
@@ -512,6 +512,123 @@ function normalizeFinancialTotals(value) {
   return result;
 }
 
+function parseJsonPreservingNumberLexemes(input) {
+  const source = String(input);
+  let index = 0;
+
+  function fail() {
+    throw new Error('PostgreSQL counts output contains invalid JSON');
+  }
+
+  function skipWhitespace() {
+    while (/\s/.test(source[index] || '')) index += 1;
+  }
+
+  function parseString() {
+    if (source[index] !== '"') fail();
+    const start = index;
+    index += 1;
+    while (index < source.length) {
+      if (source[index] === '\\') {
+        index += 2;
+        continue;
+      }
+      if (source[index] === '"') {
+        index += 1;
+        try {
+          return JSON.parse(source.slice(start, index));
+        } catch {
+          fail();
+        }
+      }
+      index += 1;
+    }
+    fail();
+  }
+
+  function parseNumber() {
+    const match = source.slice(index).match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);
+    if (!match) fail();
+    index += match[0].length;
+    return match[0];
+  }
+
+  function parseValue() {
+    skipWhitespace();
+    const character = source[index];
+    if (character === '"') return parseString();
+    if (character === '{') return parseObject();
+    if (character === '[') return parseArray();
+    if (character === 't' && source.startsWith('true', index)) {
+      index += 4;
+      return true;
+    }
+    if (character === 'f' && source.startsWith('false', index)) {
+      index += 5;
+      return false;
+    }
+    if (character === 'n' && source.startsWith('null', index)) {
+      index += 4;
+      return null;
+    }
+    if (character === '-' || /\d/.test(character || '')) return parseNumber();
+    fail();
+  }
+
+  function parseObject() {
+    const value = {};
+    index += 1;
+    skipWhitespace();
+    if (source[index] === '}') {
+      index += 1;
+      return value;
+    }
+    while (index < source.length) {
+      const key = parseString();
+      skipWhitespace();
+      if (source[index] !== ':') fail();
+      index += 1;
+      value[key] = parseValue();
+      skipWhitespace();
+      if (source[index] === '}') {
+        index += 1;
+        return value;
+      }
+      if (source[index] !== ',') fail();
+      index += 1;
+      skipWhitespace();
+    }
+    fail();
+  }
+
+  function parseArray() {
+    const value = [];
+    index += 1;
+    skipWhitespace();
+    if (source[index] === ']') {
+      index += 1;
+      return value;
+    }
+    while (index < source.length) {
+      value.push(parseValue());
+      skipWhitespace();
+      if (source[index] === ']') {
+        index += 1;
+        return value;
+      }
+      if (source[index] !== ',') fail();
+      index += 1;
+      skipWhitespace();
+    }
+    fail();
+  }
+
+  const value = parseValue();
+  skipWhitespace();
+  if (index !== source.length) fail();
+  return value;
+}
+
 function parseCountsOutput(stdout) {
   const tables = [];
   let financialTotals;
@@ -524,7 +641,7 @@ function parseCountsOutput(stdout) {
   for (const line of lines) {
     let value;
     try {
-      value = JSON.parse(line);
+      value = parseJsonPreservingNumberLexemes(line);
     } catch {
       throw new Error('PostgreSQL counts output contains invalid JSON');
     }
@@ -1661,6 +1778,7 @@ function validateCommandArguments(command, args) {
 
   const optionsWithValues = COMMAND_OPTIONS_WITH_VALUES[name];
   let expectedValueFor;
+  let positionalCount = 0;
 
   for (const argument of args) {
     if (expectedValueFor) {
@@ -1671,6 +1789,10 @@ function validateCommandArguments(command, args) {
 
     if (!argument.startsWith('-')) {
       if (name === 'tar' && argument === '.') continue;
+      if (name === 'pg_restore' && positionalCount === 0 && isNonEmptyString(argument)) {
+        positionalCount += 1;
+        continue;
+      }
       return 'COMMAND_ARGUMENT_NOT_ALLOWED';
     }
     if (sensitiveArgumentName(argument)) return 'COMMAND_ARGUMENT_SECRET';
@@ -2255,6 +2377,100 @@ function validateRpcSamples(value) {
   }
 }
 
+async function validateAuthEvidence(runDir, expectedUserCount) {
+  let users;
+  try {
+    users = JSON.parse(await readFile(join(runDir, 'auth', 'users.json'), 'utf8'));
+  } catch {
+    throw new Error('Auth users evidence is invalid or unavailable');
+  }
+  if (!Array.isArray(users)) throw new Error('Auth users evidence must be a JSON array');
+
+  const metadata = await readJsonFile(join(runDir, 'auth', 'metadata.json'), 'Auth metadata');
+  const metadataCount = exactCount(metadata.count);
+  if (metadataCount !== users.length || exactCount(expectedUserCount) !== users.length) {
+    throw new Error('Auth users evidence does not match metadata or source counts');
+  }
+  return users.length;
+}
+
+async function validatePostgresEvidence(runDir, expectedCounts) {
+  const objectCounts = await readPostgresObjectCounts({
+    postgres: join(runDir, 'postgres'),
+  });
+  const expectedTables = Array.isArray(expectedCounts?.tables)
+    ? [...expectedCounts.tables].sort((left, right) => bytewiseCompare(left.relation, right.relation))
+    : undefined;
+  const actualTables = [...objectCounts.tables]
+    .sort((left, right) => bytewiseCompare(left.relation, right.relation));
+  if (!expectedCounts || exactCount(expectedCounts.tableCount) !== objectCounts.tableCount ||
+    !expectedTables || JSON.stringify(expectedTables) !== JSON.stringify(actualTables)) {
+    throw new Error('PostgreSQL object counts do not match source counts');
+  }
+  return objectCounts;
+}
+
+async function validateStorageEvidence(runDir, expectedObjectCount) {
+  let content;
+  try {
+    content = await readFile(join(runDir, 'storage', 'manifest.jsonl'), 'utf8');
+  } catch {
+    throw new Error('Storage manifest is invalid or unavailable');
+  }
+
+  const lines = content.split(/\r?\n/).filter(Boolean);
+  const objectCount = exactCount(expectedObjectCount);
+  if (lines.length !== objectCount) {
+    throw new Error('Storage manifest row count does not match source counts');
+  }
+
+  const objectsRoot = join(runDir, 'storage', 'objects');
+  const seen = new Set();
+  for (const line of lines) {
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      throw new Error('Storage manifest contains invalid JSON');
+    }
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
+      typeof entry.bucket !== 'string' || typeof entry.path !== 'string' ||
+      !Number.isSafeInteger(entry.bytes) || entry.bytes < 0 ||
+      typeof entry.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(entry.sha256)) {
+      throw new Error('Storage manifest contains invalid object evidence');
+    }
+
+    let objectPath;
+    try {
+      const bucket = safeStorageSegment(entry.bucket, 'bucket');
+      const segments = safeStorageObjectPath(entry.path);
+      const objectKey = `${bucket}/${segments.join('/')}`;
+      if (seen.has(objectKey)) throw new Error('duplicate object');
+      seen.add(objectKey);
+      objectPath = join(objectsRoot, bucket, ...segments);
+      const relativeObjectPath = relative(objectsRoot, objectPath);
+      if (relativeObjectPath === '..' || relativeObjectPath.startsWith(`..${sep}`) || isAbsolute(relativeObjectPath)) {
+        throw new Error('object path escapes Storage objects');
+      }
+    } catch {
+      throw new Error('Storage manifest contains an unsafe object path');
+    }
+
+    let contentBuffer;
+    try {
+      if (!statSync(objectPath).isFile()) throw new Error('not a file');
+      contentBuffer = await readFile(objectPath);
+    } catch {
+      throw new Error('Storage manifest object is missing');
+    }
+    const digest = createHash('sha256').update(contentBuffer).digest('hex');
+    if (contentBuffer.byteLength !== entry.bytes || digest !== entry.sha256) {
+      throw new Error('Storage manifest object bytes or checksum do not match');
+    }
+  }
+  return lines.length;
+}
+
 async function validateReconciliation(runDir, run) {
   const sourceCounts = await readJsonFile(
     join(runDir, 'reconciliation', 'source-counts.json'),
@@ -2280,6 +2496,9 @@ async function validateReconciliation(runDir, run) {
     !run.counts || JSON.stringify(sourceCounts) !== JSON.stringify(run.counts)) {
     throw new Error('Source counts do not match the run manifest');
   }
+  await validateAuthEvidence(runDir, run.counts.auth.userCount);
+  await validatePostgresEvidence(runDir, run.counts.postgres);
+  await validateStorageEvidence(runDir, run.counts.storage.objectCount);
   return { sourceCounts, financialTotals: totals, rpcSamples };
 }
 
@@ -2316,7 +2535,7 @@ function buildRestoreInvocation(connection, dataFile) {
       '--no-privileges',
       '--exit-on-error',
       '--single-transaction',
-      '--file', dataFile,
+      dataFile,
     ],
     env: {
       PGHOST: connection.PGHOST,
@@ -2327,6 +2546,11 @@ function buildRestoreInvocation(connection, dataFile) {
       PGSSLMODE: 'require',
     },
   };
+}
+
+function derivedArchivePath(runDir) {
+  const resolvedRunDir = resolve(runDir);
+  return join(dirname(resolvedRunDir), `${basename(resolvedRunDir)}.tar.age`);
 }
 
 export async function verifyRun(runDir, options = {}) {
@@ -2415,9 +2639,11 @@ export async function verifyRun(runDir, options = {}) {
       errors.push(error instanceof Error ? error.message : 'Reconciliation evidence is invalid');
     }
 
-    if (options.archivePath !== undefined) {
+    if (options.requireArchive !== false) {
       try {
-        if (!statSync(options.archivePath).isFile() || statSync(options.archivePath).size === 0) {
+        const archivePath = options.archivePath || derivedArchivePath(runDir);
+        if (!archivePath.toLowerCase().endsWith('.tar.age') ||
+          !statSync(archivePath).isFile() || statSync(archivePath).size === 0) {
           throw new Error('Encrypted archive is missing or empty');
         }
         checks.archive = true;
@@ -2425,7 +2651,7 @@ export async function verifyRun(runDir, options = {}) {
         errors.push('Encrypted archive is missing or empty');
       }
     } else {
-      checks.archive = run?.status === 'completed';
+      checks.archive = true;
     }
 
     if (options.restoreDb !== undefined) {
@@ -2473,6 +2699,63 @@ function sealError(error, recipient) {
   ));
   safe.code = ALLOWED_ERROR_CODES.has(error?.code) ? error.code : 'EXPORT_FAILED';
   return safe;
+}
+
+function safeFailureCounts(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const postgres = value.postgres;
+  const auth = value.auth;
+  const storage = value.storage;
+  if (!postgres || !auth || !storage || !Array.isArray(postgres.tables)) return undefined;
+  return {
+    postgres: {
+      tableCount: postgres.tableCount,
+      tables: postgres.tables
+        .filter((table) => table && typeof table.relation === 'string')
+        .map((table) => ({ relation: table.relation, count: table.count })),
+    },
+    auth: { userCount: auth.userCount },
+    storage: { bucketCount: storage.bucketCount, objectCount: storage.objectCount },
+  };
+}
+
+async function markSealRunFailed(paths, error, redactValues = []) {
+  let existing;
+  try {
+    existing = JSON.parse(await readFile(runStatusPath(paths), 'utf8'));
+  } catch {
+    return writeRunStatus(paths, 'failed', error);
+  }
+
+  const now = new Date().toISOString();
+  const record = {
+    projectRef: existing.projectRef === EXPECTED_PROJECT_REF ? existing.projectRef : undefined,
+    createdAt: validIsoTimestamp(existing.createdAt) ? existing.createdAt : now,
+    updatedAt: now,
+    commandVersions: safeCommandVersions(existing.commandVersions, redactValues),
+    artifacts: Array.isArray(existing.artifacts)
+      ? existing.artifacts.filter((value) => checksumPathIsSafe(value))
+      : undefined,
+    counts: safeFailureCounts(existing.counts),
+    status: 'failed',
+    errorCode: safeErrorCode(error),
+  };
+  const safeRecord = Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
+  await writeFile(runStatusPath(paths), `${JSON.stringify(safeRecord, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+
+  const checksumPath = join(paths.root, CHECKSUM_FILE_NAME);
+  if (existsSync(checksumPath)) {
+    const artifacts = await listFinalArtifacts(paths.root);
+    const checksumLines = await buildChecksumLines(paths.root, artifacts);
+    await writeFile(checksumPath, `${checksumLines.join('\n')}\n`, {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+  }
+  return safeRecord;
 }
 
 function childProcessResult(child, label) {
@@ -2566,6 +2849,7 @@ export async function sealRun(paths, recipient, runner) {
   const archivePath = paths && isNonEmptyString(paths.root)
     ? join(dirname(paths.root), `${basename(paths.root)}.tar.age`)
     : undefined;
+  let sealingAttemptStarted = false;
 
   try {
     if (!paths || !isNonEmptyString(paths.root) || !isNonEmptyString(paths.temp) ||
@@ -2581,7 +2865,7 @@ export async function sealRun(paths, recipient, runner) {
     }
     if (status !== 'completed') throw new Error(`Run status ${status || 'unknown'} cannot be sealed`);
 
-    const verification = await verifyRun(paths.root);
+    const verification = await verifyRun(paths.root, { requireArchive: false });
     if (!verification.ok) throw new Error('Run evidence is incomplete; sealing refused');
 
     const spec = {
@@ -2601,6 +2885,7 @@ export async function sealRun(paths, recipient, runner) {
       },
     };
 
+    sealingAttemptStarted = true;
     await invokeInjectedSealRunner(runner, spec);
     try {
       if (!statSync(archivePath).isFile() || statSync(archivePath).size === 0) {
@@ -2613,7 +2898,8 @@ export async function sealRun(paths, recipient, runner) {
     return archivePath;
   } catch (error) {
     const safe = sealError(error, recipient);
-    await writeRunStatus(paths, 'failed', safe).catch(() => {});
+    if (sealingAttemptStarted) await rm(archivePath, { force: true }).catch(() => {});
+    await markSealRunFailed(paths, safe, [recipient]).catch(() => {});
     throw safe;
   }
 }
