@@ -2478,3 +2478,65 @@ describe('Task 6 reconciliation, sealing and verification', () => {
     }
   });
 });
+
+describe('runbook documentation', () => {
+  it('documents the safe Supabase export gate and repository guardrails', () => {
+    const runbook = readFileSync(new URL('../docs/runbooks/export-supabase.md', import.meta.url), 'utf8');
+    const backupPlan = readFileSync(new URL('../BACKUP_RESTORE_PLAN.md', import.meta.url), 'utf8');
+    const gitignore = readFileSync(new URL('../.gitignore', import.meta.url), 'utf8');
+
+    expect(runbook).toContain('zryfwbjvlacorryzdaod');
+    expect(runbook).toMatch(/--dry-run[\s\S]*predetermin|predetermin[\s\S]*--dry-run/i);
+    expect(runbook).toMatch(/--execute[\s\S]*acci[oó]n\s+remota\s+expl[ií]cita|acci[oó]n\s+remota\s+expl[ií]cita[\s\S]*--execute/i);
+    for (const variable of [
+      'SUPABASE_PROJECT_REF',
+      'SUPABASE_URL',
+      'SUPABASE_DB_URL',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'EXPORT_ROOT',
+      'EXPORT_AGE_RECIPIENT',
+    ]) {
+      expect(runbook).toContain(variable);
+      expect(runbook).not.toMatch(new RegExp(`${variable}\\s*=\\s*[^\\s]+`));
+    }
+    expect(runbook).toContain('C:\\\\secure\\\\donaciones-export');
+    expect(runbook).toContain('npm.cmd run export:supabase:dry-run');
+    expect(runbook).toContain('# detenerse y obtener confirmacion explicita del operador');
+    expect(runbook).toContain('npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod');
+    expect(runbook).toContain('npm.cmd run verify:export -- --run-dir "C:\\\\secure\\\\donaciones-export\\\\2026-08-06T120000Z"');
+
+    for (const control of [
+      /estructura.*completitud/i,
+      /manifest/i,
+      /checksum.*tamper|tamper.*checksum/i,
+      /reconciliaci[oó]n.*conteo|conteo.*reconciliaci[oó]n/i,
+      /archive status/i,
+      /localhost.*restore|restore.*localhost/i,
+    ]) {
+      expect(runbook).toMatch(control);
+    }
+    expect(runbook).toMatch(/desencript|decrypt/i);
+    expect(runbook).toMatch(/evidencia/);
+    expect(runbook).toMatch(/checkpoint[\s\S]*inmediatamente antes[\s\S]*--execute/i);
+    expect(runbook).toMatch(/agente[\s\S]*(?:no puede|no debe)[\s\S]*ejecutar[\s\S]*--execute/i);
+    expect(runbook).toMatch(/no.*producci[oó]n/i);
+    expect(runbook).toMatch(/Blaze/);
+    expect(runbook).toMatch(/migraci[oó]n destructiva/i);
+    expect(runbook).toMatch(/export(?:ar|aci[oó]n).*credencial|credencial.*export/i);
+
+    expect(backupPlan).toContain('docs/runbooks/export-supabase.md');
+    expect(backupPlan).toMatch(/plan escrito.*(?:no equivale|no es igual).*gate/i);
+    expect(backupPlan).toMatch(/manifest.*checksum.*evidencia/i);
+
+    for (const entry of [
+      'backups/',
+      'exports/',
+      '*.dump',
+      '*.age',
+      '/exports/**/*.jsonl',
+      '/exports/**/*.sql',
+    ]) {
+      expect(gitignore).toContain(entry);
+    }
+  });
+});

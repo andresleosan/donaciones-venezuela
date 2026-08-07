@@ -1,30 +1,60 @@
-# Sistema operativo
-.DS_Store
-Thumbs.db
+# Base de 1 Titán — Cronos la completa con lo específico del stack elegido (STACK.md).
 
-# Editores
-.vscode/
-.idea/
-*.swp
-
-# Logs y temporales
-*.log
-.cache/
-
-# Variables de entorno (no hay backend Node, pero por si acaso)
+# Secretos y credenciales — nunca deben llegar al repo
 .env
-.env.local
-
-# Vercel
-.vercel
-
-# CLASP y credenciales de Google Apps Script
-.clasprc.json
-credentials.json
-token.json
-oauth.json
-service-account.json
+.env.*
+!.env.example
 *.pem
 *.key
 *.p12
-.env*
+*.cer
+secrets/
+credentials/
+
+# Google Cloud / Firebase / Apps Script
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+.clasprc.json
+.firebase/
+firebase-debug.log
+
+# Dependencias e instalación
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Builds y artefactos
+dist/
+build/
+out/
+*.log
+coverage/
+
+# Reportes de QA (browser-qa-e2e, v3.3.0) — se regeneran en cada corrida, no se versionan
+qa/reports/
+playwright-report/
+test-results/
+
+# Editor / sistema operativo
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
+# Bases de datos locales
+*.sqlite3
+*.db
+
+# Backups que dejan los scripts de la agencia al actualizar
+*.bak-*
+
+# Exportaciones y respaldos Supabase: siempre fuera del repositorio
+backups/
+exports/
+*.dump
+*.age
+/exports/**/*.jsonl
+/exports/**/*.sql

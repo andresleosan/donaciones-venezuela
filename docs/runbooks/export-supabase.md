@@ -1,6 +1,6 @@
 # Runbook de exportacion Supabase
 
-## Alcance de Tasks 3 a 5
+## Alcance de Tasks 3 a 7
 
 El exportador prepara evidencia de PostgreSQL para el proyecto Supabase
 `zryfwbjvlacorryzdaod`. Esta tarea solo exporta el schema `public` de la
@@ -11,10 +11,42 @@ aplicacion:
 - `postgres/object-counts.json`: conteo exacto por tabla base de `public`.
 - `reconciliation/financial-totals.json`: agregados financieros sin filas ni PII.
 - `run.json`: estado `prepared` y versiones de `pg_dump`/`psql`, sin datos de
-  conexion. `completed` queda reservado para el sellado de Task 6.
+  conexion. `completed` solo es valido despues de generar el manifiesto, los
+  checksums y el archivo cifrado.
 
 Auth y Storage no se leen desde schemas internos. Se exportan mediante sus APIs
 soportadas. El CLI no ejecuta `pg_restore` contra una base remota.
+
+## Preparacion local y limites
+
+Este runbook prepara una exportacion verificable del proyecto Supabase con
+referencia exacta `zryfwbjvlacorryzdaod`. No es una autorizacion de acceso
+remoto: la autorizacion de cada ejecucion pertenece al operador.
+
+Antes de abrir la red, el operador debe:
+
+1. Trabajar desde una copia local del repositorio con Node.js 20 o posterior y
+   las herramientas locales `pg_dump`, `psql`, `pg_restore`, `tar` y `age`.
+2. Confirmar que `EXPORT_ROOT` y cualquier `--run-dir` son rutas absolutas,
+   externas al repositorio, con permisos restringidos. Un ejemplo de ruta
+   externa es `C:\\secure\\donaciones-export`; no debe convertirse en una
+   carpeta del repositorio.
+3. Cargar los nombres de variables requeridas mediante el entorno seguro del
+   operador, sin escribir sus valores en archivos, argumentos, historial,
+   logs, manifiestos o este runbook.
+4. Comprobar que el destino sigue siendo el proyecto exacto
+   `zryfwbjvlacorryzdaod` y que la ventana de trabajo fue aprobada.
+
+El modo predeterminado es `--dry-run`: solo revisa la preparacion local, los
+nombres de variables, las rutas y las herramientas. No hace red, dumps,
+descargas, sellado ni crea artefactos de datos. Solo `--execute` es la accion
+remota explicita; tambien es la unica opcion que puede abrir red y producir la
+exportacion.
+
+Esta tarea no ejecuta una migracion destructiva, no modifica ni elimina datos
+remotos y no se permite exportar credenciales, contrasenas, hashes, sesiones, refresh
+tokens, PINs ni valores secretos. No es produccion y no autoriza ningun acceso
+a produccion. Blaze permanece deshabilitado y no se activa por este runbook.
 
 ### Auth metadata
 
@@ -104,8 +136,9 @@ exacto y `mode=execute` antes de leer `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Variables y rutas
 
-Entregar los valores solo por el entorno seguro del operador. Nunca escribirlos
-en el repositorio, argumentos, logs o manifiestos:
+Entregar los valores solo por el entorno seguro del operador. La siguiente
+lista contiene nombres, no valores; nunca escribir valores en el repositorio,
+argumentos, logs o manifiestos:
 
 ```text
 SUPABASE_PROJECT_REF
@@ -114,8 +147,11 @@ SUPABASE_DB_URL
 SUPABASE_SERVICE_ROLE_KEY
 EXPORT_ROOT
 EXPORT_AGE_RECIPIENT
-EXPORT_EXECUTION_APPROVED
 ```
+
+`EXPORT_EXECUTION_APPROVED` es una variable separada de control del checkpoint,
+no un secreto. En modo `--execute` debe estar establecida por el operador como
+`YES` inmediatamente antes de la accion remota; no se usa en `--dry-run`.
 
 `EXPORT_ROOT` o `--run-dir` debe ser una ruta absoluta externa al repositorio,
 con permisos restringidos. El entorno explicito que recibe `runCommand`
@@ -123,27 +159,83 @@ reemplaza `process.env`: solo contiene `PGHOST`, `PGPORT`, `PGUSER`,
 `PGDATABASE`, `PGPASSWORD` y `PGSSLMODE=require`. Los ejecutables se resuelven
 localmente a rutas absolutas antes de invocarlos.
 
-## Secuencia segura
+## Secuencia PowerShell segura
 
 El agente no ejecuta la secuencia `--execute` sin un checkpoint nuevo y
-confirmacion explicita del operador inmediatamente antes de abrir red. El modo
-`--execute` exige que el entorno contenga exactamente
-`EXPORT_EXECUTION_APPROVED=YES`; el modo `--dry-run` no lee ni exige esta
-variable.
+confirmacion explicita del operador inmediatamente antes de abrir red. El
+operador debe cargar `EXPORT_EXECUTION_APPROVED=YES` en la sesion aprobada antes
+del bloque siguiente y confirmar de nuevo el proyecto, la ruta externa y la
+ventana. El comando final es una plantilla para el operador: un agente no puede
+ejecutar `--execute` sin una confirmacion fresca inmediatamente antes.
 
 ```powershell
 npm.cmd run export:supabase:dry-run
 # detenerse y obtener confirmacion explicita del operador
-$env:EXPORT_EXECUTION_APPROVED = 'YES'
 npm.cmd run export:supabase -- --execute --project-ref zryfwbjvlacorryzdaod
+npm.cmd run verify:export -- --run-dir "C:\\secure\\donaciones-export\\2026-08-06T120000Z"
 ```
 
-El modo predeterminado es `--dry-run`; valida nombres de variables, rutas y
-herramientas locales sin red, dumps ni artefactos de datos. En estas Tasks 3 a 5
-las pruebas usan runners, streams de Node y `fetchImpl` falsos y no ejecutan
+En una sesion PowerShell del operador, el checkpoint puede prepararse con
+`$env:EXPORT_EXECUTION_APPROVED = 'YES'` despues de la confirmacion y no antes.
+Si la confirmacion cambia, se debe retirar la variable y repetir el checkpoint.
+En estas Tasks 3 a 7 las pruebas usan runners, streams de Node y `fetchImpl` falsos y no ejecutan
 `pg_dump`, `psql`, Auth remoto, Storage remoto, Firebase remoto, migraciones ni
 comandos que creen artefactos fuera de fixtures. Los runs de `--execute` siguen
-en `prepared`; `completed` queda reservado para el sellado de Task 6.
+en `completed` solo despues de terminar el manifiesto, los checksums y el
+sellado cifrado.
+
+## Desencriptado, verificacion y evidencia
+
+El archivo cifrado se crea fuera del repositorio, junto al directorio del run,
+con extension `.tar.age`. El operador debe desencriptarlo en una ruta externa
+de verificacion, sin reemplazar un run anterior y sin poner el contenido
+desencriptado en Git. La identidad privada y su contenido se entregan por el
+gestor seguro; no se copia el secreto al comando, historial o evidencia. El
+placeholder del siguiente comando representa solo una ruta administrada por el
+operador. Es una plantilla operativa, no un comando para un agente:
+
+```powershell
+age --decrypt --identity <AGE_IDENTITY_FILE> --output "C:\\secure\\donaciones-export\\2026-08-06T120000Z.tar" "C:\\secure\\donaciones-export\\2026-08-06T120000Z.tar.age"
+tar --extract --file="C:\\secure\\donaciones-export\\2026-08-06T120000Z.tar" --directory="C:\\secure\\donaciones-export\\2026-08-06T120000Z"
+npm.cmd run verify:export -- --run-dir "C:\\secure\\donaciones-export\\2026-08-06T120000Z"
+```
+
+La salida del verificador, el `run.json`, `checksums.sha256`, los manifiestos y
+los conteos se conservan en una ubicacion externa aprobada como evidencia de la
+ejecucion. La evidencia debe registrar fecha UTC, responsable, target exacto,
+resultado de cada control y cualquier diferencia explicada, pero nunca filas
+con PII, claves, contrasenas, tokens, identidades de `age` o valores de las
+variables.
+
+## Seis controles de verificacion
+
+El paquete no se aprueba hasta que los seis controles tengan resultado y
+evidencia:
+
+1. **Estructura y completitud:** el directorio desencriptado contiene
+   `run.json` con estado `completed`, todos los artefactos requeridos y ningun
+   temporal pendiente.
+2. **Manifest:** `run.json` enumera los artefactos finales y
+   `storage/manifest.jsonl` tiene una fila por objeto, buckets consistentes y
+   ninguna fila duplicada o ruta insegura.
+3. **Checksums y tamper:** `checksums.sha256` cubre todos los artefactos salvo
+   el propio archivo; `verify:export` debe detectar cualquier cambio de bytes,
+   checksum o integridad.
+4. **Reconciliacion y conteos:** `source-counts.json`, conteos de PostgreSQL,
+   Auth y Storage, totales financieros y filas del manifest coinciden; no se
+   aceptan diferencias sin explicar.
+5. **Archive status:** existe un archivo `.tar.age` no vacio junto al run y el
+   verificador informa el archive status como aprobado.
+6. **Restore local opcional (localhost):** si se hace un ensayo, usar solo una
+   base aislada en `localhost` o `127.0.0.1`, con el target local
+   `demo-donaciones-venezuela`; nunca una base remota. Ejemplo sin credencial:
+
+   ```powershell
+   npm.cmd run verify:export -- --run-dir "C:\\secure\\donaciones-export\\2026-08-06T120000Z" --restore-db "postgres://restore@127.0.0.1/demo_restore" --project-target demo-donaciones-venezuela
+   ```
+
+Un control fallido bloquea la aprobacion del paquete y obliga a registrar el
+motivo antes de repetir la verificacion.
 
 ## Conteos y reconciliacion
 
