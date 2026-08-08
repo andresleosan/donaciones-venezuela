@@ -49,6 +49,17 @@ it('devuelve el usuario actual y sus claims', async () => {
   });
 });
 
+it('propaga forceRefresh al metodo de claims del usuario', async () => {
+  const user = {
+    getIdTokenResult: vi.fn(async () => ({ token: 'token-1', claims: {} })),
+  };
+  authState.currentUser = user;
+
+  await getIdTokenResult(true);
+
+  expect(user.getIdTokenResult).toHaveBeenCalledWith(true);
+});
+
 it('devuelve null cuando no hay sesion', async () => {
   expect(await getCurrentUser()).toBeNull();
   expect(await getIdTokenResult()).toBeNull();
@@ -73,4 +84,11 @@ it('observa cambios de sesion y devuelve el unsubscribe de Firebase', async () =
     callback,
     undefined,
   );
+});
+
+it('reexporta los helpers de sesion desde el indice Firebase', async () => {
+  const firebase = await import('../../src/firebase/index.js');
+
+  expect(firebase.getCurrentUser).toBe(getCurrentUser);
+  expect(firebase.getIdTokenResult).toBe(getIdTokenResult);
 });
