@@ -22,7 +22,11 @@ export async function bootstrapAdmin(
   }
 
   const claims = { ...(user.customClaims ?? {}), role: 'admin' };
-  await auth.setCustomUserClaims(normalizedUid, claims);
+  try {
+    await auth.setCustomUserClaims(normalizedUid, claims);
+  } catch {
+    throw new Error('No se pudo asignar el rol de administrador');
+  }
 
   return { uid: normalizedUid, role: 'admin' };
 }
