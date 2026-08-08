@@ -38,19 +38,33 @@ function createEmulatorAuth(): Auth {
 }
 
 afterEach(async () => {
-  if (!auth) return;
+  const currentAuth = auth;
+  const currentUser = createdUser;
+  const currentApp = app;
+  let cleanupError: unknown;
 
   try {
-    await signOut(auth);
+    if (currentAuth) await signOut(currentAuth);
+  } catch (error) {
+    cleanupError = error;
   } finally {
-    if (createdUser) {
-      await deleteUser(createdUser);
-      createdUser = undefined;
+    try {
+      if (currentUser) await deleteUser(currentUser);
+    } catch (error) {
+      cleanupError ??= error;
+    } finally {
+      try {
+        if (currentApp) await deleteApp(currentApp);
+      } catch (error) {
+        cleanupError ??= error;
+      }
     }
-    if (app) await deleteApp(app);
-    auth = undefined;
-    app = undefined;
   }
+
+  createdUser = undefined;
+  auth = undefined;
+  app = undefined;
+  if (cleanupError) throw cleanupError;
 });
 
 describe('Auth y authSession en Emulator Suite', () => {
