@@ -518,9 +518,9 @@ npm.cmd --prefix functions audit --audit-level=high
 python scripts/verificar-idioma.py
 ```
 
-Expected: build exitoso, ninguna vulnerabilidad `high` o `critical` nueva atribuible al subproyecto, y verificacion de idioma exitosa. Las vulnerabilidades moderadas preexistentes deben quedar reportadas, no ocultas.
+Expected: build exitoso, ninguna vulnerabilidad `high` o `critical` en la salida actual, y verificacion de idioma exitosa. Las vulnerabilidades moderadas observadas deben quedar reportadas, no ocultas.
 
-Evidence (2026-08-07, misma rama): `npm.cmd run build` paso con advertencias preexistentes de scripts clasicos sin `type="module"` y assets `layers*.png`; `npm.cmd audit --audit-level=high` reporto 5 vulnerabilidades moderadas y ninguna high/critical; `npm.cmd --prefix functions audit --audit-level=high` reporto 7 moderadas y ninguna high/critical; `python scripts/verificar-idioma.py` devolvio `Idioma OK: 1499 claves paralelas en es/en, sin texto cableado en el JS.`
+Evidence (2026-08-07, misma rama): `npm.cmd run build` paso con advertencias observadas de scripts clasicos sin `type="module"` y assets `layers*.png`; `npm.cmd audit --audit-level=high` reporto 5 vulnerabilidades moderadas en la salida actual y ninguna high/critical; `npm.cmd --prefix functions audit --audit-level=high` reporto 7 moderadas en la salida actual y ninguna high/critical; este plan no modifico manifests ni versiones de dependencias; `python scripts/verificar-idioma.py` devolvio `Idioma OK: 1499 claves paralelas en es/en, sin texto cableado en el JS.`
 
 - [x] **Step 3: Perform the manual security review**
 
