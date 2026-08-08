@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Bloqueo inicial. Se abriran rutas solo despues de definir claims,
+    // propietarios, minimizacion de PII y pruebas con Emulator Suite.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
