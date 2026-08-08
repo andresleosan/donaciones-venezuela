@@ -50,6 +50,21 @@ it('responde 401 sin revelar el error de verificacion', async () => {
   });
 });
 
+it('normaliza errores desconocidos sin filtrar el mensaje interno', async () => {
+  const { res, result } = createResponse();
+  await authSessionHandler(
+    { method: 'GET', headers: {} },
+    res,
+    async () => { throw new Error('token secreto interno'); },
+  );
+
+  expect(result.status).toBe(401);
+  expect(result.body).toEqual({
+    error: { code: 'unauthenticated', message: 'Authentication required' },
+  });
+  expect(JSON.stringify(result.body)).not.toContain('token secreto interno');
+});
+
 it('rechaza metodos diferentes de GET', async () => {
   const { res, result } = createResponse();
   await authSessionHandler({ method: 'POST', headers: {} }, res, vi.fn());
