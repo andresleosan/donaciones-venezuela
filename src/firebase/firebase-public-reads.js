@@ -16,15 +16,21 @@ async function getFirestoreDb() {
 }
 
 async function listPublicCollection(collectionName, orderField, options) {
+  if (options === null) {
+    throw new Error('invalid-public-options');
+  }
+
   const pageSize = options.pageSize === undefined ? MAX_PUBLIC_PAGE_SIZE : options.pageSize;
   const cursor = options.cursor;
   const hasCursor = cursor !== undefined && cursor !== null;
+  const cursorPath = cursor?.ref?.path;
+  const cursorSegments = typeof cursorPath === 'string' ? cursorPath.split('/') : [];
 
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > MAX_PUBLIC_PAGE_SIZE) {
     throw new Error('invalid-public-page-size');
   }
 
-  if (hasCursor && (typeof cursor.ref?.path !== 'string' || !cursor.ref.path.startsWith(`${collectionName}/`))) {
+  if (hasCursor && (cursorSegments.length !== 2 || cursorSegments[0] !== collectionName || cursorSegments[1].length === 0)) {
     throw new Error('invalid-public-cursor');
   }
 

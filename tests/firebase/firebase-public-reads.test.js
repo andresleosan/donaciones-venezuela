@@ -66,6 +66,11 @@ it.each([0, -1, 51, '50', NaN, null])('rechaza pageSize invalido: %s', async (pa
   expect(firestoreMocks.getDocs).not.toHaveBeenCalled();
 });
 
+it('rechaza opciones nulas con un error estable', async () => {
+  await expect(listPublicPlaces(null)).rejects.toThrow('invalid-public-options');
+  expect(firestoreMocks.getDocs).not.toHaveBeenCalled();
+});
+
 it.each([0, false, ''])('rechaza cursor falsy explicito: %s', async (cursor) => {
   await expect(listPublicPlaces({ cursor })).rejects.toThrow('invalid-public-cursor');
   expect(firestoreMocks.getDocs).not.toHaveBeenCalled();
@@ -73,6 +78,13 @@ it.each([0, false, ''])('rechaza cursor falsy explicito: %s', async (cursor) => 
 
 it('rechaza cursor de otra coleccion', async () => {
   const cursor = { ref: { path: 'vacantesPublicas/v-1' } };
+
+  await expect(listPublicPlaces({ cursor })).rejects.toThrow('invalid-public-cursor');
+  expect(firestoreMocks.getDocs).not.toHaveBeenCalled();
+});
+
+it('rechaza cursor con una ruta anidada', async () => {
+  const cursor = { ref: { path: 'lugaresPublicos/lugar-1/subruta' } };
 
   await expect(listPublicPlaces({ cursor })).rejects.toThrow('invalid-public-cursor');
   expect(firestoreMocks.getDocs).not.toHaveBeenCalled();
