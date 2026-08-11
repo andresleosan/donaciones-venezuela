@@ -16,14 +16,15 @@ async function getFirestoreDb() {
 }
 
 async function listPublicCollection(collectionName, orderField, options) {
-  const pageSize = options.pageSize ?? MAX_PUBLIC_PAGE_SIZE;
+  const pageSize = options.pageSize === undefined ? MAX_PUBLIC_PAGE_SIZE : options.pageSize;
   const cursor = options.cursor;
+  const hasCursor = cursor !== undefined && cursor !== null;
 
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > MAX_PUBLIC_PAGE_SIZE) {
     throw new Error('invalid-public-page-size');
   }
 
-  if (cursor && (typeof cursor.ref?.path !== 'string' || !cursor.ref.path.startsWith(`${collectionName}/`))) {
+  if (hasCursor && (typeof cursor.ref?.path !== 'string' || !cursor.ref.path.startsWith(`${collectionName}/`))) {
     throw new Error('invalid-public-cursor');
   }
 
@@ -35,7 +36,7 @@ async function listPublicCollection(collectionName, orderField, options) {
       constraints.push(where('activo', '==', true));
     }
     constraints.push(orderBy(orderField, 'desc'), orderBy(documentId(), 'desc'));
-    if (cursor) constraints.push(startAfter(cursor));
+    if (hasCursor) constraints.push(startAfter(cursor));
     constraints.push(limit(pageSize));
 
     const snapshot = await getDocs(query(reference, ...constraints));

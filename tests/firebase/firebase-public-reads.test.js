@@ -56,12 +56,18 @@ it('lista vacantes con orden y limite por defecto', async () => {
   });
   expect(firestoreMocks.collection).toHaveBeenCalledWith(expect.anything(), 'vacantesPublicas');
   expect(firestoreMocks.orderBy).toHaveBeenCalledWith('createdAt', 'desc');
+  expect(firestoreMocks.orderBy).toHaveBeenNthCalledWith(2, 'documentId()', 'desc');
   expect(firestoreMocks.limit).toHaveBeenCalledWith(50);
   expect(firestoreMocks.query).toHaveBeenCalled();
 });
 
-it.each([0, -1, 51, '50', NaN])('rechaza pageSize invalido: %s', async (pageSize) => {
+it.each([0, -1, 51, '50', NaN, null])('rechaza pageSize invalido: %s', async (pageSize) => {
   await expect(listPublicVacancies({ pageSize })).rejects.toThrow('invalid-public-page-size');
+  expect(firestoreMocks.getDocs).not.toHaveBeenCalled();
+});
+
+it.each([0, false, ''])('rechaza cursor falsy explicito: %s', async (cursor) => {
+  await expect(listPublicPlaces({ cursor })).rejects.toThrow('invalid-public-cursor');
   expect(firestoreMocks.getDocs).not.toHaveBeenCalled();
 });
 
