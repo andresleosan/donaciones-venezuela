@@ -379,7 +379,7 @@ no se ejecutaron deploy, Blaze ni escrituras remotas;
 
 Ejecutar `git diff --check` y revisar `git status` sin revertir cambios ajenos.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/runbooks/public-readings.md tasks.md docs/superpowers/plans/2026-08-11-public-readings.md
