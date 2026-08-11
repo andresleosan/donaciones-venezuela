@@ -328,7 +328,7 @@ git commit -m "feat: add bounded public firestore repositories"
 - Consumes: reglas, indices, sanitizer, repositorios y pruebas de Tasks 1-2.
 - Produces: procedimiento local reproducible, rollback documentado y evidencia de `T06` sin marcar tareas posteriores.
 
-- [ ] **Step 1: Write the runbook**
+- [x] **Step 1: Write the runbook**
 
 Crear `docs/runbooks/public-readings.md` con estas instrucciones operativas exactas:
 
@@ -344,7 +344,7 @@ Fuera de alcance: deploy, Blaze, services/api.js y colecciones privadas
 
 Documentar que un documento publico debe ser generado por Functions/Admin SDK con `sanitizePublicProjection`; ningun cliente puede escribirlo. Documentar tambien que la ausencia de documentos en el proyecto greenfield es correcta y no autoriza inventar datos.
 
-- [ ] **Step 2: Run focused and full verification**
+- [x] **Step 2: Run focused and full verification**
 
 Run, en este orden:
 
@@ -360,11 +360,11 @@ python scripts/verificar-idioma.py
 
 Expected: todas las pruebas pasan; las auditorias no reportan `high` ni `critical`; cualquier vulnerabilidad `moderate` observada queda documentada sin atribuirle una antiguedad no demostrada.
 
-- [ ] **Step 3: Update backlog and plan evidence**
+- [x] **Step 3: Update backlog and plan evidence**
 
 Actualizar unicamente la fila `T06` de `tasks.md` con evidencia real de reglas, repositorios y comandos. Dejar `T07` a `T12` en su estado actual. Marcar checks del plan solo con resultados efectivamente obtenidos.
 
-- [ ] **Step 4: Perform security review and inspect diff**
+- [x] **Step 4: Perform security review and inspect diff**
 
 Confirmar en el diff que:
 
