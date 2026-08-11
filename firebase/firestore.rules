@@ -2,8 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Bloqueo inicial. Se abriran rutas solo despues de definir claims,
-    // propietarios, minimizacion de PII y pruebas con Emulator Suite.
+    match /lugaresPublicos/{id} {
+      allow get: if true;
+      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow write: if false;
+    }
+
+    match /vacantesPublicas/{id} {
+      allow get: if true;
+      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

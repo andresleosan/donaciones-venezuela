@@ -24,6 +24,57 @@ describe('proyecciones públicas', () => {
     });
   });
 
+  it('sanitiza lugaresPublicos con la allowlist exacta', () => {
+    expect(sanitizePublicProjection('lugaresPublicos', {
+      nombre: 'Centro Demo',
+      tipo: 'Centro',
+      ubicacionPublica: 'Zona Este',
+      latAproximada: 10.5,
+      lngAproximada: -66.9,
+      contactoPublico: 'contacto publico',
+      activo: true,
+      updatedAt: '2026-08-11T12:00:00.000Z',
+      telefono: '0000000000',
+      direccion: 'Direccion privada',
+      authUid: 'uid-privado',
+    })).toEqual({
+      nombre: 'Centro Demo',
+      tipo: 'Centro',
+      ubicacionPublica: 'Zona Este',
+      latAproximada: 10.5,
+      lngAproximada: -66.9,
+      contactoPublico: 'contacto publico',
+      activo: true,
+      updatedAt: '2026-08-11T12:00:00.000Z',
+    });
+  });
+
+  it('sanitiza vacantesPublicas y elimina campos privados', () => {
+    expect(sanitizePublicProjection('vacantesPublicas', {
+      lugarId: 'lugar-1',
+      titulo: 'Apoyo logistico',
+      descripcion: 'Turno de prueba',
+      cupos: 2,
+      estado: 'Abierta',
+      createdAt: '2026-08-11T12:00:00.000Z',
+      email: 'privado@example.test',
+      telefono: '000',
+      ubicacionPrecisa: { lat: 10.5, lng: -66.9 },
+    })).toEqual({
+      lugarId: 'lugar-1',
+      titulo: 'Apoyo logistico',
+      descripcion: 'Turno de prueba',
+      cupos: 2,
+      estado: 'Abierta',
+      createdAt: '2026-08-11T12:00:00.000Z',
+    });
+  });
+
+  it('rechaza campos prohibidos anidados despues de la allowlist', () => {
+    expect(findForbiddenPublicFields({ contactoPublico: { documento: 'V-1' } }))
+      .toEqual(['contactoPublico.documento']);
+  });
+
   it('detecta campos prohibidos también anidados', () => {
     expect(findForbiddenPublicFields({ evidencia: { documento: 'V-1' } }))
       .toEqual(['evidencia.documento']);
