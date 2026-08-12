@@ -56,6 +56,26 @@ it('devuelve exito minimo al activar', async () => {
   expect(JSON.stringify(result.body)).not.toMatch(/email|telefono|authUid|token|claim/i);
 });
 
+it('omite campos sensibles de un resultado de applyConsent no confiable', async () => {
+  const { res, result } = createResponse();
+  await setVolunteerPublicConsentHandler(
+    request,
+    res,
+    async () => ({
+      success: true,
+      enabled: true,
+      volunteerId: 'wrong-id',
+      email: 'private@example.test',
+      token: 'secret-token',
+      authUid: 'private-uid',
+    } as never),
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.body).toEqual({ success: true, enabled: true, volunteerId: 'v1' });
+  expect(JSON.stringify(result.body)).not.toMatch(/email|token|authUid|wrong-id/i);
+});
+
 it('normaliza errores desconocidos', async () => {
   const { res, result } = createResponse();
   await setVolunteerPublicConsentHandler(

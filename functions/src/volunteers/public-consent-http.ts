@@ -134,7 +134,13 @@ export async function setVolunteerPublicConsentHandler(
 
   try {
     const result = await apply(req);
-    res.status(200).json(result);
+    const body = isRecord(req.body) ? req.body : undefined;
+    const volunteerId = typeof body?.volunteerId === 'string' ? body.volunteerId : '';
+    res.status(200).json({
+      success: Boolean(result.success),
+      enabled: Boolean(result.enabled),
+      volunteerId,
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       res.status(error.status).json({
