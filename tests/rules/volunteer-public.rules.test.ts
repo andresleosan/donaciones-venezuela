@@ -82,4 +82,11 @@ describe('Firestore voluntariosPublicos', () => {
     await assertFails(getDoc(doc(db, 'voluntarios/volunteer-1')));
     await assertFails(getDoc(doc(db, 'auditoriaAdmin/audit-1')));
   });
+
+  it('deniega lectura y escritura del bucket rateLimits al cliente', async () => {
+    const db = testEnv.authenticatedContext('client-uid', { role: 'user' }).firestore();
+
+    await assertFails(getDoc(doc(db, 'rateLimits/test')));
+    await assertFails(setDoc(doc(db, 'rateLimits/test'), { hits: 1 }));
+  });
 });

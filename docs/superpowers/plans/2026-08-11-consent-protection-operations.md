@@ -289,7 +289,15 @@ git commit -m "feat: guard volunteer consent with app check and limits"
 - Consumes: rate limiter, App Check, endpoint de consentimiento, Auth/Firestore/Functions Emulator y runbook actual.
 - Produces: evidencia local de `5 OK + 1 429`, intentos request limitados, App Check por modo, rateLimits cerrado y gates de producción.
 
-- [ ] **Step 1: Write the failing integration additions**
+- [x] **Step 1: Write the failing integration additions**
+
+  Evidencia: `tests/emulators/volunteer-consent.integration.test.ts` cubre 6
+  solicitudes concurrentes (`5` respuestas `200` y `1` respuesta `429`),
+  `Retry-After`, cinco auditorías exactas, 21 intentos Auth fallidos (`20`
+  respuestas `401` y `1` respuesta `429`), App Check local en `disabled`,
+  `log-only` y `enforced`, y ausencia de mutación cuando el guard bloquea.
+  `tests/rules/volunteer-public.rules.test.ts` cubre lectura/escritura
+  denegadas para `rateLimits`.
 
 Agregar a la integración:
 
@@ -312,19 +320,37 @@ it('no permite al cliente leer ni escribir rateLimits', async () => {
 
 Agregar casos de App Check local para `disabled`, `log-only` y `enforced` mediante verificador inyectado o configuración de test, sin activar enforcement remoto. Limpiar Firestore antes de cada caso y usar IDs UUID para que no haya contaminación.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
+
+  Evidencia: `npm.cmd --prefix functions run build` pasó; la primera corrida
+  aislada sin emuladores falló con `ECONNREFUSED 127.0.0.1:8080`, y la primera
+  corrida con emuladores detectó una aserción incorrecta de estado de prueba.
+  La expectativa se corrigió sin cambios de producción.
 
 Run: `npm.cmd --prefix functions run build` y después `npx vitest run tests/emulators/volunteer-consent.integration.test.ts`
 
 Expected: FAIL hasta que los guards estén cableados y `rateLimits` siga cerrado en las reglas.
 
-- [ ] **Step 3: Wire commands and document gates**
+- [x] **Step 3: Wire commands and document gates**
+
+  Evidencia: `package.json` ya contiene la integración de consentimiento junto
+  con `health` y `authSession`, y `test:functions` levanta `auth,firestore,functions`.
+  `docs/runbooks/volunteer-public-consent.md`, el borrador legal y los gates
+  operativos están presentes; producción y `APP_CHECK_MODE=enforced` remoto
+  siguen bloqueados.
 
 Actualizar `package.json` para que `test:functions:run` incluya la integración actual y `test:functions` levante `auth,firestore,functions`; conservar health y authSession.
 
 Actualizar el runbook de consentimiento con enlaces al borrador y checklist, indicando que `APP_CHECK_MODE=enforced` no se activa remotamente en esta tarea.
 
-- [ ] **Step 4: Run complete verification**
+- [x] **Step 4: Run complete verification**
+
+  Evidencia de cierre registrada en el reporte de Task 4:
+  `npm.cmd run test:unit`, `npm.cmd run test:functions`,
+  `npm.cmd run test:emulators`, `npm.cmd run build`, auditorías npm y
+  `python scripts/verificar-idioma.py`, ejecutados en ese orden.
+  Observaciones esperadas: host Node 24 frente a runtime Functions 22 y
+  advertencias/moderates existentes, documentadas sin activar servicios remotos.
 
 Run, en este orden:
 
@@ -340,7 +366,11 @@ python scripts/verificar-idioma.py
 
 Expected: todas pasan; no hay `high`/`critical`; moderate, Node host 24 vs engine 22 y warnings legacy se documentan como observaciones actuales. No ejecutar deploy ni configuración remota.
 
-- [ ] **Step 5: Security review and commit**
+- [x] **Step 5: Security review and commit**
+
+  Evidencia: diff revisado; `rateLimits` permanece cerrado al cliente, no se
+  persisten IP/token/email/body/header completos, App Check enforced no se
+  activa remotamente, y `services/api.js`, UI y otras acciones no cambian.
 
 Confirmar en el diff:
 

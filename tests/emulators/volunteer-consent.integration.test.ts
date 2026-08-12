@@ -30,7 +30,10 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { applyConsentTransaction } from '../../functions/src/volunteers/public-consent-http.js';
+import {
+  applyConsentTransaction,
+  setVolunteerPublicConsentHandler,
+} from '../../functions/src/volunteers/public-consent-http.js';
 const require = createRequire(import.meta.url);
 const adminModule = resolve(process.cwd(), 'functions/node_modules/firebase-admin/lib');
 const { getAuth: getAdminAuth } = require(resolve(adminModule, 'auth/index.js'));
@@ -108,6 +111,25 @@ async function callConsent(token: string, enabled: boolean) {
   });
 }
 
+function createResponse() {
+  const result: { status?: number; body?: unknown; headers: Record<string, string> } = {
+    headers: {},
+  };
+  const res = {
+    setHeader(name: string, value: string) {
+      result.headers[name] = value;
+    },
+    status(code: number) {
+      result.status = code;
+      return res;
+    },
+    json(body: unknown) {
+      result.body = body;
+    },
+  };
+  return { res, result };
+}
+
 async function seedPrivateProfile(authUid: string, includePrivateFields = true): Promise<void> {
   await rulesEnv.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), `voluntarios/${volunteerId}`), {
@@ -124,6 +146,20 @@ async function seedPrivateProfile(authUid: string, includePrivateFields = true):
       } : {}),
     });
   });
+}
+
+async function readPrivateConsent(): Promise<unknown> {
+  let privateSnapshot;
+  await rulesEnv.withSecurityRulesDisabled(async (context) => {
+    privateSnapshot = await getDoc(doc(context.firestore(), `voluntarios/${volunteerId}`));
+  });
+  return privateSnapshot.data()?.publicProfileConsent ?? null;
+}
+
+async function readAuditCount(): Promise<number> {
+  return (await getAdminFirestore().collection('auditoriaAdmin')
+    .where('entidadId', '==', volunteerId)
+    .get()).size;
 }
 
 async function readAdminAudit(actorUid: string): Promise<{ id: string; data: Record<string, unknown> }> {
@@ -392,5 +428,108 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     expect((await callConsent(await idToken(owner), false)).status).toBe(200);
     expect((await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`))).exists()).toBe(false);
     expect((await readAdminAudit(owner.uid)).data.actorUid).toBe(owner.uid);
+  });
+
+  it('bloquea la sexta solicitud UID sin mutar el consentimiento bloqueado', async () => {
+    const owner = await createUser('volunteer');
+    await seedPrivateProfile(owner.uid);
+    const token = await idToken(owner);
+
+    const responses = await Promise.all(
+      Array.from({ length: 6 }, () => callConsent(token, true)),
+    );
+
+    expect(responses.filter((response) => response.status === 200)).toHaveLength(5);
+    const limitedResponse = responses.find((response) => response.status === 429);
+    expect(limitedResponse).toBeDefined();
+    expect(limitedResponse!.headers.get('retry-after')).toMatch(/^[1-9][0-9]*$/);
+    expect(await readPrivateConsent()).toMatchObject({ enabled: true, version: 'volunteer-public-v1' });
+    expect((await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`))).exists()).toBe(true);
+    expect(await readAuditCount()).toBe(5);
+  });
+
+  it('limita veinte intentos Auth fallidos por request sin aplicar consentimiento', async () => {
+    const responses = await Promise.all(
+      Array.from({ length: 21 }, () => fetch(consentUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-For': '203.0.113.77',
+        },
+        body: JSON.stringify({
+          volunteerId,
+          enabled: true,
+          consentVersion: 'volunteer-public-v1',
+        }),
+      })),
+    );
+
+    expect(responses.filter((response) => response.status === 401)).toHaveLength(20);
+    const limitedResponse = responses.find((response) => response.status === 429);
+    expect(limitedResponse).toBeDefined();
+    expect(limitedResponse!.headers.get('retry-after')).toMatch(/^[1-9][0-9]*$/);
+    expect(await readAuditCount()).toBe(0);
+  });
+
+  it('mantiene App Check local en disabled, log-only y enforced sin enforcement remoto', async () => {
+    const owner = await createUser('volunteer');
+    await seedPrivateProfile(owner.uid, false);
+    const authenticate = async () => ({ uid: owner.uid, role: 'user' as const });
+    const rateLimiter = async () => ({ allowed: true as const, hits: 1, retryAfter: 0 as const });
+    const request = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-firebase-appcheck': 'synthetic-invalid-token',
+      },
+      body: {
+        volunteerId,
+        enabled: true,
+        consentVersion: 'volunteer-public-v1',
+      },
+    };
+
+    const disabled = createResponse();
+    await setVolunteerPublicConsentHandler(request, disabled.res, undefined, {
+      appCheckMode: 'disabled',
+      verifyAppCheck: async () => { throw new Error('must-not-run'); },
+      authenticate,
+      rateLimiter,
+    });
+    expect(disabled.result.status).toBe(200);
+
+    const logOnly = createResponse();
+    await setVolunteerPublicConsentHandler(request, logOnly.res, undefined, {
+      appCheckMode: 'log-only',
+      verifyAppCheck: async () => { throw new Error('synthetic verifier failure'); },
+      authenticate,
+      rateLimiter,
+    });
+    expect(logOnly.result.status).toBe(200);
+
+    const previousState = await readPrivateConsent();
+    const previousAuditCount = await readAuditCount();
+    const enforced = createResponse();
+    await setVolunteerPublicConsentHandler(request, enforced.res, undefined, {
+      appCheckMode: 'enforced',
+      verifyAppCheck: async () => { throw new Error('synthetic verifier failure'); },
+      authenticate,
+      rateLimiter,
+    });
+    expect(enforced.result.status).toBe(403);
+    expect(enforced.result.body).toEqual({
+      error: { code: 'app-check-required', message: 'App Check required' },
+    });
+    expect(await readPrivateConsent()).toEqual(previousState);
+    expect(await readAuditCount()).toBe(previousAuditCount);
+  });
+
+  it('deniega al cliente leer y escribir rateLimits', async () => {
+    const owner = await createUser('volunteer');
+    const ownerToken = await idToken(owner);
+    expect(ownerToken).toEqual(expect.any(String));
+
+    await assertFails(getDoc(doc(firestore!, 'rateLimits/test')));
+    await assertFails(setDoc(doc(firestore!, 'rateLimits/test'), { hits: 1 }));
   });
 });
