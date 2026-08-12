@@ -40,6 +40,8 @@ const FORBIDDEN = new Set([
 const VOLUNTEER_FORBIDDEN = new Set([
   ...FORBIDDEN,
   'documentos', 'tokens', 'fotopublicapath',
+  'foto', 'photo', 'fotopath', 'photopath', 'imagen', 'image', 'imagenpath',
+  'imagepath', 'location', 'ubicacion', 'token', 'tokenpublico',
 ]);
 
 export type ProjectionName = keyof typeof PUBLIC_PROJECTION_FIELDS;

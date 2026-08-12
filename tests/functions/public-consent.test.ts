@@ -53,6 +53,18 @@ it('solo permite activar al titular user de un perfil activo', () => {
   )).toThrow('forbidden');
 });
 
+it.each([
+  { uid: 'panel-1', role: 'panel' as const },
+  { uid: 'uid-1', role: 'admin' as const },
+  { uid: 'other-1', role: 'user' as const },
+])('rechaza activar a %s aunque el perfil este activo', (context) => {
+  expect(() => assertConsentPermission(
+    context,
+    { authUid: 'uid-1', activo: true },
+    true,
+  )).toThrow('forbidden');
+});
+
 it('rechaza activar un perfil inactivo', () => {
   expect(() => assertConsentPermission(
     { uid: 'uid-1', role: 'user' },
@@ -171,4 +183,71 @@ it('normaliza trazabilidad ausente a null', () => {
     revokedAt: 'now',
     revokedByUid: 'panel-1',
   });
+});
+
+it.each(['fotoPath', 'location', 'ubicacion', 'token', 'tokenPublico'])
+  ('rechaza %s anidado dentro de habilidades durante la activacion', (forbiddenField) => {
+    expect(() => buildConsentMutation(
+      consentRequest,
+      {
+        activo: true,
+        habilidades: [{ etiqueta: 'salud', [forbiddenField]: 'privado' }],
+      },
+      { now: 'now', actorUid: 'uid-1' },
+    )).toThrow('forbidden-public-fields');
+  });
+
+it('conserva la trazabilidad al repetir una activacion', () => {
+  const mutation = buildConsentMutation(
+    consentRequest,
+    {
+      activo: true,
+      nombre: 'Ana Demo',
+      publicProfileConsent: {
+        enabled: true,
+        consentedAt: 'previous-consented-at',
+        consentedByUid: 'previous-user',
+        revokedAt: 'previous-revoked-at',
+        revokedByUid: 'previous-admin',
+      },
+    },
+    { now: 'new-now', actorUid: 'new-actor' },
+  );
+
+  expect(mutation.privatePatch.publicProfileConsent).toEqual({
+    enabled: true,
+    version: VOLUNTEER_PUBLIC_CONSENT_VERSION,
+    consentedAt: 'previous-consented-at',
+    consentedByUid: 'previous-user',
+    revokedAt: 'previous-revoked-at',
+    revokedByUid: 'previous-admin',
+  });
+  expect(mutation.audit).toMatchObject({ actorUid: 'new-actor', createdAt: 'new-now' });
+});
+
+it('conserva la trazabilidad al repetir una revocacion', () => {
+  const mutation = buildConsentMutation(
+    { ...consentRequest, enabled: false },
+    {
+      activo: true,
+      publicProfileConsent: {
+        enabled: false,
+        consentedAt: 'previous-consented-at',
+        consentedByUid: 'previous-user',
+        revokedAt: 'previous-revoked-at',
+        revokedByUid: 'previous-admin',
+      },
+    },
+    { now: 'new-now', actorUid: 'new-actor' },
+  );
+
+  expect(mutation.privatePatch.publicProfileConsent).toEqual({
+    enabled: false,
+    version: VOLUNTEER_PUBLIC_CONSENT_VERSION,
+    consentedAt: 'previous-consented-at',
+    consentedByUid: 'previous-user',
+    revokedAt: 'previous-revoked-at',
+    revokedByUid: 'previous-admin',
+  });
+  expect(mutation.audit).toMatchObject({ actorUid: 'new-actor', createdAt: 'new-now' });
 });

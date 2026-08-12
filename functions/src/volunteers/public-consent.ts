@@ -100,13 +100,14 @@ export function buildConsentMutation(
   const consentedByUid = previous.consentedByUid ?? null;
   const revokedAt = previous.revokedAt ?? null;
   const revokedByUid = previous.revokedByUid ?? null;
+  const stateChanged = previous.enabled !== input.enabled;
 
   const consent = input.enabled
     ? {
       enabled: true,
       version: VOLUNTEER_PUBLIC_CONSENT_VERSION,
-      consentedAt: timestamps.now,
-      consentedByUid: timestamps.actorUid,
+      consentedAt: stateChanged ? timestamps.now : consentedAt,
+      consentedByUid: stateChanged ? timestamps.actorUid : consentedByUid,
       revokedAt,
       revokedByUid,
     }
@@ -115,8 +116,8 @@ export function buildConsentMutation(
       version: VOLUNTEER_PUBLIC_CONSENT_VERSION,
       consentedAt,
       consentedByUid,
-      revokedAt: timestamps.now,
-      revokedByUid: timestamps.actorUid,
+      revokedAt: stateChanged ? timestamps.now : revokedAt,
+      revokedByUid: stateChanged ? timestamps.actorUid : revokedByUid,
     };
 
   return {
