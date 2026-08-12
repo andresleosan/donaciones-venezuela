@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const storageMocks = vi.hoisted(() => ({
   deleteObject: vi.fn(),
@@ -23,6 +23,10 @@ beforeEach(() => {
     ref: { fullPath: 'private/uid-1/receipts/file-1.pdf' },
   });
   storageMocks.getDownloadURL.mockResolvedValue('https://persistent.example/token');
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 it('construye un path privado canonico', async () => {
@@ -83,6 +87,15 @@ it('rechaza extensiones que no pertenecen al allowlist', async () => {
   const { createPrivateFilePath } = await import('../../src/firebase/firebase-storage.js');
   expect(() => createPrivateFilePath('uid-1', 'receipts', 'file-1', 'png.exe'))
     .toThrow('Extension invalida');
+});
+
+it('rechaza una extension valida que no corresponde al MIME', async () => {
+  await expect(uploadPrivateFile(
+    'uid-1',
+    'receipts',
+    { size: 128, type: 'image/png' },
+    { fileId: 'file-1', extension: 'jpg' },
+  )).rejects.toThrow('Extension no coincide con MIME');
 });
 
 it('sube con metadata custom privada y devuelve solo el path', async () => {

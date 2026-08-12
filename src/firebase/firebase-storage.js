@@ -58,6 +58,12 @@ function validatePrivateIdentity(uid, category, file, options) {
     throw new Error('Categoria no permitida');
   }
   validateFile(file);
+  if (options.extension !== undefined) {
+    const expectedExtension = MIME_EXTENSIONS[file.type];
+    if (options.extension !== expectedExtension) {
+      throw new Error('Extension no coincide con MIME');
+    }
+  }
   if (options.fileId !== undefined && (typeof options.fileId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(options.fileId))) {
     throw new Error('fileId invalido');
   }
