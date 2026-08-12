@@ -109,3 +109,39 @@ Implementado y verificado. El cambio queda listo para revision.
 - No se tocaron `firebase/firestore.rules`, `firebase/firestore.indexes.json`,
   `services/api.js`, UI, activacion, publisher ni datos remotos.
 - No quedan hallazgos abiertos de este fix round.
+
+## Fix Round 2
+
+### Hallazgo atendido
+
+- Se separo el denylist generico `FORBIDDEN` del denylist especifico
+  `VOLUNTEER_FORBIDDEN`. El helper generico conserva el comportamiento previo de
+  `sanitizePublicProjection`, incluyendo `fotoPublicaPath` en
+  `voluntariosPublicos`, `rescatistasPublicos` y `motorizadosPublicos`.
+- `sanitizeVolunteerPublicProfile` sigue rechazando de forma recursiva
+  `fotoPublicaPath`, `documentos`, `tokens`, `ubicacionPrecisa`, `email`,
+  `telefono` y `authUid` dentro de `habilidades`.
+- Se agrego una regresion parametrizada para los tres perfiles existentes y se
+  conservo la regresion de `tokenPublico` en facturas.
+- No se modificaron reglas, indices, activacion, publisher, UI/API ni operaciones
+  remotas.
+
+### TDD y verificacion
+
+- RED: `npx vitest run tests/contracts/public-projections.test.ts` produjo
+  3 fallos esperados, uno por cada perfil existente, con
+  `forbidden-public-fields:fotoPublicaPath`.
+- GREEN: `npx vitest run tests/contracts/public-projections.test.ts tests/contracts/volunteer-public-profile.test.ts`:
+  2 archivos, 26 tests OK.
+- `npm.cmd run test:rules`: 4 archivos, 24 tests OK, con emuladores locales.
+- `npm.cmd run test:unit`: 13 archivos, 205 tests OK.
+- `npm.cmd --prefix functions run build`: TypeScript OK.
+- `git diff --check`: OK.
+
+### Autorrevision
+
+- `findForbiddenPublicFields` y `sanitizePublicProjection` usan solo el denylist
+  generico, por lo que no bloquean los campos de foto declarados ni `tokenPublico`.
+- Solo el sanitizer v1 usa `VOLUNTEER_FORBIDDEN`, que extiende el denylist con las
+  tres claves sensibles adicionales.
+- No quedan hallazgos abiertos de este fix round.
