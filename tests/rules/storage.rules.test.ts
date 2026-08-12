@@ -21,8 +21,12 @@ beforeAll(async () => {
   });
 
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const objectRef = ref(context.storage(), 'private/pruebas/existing.txt');
-    await uploadBytes(objectRef, new Uint8Array([1]), { contentType: 'text/plain' });
+    const objectRef = ref(context.storage(), 'private/owner-uid/receipts/existing.pdf');
+    await uploadBytes(
+      objectRef,
+      new Uint8Array([1]),
+      metadata('application/pdf', 'receipts'),
+    );
   });
 });
 
@@ -82,10 +86,16 @@ describe('Storage private files', () => {
     ));
   });
 
-  it('deniega lectura y borrado directo incluso al propietario', async () => {
-    const storage = owner();
-    await assertFails(getBytes(ref(storage, 'private/pruebas/existing.txt')));
-    await assertFails(deleteObject(ref(storage, 'private/pruebas/existing.txt')));
+  it('deniega lectura y borrado directo al propietario, panel y admin', async () => {
+    for (const storage of [
+      owner(),
+      testEnv.authenticatedContext('panel-uid', { role: 'panel' }).storage(),
+      testEnv.authenticatedContext('admin-uid', { role: 'admin' }).storage(),
+    ]) {
+      const objectRef = ref(storage, 'private/owner-uid/receipts/existing.pdf');
+      await assertFails(getBytes(objectRef));
+      await assertFails(deleteObject(objectRef));
+    }
   });
 
   it('deniega carga anonima', async () => {
@@ -101,6 +111,15 @@ describe('Storage private files', () => {
     await assertFails(upload(
       other(),
       'private/owner-uid/receipts/other.pdf',
+      'application/pdf',
+      'receipts',
+    ));
+  });
+
+  it('deniega escritura fuera del prefijo privado contractual', async () => {
+    await assertFails(upload(
+      owner(),
+      'public/owner-uid/receipts/outside.pdf',
       'application/pdf',
       'receipts',
     ));
