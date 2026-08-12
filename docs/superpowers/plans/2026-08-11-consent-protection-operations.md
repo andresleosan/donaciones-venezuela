@@ -297,7 +297,9 @@ git commit -m "feat: guard volunteer consent with app check and limits"
   respuestas `401` y `1` respuesta `429`), App Check local en `disabled`,
   `log-only` y `enforced`, y ausencia de mutación cuando el guard bloquea.
   `tests/rules/volunteer-public.rules.test.ts` cubre lectura/escritura
-  denegadas para `rateLimits`.
+  denegadas para `rateLimits`. Fix round 1 añade estado previo completo para
+  el sexto request, resets por caso App Check, spy del verificador `log-only`
+  y Auth fallida sin `req.ip`.
 
 Agregar a la integración:
 
@@ -322,10 +324,17 @@ Agregar casos de App Check local para `disabled`, `log-only` y `enforced` median
 
 - [x] **Step 2: Run tests to verify they fail**
 
-  Evidencia: `npm.cmd --prefix functions run build` pasó; la primera corrida
-  aislada sin emuladores falló con `ECONNREFUSED 127.0.0.1:8080`, y la primera
-  corrida con emuladores detectó una aserción incorrecta de estado de prueba.
-  La expectativa se corrigió sin cambios de producción.
+  Evidencia original honesta: `npm.cmd --prefix functions run build` pasó; la
+  corrida aislada sin emuladores falló con `ECONNREFUSED 127.0.0.1:8080`, por lo
+  que no fue evidencia de una aserción funcional RED. La primera corrida en el
+  harness correcto detectó una aserción incorrecta de estado de prueba y luego,
+  al ampliar App Check, un timeout de 20 s por contención de 21 requests
+  concurrentes. Fix round 1 corrige las expectativas y fija 40 s solo para ese
+  caso; no se inventa una salida RED funcional.
+
+  Evidencia corregida: `npx firebase emulators:exec --project
+  demo-donaciones-venezuela --only auth,firestore,functions "npx vitest run
+  tests/emulators/volunteer-consent.integration.test.ts"` pasó `11/11`.
 
 Run: `npm.cmd --prefix functions run build` y después `npx vitest run tests/emulators/volunteer-consent.integration.test.ts`
 
@@ -351,6 +360,9 @@ Actualizar el runbook de consentimiento con enlaces al borrador y checklist, ind
   `python scripts/verificar-idioma.py`, ejecutados en ese orden.
   Observaciones esperadas: host Node 24 frente a runtime Functions 22 y
   advertencias/moderates existentes, documentadas sin activar servicios remotos.
+
+  Fix round 1: `npx vitest run tests/functions/public-consent-http.test.ts`
+  pasó `24/24`; la integración enfocada en Emulator Suite pasó `11/11`.
 
 Run, en este orden:
 

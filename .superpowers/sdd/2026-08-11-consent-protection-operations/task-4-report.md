@@ -51,3 +51,39 @@ Ejecutados en el orden solicitado:
   imágenes no resueltas en el build; no son introducidos por Task 4.
 - Las auditorías solo reportan vulnerabilidades `moderate`; no se ejecutó
   `npm audit fix --force` porque implicaría cambios mayores fuera del alcance.
+
+## Fix Round 1
+
+Hallazgos P2 corregidos sin cambios remotos ni producción:
+
+- El sexto request ahora se ejecuta después de cinco requests concurrentes
+  permitidos; captura el estado privado, la proyección pública y la auditoría
+  antes del request bloqueado, identifica explícitamente el `429` y compara los
+  tres estados después del bloqueo.
+- Cada modo App Check vive en un caso independiente, por lo que `beforeEach`
+  limpia Firestore y asigna un UUID nuevo. `disabled` prueba que el verificador
+  no se llama; `log-only` usa un spy con token sintético y verifica la llamada;
+  `enforced` prueba tanto token ausente como inválido y ausencia de mutación,
+  Auth, rate limit y `apply`.
+- Se añadió cobertura de Auth fallida sin `req.ip`: responde `401`, no llama al
+  rate limiter y no crea un bucket global.
+- Se corrigió la evidencia RED del plan: la corrida aislada sin emuladores se
+  conserva como error de harness (`ECONNREFUSED`), no como fallo funcional. La
+  corrida válida en Emulator Suite se reporta con su resultado real; el timeout
+  inicial de 20 s para 21 requests concurrentes se documenta como contención del
+  harness y el caso tiene timeout explícito de 40 s.
+
+## Fix Round 1 Verification
+
+- `npm.cmd --prefix functions run build`: pasó.
+- `npx vitest run tests/functions/public-consent-http.test.ts`: 1 archivo,
+  24 tests pasaron.
+- `npx firebase emulators:exec --project demo-donaciones-venezuela --only
+  auth,firestore,functions "npx vitest run
+  tests/emulators/volunteer-consent.integration.test.ts"`: 1 archivo,
+  11 tests pasaron.
+- `npm.cmd run test:functions`: 11 archivos, 107 tests pasaron.
+- `npm.cmd run test:emulators`: 15 archivos, 132 tests pasaron.
+- Ambas corridas emitieron únicamente las observaciones existentes de Node 24
+  del host frente a Functions Node 22 y `MetadataLookupWarning` del entorno
+  local; terminaron con código 0.

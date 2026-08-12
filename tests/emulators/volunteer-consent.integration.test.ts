@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   deleteApp,
   initializeApp,
@@ -156,10 +156,34 @@ async function readPrivateConsent(): Promise<unknown> {
   return privateSnapshot.data()?.publicProfileConsent ?? null;
 }
 
-async function readAuditCount(): Promise<number> {
-  return (await getAdminFirestore().collection('auditoriaAdmin')
+async function readPrivateProfile(): Promise<Record<string, unknown>> {
+  let privateSnapshot;
+  await rulesEnv.withSecurityRulesDisabled(async (context) => {
+    privateSnapshot = await getDoc(doc(context.firestore(), `voluntarios/${volunteerId}`));
+  });
+  expect(privateSnapshot.exists()).toBe(true);
+  return privateSnapshot.data() as Record<string, unknown>;
+}
+
+async function readPublicProfile(): Promise<Record<string, unknown> | null> {
+  const publicSnapshot = await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`));
+  return publicSnapshot.exists() ? publicSnapshot.data() as Record<string, unknown> : null;
+}
+
+async function readAuditState(): Promise<Array<{ id: string; data: Record<string, unknown> }>> {
+  const snapshot = await getAdminFirestore().collection('auditoriaAdmin')
     .where('entidadId', '==', volunteerId)
-    .get()).size;
+    .get();
+  return snapshot.docs
+    .map((auditDocument) => ({
+      id: auditDocument.id,
+      data: auditDocument.data() as Record<string, unknown>,
+    }))
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+async function readAuditCount(): Promise<number> {
+  return (await readAuditState()).length;
 }
 
 async function readAdminAudit(actorUid: string): Promise<{ id: string; data: Record<string, unknown> }> {
@@ -435,17 +459,21 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     await seedPrivateProfile(owner.uid);
     const token = await idToken(owner);
 
-    const responses = await Promise.all(
-      Array.from({ length: 6 }, () => callConsent(token, true)),
+    const allowedResponses = await Promise.all(
+      Array.from({ length: 5 }, () => callConsent(token, true)),
     );
+    expect(allowedResponses.every((response) => response.status === 200)).toBe(true);
 
-    expect(responses.filter((response) => response.status === 200)).toHaveLength(5);
-    const limitedResponse = responses.find((response) => response.status === 429);
-    expect(limitedResponse).toBeDefined();
-    expect(limitedResponse!.headers.get('retry-after')).toMatch(/^[1-9][0-9]*$/);
-    expect(await readPrivateConsent()).toMatchObject({ enabled: true, version: 'volunteer-public-v1' });
-    expect((await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`))).exists()).toBe(true);
-    expect(await readAuditCount()).toBe(5);
+    const previousPrivateState = await readPrivateProfile();
+    const previousPublicState = await readPublicProfile();
+    const previousAuditState = await readAuditState();
+
+    const blockedResponse = await callConsent(token, true);
+    expect(blockedResponse.status).toBe(429);
+    expect(blockedResponse!.headers.get('retry-after')).toMatch(/^[1-9][0-9]*$/);
+    expect(await readPrivateProfile()).toEqual(previousPrivateState);
+    expect(await readPublicProfile()).toEqual(previousPublicState);
+    expect(await readAuditState()).toEqual(previousAuditState);
   });
 
   it('limita veinte intentos Auth fallidos por request sin aplicar consentimiento', async () => {
@@ -469,13 +497,114 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     expect(limitedResponse).toBeDefined();
     expect(limitedResponse!.headers.get('retry-after')).toMatch(/^[1-9][0-9]*$/);
     expect(await readAuditCount()).toBe(0);
-  });
+  }, 40000);
 
-  it('mantiene App Check local en disabled, log-only y enforced sin enforcement remoto', async () => {
+  it('mantiene App Check local disabled sin exigir token', async () => {
     const owner = await createUser('volunteer');
     await seedPrivateProfile(owner.uid, false);
     const authenticate = async () => ({ uid: owner.uid, role: 'user' as const });
     const rateLimiter = async () => ({ allowed: true as const, hits: 1, retryAfter: 0 as const });
+    const request = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: {
+        volunteerId,
+        enabled: true,
+        consentVersion: 'volunteer-public-v1',
+      },
+    };
+
+    const disabled = createResponse();
+    const verifyAppCheck = vi.fn(async () => { throw new Error('must-not-run'); });
+    await setVolunteerPublicConsentHandler(request, disabled.res, undefined, {
+      appCheckMode: 'disabled',
+      verifyAppCheck,
+      authenticate,
+      rateLimiter,
+    });
+    expect(disabled.result.status).toBe(200);
+    expect(verifyAppCheck).not.toHaveBeenCalled();
+  });
+
+  it('mantiene App Check local log-only y verifica el token presente', async () => {
+    const owner = await createUser('volunteer');
+    await seedPrivateProfile(owner.uid, false);
+    const authenticate = async () => ({ uid: owner.uid, role: 'user' as const });
+    const rateLimiter = async () => ({ allowed: true as const, hits: 1, retryAfter: 0 as const });
+    const verifyAppCheck = vi.fn(async (token: string) => {
+      expect(token).toBe('synthetic-valid-token');
+    });
+    const request = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-firebase-appcheck': 'synthetic-valid-token',
+      },
+      body: {
+        volunteerId,
+        enabled: true,
+        consentVersion: 'volunteer-public-v1',
+      },
+    };
+
+    const logOnly = createResponse();
+    await setVolunteerPublicConsentHandler(request, logOnly.res, undefined, {
+      appCheckMode: 'log-only',
+      verifyAppCheck,
+      authenticate,
+      rateLimiter,
+    });
+    expect(logOnly.result.status).toBe(200);
+    expect(verifyAppCheck).toHaveBeenCalledTimes(1);
+    expect(verifyAppCheck).toHaveBeenCalledWith('synthetic-valid-token');
+  });
+
+  it('enforced bloquea la ausencia de App Check sin mutar', async () => {
+    const owner = await createUser('volunteer');
+    await seedPrivateProfile(owner.uid, false);
+    const authenticate = vi.fn(async () => ({ uid: owner.uid, role: 'user' as const }));
+    const rateLimiter = vi.fn(async () => ({ allowed: true as const, hits: 1, retryAfter: 0 as const }));
+    const apply = vi.fn();
+    const verifyAppCheck = vi.fn(async () => undefined);
+    const request = {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: {
+        volunteerId,
+        enabled: true,
+        consentVersion: 'volunteer-public-v1',
+      },
+    };
+
+    const enforced = createResponse();
+    await setVolunteerPublicConsentHandler(request, enforced.res, apply, {
+      appCheckMode: 'enforced',
+      verifyAppCheck,
+      authenticate,
+      rateLimiter,
+    });
+    expect(enforced.result.status).toBe(403);
+    expect(enforced.result.body).toEqual({
+      error: { code: 'app-check-required', message: 'App Check required' },
+    });
+    expect(verifyAppCheck).not.toHaveBeenCalled();
+    expect(authenticate).not.toHaveBeenCalled();
+    expect(rateLimiter).not.toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+    expect(await readPrivateConsent()).toBeNull();
+    expect(await readPublicProfile()).toBeNull();
+    expect(await readAuditCount()).toBe(0);
+  });
+
+  it('enforced bloquea App Check invalido sin mutar', async () => {
+    const owner = await createUser('volunteer');
+    await seedPrivateProfile(owner.uid, false);
+    const authenticate = vi.fn(async () => ({ uid: owner.uid, role: 'user' as const }));
+    const rateLimiter = vi.fn(async () => ({ allowed: true as const, hits: 1, retryAfter: 0 as const }));
+    const apply = vi.fn();
+    const verifyAppCheck = vi.fn(async () => { throw new Error('synthetic verifier failure'); });
     const request = {
       method: 'POST',
       headers: {
@@ -489,30 +618,10 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
       },
     };
 
-    const disabled = createResponse();
-    await setVolunteerPublicConsentHandler(request, disabled.res, undefined, {
-      appCheckMode: 'disabled',
-      verifyAppCheck: async () => { throw new Error('must-not-run'); },
-      authenticate,
-      rateLimiter,
-    });
-    expect(disabled.result.status).toBe(200);
-
-    const logOnly = createResponse();
-    await setVolunteerPublicConsentHandler(request, logOnly.res, undefined, {
-      appCheckMode: 'log-only',
-      verifyAppCheck: async () => { throw new Error('synthetic verifier failure'); },
-      authenticate,
-      rateLimiter,
-    });
-    expect(logOnly.result.status).toBe(200);
-
-    const previousState = await readPrivateConsent();
-    const previousAuditCount = await readAuditCount();
     const enforced = createResponse();
-    await setVolunteerPublicConsentHandler(request, enforced.res, undefined, {
+    await setVolunteerPublicConsentHandler(request, enforced.res, apply, {
       appCheckMode: 'enforced',
-      verifyAppCheck: async () => { throw new Error('synthetic verifier failure'); },
+      verifyAppCheck,
       authenticate,
       rateLimiter,
     });
@@ -520,8 +629,13 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     expect(enforced.result.body).toEqual({
       error: { code: 'app-check-required', message: 'App Check required' },
     });
-    expect(await readPrivateConsent()).toEqual(previousState);
-    expect(await readAuditCount()).toBe(previousAuditCount);
+    expect(verifyAppCheck).toHaveBeenCalledWith('synthetic-invalid-token');
+    expect(authenticate).not.toHaveBeenCalled();
+    expect(rateLimiter).not.toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+    expect(await readPrivateConsent()).toBeNull();
+    expect(await readPublicProfile()).toBeNull();
+    expect(await readAuditCount()).toBe(0);
   });
 
   it('deniega al cliente leer y escribir rateLimits', async () => {

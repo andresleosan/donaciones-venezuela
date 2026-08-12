@@ -261,6 +261,29 @@ it('limita por request ante Auth fallida y responde 401 sin aplicar', async () =
   expect(apply).not.toHaveBeenCalled();
 });
 
+it('rechaza Auth fallida sin req.ip sin consumir un bucket global', async () => {
+  const { res, result } = createResponse();
+  const apply = vi.fn();
+  const authenticate = vi.fn(async () => {
+    throw new AuthError('unauthenticated', 401, 'private auth details');
+  });
+  const rateLimiter = vi.fn(allowRateLimit);
+
+  await setVolunteerPublicConsentHandler(
+    request,
+    res,
+    apply,
+    { authenticate, rateLimiter },
+  );
+
+  expect(result.status).toBe(401);
+  expect(result.body).toEqual({
+    error: { code: 'unauthenticated', message: 'Authentication required' },
+  });
+  expect(rateLimiter).not.toHaveBeenCalled();
+  expect(apply).not.toHaveBeenCalled();
+});
+
 it('normaliza cualquier fallo del autenticador a 401 sin filtrar detalles', async () => {
   const { res, result } = createResponse();
   const apply = vi.fn();
