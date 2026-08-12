@@ -2,10 +2,11 @@ import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, it } from 'vitest';
 import {
   assertFails,
+  assertSucceeds,
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { getBytes, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getBytes, ref, updateMetadata, uploadBytes } from 'firebase/storage';
 
 let testEnv: RulesTestEnvironment;
 
@@ -27,22 +28,155 @@ beforeAll(async () => {
 
 afterAll(async () => testEnv.cleanup());
 
-const roles = ['anonymous', 'user', 'panel', 'admin'] as const;
+const owner = () => testEnv.authenticatedContext('owner-uid', { role: 'user' }).storage();
+const other = () => testEnv.authenticatedContext('other-uid', { role: 'user' }).storage();
 
-describe('Storage deny-by-default', () => {
-  for (const role of roles) {
-    it(`deniega lectura y escritura a ${role}`, async () => {
-      const context = role === 'anonymous'
-        ? testEnv.unauthenticatedContext()
-        : testEnv.authenticatedContext(`${role}-uid`, { role });
-      const storage = context.storage();
+const metadata = (contentType: string, category: string, visibility = 'private') => ({
+  contentType,
+  customMetadata: {
+    ownerUid: 'owner-uid',
+    category,
+    visibility,
+  },
+});
 
-      await assertFails(uploadBytes(
-        ref(storage, `private/pruebas/new-${role}.txt`),
-        new Uint8Array([1]),
-        { contentType: 'text/plain' },
+const upload = (
+  storage: ReturnType<typeof owner>,
+  path: string,
+  contentType: string,
+  category: string,
+  size = 1,
+) => uploadBytes(
+  ref(storage, path),
+  new Uint8Array(size),
+  metadata(contentType, category),
+);
+
+describe('Storage private files', () => {
+  it('permite carga valida del propietario para las tres categorias', async () => {
+    for (const [category, extension, contentType] of [
+      ['receipts', 'pdf', 'application/pdf'],
+      ['needs', 'png', 'image/png'],
+      ['reports', 'webp', 'image/webp'],
+    ] as const) {
+      await assertSucceeds(upload(
+        owner(),
+        `private/owner-uid/${category}/file-1.${extension}`,
+        contentType,
+        category,
       ));
-      await assertFails(getBytes(ref(storage, 'private/pruebas/existing.txt')));
-    });
-  }
+    }
+  });
+
+  it('permite actualizar metadata valida al propietario', async () => {
+    const storage = owner();
+    await assertSucceeds(upload(
+      storage,
+      'private/owner-uid/receipts/file-update.pdf',
+      'application/pdf',
+      'receipts',
+    ));
+    await assertSucceeds(updateMetadata(
+      ref(storage, 'private/owner-uid/receipts/file-update.pdf'),
+      metadata('application/pdf', 'receipts'),
+    ));
+  });
+
+  it('deniega lectura y borrado directo incluso al propietario', async () => {
+    const storage = owner();
+    await assertFails(getBytes(ref(storage, 'private/pruebas/existing.txt')));
+    await assertFails(deleteObject(ref(storage, 'private/pruebas/existing.txt')));
+  });
+
+  it('deniega carga anonima', async () => {
+    await assertFails(upload(
+      testEnv.unauthenticatedContext().storage(),
+      'private/owner-uid/receipts/anonymous.pdf',
+      'application/pdf',
+      'receipts',
+    ));
+  });
+
+  it('deniega carga de un UID ajeno', async () => {
+    await assertFails(upload(
+      other(),
+      'private/owner-uid/receipts/other.pdf',
+      'application/pdf',
+      'receipts',
+    ));
+  });
+
+  it('deniega categoria desconocida', async () => {
+    await assertFails(upload(
+      owner(),
+      'private/owner-uid/avatars/avatar.png',
+      'image/png',
+      'avatars',
+    ));
+  });
+
+  it('deniega MIME invalido', async () => {
+    await assertFails(upload(
+      owner(),
+      'private/owner-uid/needs/file.txt',
+      'text/plain',
+      'needs',
+    ));
+  });
+
+  it('deniega extension incoherente con el MIME', async () => {
+    await assertFails(upload(
+      owner(),
+      'private/owner-uid/needs/file.pdf',
+      'image/png',
+      'needs',
+    ));
+  });
+
+  it('deniega metadata ausente', async () => {
+    await assertFails(uploadBytes(
+      ref(owner(), 'private/owner-uid/receipts/missing-metadata.pdf'),
+      new Uint8Array([1]),
+      { contentType: 'application/pdf' },
+    ));
+  });
+
+  it('deniega metadata con visibilidad publica', async () => {
+    await assertFails(uploadBytes(
+      ref(owner(), 'private/owner-uid/receipts/public.pdf'),
+      new Uint8Array([1]),
+      metadata('application/pdf', 'receipts', 'public'),
+    ));
+  });
+
+  it('deniega imagenes que exceden 5 MiB', async () => {
+    await assertFails(upload(
+      owner(),
+      'private/owner-uid/needs/too-large.png',
+      'image/png',
+      'needs',
+      5 * 1024 * 1024 + 1,
+    ));
+  });
+
+  it('deniega PDFs que exceden 10 MiB', async () => {
+    await assertFails(upload(
+      owner(),
+      'private/owner-uid/receipts/too-large.pdf',
+      'application/pdf',
+      'receipts',
+      10 * 1024 * 1024 + 1,
+    ));
+  });
+
+  it('deniega panel y admin en espacios ajenos', async () => {
+    for (const role of ['panel', 'admin'] as const) {
+      await assertFails(upload(
+        testEnv.authenticatedContext(`${role}-uid`, { role }).storage(),
+        `private/owner-uid/reports/${role}.webp`,
+        'image/webp',
+        'reports',
+      ));
+    }
+  });
 });

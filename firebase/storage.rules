@@ -2,8 +2,45 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Bloqueo inicial. Las rutas privadas y publicas se habilitaran
-    // individualmente despues de probar MIME, tamano, rol y propietario.
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isCategory(category) {
+      return category == 'receipts'
+        || category == 'needs'
+        || category == 'reports';
+    }
+
+    function hasPrivateMetadata(uid, category) {
+      return request.resource.metadata.keys().hasAll(['ownerUid', 'category', 'visibility'])
+        && request.resource.metadata.ownerUid == uid
+        && request.resource.metadata.category == category
+        && request.resource.metadata.visibility == 'private';
+    }
+
+    function isAllowedFile(fileName) {
+      return fileName.matches('[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp|pdf)');
+    }
+
+    function isAllowedContent(fileName) {
+      return (fileName.matches('[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp)')
+          && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
+          && request.resource.size <= 5 * 1024 * 1024)
+        || (fileName.matches('[A-Za-z0-9][A-Za-z0-9_-]*\\.pdf')
+          && request.resource.contentType == 'application/pdf'
+          && request.resource.size <= 10 * 1024 * 1024);
+    }
+
+    match /private/{uid}/{category}/{fileName} {
+      allow read, delete: if false;
+      allow create, update: if isOwner(uid)
+        && isCategory(category)
+        && isAllowedFile(fileName)
+        && isAllowedContent(fileName)
+        && hasPrivateMetadata(uid, category);
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
