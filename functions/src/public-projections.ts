@@ -27,6 +27,10 @@ export const PUBLIC_PROJECTION_FIELDS = {
   ],
 } as const;
 
+export const VOLUNTEER_PUBLIC_PROFILE_FIELDS = [
+  'nombre', 'zona', 'habilidades', 'activo', 'createdAt',
+] as const;
+
 const FORBIDDEN = new Set([
   'email', 'telefono', 'documento', 'cedula', 'placa', 'authuid',
   'pin', 'pinhash', 'tokeninterno', 'refreshtoken', 'ip', 'iphash',
@@ -63,6 +67,18 @@ export function sanitizePublicProjection(
     if (source[field] !== undefined) result[field] = source[field];
   }
 
+  const forbidden = findForbiddenPublicFields(result);
+  if (forbidden.length) {
+    throw new Error(`forbidden-public-fields:${forbidden.join(',')}`);
+  }
+  return result;
+}
+
+export function sanitizeVolunteerPublicProfile(source: UnknownRecord): UnknownRecord {
+  const result: UnknownRecord = {};
+  for (const field of VOLUNTEER_PUBLIC_PROFILE_FIELDS) {
+    if (source[field] !== undefined) result[field] = source[field];
+  }
   const forbidden = findForbiddenPublicFields(result);
   if (forbidden.length) {
     throw new Error(`forbidden-public-fields:${forbidden.join(',')}`);

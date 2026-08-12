@@ -14,6 +14,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /voluntariosPublicos/{id} {
+      allow get: if true;
+      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
