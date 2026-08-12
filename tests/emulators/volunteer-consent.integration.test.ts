@@ -18,11 +18,9 @@ import {
   type User,
 } from 'firebase/auth';
 import {
-  collection,
   connectFirestoreEmulator,
   doc,
   getDoc,
-  getDocs,
   getFirestore,
   setDoc,
   type Firestore,
@@ -32,9 +30,11 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
+import { applyConsentTransaction } from '../../functions/src/volunteers/public-consent-http.js';
 const require = createRequire(import.meta.url);
 const adminModule = resolve(process.cwd(), 'functions/node_modules/firebase-admin/lib');
 const { getAuth: getAdminAuth } = require(resolve(adminModule, 'auth/index.js'));
+const { getFirestore: getAdminFirestore } = require(resolve(adminModule, 'firestore/index.js'));
 const { getApps, initializeApp: initializeAdminApp } = require(resolve(adminModule, 'app/index.js'));
 
 const projectId = 'demo-donaciones-venezuela';
@@ -48,7 +48,6 @@ const firebaseConfig = {
 };
 const authEmulatorUrl = 'http://127.0.0.1:9099';
 const consentUrl = `http://127.0.0.1:5001/${projectId}/us-east1/setVolunteerPublicConsent`;
-const volunteerId = 'volunteer-1';
 const password = 'Password-1234!';
 
 let rulesEnv: RulesTestEnvironment;
@@ -56,6 +55,7 @@ let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let firestore: Firestore | undefined;
 let createdUsers: User[] = [];
+let volunteerId: string;
 
 function createEmulatorApp(name: string): { app: FirebaseApp; auth: Auth; firestore: Firestore } {
   const emulatorApp = initializeApp(firebaseConfig, `${name}-${crypto.randomUUID()}`);
@@ -108,6 +108,35 @@ async function callConsent(token: string, enabled: boolean) {
   });
 }
 
+async function seedPrivateProfile(authUid: string, includePrivateFields = true): Promise<void> {
+  await rulesEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), `voluntarios/${volunteerId}`), {
+      authUid,
+      activo: true,
+      nombre: 'Ana Demo',
+      zona: 'Este',
+      habilidades: ['salud'],
+      createdAt: '2026-08-11T12:00:00.000Z',
+      ...(includePrivateFields ? {
+        email: 'volunteer@example.test',
+        telefono: '000-0000000',
+        fotoPath: `private/voluntarios/${volunteerId}/foto.jpg`,
+      } : {}),
+    });
+  });
+}
+
+async function readAdminAudit(actorUid: string): Promise<Record<string, unknown>> {
+  const snapshot = await getAdminFirestore()
+    .collection('auditoriaAdmin')
+    .where('entidadId', '==', volunteerId)
+    .where('accion', '==', 'revocar_consentimiento_publico')
+    .where('actorUid', '==', actorUid)
+    .get();
+  expect(snapshot.size).toBe(1);
+  return snapshot.docs[0]!.data() as Record<string, unknown>;
+}
+
 beforeAll(async () => {
   process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
   process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
@@ -123,7 +152,9 @@ beforeAll(async () => {
   });
 });
 
-beforeEach(() => {
+beforeEach(async () => {
+  await rulesEnv.clearFirestore();
+  volunteerId = `volunteer-${crypto.randomUUID()}`;
   ({ app, auth, firestore } = createEmulatorApp('volunteer-consent-integration'));
 });
 
@@ -170,19 +201,7 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     await setRole(panel.uid, 'panel');
     await setRole(admin.uid, 'admin');
 
-    await rulesEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), `voluntarios/${volunteerId}`), {
-        authUid: owner.uid,
-        activo: true,
-        nombre: 'Ana Demo',
-        zona: 'Este',
-        habilidades: ['salud'],
-        createdAt: '2026-08-11T12:00:00.000Z',
-        email: owner.email,
-        telefono: '000-0000000',
-        fotoPath: 'private/voluntarios/volunteer-1/foto.jpg',
-      });
-    });
+    await seedPrivateProfile(owner.uid);
 
     const ownerResponse = await callConsent(await idToken(owner), true);
     expect(ownerResponse.status).toBe(200);
@@ -213,20 +232,31 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     });
     expect(privateSnapshot.data()).toMatchObject({
       authUid: owner.uid,
-      email: owner.email,
+      email: 'volunteer@example.test',
       telefono: '000-0000000',
-      fotoPath: 'private/voluntarios/volunteer-1/foto.jpg',
+      fotoPath: `private/voluntarios/${volunteerId}/foto.jpg`,
       publicProfileConsent: { enabled: false, revokedByUid: admin.uid },
     });
 
-    let auditSnapshot;
-    await rulesEnv.withSecurityRulesDisabled(async (context) => {
-      auditSnapshot = await getDocs(collection(context.firestore(), 'auditoriaAdmin'));
+    const audit = await readAdminAudit(admin.uid);
+    expect(Object.keys(audit).sort()).toEqual([
+      'accion', 'actorUid', 'createdAt', 'entidad', 'entidadId', 'resultado',
+    ]);
+    expect(audit).toMatchObject({
+      actorUid: admin.uid,
+      accion: 'revocar_consentimiento_publico',
+      entidad: 'voluntarios',
+      entidadId: volunteerId,
+      resultado: 'success',
     });
-    expect(auditSnapshot?.empty).toBe(false);
-    const auditId = auditSnapshot?.docs[0]?.id;
-    expect(auditId).toBeTruthy();
-    await assertFails(getDoc(doc(firestore!, `auditoriaAdmin/${auditId}`)));
+    expect(JSON.stringify(audit)).not.toMatch(/email|telefono|foto|authUid|token|nombre|zona|habilidades/i);
+
+    for (const role of ['anonymous', 'user', 'panel', 'admin'] as const) {
+      const privateDb = role === 'anonymous'
+        ? rulesEnv.unauthenticatedContext().firestore()
+        : rulesEnv.authenticatedContext(`${role}-${crypto.randomUUID()}`, { role }).firestore();
+      await assertFails(getDoc(doc(privateDb, `voluntarios/${volunteerId}`)));
+    }
   });
 
   it('rechaza activacion administrativa y revocacion de otro titular', async () => {
@@ -237,16 +267,7 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     await setRole(panel.uid, 'panel');
     await setRole(admin.uid, 'admin');
 
-    await rulesEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), `voluntarios/${volunteerId}`), {
-        authUid: owner.uid,
-        activo: true,
-        nombre: 'Ana Demo',
-        zona: 'Este',
-        habilidades: ['salud'],
-        createdAt: '2026-08-11T12:00:00.000Z',
-      });
-    });
+    await seedPrivateProfile(owner.uid, false);
 
     for (const actor of [panel, admin]) {
       const response = await callConsent(await idToken(actor), true);
@@ -255,5 +276,76 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
 
     const otherResponse = await callConsent(await idToken(otherUser), false);
     expect(otherResponse.status).toBe(403);
+  });
+
+  it('no deja estado parcial cuando falla una escritura dentro de la transaccion', async () => {
+    const committed = new Map<string, unknown>([
+      [`voluntarios/${volunteerId}`, {
+        authUid: 'owner-uid', activo: true, nombre: 'Ana Demo', zona: 'Este',
+        habilidades: ['salud'], createdAt: 'created-at',
+      }],
+    ]);
+    const initialState = new Map(committed);
+    const staged = new Map<string, unknown>();
+    let auditPath = '';
+    const transaction = {
+      get: async (reference: { path?: string }) => ({
+        exists: committed.has(reference.path!),
+        data: () => committed.get(reference.path!),
+      }),
+      update: (reference: { path?: string }, data: unknown) => {
+        staged.set(reference.path!, { ...(committed.get(reference.path!) as object), ...(data as object) });
+      },
+      set: (reference: { path?: string }, data: unknown) => {
+        staged.set(reference.path!, data);
+        if (reference.path!.startsWith('auditoriaAdmin/')) {
+          auditPath = reference.path!;
+          throw new Error('injected-transaction-failure');
+        }
+      },
+      delete: (reference: { path?: string }) => staged.set(reference.path!, undefined),
+    };
+    const db = {
+      collection: (name: string) => ({
+        doc: (id?: string) => ({
+          path: id ? `${name}/${id}` : `${name}/audit-generated`,
+        }),
+      }),
+      runTransaction: async <T>(callback: (tx: typeof transaction) => Promise<T>) => callback(transaction),
+    };
+
+    await expect(applyConsentTransaction(
+      {
+        volunteerId,
+        enabled: true,
+        consentVersion: 'volunteer-public-v1',
+      },
+      { uid: 'owner-uid', role: 'user' },
+      db,
+      'transaction-now',
+    )).rejects.toThrow('injected-transaction-failure');
+
+    expect(auditPath).toBe(`auditoriaAdmin/audit-generated`);
+    expect(staged.size).toBe(3);
+    expect(committed).toEqual(initialState);
+    expect(committed.has(`voluntariosPublicos/${volunteerId}`)).toBe(false);
+    expect([...committed.keys()].some((path) => path.startsWith('auditoriaAdmin/'))).toBe(false);
+  });
+
+  it('permite revocacion a panel y luego al titular', async () => {
+    const owner = await createUser('volunteer');
+    const panel = await createUser('panel');
+    await setRole(panel.uid, 'panel');
+    await seedPrivateProfile(owner.uid, false);
+
+    expect((await callConsent(await idToken(owner), true)).status).toBe(200);
+    expect((await callConsent(await idToken(panel), false)).status).toBe(200);
+    expect((await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`))).exists()).toBe(false);
+    expect((await readAdminAudit(panel.uid)).actorUid).toBe(panel.uid);
+
+    expect((await callConsent(await idToken(owner), true)).status).toBe(200);
+    expect((await callConsent(await idToken(owner), false)).status).toBe(200);
+    expect((await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`))).exists()).toBe(false);
+    expect((await readAdminAudit(owner.uid)).actorUid).toBe(owner.uid);
   });
 });
