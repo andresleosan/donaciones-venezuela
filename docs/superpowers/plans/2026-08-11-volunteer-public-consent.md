@@ -463,7 +463,7 @@ git commit -m "feat: publish volunteer consent transaction"
 - Consumes: `setVolunteerPublicConsent`, Auth Emulator, Firestore Emulator y reglas de Task 1.
 - Produces: evidencia de activacion/revocacion atomica, auditoria privada y rollback local.
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 Crear `tests/emulators/volunteer-consent.integration.test.ts` que:
 
@@ -479,13 +479,13 @@ Crear `tests/emulators/volunteer-consent.integration.test.ts` que:
 
 El test debe usar solamente `demo-donaciones-venezuela`, URLs localhost, fixtures sintéticos y emuladores. No ejecutar el endpoint contra `donaciones-venezuela-4fc29`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm.cmd --prefix functions run build` y luego `npx vitest run tests/emulators/volunteer-consent.integration.test.ts`
 
 Expected: el test enfocado falla sin emuladores o porque la Function aun no esta cableada; no se considera evidencia funcional hasta ejecutar el comando con Emulator Suite.
 
-- [ ] **Step 3: Write the runbook and wire test commands**
+- [x] **Step 3: Write the runbook and wire test commands**
 
 Crear `docs/runbooks/volunteer-public-consent.md` con estas instrucciones:
 
@@ -502,7 +502,7 @@ Produccion: bloqueada hasta textos legales, rate limiting/App Check y revision o
 
 Actualizar `test:functions:run` para incluir `tests/emulators/volunteer-consent.integration.test.ts` y `test:functions` para iniciar `auth,firestore,functions` si la prueba requiere Firestore; conservar health y Auth existentes. No crear un script paralelo que omita la suite existente.
 
-- [ ] **Step 4: Run focused and full verification**
+- [x] **Step 4: Run focused and full verification**
 
 Run, en este orden:
 
@@ -518,7 +518,7 @@ python scripts/verificar-idioma.py
 
 Expected: todas las pruebas pasan, las auditorias no reportan `high`/`critical`, el build pasa y el idioma queda verificado. Las vulnerabilidades `moderate`, Node host distinto del engine o warnings legacy se documentan como observaciones actuales.
 
-- [ ] **Step 5: Perform security review and commit**
+- [x] **Step 5: Perform security review and commit**
 
 Confirmar en el diff:
 
