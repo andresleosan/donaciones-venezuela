@@ -10,11 +10,27 @@ import {
   parseConsentRequest,
   type ConsentRequest,
 } from './public-consent.js';
+import {
+  AppCheckError,
+  verifyConfiguredAppCheck,
+  type AppCheckMode,
+  type AppCheckVerifier,
+} from '../security/app-check.js';
+import {
+  consumeRateLimit,
+  RateLimitError,
+} from '../security/rate-limit.js';
 
 type ConsentRequestHttp = {
   method: string;
+  ip?: string;
   body?: unknown;
-  headers?: { authorization?: string; 'content-type'?: string };
+  headers?: {
+    authorization?: string;
+    'content-type'?: string;
+    'x-firebase-appcheck'?: string;
+    'X-Firebase-AppCheck'?: string;
+  };
   get?: (name: string) => string | null | undefined;
 };
 
@@ -50,7 +66,22 @@ type FirestoreAdapter = {
   runTransaction<T>(callback: (transaction: Transaction) => Promise<T>): Promise<T>;
 };
 
-type ConsentApplier = (request: ConsentRequestHttp) => Promise<ConsentResult>;
+type ConsentApplier = (
+  request: ConsentRequestHttp,
+  context?: AuthContext,
+) => Promise<ConsentResult>;
+type RateLimiter = (
+  bucket: 'uid' | 'request',
+  keyValue: string,
+  now: number,
+) => Promise<{ allowed: true; hits: number; retryAfter: 0 }>;
+type ConsentGuardDependencies = {
+  appCheckMode?: AppCheckMode;
+  verifyAppCheck?: AppCheckVerifier;
+  authenticate?: typeof authenticateRequest;
+  rateLimiter?: RateLimiter;
+  now?: () => number;
+};
 
 const PUBLIC_ERRORS: Record<string, { status: number; message: string }> = {
   'invalid-input': { status: 400, message: 'Invalid input' },
@@ -58,9 +89,12 @@ const PUBLIC_ERRORS: Record<string, { status: number; message: string }> = {
   forbidden: { status: 403, message: 'Forbidden' },
   'volunteer-not-found': { status: 404, message: 'Volunteer not found' },
   'volunteer-not-active': { status: 409, message: 'Volunteer not active' },
+  'app-check-required': { status: 403, message: 'App Check required' },
+  'rate-limit-exceeded': { status: 429, message: 'Too many requests' },
 };
 
 function errorCode(error: unknown): string | null {
+  if (isRecord(error) && typeof error.code === 'string') return error.code;
   return error instanceof Error ? error.message : null;
 }
 
@@ -119,16 +153,20 @@ export async function applyConsentTransaction(
   });
 }
 
-async function applyConsent(request: ConsentRequestHttp): Promise<ConsentResult> {
-  const context = await authenticateRequest(request);
+async function applyConsent(
+  request: ConsentRequestHttp,
+  context?: AuthContext,
+): Promise<ConsentResult> {
+  const authenticatedContext = context ?? await authenticateRequest(request);
   const input = parseConsentRequest(request.body);
-  return applyConsentTransaction(input, context);
+  return applyConsentTransaction(input, authenticatedContext);
 }
 
 export async function setVolunteerPublicConsentHandler(
   req: ConsentRequestHttp,
   res: ConsentResponse,
   apply: ConsentApplier = applyConsent,
+  dependencies: ConsentGuardDependencies = {},
 ): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -146,7 +184,25 @@ export async function setVolunteerPublicConsentHandler(
   }
 
   try {
-    const result = await apply(req);
+    await verifyConfiguredAppCheck(req, dependencies.verifyAppCheck, dependencies.appCheckMode);
+
+    const authenticate = dependencies.authenticate ?? authenticateRequest;
+    const rateLimiter = dependencies.rateLimiter ?? ((bucket, keyValue, now) => (
+      consumeRateLimit(bucket, keyValue, now)
+    ));
+    const now = dependencies.now?.() ?? Date.now();
+    let context: AuthContext;
+    try {
+      context = await authenticate(req);
+    } catch (error) {
+      if (!(error instanceof AuthError)) throw error;
+      const requestIp = req.ip?.trim();
+      if (requestIp) await rateLimiter('request', requestIp, now);
+      throw error;
+    }
+
+    await rateLimiter('uid', context.uid, now);
+    const result = await apply(req, context);
     const body = isRecord(req.body) ? req.body : undefined;
     const volunteerId = typeof body?.volunteerId === 'string' ? body.volunteerId.trim() : '';
     res.status(200).json({
@@ -155,6 +211,21 @@ export async function setVolunteerPublicConsentHandler(
       volunteerId,
     });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      res.setHeader('Retry-After', String(error.retryAfter));
+      res.status(429).json({
+        error: { code: error.code, message: 'Too many requests' },
+      });
+      return;
+    }
+
+    if (error instanceof AppCheckError) {
+      res.status(403).json({
+        error: { code: error.code, message: 'App Check required' },
+      });
+      return;
+    }
+
     if (error instanceof AuthError) {
       res.status(error.status).json({
         error: {

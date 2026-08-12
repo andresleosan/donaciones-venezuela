@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { AuthError } from '../../functions/src/auth/authorization.js';
+import { RateLimitError } from '../../functions/src/security/rate-limit.js';
 import {
   applyConsentTransaction,
   setVolunteerPublicConsentHandler,
@@ -36,6 +37,13 @@ const request = {
   },
 };
 
+const authenticated = async () => ({ uid: 'uid-1', role: 'user' as const });
+const allowRateLimit = async () => ({ allowed: true as const, hits: 1, retryAfter: 0 as const });
+const guardDependencies = {
+  authenticate: authenticated,
+  rateLimiter: allowRateLimit,
+};
+
 it('rechaza metodos distintos de POST', async () => {
   const { res, result } = createResponse();
   await setVolunteerPublicConsentHandler({ method: 'GET' }, res, vi.fn());
@@ -50,6 +58,7 @@ it('devuelve exito minimo al activar', async () => {
     request,
     res,
     async () => ({ success: true, enabled: true, volunteerId: 'v1' }),
+    guardDependencies,
   );
 
   expect(result.status).toBe(200);
@@ -88,6 +97,7 @@ it('omite campos sensibles de un resultado de applyConsent no confiable', async 
       token: 'secret-token',
       authUid: 'private-uid',
     } as never),
+    guardDependencies,
   );
 
   expect(result.status).toBe(200);
@@ -101,6 +111,7 @@ it('normaliza errores desconocidos', async () => {
     request,
     res,
     async () => { throw new Error('private@example.test firestore path'); },
+    guardDependencies,
   );
 
   expect(result.status).toBe(500);
@@ -113,6 +124,7 @@ it('conserva errores publicos de autenticacion', async () => {
     request,
     res,
     async () => { throw new AuthError('unauthenticated', 401, 'private token details'); },
+    guardDependencies,
   );
 
   expect(result.status).toBe(401);
@@ -141,6 +153,7 @@ it('acepta Content-Type JSON con charset', async () => {
     { ...request, headers: { 'content-type': 'Application/JSON; charset=utf-8' } },
     res,
     async () => ({ success: true, enabled: true, volunteerId: 'v1' }),
+    guardDependencies,
   );
 
   expect(result.status).toBe(200);
@@ -158,10 +171,94 @@ it.each([
     request,
     res,
     async () => { throw new Error(code); },
+    guardDependencies,
   );
 
   expect(result.status).toBe(status);
   expect(result.body).toEqual({ error: { code, message } });
+});
+
+it('devuelve 429 con Retry-After y no aplica el consentimiento al exceder el limite', async () => {
+  const { res, result } = createResponse();
+  const apply = vi.fn();
+  const rateLimiter = vi.fn(async () => { throw new RateLimitError(37); });
+
+  await setVolunteerPublicConsentHandler(request, res, apply, {
+    authenticate: authenticated,
+    rateLimiter,
+  });
+
+  expect(result.status).toBe(429);
+  expect(result.headers['Retry-After']).toBe('37');
+  expect(result.body).toEqual({
+    error: { code: 'rate-limit-exceeded', message: 'Too many requests' },
+  });
+  expect(apply).not.toHaveBeenCalled();
+});
+
+it('devuelve 403 seguro y no aplica el consentimiento cuando App Check es rechazado', async () => {
+  const { res, result } = createResponse();
+  const apply = vi.fn();
+  const authenticate = vi.fn(authenticated);
+
+  await setVolunteerPublicConsentHandler(
+    { ...request, headers: { ...request.headers, 'x-firebase-appcheck': 'bad' } },
+    res,
+    apply,
+    {
+      appCheckMode: 'enforced',
+      verifyAppCheck: async () => { throw new Error('private verifier details'); },
+      authenticate,
+      rateLimiter: allowRateLimit,
+    },
+  );
+
+  expect(result.status).toBe(403);
+  expect(result.body).toEqual({
+    error: { code: 'app-check-required', message: 'App Check required' },
+  });
+  expect(authenticate).not.toHaveBeenCalled();
+  expect(apply).not.toHaveBeenCalled();
+});
+
+it('usa el UID autenticado para el bucket UID y la IP normalizada para el bucket request', async () => {
+  const { res, result } = createResponse();
+  const apply = vi.fn(async () => ({ success: true, enabled: true, volunteerId: 'v1' }));
+  const rateLimiter = vi.fn(allowRateLimit);
+
+  await setVolunteerPublicConsentHandler(
+    { ...request, ip: ' 203.0.113.7 ' },
+    res,
+    apply,
+    { authenticate: authenticated, rateLimiter },
+  );
+
+  expect(result.status).toBe(200);
+  expect(rateLimiter).toHaveBeenCalledWith('uid', 'uid-1', expect.any(Number));
+  expect(rateLimiter).toHaveBeenCalledTimes(1);
+});
+
+it('limita por request ante Auth fallida y responde 401 sin aplicar', async () => {
+  const { res, result } = createResponse();
+  const apply = vi.fn();
+  const authenticate = vi.fn(async () => {
+    throw new AuthError('unauthenticated', 401, 'private auth details');
+  });
+  const rateLimiter = vi.fn(allowRateLimit);
+
+  await setVolunteerPublicConsentHandler(
+    { ...request, ip: ' 203.0.113.7 ' },
+    res,
+    apply,
+    { authenticate, rateLimiter },
+  );
+
+  expect(result.status).toBe(401);
+  expect(result.body).toEqual({
+    error: { code: 'unauthenticated', message: 'Authentication required' },
+  });
+  expect(rateLimiter).toHaveBeenCalledWith('request', '203.0.113.7', expect.any(Number));
+  expect(apply).not.toHaveBeenCalled();
 });
 
 it('aplica la mutacion dentro de una transaccion y solo toca los documentos previstos', async () => {
