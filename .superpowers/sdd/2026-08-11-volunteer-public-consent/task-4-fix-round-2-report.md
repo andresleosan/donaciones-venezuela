@@ -42,4 +42,4 @@ perfiles reales.
 
 `5e97c2d test: make volunteer consent rollback faithful`
 
-`d7b9d4f docs: record volunteer consent fix round 2`
+`0b4ac55 docs: record volunteer consent fix round 2`
