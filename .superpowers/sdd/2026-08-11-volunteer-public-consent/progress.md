@@ -16,4 +16,7 @@ Task 3: complete (commits 9a11794..f4e44b5, review clean)
 Task 4: fix round 1/5 (audit/isolation/role findings addressed; rollback finding remained; commits 6b9080f..cfe5b0b)
 Task 4: fix round 2/5 (rollback proof and audit denial regression addressed; commits cfe5b0b..fb06690)
 Task 4: complete (commits f4e44b5..fb06690, review clean)
+Final review: fix wave 1/1 (schema alignment, JSON content type and canonical volunteerId addressed; commits fb06690..4bb2c48)
+Final review: minor (deferred): historical plans retain broader future photo wording; current schema v1 and implementation are aligned.
+Final review: complete (review clean; no blocking findings)
 Final fix wave: findings 1-3 addressed; focused tests, Functions build and relevant Emulator Suite passed; code commit 95a872f; report commit pending.
