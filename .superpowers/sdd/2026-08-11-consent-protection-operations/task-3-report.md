@@ -43,7 +43,7 @@ Implementación completada y comprometida en dos commits.
 
 ## Verificación final
 
-- `npx vitest run tests/functions/rate-limit.test.ts tests/functions/app-check.test.ts tests/functions/public-consent-http.test.ts`: 3 archivos, 46 tests OK.
+- `npx vitest run tests/functions/rate-limit.test.ts tests/functions/app-check.test.ts tests/functions/public-consent-http.test.ts`: 3 archivos, 47 tests OK.
 - `npm run build` ejecutado en `functions`: TypeScript OK.
 - `git diff --check`: sin errores.
 - `npm audit --audit-level=high`: salida con 5 vulnerabilidades moderadas, 0 high/critical; el arreglo sugerido exige `--force` y downgrade mayor de `firebase-tools`.
