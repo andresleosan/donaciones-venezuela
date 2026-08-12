@@ -24,6 +24,21 @@ describe('proyecciones públicas', () => {
     });
   });
 
+  it.each(['voluntariosPublicos', 'rescatistasPublicos', 'motorizadosPublicos'] as const)(
+    'conserva fotoPublicaPath declarado en %s',
+    (name) => {
+      expect(sanitizePublicProjection(name, {
+        nombre: 'Ana',
+        zona: 'Este',
+        fotoPublicaPath: 'public/profile.jpg',
+        activo: true,
+        createdAt: '2026-08-11T12:00:00.000Z',
+      })).toMatchObject({
+        fotoPublicaPath: 'public/profile.jpg',
+      });
+    },
+  );
+
   it('sanitiza lugaresPublicos con la allowlist exacta', () => {
     expect(sanitizePublicProjection('lugaresPublicos', {
       nombre: 'Centro Demo',

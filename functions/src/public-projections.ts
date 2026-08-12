@@ -32,9 +32,14 @@ export const VOLUNTEER_PUBLIC_PROFILE_FIELDS = [
 ] as const;
 
 const FORBIDDEN = new Set([
-  'email', 'telefono', 'documento', 'documentos', 'cedula', 'placa', 'authuid',
+  'email', 'telefono', 'documento', 'cedula', 'placa', 'authuid',
   'pin', 'pinhash', 'tokeninterno', 'refreshtoken', 'ip', 'iphash',
-  'tokens', 'fotopublicapath', 'comprobantepath', 'fileprivatepath', 'ubicacionprecisa',
+  'comprobantepath', 'fileprivatepath', 'ubicacionprecisa',
+]);
+
+const VOLUNTEER_FORBIDDEN = new Set([
+  ...FORBIDDEN,
+  'documentos', 'tokens', 'fotopublicapath',
 ]);
 
 export type ProjectionName = keyof typeof PUBLIC_PROJECTION_FIELDS;
@@ -45,17 +50,25 @@ function normalizeKey(key: string): string {
     .replace(/[^a-z0-9]/gi, '').toLowerCase();
 }
 
-export function findForbiddenPublicFields(value: unknown, path = ''): string[] {
+function findForbiddenFields(
+  value: unknown,
+  forbidden: Set<string>,
+  path = '',
+): string[] {
   if (Array.isArray(value)) {
-    return value.flatMap((item, index) => findForbiddenPublicFields(item, `${path}[${index}]`));
+    return value.flatMap((item, index) => findForbiddenFields(item, forbidden, `${path}[${index}]`));
   }
   if (!value || typeof value !== 'object') return [];
 
   return Object.entries(value as UnknownRecord).flatMap(([key, child]) => {
     const childPath = path ? `${path}.${key}` : key;
-    const own = FORBIDDEN.has(normalizeKey(key)) ? [childPath] : [];
-    return own.concat(findForbiddenPublicFields(child, childPath));
+    const own = forbidden.has(normalizeKey(key)) ? [childPath] : [];
+    return own.concat(findForbiddenFields(child, forbidden, childPath));
   });
+}
+
+export function findForbiddenPublicFields(value: unknown, path = ''): string[] {
+  return findForbiddenFields(value, FORBIDDEN, path);
 }
 
 export function sanitizePublicProjection(
@@ -67,7 +80,7 @@ export function sanitizePublicProjection(
     if (source[field] !== undefined) result[field] = source[field];
   }
 
-  const forbidden = findForbiddenPublicFields(result);
+  const forbidden = findForbiddenFields(result, FORBIDDEN);
   if (forbidden.length) {
     throw new Error(`forbidden-public-fields:${forbidden.join(',')}`);
   }
@@ -79,7 +92,7 @@ export function sanitizeVolunteerPublicProfile(source: UnknownRecord): UnknownRe
   for (const field of VOLUNTEER_PUBLIC_PROFILE_FIELDS) {
     if (source[field] !== undefined) result[field] = source[field];
   }
-  const forbidden = findForbiddenPublicFields(result);
+  const forbidden = findForbiddenFields(result, VOLUNTEER_FORBIDDEN);
   if (forbidden.length) {
     throw new Error(`forbidden-public-fields:${forbidden.join(',')}`);
   }
