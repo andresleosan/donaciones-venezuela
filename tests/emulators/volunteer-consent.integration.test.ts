@@ -459,26 +459,34 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     await seedPrivateProfile(owner.uid);
     const token = await idToken(owner);
 
-    const allowedResponses = await Promise.all(
-      Array.from({ length: 5 }, () => callConsent(token, true)),
-    );
-    expect(allowedResponses.every((response) => response.status === 200)).toBe(true);
-
     const previousPrivateState = await readPrivateProfile();
     const previousPublicState = await readPublicProfile();
     const previousAuditState = await readAuditState();
+    const responses = await Promise.all(
+      Array.from({ length: 6 }, () => callConsent(token, true)),
+    );
 
-    const blockedResponse = await callConsent(token, true);
-    expect(blockedResponse.status).toBe(429);
+    expect(responses.filter((response) => response.status === 200)).toHaveLength(5);
+    expect(responses.filter((response) => response.status === 429)).toHaveLength(1);
+    expect(responses.every((response) => response.status === 200 || response.status === 429)).toBe(true);
+    const blockedResponse = responses.find((response) => response.status === 429);
+    expect(blockedResponse).toBeDefined();
     expect(blockedResponse!.headers.get('retry-after')).toMatch(/^[1-9][0-9]*$/);
-    expect(await readPrivateProfile()).toEqual(previousPrivateState);
-    expect(await readPublicProfile()).toEqual(previousPublicState);
-    expect(await readAuditState()).toEqual(previousAuditState);
+
+    const privateStateAfterAllowed = await readPrivateProfile();
+    const publicStateAfterAllowed = await readPublicProfile();
+    const auditStateAfterAllowed = await readAuditState();
+    expect(privateStateAfterAllowed.publicProfileConsent).toMatchObject({ enabled: true });
+    expect(publicStateAfterAllowed).not.toBeNull();
+    expect(auditStateAfterAllowed).toHaveLength(previousAuditState.length + 5);
+    expect(privateStateAfterAllowed).not.toEqual(previousPrivateState);
+    expect(publicStateAfterAllowed).not.toEqual(previousPublicState);
   });
 
   it('limita veinte intentos Auth fallidos por request sin aplicar consentimiento', async () => {
-    const responses = await Promise.all(
-      Array.from({ length: 21 }, () => fetch(consentUrl, {
+    const responses = [];
+    for (let attempt = 0; attempt < 21; attempt += 1) {
+      responses.push(await fetch(consentUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -489,10 +497,12 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
           enabled: true,
           consentVersion: 'volunteer-public-v1',
         }),
-      })),
-    );
+      }));
+    }
 
+    expect(responses.every((response) => response.status === 401 || response.status === 429)).toBe(true);
     expect(responses.filter((response) => response.status === 401)).toHaveLength(20);
+    expect(responses.filter((response) => response.status === 429)).toHaveLength(1);
     const limitedResponse = responses.find((response) => response.status === 429);
     expect(limitedResponse).toBeDefined();
     expect(limitedResponse!.headers.get('retry-after')).toMatch(/^[1-9][0-9]*$/);

@@ -186,3 +186,55 @@ it.each([
     'rate-limit-storage-failed',
   );
 });
+
+it('rechaza un documento cuyo bucket no coincide con el solicitado', async () => {
+  const keyHash = hashRateLimitKey(createUidRateLimitKey('uid-1'));
+  const db = createRateLimitDb({
+    initialDocuments: {
+      [`rateLimits/${keyHash}`]: {
+        bucket: 'request',
+        windowStart: 0,
+        hits: 1,
+        expiresAt: 3600000,
+      },
+    },
+  });
+
+  await expect(consumeRateLimit('uid', 'uid-1', 0, db)).rejects.toThrow(
+    'rate-limit-storage-failed',
+  );
+  expect(db.committed()).toEqual({
+    [`rateLimits/${keyHash}`]: {
+      bucket: 'request',
+      windowStart: 0,
+      hits: 1,
+      expiresAt: 3600000,
+    },
+  });
+});
+
+it('rechaza ventanas almacenadas inconsistentes con su bucket', async () => {
+  const keyHash = hashRateLimitKey(createUidRateLimitKey('uid-1'));
+  const db = createRateLimitDb({
+    initialDocuments: {
+      [`rateLimits/${keyHash}`]: {
+        bucket: 'uid',
+        windowStart: 0,
+        hits: 1,
+        expiresAt: 3600001,
+      },
+    },
+  });
+
+  await expect(consumeRateLimit('uid', 'uid-1', 0, db)).rejects.toThrow(
+    'rate-limit-storage-failed',
+  );
+  expect(db.committed()).toEqual({
+    [`rateLimits/${keyHash}`]: {
+      bucket: 'uid',
+      windowStart: 0,
+      hits: 1,
+      expiresAt: 3600001,
+    },
+  });
+});

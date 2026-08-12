@@ -67,19 +67,24 @@ function isRateLimitBucket(value: string): value is RateLimitBucket {
   return value === 'uid' || value === 'request';
 }
 
-function isRateLimitDocument(value: unknown): value is RateLimitDocument {
+function isRateLimitDocument(
+  value: unknown,
+  bucket: RateLimitBucket,
+  windowMs: number,
+): value is RateLimitDocument {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const document = value as Record<string, unknown>;
-  return (document.bucket === 'uid' || document.bucket === 'request')
+  return document.bucket === bucket
     && typeof document.windowStart === 'number'
     && Number.isSafeInteger(document.windowStart)
     && document.windowStart >= 0
+    && document.windowStart % windowMs === 0
     && typeof document.hits === 'number'
     && Number.isSafeInteger(document.hits)
     && document.hits >= 0
     && typeof document.expiresAt === 'number'
     && Number.isSafeInteger(document.expiresAt)
-    && document.expiresAt >= 0;
+    && document.expiresAt === document.windowStart + windowMs;
 }
 
 export async function consumeRateLimit(
@@ -105,11 +110,11 @@ export async function consumeRateLimit(
     return await firestore.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(reference);
       const snapshotData = snapshot.data();
-      if (snapshot.exists && !isRateLimitDocument(snapshotData)) {
+      if (snapshot.exists && !isRateLimitDocument(snapshotData, bucket, rateLimit.windowMs)) {
         throw new Error('rate-limit-document-corrupt');
       }
       const previous = snapshot.exists ? snapshotData as RateLimitDocument : undefined;
-      const current = previous?.bucket === bucket && previous.windowStart === windowStart
+      const current = previous?.windowStart === windowStart
         ? previous.hits
         : 0;
 

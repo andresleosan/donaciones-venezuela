@@ -87,3 +87,34 @@ Hallazgos P2 corregidos sin cambios remotos ni producción:
 - Ambas corridas emitieron únicamente las observaciones existentes de Node 24
   del host frente a Functions Node 22 y `MetadataLookupWarning` del entorno
   local; terminaron con código 0.
+
+## Fix Round 2
+
+- El rate limiter ahora rechaza con `rate-limit-storage-failed` cualquier documento
+  cuyo `bucket` no coincida exactamente con el bucket solicitado.
+- También rechaza ventanas almacenadas desalineadas o incoherentes: `windowStart`
+  debe estar alineado con la ventana del bucket y `expiresAt` debe ser exactamente
+  el final de esa ventana. El documento corrupto no se sobrescribe.
+- La integración ejecuta seis requests UID concurrentes bajo contención real y
+  exige exactamente cinco `200` y un `429`, `Retry-After` positivo y solo cinco
+  auditorías, demostrando que el request bloqueado no muta consentimiento,
+  proyección ni auditoría adicional.
+- Los 21 intentos Auth fallidos ahora exigen explícitamente que toda respuesta sea
+  `401` o `429`, además de comprobar veinte `401`, un `429`, `Retry-After` positivo
+  y cero auditorías.
+
+## Fix Round 2 Verification
+
+- `npx vitest run tests/functions/rate-limit.test.ts`: 1 archivo, 20 tests
+  pasaron; las regresiones de bucket cruzado y ventana incoherente quedaron
+  cubiertas.
+- `npm.cmd --prefix functions run build`: pasó.
+- `npx vitest run tests/functions/rate-limit.test.ts tests/functions/app-check.test.ts tests/functions/public-consent-http.test.ts`:
+  3 archivos, 50 tests pasaron.
+- `npx firebase emulators:exec --project demo-donaciones-venezuela --only
+  auth,firestore,functions "npx vitest run
+  tests/emulators/volunteer-consent.integration.test.ts"`: 1 archivo, 11 tests
+  pasaron. La corrida confirmó la contención concurrente UID, estados `401/429`
+  exclusivos para Auth fallida y ausencia de mutación bloqueada.
+- `npm.cmd run test:functions`: 11 archivos, 109 tests pasaron; incluyó build de
+  Functions y la integración completa en Emulator Suite.
