@@ -24,10 +24,23 @@ it('acepta el body exacto de activacion', () => {
   });
 });
 
+it('recorta volunteerId y devuelve el ID canonico', () => {
+  expect(parseConsentRequest({
+    volunteerId: '  volunteer-1  ',
+    enabled: true,
+    consentVersion: 'volunteer-public-v1',
+  })).toEqual({
+    volunteerId: 'volunteer-1',
+    enabled: true,
+    consentVersion: 'volunteer-public-v1',
+  });
+});
+
 it.each([
   null,
   {},
   { volunteerId: '', enabled: true, consentVersion: 'volunteer-public-v1' },
+  { volunteerId: ' \t\n ', enabled: true, consentVersion: 'volunteer-public-v1' },
   { volunteerId: 'v1', enabled: 'true', consentVersion: 'volunteer-public-v1' },
   { volunteerId: 'v1', enabled: true, consentVersion: 'volunteer-public-v1', extra: true },
 ])('rechaza body invalido: %j', (body) => {

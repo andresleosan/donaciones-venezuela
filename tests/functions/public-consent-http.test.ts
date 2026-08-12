@@ -28,6 +28,7 @@ function createResponse() {
 
 const request = {
   method: 'POST',
+  headers: { 'content-type': 'application/json' },
   body: {
     volunteerId: 'v1',
     enabled: true,
@@ -54,6 +55,24 @@ it('devuelve exito minimo al activar', async () => {
   expect(result.status).toBe(200);
   expect(result.body).toEqual({ success: true, enabled: true, volunteerId: 'v1' });
   expect(JSON.stringify(result.body)).not.toMatch(/email|telefono|authUid|token|claim/i);
+});
+
+it.each([
+  undefined,
+  'text/plain',
+  'application/json-patch+json',
+] as const)('rechaza Content-Type no JSON como invalid-input: %s', async (contentType) => {
+  const { res, result } = createResponse();
+  const apply = vi.fn();
+  await setVolunteerPublicConsentHandler(
+    { ...request, headers: contentType ? { 'content-type': contentType } : undefined },
+    res,
+    apply,
+  );
+
+  expect(result.status).toBe(400);
+  expect(result.body).toEqual({ error: { code: 'invalid-input', message: 'Invalid input' } });
+  expect(apply).not.toHaveBeenCalled();
 });
 
 it('omite campos sensibles de un resultado de applyConsent no confiable', async () => {
@@ -104,12 +123,27 @@ it('conserva errores publicos de autenticacion', async () => {
 
 it('rechaza la solicitud sin Bearer antes de tocar el servicio', async () => {
   const { res, result } = createResponse();
-  await setVolunteerPublicConsentHandler({ method: 'POST', body: request.body }, res);
+  await setVolunteerPublicConsentHandler({
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: request.body,
+  }, res);
 
   expect(result.status).toBe(401);
   expect(result.body).toEqual({
     error: { code: 'unauthenticated', message: 'Authentication required' },
   });
+});
+
+it('acepta Content-Type JSON con charset', async () => {
+  const { res, result } = createResponse();
+  await setVolunteerPublicConsentHandler(
+    { ...request, headers: { 'content-type': 'Application/JSON; charset=utf-8' } },
+    res,
+    async () => ({ success: true, enabled: true, volunteerId: 'v1' }),
+  );
+
+  expect(result.status).toBe(200);
 });
 
 it.each([

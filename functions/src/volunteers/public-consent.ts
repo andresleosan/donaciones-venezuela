@@ -66,7 +66,7 @@ export function parseConsentRequest(body: unknown): ConsentRequest {
   }
 
   return {
-    volunteerId: body.volunteerId,
+    volunteerId: body.volunteerId.trim(),
     enabled: body.enabled,
     consentVersion: VOLUNTEER_PUBLIC_CONSENT_VERSION,
   };

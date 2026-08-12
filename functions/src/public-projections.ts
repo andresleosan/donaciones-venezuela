@@ -1,4 +1,5 @@
 export const PUBLIC_PROJECTION_FIELDS = {
+  // Compatibilidad generica; el consentimiento v1 usa la allowlist separada sin foto.
   lugaresPublicos: [
     'nombre', 'tipo', 'ubicacionPublica', 'latAproximada', 'lngAproximada',
     'contactoPublico', 'activo', 'updatedAt',

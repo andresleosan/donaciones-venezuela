@@ -14,7 +14,7 @@ import {
 type ConsentRequestHttp = {
   method: string;
   body?: unknown;
-  headers?: { authorization?: string };
+  headers?: { authorization?: string; 'content-type'?: string };
   get?: (name: string) => string | null | undefined;
 };
 
@@ -70,6 +70,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function defaultFirestore(): FirestoreAdapter {
   return getFirestore() as unknown as FirestoreAdapter;
+}
+
+function hasJsonContentType(request: ConsentRequestHttp): boolean {
+  const contentType = request.get?.('content-type') ?? request.headers?.['content-type'];
+  return typeof contentType === 'string'
+    && contentType.split(';', 1)[0]?.trim().toLowerCase() === 'application/json';
 }
 
 export async function applyConsentTransaction(
@@ -132,10 +138,17 @@ export async function setVolunteerPublicConsentHandler(
     return;
   }
 
+  if (!hasJsonContentType(req)) {
+    res.status(400).json({
+      error: { code: 'invalid-input', message: 'Invalid input' },
+    });
+    return;
+  }
+
   try {
     const result = await apply(req);
     const body = isRecord(req.body) ? req.body : undefined;
-    const volunteerId = typeof body?.volunteerId === 'string' ? body.volunteerId : '';
+    const volunteerId = typeof body?.volunteerId === 'string' ? body.volunteerId.trim() : '';
     res.status(200).json({
       success: Boolean(result.success),
       enabled: Boolean(result.enabled),
