@@ -126,7 +126,7 @@ async function seedPrivateProfile(authUid: string, includePrivateFields = true):
   });
 }
 
-async function readAdminAudit(actorUid: string): Promise<Record<string, unknown>> {
+async function readAdminAudit(actorUid: string): Promise<{ id: string; data: Record<string, unknown> }> {
   const snapshot = await getAdminFirestore()
     .collection('auditoriaAdmin')
     .where('entidadId', '==', volunteerId)
@@ -134,7 +134,14 @@ async function readAdminAudit(actorUid: string): Promise<Record<string, unknown>
     .where('actorUid', '==', actorUid)
     .get();
   expect(snapshot.size).toBe(1);
-  return snapshot.docs[0]!.data() as Record<string, unknown>;
+  const auditDocument = snapshot.docs.find((candidate) => {
+    const data = candidate.data();
+    return data.entidadId === volunteerId
+      && data.accion === 'revocar_consentimiento_publico'
+      && data.actorUid === actorUid;
+  });
+  expect(auditDocument).toBeDefined();
+  return { id: auditDocument!.id, data: auditDocument!.data() as Record<string, unknown> };
 }
 
 beforeAll(async () => {
@@ -238,7 +245,7 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
       publicProfileConsent: { enabled: false, revokedByUid: admin.uid },
     });
 
-    const audit = await readAdminAudit(admin.uid);
+    const { id: auditId, data: audit } = await readAdminAudit(admin.uid);
     expect(Object.keys(audit).sort()).toEqual([
       'accion', 'actorUid', 'createdAt', 'entidad', 'entidadId', 'resultado',
     ]);
@@ -250,6 +257,7 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
       resultado: 'success',
     });
     expect(JSON.stringify(audit)).not.toMatch(/email|telefono|foto|authUid|token|nombre|zona|habilidades/i);
+    await assertFails(getDoc(doc(firestore!, `auditoriaAdmin/${auditId}`)));
 
     for (const role of ['anonymous', 'user', 'panel', 'admin'] as const) {
       const privateDb = role === 'anonymous'
@@ -286,32 +294,55 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
       }],
     ]);
     const initialState = new Map(committed);
-    const staged = new Map<string, unknown>();
+    let failedTransactionWrites: Array<{ path: string; operation: 'update' | 'set' | 'delete'; data?: unknown }> = [];
+    let failAuditWrite = true;
     let auditPath = '';
-    const transaction = {
+    const createTransaction = (stagedWrites: Array<{ path: string; operation: 'update' | 'set' | 'delete'; data?: unknown }>) => ({
       get: async (reference: { path?: string }) => ({
         exists: committed.has(reference.path!),
         data: () => committed.get(reference.path!),
       }),
       update: (reference: { path?: string }, data: unknown) => {
-        staged.set(reference.path!, { ...(committed.get(reference.path!) as object), ...(data as object) });
+        stagedWrites.push({ path: reference.path!, operation: 'update', data });
       },
       set: (reference: { path?: string }, data: unknown) => {
-        staged.set(reference.path!, data);
-        if (reference.path!.startsWith('auditoriaAdmin/')) {
+        stagedWrites.push({ path: reference.path!, operation: 'set', data });
+        if (failAuditWrite && reference.path!.startsWith('auditoriaAdmin/')) {
           auditPath = reference.path!;
           throw new Error('injected-transaction-failure');
         }
       },
-      delete: (reference: { path?: string }) => staged.set(reference.path!, undefined),
-    };
+      delete: (reference: { path?: string }) => {
+        stagedWrites.push({ path: reference.path!, operation: 'delete' });
+      },
+    });
     const db = {
       collection: (name: string) => ({
         doc: (id?: string) => ({
           path: id ? `${name}/${id}` : `${name}/audit-generated`,
         }),
       }),
-      runTransaction: async <T>(callback: (tx: typeof transaction) => Promise<T>) => callback(transaction),
+      runTransaction: async <T>(callback: (tx: ReturnType<typeof createTransaction>) => Promise<T>) => {
+        const stagedWrites: Array<{ path: string; operation: 'update' | 'set' | 'delete'; data?: unknown }> = [];
+        try {
+          const result = await callback(createTransaction(stagedWrites));
+          for (const write of stagedWrites) {
+            if (write.operation === 'delete') committed.delete(write.path);
+            else if (write.operation === 'update') {
+              committed.set(write.path, {
+                ...(committed.get(write.path) as object),
+                ...(write.data as object),
+              });
+            } else {
+              committed.set(write.path, write.data);
+            }
+          }
+          return result;
+        } catch (error) {
+          failedTransactionWrites = stagedWrites;
+          throw error;
+        }
+      },
     };
 
     await expect(applyConsentTransaction(
@@ -326,10 +357,24 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     )).rejects.toThrow('injected-transaction-failure');
 
     expect(auditPath).toBe(`auditoriaAdmin/audit-generated`);
-    expect(staged.size).toBe(3);
+    expect(failedTransactionWrites).toHaveLength(3);
     expect(committed).toEqual(initialState);
     expect(committed.has(`voluntariosPublicos/${volunteerId}`)).toBe(false);
     expect([...committed.keys()].some((path) => path.startsWith('auditoriaAdmin/'))).toBe(false);
+
+    failAuditWrite = false;
+    await applyConsentTransaction(
+      {
+        volunteerId,
+        enabled: true,
+        consentVersion: 'volunteer-public-v1',
+      },
+      { uid: 'owner-uid', role: 'user' },
+      db,
+      'transaction-now',
+    );
+    expect(committed.has(`voluntariosPublicos/${volunteerId}`)).toBe(true);
+    expect([...committed.keys()].some((path) => path.startsWith('auditoriaAdmin/'))).toBe(true);
   });
 
   it('permite revocacion a panel y luego al titular', async () => {
@@ -341,11 +386,11 @@ describe('consentimiento publico de voluntarios en Emulator Suite', () => {
     expect((await callConsent(await idToken(owner), true)).status).toBe(200);
     expect((await callConsent(await idToken(panel), false)).status).toBe(200);
     expect((await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`))).exists()).toBe(false);
-    expect((await readAdminAudit(panel.uid)).actorUid).toBe(panel.uid);
+    expect((await readAdminAudit(panel.uid)).data.actorUid).toBe(panel.uid);
 
     expect((await callConsent(await idToken(owner), true)).status).toBe(200);
     expect((await callConsent(await idToken(owner), false)).status).toBe(200);
     expect((await getDoc(doc(firestore!, `voluntariosPublicos/${volunteerId}`))).exists()).toBe(false);
-    expect((await readAdminAudit(owner.uid)).actorUid).toBe(owner.uid);
+    expect((await readAdminAudit(owner.uid)).data.actorUid).toBe(owner.uid);
   });
 });
