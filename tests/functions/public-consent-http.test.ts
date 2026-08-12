@@ -261,6 +261,28 @@ it('limita por request ante Auth fallida y responde 401 sin aplicar', async () =
   expect(apply).not.toHaveBeenCalled();
 });
 
+it('normaliza cualquier fallo del autenticador a 401 sin filtrar detalles', async () => {
+  const { res, result } = createResponse();
+  const apply = vi.fn();
+  const authenticate = vi.fn(async () => {
+    throw new Error('private auth verifier details');
+  });
+
+  await setVolunteerPublicConsentHandler(
+    { ...request, ip: '203.0.113.7' },
+    res,
+    apply,
+    { authenticate, rateLimiter: allowRateLimit },
+  );
+
+  expect(result.status).toBe(401);
+  expect(result.body).toEqual({
+    error: { code: 'unauthenticated', message: 'Authentication required' },
+  });
+  expect(JSON.stringify(result.body)).not.toContain('private auth verifier details');
+  expect(apply).not.toHaveBeenCalled();
+});
+
 it('aplica la mutacion dentro de una transaccion y solo toca los documentos previstos', async () => {
   const transaction = {
     get: vi.fn(async () => ({

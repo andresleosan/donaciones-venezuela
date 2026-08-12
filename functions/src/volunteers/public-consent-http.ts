@@ -195,10 +195,10 @@ export async function setVolunteerPublicConsentHandler(
     try {
       context = await authenticate(req);
     } catch (error) {
-      if (!(error instanceof AuthError)) throw error;
       const requestIp = req.ip?.trim();
       if (requestIp) await rateLimiter('request', requestIp, now);
-      throw error;
+      if (error instanceof AuthError) throw error;
+      throw new AuthError('unauthenticated', 401, 'Authentication required');
     }
 
     await rateLimiter('uid', context.uid, now);
