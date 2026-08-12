@@ -32,9 +32,9 @@ export const VOLUNTEER_PUBLIC_PROFILE_FIELDS = [
 ] as const;
 
 const FORBIDDEN = new Set([
-  'email', 'telefono', 'documento', 'cedula', 'placa', 'authuid',
+  'email', 'telefono', 'documento', 'documentos', 'cedula', 'placa', 'authuid',
   'pin', 'pinhash', 'tokeninterno', 'refreshtoken', 'ip', 'iphash',
-  'comprobantepath', 'fileprivatepath', 'ubicacionprecisa',
+  'tokens', 'fotopublicapath', 'comprobantepath', 'fileprivatepath', 'ubicacionprecisa',
 ]);
 
 export type ProjectionName = keyof typeof PUBLIC_PROJECTION_FIELDS;

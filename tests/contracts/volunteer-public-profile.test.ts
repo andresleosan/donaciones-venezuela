@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeVolunteerPublicProfile } from '../../functions/src/public-projections.js';
+import {
+  sanitizePublicProjection,
+  sanitizeVolunteerPublicProfile,
+} from '../../functions/src/public-projections.js';
 
 describe('perfil publico de voluntarios', () => {
   it('publica solo la allowlist v1 y omite foto y PII', () => {
@@ -31,5 +34,35 @@ describe('perfil publico de voluntarios', () => {
       activo: true,
       createdAt: '2026-08-11T12:00:00.000Z',
     })).toThrow('forbidden-public-fields');
+  });
+
+  it.each([
+    'fotoPublicaPath',
+    'documentos',
+    'tokens',
+    'ubicacionPrecisa',
+    'email',
+    'telefono',
+    'authUid',
+  ])('rechaza %s anidado dentro de habilidades', (forbiddenField) => {
+    expect(() => sanitizeVolunteerPublicProfile({
+      nombre: 'Ana Demo',
+      zona: 'Este',
+      habilidades: [{ etiqueta: 'salud', [forbiddenField]: 'privado' }],
+      activo: true,
+      createdAt: '2026-08-11T12:00:00.000Z',
+    })).toThrow('forbidden-public-fields');
+  });
+
+  it('conserva tokenPublico de la proyeccion de facturas no relacionada', () => {
+    expect(sanitizePublicProjection('facturasPublicas', {
+      numero: 'F-1',
+      tokenPublico: 'public-token',
+      estado: 'abierta',
+    })).toEqual({
+      numero: 'F-1',
+      tokenPublico: 'public-token',
+      estado: 'abierta',
+    });
   });
 });
