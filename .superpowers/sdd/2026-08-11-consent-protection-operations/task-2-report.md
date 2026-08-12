@@ -33,3 +33,28 @@ No se detectó persistencia de IP, UID, token, email, body ni headers en el docu
 ## Preocupaciones abiertas
 
 La integración del limitador en endpoints y la verificación de App Check quedan deliberadamente para tareas posteriores.
+
+## Fix Round 1
+
+### Hallazgos corregidos
+
+- `defaultFirestore()`, `collection()` y `doc()` ahora se ejecutan dentro del límite `try/catch`; sus errores se normalizan a `rate-limit-storage-failed`.
+- `createRequestRateLimitKey` acepta `string | undefined` y rechaza valores ausentes o no textuales con `request-identity-required`.
+- Los documentos existentes con `hits`, `windowStart` o `expiresAt` no finitos, negativos o fraccionarios se consideran corruptos y producen `rate-limit-storage-failed`.
+
+### Regresiones agregadas
+
+- Fallo del adaptador al construir colección/referencia.
+- Fallo de inicialización de Firestore por defecto.
+- IP `undefined` y valor no textual.
+- Nueve variantes de documento corrupto.
+
+### Verificación de fix round 1
+
+- `npx vitest run tests/functions/rate-limit.test.ts`: 1 archivo, 18 pruebas OK.
+- `npm run build` ejecutado en `functions`: TypeScript OK.
+- `git diff --check`: sin errores atribuibles a los archivos de esta tarea.
+
+### Autocrítica
+
+Se conservaron los límites 5/20 por hora, SHA-256, campos persistidos, semántica transaccional y alcance aislado. No se agregaron endpoints, App Check, operaciones remotas, despliegues ni secretos. No quedan hallazgos críticos abiertos en el código revisado.

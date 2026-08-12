@@ -14,8 +14,11 @@ type RateLimitDocument = {
   expiresAt: number;
 };
 
-function createRateLimitDb(options: { failOnSet?: boolean } = {}) {
-  const committedDocuments: Record<string, RateLimitDocument> = {};
+function createRateLimitDb(options: {
+  failOnSet?: boolean;
+  initialDocuments?: Record<string, unknown>;
+} = {}) {
+  const committedDocuments: Record<string, unknown> = { ...options.initialDocuments };
   const references = new Map<string, { path: string }>();
   const referenceFor = (path: string) => {
     const existing = references.get(path);
@@ -113,6 +116,24 @@ it('reinicia una ventana expirada', async () => {
 it('rechaza IP ausente sin usar una clave global', async () => {
   expect(() => createRequestRateLimitKey('')).toThrow('request-identity-required');
   expect(() => createRequestRateLimitKey('   ')).toThrow('request-identity-required');
+  expect(() => createRequestRateLimitKey(undefined)).toThrow('request-identity-required');
+  expect(() => createRequestRateLimitKey(42 as never)).toThrow('request-identity-required');
+});
+
+it('normaliza los fallos al inicializar Firestore o construir la referencia', async () => {
+  const db = {
+    collection() {
+      throw new Error('private adapter details');
+    },
+  } as NonNullable<Parameters<typeof consumeRateLimit>[3]>;
+
+  await expect(consumeRateLimit('uid', 'uid-1', 0, db)).rejects.toThrow(
+    'rate-limit-storage-failed',
+  );
+});
+
+it('normaliza el fallo del Firestore por defecto sin filtrar detalles', async () => {
+  await expect(consumeRateLimit('uid', 'uid-1', 0)).rejects.toThrow('rate-limit-storage-failed');
 });
 
 it('no deja write committed cuando falla la transaccion', async () => {
@@ -135,4 +156,33 @@ it('persiste solo datos derivados del limite sin valores sensibles', async () =>
     hits: 1,
     expiresAt: 3600000,
   });
+});
+
+it.each([
+  { hits: Number.NaN },
+  { hits: -1 },
+  { hits: 1.5 },
+  { windowStart: Number.POSITIVE_INFINITY },
+  { windowStart: -1 },
+  { windowStart: 0.5 },
+  { expiresAt: Number.NaN },
+  { expiresAt: -1 },
+  { expiresAt: 0.5 },
+])('rechaza documentos de limite corruptos: %s', async (corruption) => {
+  const keyHash = hashRateLimitKey(createUidRateLimitKey('uid-1'));
+  const db = createRateLimitDb({
+    initialDocuments: {
+      [`rateLimits/${keyHash}`]: {
+        bucket: 'uid',
+        windowStart: 0,
+        hits: 1,
+        expiresAt: 3600000,
+        ...corruption,
+      },
+    },
+  });
+
+  await expect(consumeRateLimit('uid', 'uid-1', 0, db)).rejects.toThrow(
+    'rate-limit-storage-failed',
+  );
 });
