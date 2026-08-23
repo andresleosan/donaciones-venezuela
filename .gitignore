@@ -4,8 +4,11 @@
 .env
 .env.*
 !.env.example
+!.env.*.example
 *.pem
 *.key
+credentials*.json
+service-account*.json
 *.p12
 *.cer
 secrets/

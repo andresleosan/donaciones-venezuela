@@ -12,11 +12,17 @@ it('limita la expiración a 15 minutos', () => {
 });
 
 it('acepta solo el path privado canónico', () => {
-  expect(validatePrivateStoragePath('private/facturas/f1/a.png'))
-    .toBe('private/facturas/f1/a.png');
+  expect(validatePrivateStoragePath('private/owner-1/receipts/f1.png'))
+    .toMatchObject({
+      path: 'private/owner-1/receipts/f1.png',
+      ownerUid: 'owner-1',
+      category: 'receipts',
+      fileName: 'f1.png',
+      extension: 'png',
+    });
 
   for (const invalid of [
-    'public/facturas/f1/a.png',
+    'public/owner-1/receipts/f1.png',
     'private/../f1/a.png',
     'private//f1/a.png',
     'private/facturas/f1/..',
