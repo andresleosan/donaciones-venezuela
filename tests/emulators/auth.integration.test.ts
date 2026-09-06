@@ -15,14 +15,9 @@ import {
 } from 'firebase/auth';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const firebaseConfig = {
-  apiKey: 'demo-api-key',
-  authDomain: 'demo-donaciones-venezuela.firebaseapp.com',
-  projectId: 'demo-donaciones-venezuela',
-  storageBucket: 'demo-donaciones-venezuela.appspot.com',
-  messagingSenderId: 'demo-sender-id',
-  appId: 'demo-app-id',
-};
+import { DEMO_FIREBASE_CONFIG } from './entorno.js';
+
+const firebaseConfig = DEMO_FIREBASE_CONFIG;
 const authEmulatorUrl = 'http://127.0.0.1:9099';
 const authSessionUrl = 'http://127.0.0.1:5001/demo-donaciones-venezuela/us-east1/authSession';
 

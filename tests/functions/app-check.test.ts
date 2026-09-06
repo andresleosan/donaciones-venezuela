@@ -33,11 +33,32 @@ it('enforced exige X-Firebase-AppCheck y normaliza fallo', async () => {
   )).rejects.toMatchObject({ code: 'app-check-required', status: 403 });
 });
 
-it('solo acepta los modos configurados y deshabilita valores desconocidos', () => {
+it('solo acepta los modos configurados', () => {
   expect(getAppCheckMode('disabled')).toBe('disabled');
   expect(getAppCheckMode('log-only')).toBe('log-only');
   expect(getAppCheckMode('enforced')).toBe('enforced');
-  expect(getAppCheckMode('unexpected')).toBe('disabled');
+});
+
+it('falla cerrado ante un valor ausente o desconocido fuera del emulador', () => {
+  expect(getAppCheckMode('unexpected', false)).toBe('enforced');
+  expect(getAppCheckMode('', false)).toBe('enforced');
+  expect(getAppCheckMode(null, false)).toBe('enforced');
+
+  const previo = process.env.APP_CHECK_MODE;
+  try {
+    delete process.env.APP_CHECK_MODE;
+    expect(getAppCheckMode(undefined, false)).toBe('enforced');
+  } finally {
+    if (previo === undefined) delete process.env.APP_CHECK_MODE;
+    else process.env.APP_CHECK_MODE = previo;
+  }
+});
+
+it('en Emulator Suite un valor ausente queda deshabilitado para poder probar', () => {
+  expect(getAppCheckMode(undefined, true)).toBe('disabled');
+  expect(getAppCheckMode('unexpected', true)).toBe('disabled');
+  // Una configuracion explicita gana sobre el emulador.
+  expect(getAppCheckMode('enforced', true)).toBe('enforced');
 });
 
 it('lee el token mediante el accessor de request', async () => {

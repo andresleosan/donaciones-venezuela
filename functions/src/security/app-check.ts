@@ -14,19 +14,21 @@ export class AppCheckError extends Error {
 }
 
 type AppCheckRequest = {
-  headers?: {
-    'x-firebase-appcheck'?: string;
-    'X-Firebase-AppCheck'?: string;
-  };
+  headers?: Record<string, unknown>;
   get?: (name: string) => string | null | undefined;
 };
 
 export type AppCheckVerifier = (token: string) => Promise<unknown>;
 
-export function getAppCheckMode(value: unknown = process.env.APP_CHECK_MODE): AppCheckMode {
-  return value === 'log-only' || value === 'enforced' || value === 'disabled'
-    ? value
-    : 'disabled';
+// Fail-closed: un valor ausente o desconocido pasa a 'enforced'. La unica
+// excepcion es Emulator Suite, donde no hay proveedor de atestacion y exigirla
+// dejaria toda la suite sin poder llamar a ninguna Function.
+export function getAppCheckMode(
+  value: unknown = process.env.APP_CHECK_MODE,
+  isEmulator: boolean = process.env.FUNCTIONS_EMULATOR === 'true',
+): AppCheckMode {
+  if (value === 'log-only' || value === 'enforced' || value === 'disabled') return value;
+  return isEmulator ? 'disabled' : 'enforced';
 }
 
 function getAppCheckToken(request: AppCheckRequest): string | null {

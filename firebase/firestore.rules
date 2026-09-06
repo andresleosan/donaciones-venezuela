@@ -1,24 +1,125 @@
 rules_version = '2';
 
+// Frontera publica de Firestore.
+//
+// Regla unica: el cliente SOLO lee proyecciones publicas, y nunca escribe nada.
+// Todas las colecciones canonicas (con PII, dinero, tokens o credenciales) caen
+// en el `deny` final y solo son accesibles desde Cloud Functions con Admin SDK.
+//
+// Las Rules no filtran resultados: una consulta debe cumplirlas por completo.
+// Por eso `list` exige un limite explicito de 50 como maximo; sin el, un cliente
+// podria pedir la coleccion entera de una sola vez.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function listaAcotada() {
+      return request.query.limit != null && request.query.limit <= 50;
+    }
+
+    // --- Proyecciones publicas: lectura anonima, escritura solo por Functions ---
+
     match /lugaresPublicos/{id} {
       allow get: if true;
-      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow list: if listaAcotada();
       allow write: if false;
     }
 
     match /vacantesPublicas/{id} {
       allow get: if true;
-      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow list: if listaAcotada();
       allow write: if false;
     }
 
     match /voluntariosPublicos/{id} {
       allow get: if true;
-      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow list: if listaAcotada();
       allow write: if false;
     }
+
+    match /motorizadosPublicos/{id} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    match /historialPublico/{id} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    match /trayectosPublicos/{id} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    match /donacionesMotorizadosPublicos/{id} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    match /entregasPublicas/{id} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    match /familiasPublicas/{id} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    // El id ES el token publico (DV-XXXX-XXXX-XXXX): quien lo tiene puede leer su
+    // factura. Listar esta prohibido, o el token dejaria de ser un secreto.
+    match /facturasPublicas/{tokenPublico} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // Presupuestos y ofertas se consultan por token igual que las facturas, pero
+    // ademas se listan para poblar las vistas de "necesidades" y "recogidas".
+    match /presupuestosPublicos/{tokenPublico} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    match /ofertasPublicas/{tokenPublico} {
+      allow get: if true;
+      allow list: if listaAcotada();
+      allow write: if false;
+    }
+
+    // Documentos unicos: contadores agregados y tasa de cambio vigente.
+    match /estadisticas/{id} {
+      allow get: if id == 'global';
+      allow list: if false;
+      allow write: if false;
+    }
+
+    match /tasas/{id} {
+      allow get: if id == 'actual';
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // --- Denegaciones explicitas ---
+    // El `deny` final ya las cubre; se escriben aparte para que un refactor futuro
+    // de esa regla no las abra por descuido, y para que las pruebas las nombren.
+
+    match /rateLimits/{id} { allow read, write: if false; }
+    match /auditoriaAdmin/{id} { allow read, write: if false; }
+    match /config/{id} { allow read, write: if false; }
+    match /indices/{coleccion}/{documento=**} { allow read, write: if false; }
+    match /centrosPanel/{id} { allow read, write: if false; }
+    match /personas/{id} { allow read, write: if false; }
+    match /familiasDamnificadas/{id} { allow read, write: if false; }
+    match /denuncias/{id} { allow read, write: if false; }
+    match /facturas/{id}/{documento=**} { allow read, write: if false; }
 
     match /{document=**} {
       allow read, write: if false;

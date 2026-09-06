@@ -5,6 +5,10 @@
 .env.*
 !.env.example
 !.env.*.example
+# Configuracion NO secreta de Functions por proyecto (modo App Check, origenes
+# permitidos). Debe viajar en el repositorio: el despliegue depende de ella.
+!functions/.env.demo-donaciones-venezuela
+!functions/.env.donaciones-venezuela-4fc29
 *.pem
 *.key
 credentials*.json
@@ -40,6 +44,9 @@ out/
 /functions/lib/
 *.log
 coverage/
+
+# Grafo de conocimiento generado por la skill graphify: se regenera, no se versiona
+graphify-out/
 
 # Reportes de QA (browser-qa-e2e, v3.3.0) — se regeneran en cada corrida, no se versionan
 qa/reports/

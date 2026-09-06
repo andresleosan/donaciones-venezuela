@@ -17,6 +17,7 @@ import {
   type AppCheckVerifier,
 } from '../security/app-check.js';
 import {
+  clientIp,
   consumeRateLimit,
   RateLimitError,
 } from '../security/rate-limit.js';
@@ -195,8 +196,11 @@ export async function setVolunteerPublicConsentHandler(
     try {
       context = await authenticate(req);
     } catch (error) {
-      const requestIp = req.ip?.trim();
-      if (requestIp) await rateLimiter('request', requestIp, now);
+      // Nunca req.ip: detras de Cloud Run es la direccion del front-end de
+      // Google y colapsaria todo el trafico anonimo en un unico cubo. Sin un
+      // X-Forwarded-For utilizable no se consume cupo, para no crear ese cubo global.
+      const requestIp = clientIp(req);
+      if (requestIp !== 'desconocida') await rateLimiter('request', requestIp, now);
       if (error instanceof AuthError) throw error;
       throw new AuthError('unauthenticated', 401, 'Authentication required');
     }

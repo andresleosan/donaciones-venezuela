@@ -40,15 +40,10 @@ const { getAuth: getAdminAuth } = require(resolve(adminModule, 'auth/index.js'))
 const { getFirestore: getAdminFirestore } = require(resolve(adminModule, 'firestore/index.js'));
 const { getApps, initializeApp: initializeAdminApp } = require(resolve(adminModule, 'app/index.js'));
 
-const projectId = 'demo-donaciones-venezuela';
-const firebaseConfig = {
-  apiKey: 'demo-api-key',
-  authDomain: `${projectId}.firebaseapp.com`,
-  projectId,
-  storageBucket: `${projectId}.appspot.com`,
-  messagingSenderId: 'demo-sender-id',
-  appId: 'demo-app-id',
-};
+import { DEMO_FIREBASE_CONFIG, DEMO_PROJECT_ID } from './entorno.js';
+
+const projectId = DEMO_PROJECT_ID;
+const firebaseConfig = DEMO_FIREBASE_CONFIG;
 const authEmulatorUrl = 'http://127.0.0.1:9099';
 const consentUrl = `http://127.0.0.1:5001/${projectId}/us-east1/setVolunteerPublicConsent`;
 const password = 'Password-1234!';

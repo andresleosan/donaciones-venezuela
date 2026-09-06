@@ -23,6 +23,19 @@ function createResponse() {
   return { res, result };
 }
 
+it('exige App Check cuando el modo es enforced', async () => {
+  const { res, result } = createResponse();
+  const authenticate = vi.fn();
+
+  await authSessionHandler({ method: 'GET', headers: {} }, res, authenticate, { appCheckMode: 'enforced' });
+
+  expect(result.status).toBe(403);
+  expect(result.body).toEqual({
+    error: { code: 'app-check-required', message: 'App Check required' },
+  });
+  expect(authenticate).not.toHaveBeenCalled();
+});
+
 it('devuelve solo uid y rol para una sesion autenticada', async () => {
   const { res, result } = createResponse();
   await authSessionHandler(

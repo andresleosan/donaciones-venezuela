@@ -1,7 +1,11 @@
 import { getAuth } from 'firebase-admin/auth';
 
 export type Role = 'user' | 'panel' | 'admin';
-export type AuthContext = { uid: string; role: Role };
+
+// `panelLugarId` solo viaja cuando el claim existe: un rol 'panel' sin centro
+// asignado no puede operar ningun panel. Se deja opcional para no cambiar la
+// forma del contexto de los endpoints que no lo usan.
+export type AuthContext = { uid: string; role: Role; panelLugarId?: string };
 
 export class AuthError extends Error {
   constructor(
@@ -16,6 +20,7 @@ export class AuthError extends Error {
 type TokenClaims = {
   uid?: unknown;
   role?: unknown;
+  panelLugarId?: unknown;
 };
 
 type VerifyIdToken = (token: string) => Promise<TokenClaims>;
@@ -56,7 +61,11 @@ export async function authenticateRequest(
       ? claims.role
       : 'user';
 
-    return { uid: claims.uid, role };
+    const panelLugarId = typeof claims.panelLugarId === 'string' && claims.panelLugarId.trim()
+      ? claims.panelLugarId.trim()
+      : undefined;
+
+    return panelLugarId ? { uid: claims.uid, role, panelLugarId } : { uid: claims.uid, role };
   } catch {
     throw toUnauthenticatedError();
   }

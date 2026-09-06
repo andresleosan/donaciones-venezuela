@@ -227,7 +227,7 @@ it('usa el UID autenticado para el bucket UID y la IP normalizada para el bucket
   const rateLimiter = vi.fn(allowRateLimit);
 
   await setVolunteerPublicConsentHandler(
-    { ...request, ip: ' 203.0.113.7 ' },
+    { ...request, headers: { ...request.headers, 'x-forwarded-for': ' 203.0.113.7 , 10.0.0.1' } },
     res,
     apply,
     { authenticate: authenticated, rateLimiter },
@@ -247,7 +247,7 @@ it('limita por request ante Auth fallida y responde 401 sin aplicar', async () =
   const rateLimiter = vi.fn(allowRateLimit);
 
   await setVolunteerPublicConsentHandler(
-    { ...request, ip: ' 203.0.113.7 ' },
+    { ...request, headers: { ...request.headers, 'x-forwarded-for': ' 203.0.113.7 , 10.0.0.1' } },
     res,
     apply,
     { authenticate, rateLimiter },
@@ -261,7 +261,7 @@ it('limita por request ante Auth fallida y responde 401 sin aplicar', async () =
   expect(apply).not.toHaveBeenCalled();
 });
 
-it('rechaza Auth fallida sin req.ip sin consumir un bucket global', async () => {
+it('rechaza Auth fallida sin X-Forwarded-For utilizable sin consumir un bucket global', async () => {
   const { res, result } = createResponse();
   const apply = vi.fn();
   const authenticate = vi.fn(async () => {
@@ -292,7 +292,7 @@ it('normaliza cualquier fallo del autenticador a 401 sin filtrar detalles', asyn
   });
 
   await setVolunteerPublicConsentHandler(
-    { ...request, ip: '203.0.113.7' },
+    { ...request, headers: { ...request.headers, 'x-forwarded-for': '203.0.113.7' } },
     res,
     apply,
     { authenticate, rateLimiter: allowRateLimit },
