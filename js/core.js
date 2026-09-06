@@ -528,21 +528,34 @@
       if (form && form.__wiz && estado.paso != null) form.__wiz.irA(estado.paso);
     }
 
-    // -- SESIÓN DE USUARIO (persistente entre pestañas y recargas) ---------
-    // Guarda la sesión OTP de Supabase Auth: tokens + email + nombre + roles.
-    // Se usa localStorage (no sessionStorage) para que «usar la app sin
-    // problemas» no exija pedir otro código en cada recarga. NUNCA se guarda
-    // el PIN de un centro ni el código OTP.
-    const SESION_KEY = 'dv-sesion';
+    // -- SESIÓN DE USUARIO (en memoria; la persistencia la lleva Firebase) --
+    // Antes se guardaba el JWT de Supabase en localStorage para sobrevivir a las
+    // recargas. Con Firebase Auth eso ya lo hace el SDK (persistencia `local`),
+    // así que el ID token vive solo en memoria: `src/main.js` publica el almacén
+    // en `window.DVSesion` y lo repuebla en cada cambio de sesión. NUNCA se
+    // guarda el PIN de un centro.
+    const sesionMemoria = (function () {
+      if (window.DVSesion) return window.DVSesion;
+      // Respaldo por si el módulo de arranque no llegó a evaluarse: la app se
+      // degrada a "sin sesión" en vez de romperse.
+      let valor = null;
+      return {
+        get: () => valor,
+        set: (datos) => { valor = datos ? Object.assign({}, valor || {}, datos) : null; return valor; },
+        clear: () => { valor = null; }
+      };
+    })();
     function guardarSesion(datos) {
-      try { localStorage.setItem(SESION_KEY, JSON.stringify(datos)); } catch (err) { /* modo privado */ }
+      sesionMemoria.set(datos);
       pintarBotonSesion();
     }
     function sesionActual() {
-      let s = null;
-      try { s = JSON.parse(localStorage.getItem(SESION_KEY) || 'null'); } catch (err) { return null; }
+      const s = sesionMemoria.get();
       return (s && s.access_token) ? s : null;
     }
+    // `src/main.js` avisa cuando Firebase renueva o cierra la sesión por su
+    // cuenta (otra pestaña, token caducado): el botón debe repintarse.
+    window.addEventListener('dv-sesion-change', () => pintarBotonSesion());
     async function sesionValida() {
       const s = sesionActual();
       if (!s) return null;
@@ -555,10 +568,12 @@
       } catch (err) { cerrarSesion(); return null; }
     }
     function cerrarSesion() {
-      try { localStorage.removeItem(SESION_KEY); } catch (err) { /* modo privado */ }
-      if (window.SheetsService && typeof window.SheetsService.clearOfflineQueue === 'function') {
-        window.SheetsService.clearOfflineQueue().catch(() => {});
-      }
+      sesionMemoria.clear();
+      // `cerrarSesion` del facade cierra la sesión de Firebase y vacía la cola;
+      // el respaldo cubre una fachada antigua que solo sepa vaciar la cola.
+      const api = window.SheetsService || {};
+      if (typeof api.cerrarSesion === 'function') api.cerrarSesion().catch(() => {});
+      else if (typeof api.clearOfflineQueue === 'function') api.clearOfflineQueue().catch(() => {});
       pintarBotonSesion();
     }
     function nombreSesion(s) {
@@ -690,11 +705,10 @@
     }
 
     // ── CONFIGURACIÓN ─────────────────────────────────────────
-    // `js/entorno.js` puede definir `window.DV_ENTORNO` para apuntar la app a
-    // otro backend. En producción ese archivo es un stub vacío y se usan los
-    // valores de abajo; el entorno de pruebas lo sirve sobrescrito.
-    const SUPABASE_URL = (window.DV_ENTORNO && window.DV_ENTORNO.supabaseUrl) || 'https://zryfwbjvlacorryzdaod.supabase.co';
-    const SUPABASE_KEY = (window.DV_ENTORNO && window.DV_ENTORNO.supabaseKey) || 'sb_publishable_T7fK4bKb1f3o9b7z84IbxQ_1HMnEi56'; // clave pública (publishable), segura en el cliente
+    // El backend se configura en el módulo `src/main.js` a partir de las
+    // variables `VITE_*` del build; `js/entorno.js` puede sobrescribirlas con
+    // `window.DV_ENTORNO` antes de que ese módulo arranque. Aquí ya no queda
+    // ningún endpoint cableado.
 
     const estado = {
       lugares: [], voluntarios: [], rescatistas: [], motorizados: [], traslados: [], donacionesHumanitarias: [], estadisticas: {},
@@ -770,7 +784,7 @@
     };
     const mostrarUbicacionFamiliar = (value) => String(value || '').replace(/^Última vez:/i, t('family.lastSeenPrefix'));
 
-    window.SheetsService.configure({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_KEY });
+    window.SheetsService.configure({});
 
     function fechaRelativa(iso) {
       if (!iso) return t('relative.noDate');

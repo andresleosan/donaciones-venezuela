@@ -244,10 +244,25 @@ Evidencia: `npm.cmd run test:unit` 26 archivos / **449** pruebas OK (antes 24 / 
 - `src/main.js`: `configureAuthPersistence('local')`, `observeAuth` → mantiene `dv-sesion` en memoria (no en `localStorage`), `window.SheetsService = crearSheetsServiceFirebase()`, `window.DVFirebase = { getPrivateFileUrl, uploadPrivateFile, requestPrivateFileDeletion }`.
 - `index.html`/`ventana.html`: `<script type="module" src="/src/main.js"></script>` **antes** de los scripts legados; todos los `<script src="js/...">` y `services/...` pasan a `defer`; se elimina `<script src="services/api.js">` y el `preconnect` a Supabase.
 
-- [ ] **Step 1:** Pruebas de la fachada con `firebase/firestore` mockeado (patrón `tests/firebase/firebase-public-reads.test.js`): envelope `{ data, source }`, derivación de `coincidencias`, `source: 'offline-cache'` cuando `getDocs` falla y hay snapshot, `post` con Bearer.
-- [ ] **Step 2:** Implementar. `npm.cmd run build` PASS; en `dist/index.html` comprobar que el módulo va antes de `js/core.js` y que no queda `services/api.js`.
-- [ ] **Step 3:** Prueba manual con emulador: `npx.cmd firebase emulators:start --project demo-donaciones-venezuela --import=./seeds/emulador` (seeds de Task 2.4) + `npm.cmd run dev`; abrir `http://localhost:5173`, ver directorio con datos semilla, sin errores en consola. Anotar evidencia en el commit.
-- [ ] **Step 4:** Commit `feat: firebase-backed SheetsService facade and module bootstrap`.
+> **Hecha el 2026-09-06** salvo el Step 3 (ver abajo). Notas de implementación:
+>
+> - **Orden de scripts.** Vite inyecta el bundle en el `<head>`, así que en `dist/` el módulo se adelanta a `js/entorno.js` por mucho que en el HTML fuente vaya después. Para que `window.DV_ENTORNO` siga sirviendo: `src/firebase/firebase-config.js` pasa a getters (lee `DV_ENTORNO` en cada acceso, no al importar), `functions-base.js` y `api-client.js` lo consultan por llamada, y `src/main.js` conecta con Firebase Auth en `DOMContentLoaded`, no al evaluarse. `tests/firebase/firebase-config.test.js` fija ese contrato. En el HTML fuente el orden es: leaflet → `offline-queue-policy` → `entorno` → módulo → `pwa` → `core` → resto (`pwa.js` consulta `SheetsService` al arrancar).
+> - **Nombres de campo.** Las proyecciones de la Fase 3 todavía no están fijadas, así que cada mapeo acepta el nombre del catálogo y el de la allowlist actual (`ubicacion`/`ubicacionPublica`, `telefono`/`contactoPublico`, `lat`/`latAproximada`, `tiene_disponible`/`tieneDisponible`, `fecha_registro`/`createdAt`). La UI siempre recibe el nombre del contrato.
+> - **`getHistorial`.** La UI llama con el **nombre** del lugar y el único índice disponible es `historialPublico (lugarId, createdAt, __name__)`. La fachada consulta `where('lugarId','==', normalizar(nombre))`: la Task 3.1 debe publicar `historialPublico.lugarId` con el `nombreNorm` del lugar, o la ventana `historial` no resuelve sin una lectura extra.
+> - **Derivaciones.** `necesita[].coincidencias` y `estado.traslados` se calculan en cliente con la misma lógica de las vistas `lugares_directorio` y `traslados_sugeridos` (cruce por insumo normalizado entre lugares distintos, `order by (urgencia='Alta') desc, nombre`, traslados ordenados por `actualizado` desc y cortados a 30).
+> - **Sesión.** `dv-sesion` deja `localStorage`: vive en `window.DVSesion` (memoria) y `src/main.js` lo repuebla desde `observeAuth`; `js/core.js` emite/escucha `dv-sesion-change`. La persistencia entre recargas la lleva el SDK (`browserLocalPersistence`).
+> - **`vite.config.js` no cambia:** las dos páginas ya son entradas de Rollup y el módulo entra por el `<script type="module">`.
+>
+> **Pendiente conocido, bloquea el Step 3:** el Web SDK no tiene cableado el Emulator Suite (no hay `connectFirestoreEmulator` / `connectAuthEmulator` / `connectStorageEmulator` en `src/firebase/`), y `getFirestore(app)` devuelve la misma instancia a `firebase-firestore.js`, `firebase-public-reads.js` y la fachada, así que la conexión debe centralizarse en un único punto (conectar dos veces lanza). Se resuelve como primer paso de la Task 2.4, que es donde el emulador se usa de verdad.
+
+- [x] **Step 1:** Pruebas de la fachada con `firebase/firestore` mockeado (patrón `tests/firebase/firebase-public-reads.test.js`): envelope `{ data, source }`, derivación de `coincidencias`, `source: 'offline-cache'` cuando `getDocs` falla y hay snapshot, `post` con Bearer. **26 pruebas** en `tests/data/sheets-service-firebase.test.js`.
+- [x] **Step 2:** Implementar. `npm.cmd run build` PASS; en `dist/index.html` comprobar que el módulo va antes de `js/core.js` y que no queda `services/api.js`. Verificado: `dist/index.html:56` es el módulo, `dist/index.html:840` es `js/core.js`, y `services/api.js` no aparece en ninguna de las dos páginas construidas.
+- [ ] **Step 3:** Prueba manual con emulador: `npx.cmd firebase emulators:start --project demo-donaciones-venezuela --import=./seeds/emulador` (seeds de Task 2.4) + `npm.cmd run dev`; abrir `http://localhost:5173`, ver directorio con datos semilla, sin errores en consola. Anotar evidencia en el commit. **Aplazado a la Task 2.4:** faltan las semillas y el cableado del emulador en el Web SDK.
+- [x] **Step 4:** Commit `feat: firebase-backed SheetsService facade and module bootstrap`.
+
+Evidencia: `npm.cmd run test:unit` 28 archivos / **479** pruebas OK; `npm.cmd run test:emulators` 22 archivos / **311** pruebas OK; `npm.cmd run build` código 0; `python scripts/verificar-idioma.py` 1499 claves paralelas OK.
+
+Hallazgos para tareas posteriores: el bundle `dist/assets/main-*.js` queda en **583 kB** (175 kB gzip) porque `firebase/firestore` y `firebase/storage` se importan estática y dinámicamente a la vez y Rollup no puede separarlos — corregirlo en la Task 4.9. La CSP de `vercel.json` sigue apuntando a `*.supabase.co` (`connect-src`): es el Step 5 del gate G3.
 
 ### Task 2.3: `estadisticas/global`, `tasas/actual` y publicador de arranque
 
@@ -258,8 +273,9 @@ Evidencia: `npm.cmd run test:unit` 26 archivos / **449** pruebas OK (antes 24 / 
 
 ### Task 2.4: Seeds sintéticos para el emulador
 
-**Files:** Create `scripts/semilla-firebase.mjs`, `seeds/README.md`; `package.json` script `seed:emulador`.
+**Files:** Create `scripts/semilla-firebase.mjs`, `seeds/README.md`, `src/firebase/emuladores.js`; Modify `src/firebase/firebase-config.js`, `src/firebase/firebase-auth.js`, `src/firebase/firebase-firestore.js`, `src/firebase/firebase-public-reads.js`, `src/data/sheets-service-firebase.js`; `package.json` script `seed:emulador`.
 
+- [ ] **Step 0 (traído de la Task 2.2):** cablear el Emulator Suite en el Web SDK. `getFirestore(app)` devuelve **una sola instancia** por app, así que la conexión no puede repetirse en cada módulo: centralizar la creación de Firestore, Auth y Storage en `firebase-config.js` (una promesa por servicio) y conectar `connectFirestoreEmulator` / `connectAuthEmulator` / `connectStorageEmulator` solo cuando `DV_ENTORNO.emuladores` o `VITE_FIREBASE_EMULATORS` lo pidan. Actualizar los mocks de `firebase-config.js` en las pruebas que hoy solo falsean `getFirebaseApp`. Con eso cerrar el Step 3 de la Task 2.2.
 - [ ] **Step 1:** El script usa Admin SDK contra `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` y `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`; se niega a correr si esas variables no apuntan a `127.0.0.1`. Crea: 3 lugares con insumos (mismos de `scripts/semilla-pruebas.sql`, con prefijo `PRUEBA · `), 2 voluntarios, 2 motorizados, 1 vacante, 2 facturas (una presupuesto abierta, una necesidad), `tasas/actual` = 36.5 (fuente `seed`), usuarios `admin@prueba.local` (claim admin), `panel@prueba.local` (claim panel del lugar 1), `user@prueba.local`; y escribe todas las proyecciones vía las mismas funciones de `publicar`.
 - [ ] **Step 2:** Exportar con `npx.cmd firebase emulators:export ./seeds/emulador --project demo-donaciones-venezuela` y versionar la carpeta. Commit `feat: deterministic emulator seeds`.
 

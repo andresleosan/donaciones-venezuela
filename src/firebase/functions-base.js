@@ -2,7 +2,6 @@ import { firebaseConfig } from './firebase-config.js';
 
 export const FUNCTIONS_REGION = 'us-east1';
 
-const runtimeConfig = globalThis.DV_ENTORNO ?? {};
 const buildConfig = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 
 // URL base de las Cloud Functions.
@@ -13,7 +12,7 @@ const buildConfig = typeof import.meta !== 'undefined' && import.meta.env ? impo
 export function functionsBaseUrl(overrides = {}) {
   const explicito = overrides.apiBase
     ?? buildConfig.VITE_API_BASE
-    ?? runtimeConfig.apiBase;
+    ?? (globalThis.DV_ENTORNO ?? {}).apiBase;
   if (typeof explicito === 'string' && explicito.trim()) {
     return explicito.trim().replace(/\/+$/, '');
   }

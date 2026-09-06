@@ -1,6 +1,8 @@
 // Cascarón PWA y respaldo offline. Los datos privados no se almacenan aquí:
-// las lecturas públicas se guardan en IndexedDB desde services/api.js.
-const VERSION = '107';
+// las lecturas públicas se guardan en IndexedDB desde src/data/offline-cache.js.
+// El módulo de arranque (src/main.js) no se precachea: Vite lo publica con un
+// nombre con hash, y el manejador cache-first de abajo lo guarda al vuelo.
+const VERSION = '108';
 const CACHE = 'ayuda-ve-v' + VERSION;
 const OFFLINE_URL = '/offline.html';
 // El sufijo sale de VERSION: antes estaba cableado (?v=60) mientras las páginas
@@ -18,7 +20,7 @@ const ESTATICOS = [
   '/js/admin-datos.js' + V, '/js/admin-personas.js' + V, '/js/admin-centros.js' + V,
   '/js/ventana.js' + V,
   '/js/viaje.js' + V, '/js/denuncias.js' + V, '/js/damnificado.js' + V,
-  '/services/offline-queue-policy.js' + V, '/services/api.js' + V,
+  '/services/offline-queue-policy.js' + V,
   '/services/leaflet/leaflet.css', '/services/leaflet/leaflet.js',
   '/locales/es.json', '/locales/en.json',
   '/assets/fonts/inter-var.woff2',
