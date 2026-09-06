@@ -1,0 +1,58 @@
+# Cronos — plantilla de configuración para Codex CLI (OpenAI).
+# Se copia a .codex/config.toml en cada proyecto (scripts/nuevo-proyecto.sh / adoptar-proyecto.sh).
+#
+# La fuente de las reglas de Cronos NO vive acá: Codex lee AGENTS.md solo, de forma automática
+# (raíz del proyecto + ~/.codex/AGENTS.md global) — ver "Custom instructions with AGENTS.md" en
+# developers.openai.com/codex/guides/agents-md. Este archivo solo resuelve mecánica: modelo,
+# permisos/sandbox, MCP.
+#
+# Verificado contra documentación pública de Codex CLI al 2026-08-03 (config-reference de
+# developers.openai.com/codex y varias fuentes secundarias cruzadas) — NO contra una sesión real
+# con credenciales. Mismo criterio de honestidad que ya aplica LOOPS.md al ecosistema de plugins
+# de OpenCode (ver adr/ADR-011). Antes de confiar a ciegas: `codex --version`, `/status` dentro de
+# una sesión, y developers.openai.com/codex/config-reference si tu versión difiere.
+
+# ─── Modelo ────────────────────────────────────────────────────────────────
+# Deliberadamente sin declarar, desde v4.0.2 — mismo motivo que adapters/opencode/opencode.template.json
+# (ver CHANGELOG.md [4.0.2]): un string de respaldo fijo puede quedar inválido con el tiempo (un
+# modelo se retira, cambia de nombre, o no está disponible para tu cuenta) y Codex lo rechazaría en
+# vez de ignorarlo. Sin estas dos líneas, Codex usa el modelo por defecto de tu cuenta. Antes de
+# fijar uno real acá, corre el Paso 1 de MODELOS.md (sección Codex CLI): dentro de una sesión,
+# "/model" abre un selector con todo lo disponible para tu cuenta/proveedores configurados.
+# model = "gpt-5.6"
+# model_provider = "openai"
+
+# ─── Permisos y sandbox (equivalente a permission.bash de OpenCode) ─────────
+# approval_policy: "untrusted" | "on-request" | "on-failure" | "never".
+# "on-request" es el default recomendado acá: Codex decide cuándo pedir confirmación en vez de
+# preguntar todo o nada — más parecido al perfil ask/allow selectivo de opencode.template.json que
+# los extremos "untrusted" (pregunta todo) o "never" (no pregunta nada).
+approval_policy = "on-request"
+
+# sandbox_mode: "read-only" | "workspace-write" | "danger-full-access".
+# "workspace-write" es el equivalente funcional a lo que ya permite permission.bash de OpenCode:
+# escribir dentro del proyecto, pidiendo confirmación para salirse de ahí.
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+# Apagado por defecto — actívalo solo si el proyecto lo necesita de verdad, y documentalo en
+# STACK.md (mismo criterio de "nunca por inercia" que ya aplica Playwright MCP más abajo).
+network_access = false
+
+# ─── MCP: Playwright (equivalente a mcp.playwright de opencode.template.json) ─
+# Deshabilitado por defecto — descomenta solo cuando el proyecto lo necesite (ver skill
+# browser-qa-e2e en SKILLS.md) y confirma primero que "npx @playwright/mcp" funciona en tu máquina.
+# [mcp_servers.playwright]
+# command = "npx"
+# args = ["@playwright/mcp@latest"]
+
+# ─── Proveedores personalizados (para que el modelo NUNCA quede restringido) ─
+# Codex CLI no está limitado a modelos de OpenAI: cualquier proveedor compatible con su API se
+# declara acá y después aparece en el selector "/model" de una sesión, igual que los nativos.
+# Ejemplo (comentado) para un proveedor OpenAI-compatible cualquiera — Anthropic, OpenRouter,
+# Azure, un modelo local con Ollama/LM Studio, etc.:
+# [model_providers.mi_proveedor]
+# name = "Mi Proveedor"
+# base_url = "https://api.mi-proveedor.com/v1"
+# env_key = "MI_PROVEEDOR_API_KEY"
+# wire_api = "responses"

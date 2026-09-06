@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 1,
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "rm -rf *": "deny",
+      "git push --force*": "deny",
+      "sudo *": "ask",
+      "*migrate*": "ask",
+      "*--prod*": "ask",
+      "cat *.env*": "ask",
+      "cat *secret*": "ask",
+      "cat *credential*": "ask",
+      "env": "ask",
+      "printenv*": "ask",
+      "history": "ask"
+    }
+  },
+  "agent": {
+    "cronos": {
+      "description": "Cronos 4.2.0 — agente primario con delegación controlada: arquitectura, backend, frontend, datos, integraciones, seguridad, QA, rendimiento y despliegue",
+      "mode": "primary",
+      "permission": {
+        "task": "allow"
+      }
+    }
+  },
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": false
+    }
+  }
+}
