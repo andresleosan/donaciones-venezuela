@@ -209,8 +209,21 @@ export const mov: (codigo: string, datos: Record<string, unknown>) => string; //
 - `publicar(tx, nombreProyeccion, id, documentoPrivado)` → `sanitizePublicProjection` + `findForbiddenPublicFields` + `updatedAt: serverTimestamp()` (+ `createdAt` si no existe) y escribe la proyección; `despublicar(tx, nombreProyeccion, id)`.
 - `PUBLIC_PROJECTION_FIELDS` se amplía en `functions/src/public-projections.ts` con las allowlists de `lugaresPublicos` (añadir `nombreNorm`, `necesita`, `tieneDisponible`, `cubiertos`, `gestionado`, `lat`, `lng` redondeados a 3 decimales), `trayectosPublicos`, `donacionesMotorizadosPublicos`, `familiasPublicas` (`codigo`, `municipio`, `estadoGeo`, `numPersonas`, `numMenores`, `perdioCasa`, `perdioVehiculo`, `perdioFamiliar`, `necesidadMedica`, `rangosEdad` en `0-17/18-64/65+`, `estado`, `createdAt`, `insumosNecesarios`) y `estadisticas`.
 
-- [ ] **Step 1:** Pruebas con Firestore falso en memoria (mismo patrón que `tests/functions/rate-limit.test.ts`) para cada utilidad; `publicar` rechaza un documento con `telefono` anidado; `siguienteNumeroFactura` es monotónico y no reutiliza tras rollback simulado.
-- [ ] **Step 2:** Implementar. `npm.cmd run test:unit` PASS. Commit `feat: shared persistence helpers for api actions`.
+> **Hecha el 2026-09-06**, antes de la Task 2.3 (que necesita `publicar`). Desviaciones respecto a las interfaces de arriba, todas con motivo:
+>
+> - `publicar(tx, db, nombre, id, doc)` y `despublicar(tx, db, nombre, id)` reciben el `Firestore` porque hace falta para construir la referencia; `auditar` e `historial` reciben `ctx` (que ya lo lleva).
+> - **Índices:** la ruta es `indices/<indice>/claves/<clave>`, no `indices/<indice>/<clave>`: tres segmentos en Firestore son una colección, no un documento. La regla `match /indices/{coleccion}/{documento=**}` ya cubre el árbol entero.
+> - **`createdAt`:** en vez de rellenarlo con `serverTimestamp()` cuando falta (que lo reescribiría en cada publicación y borraría la fecha real de creación), `publicar` **falla** si la allowlist declara `createdAt` y el documento no lo trae. Una proyección que se consulta ordenada por `createdAt` sin ese campo existiría pero ninguna query la vería; mejor romper en pruebas.
+> - **Lecturas antes que escrituras:** `siguienteNumeroFactura` y `reservarClaveUnica` leen, así que van al principio de la transacción (Firestore rechaza leer después de escribir). Documentado en la cabecera de `db.ts` y cubierto por el Firestore falso, que lanza si se invierte el orden.
+> - `historialPublico.lugarId` se publica con el **nombre normalizado** del lugar (ver Task 2.2); el documento canónico conserva el `lugarId` real y `lugarNorm`.
+> - `marcaServidor()` en `publicar.ts` es el único productor del centinela `serverTimestamp()`: `firebase-admin` solo está instalado dentro de `functions/`, así que las pruebas de la raíz no pueden importarlo.
+> - Añadido `coordsPublicas(lat, lng)` a `contract.ts` (3 decimales, ~110 m) para las coordenadas de `lugaresPublicos`; `coordsAproximadas` (2 decimales) se queda para lo que necesita ~1 km.
+> - Allowlists nuevas en `public-projections.ts`: `trayectosPublicos`, `donacionesMotorizadosPublicos`, `familiasPublicas`, `estadisticas` y `tasas`; ampliadas `lugaresPublicos` e `historialPublico`.
+
+- [x] **Step 1:** Pruebas con Firestore falso en memoria (mismo patrón que `tests/functions/rate-limit.test.ts`) para cada utilidad; `publicar` rechaza un documento con `telefono` anidado; `siguienteNumeroFactura` es monotónico y no reutiliza tras rollback simulado. **22 pruebas** en `tests/functions/api-db.test.ts`.
+- [x] **Step 2:** Implementar. `npm.cmd run test:unit` PASS. Commit `feat: shared persistence helpers for api actions`.
+
+Evidencia: `npm.cmd run test:unit` 29 archivos / **506** pruebas OK; `npm.cmd run test:emulators` 23 archivos / **333** pruebas OK; `npm.cmd --prefix functions run build` código 0.
 
 ---
 

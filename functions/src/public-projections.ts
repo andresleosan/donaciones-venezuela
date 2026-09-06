@@ -1,9 +1,12 @@
 export const PUBLIC_PROJECTION_FIELDS = {
-  // Compatibilidad generica; el consentimiento v1 usa la allowlist separada sin foto.
+  // `lat`/`lng` van redondeadas a 3 decimales (~110 m) con `coordsPublicas()`:
+  // ubican el centro en el mapa sin senalar una puerta.
   lugaresPublicos: [
-    'nombre', 'tipo', 'ubicacionPublica', 'latAproximada', 'lngAproximada',
-    'contactoPublico', 'activo', 'updatedAt',
+    'nombre', 'nombreNorm', 'tipo', 'ubicacionPublica', 'latAproximada', 'lngAproximada',
+    'lat', 'lng', 'contactoPublico', 'gestionado', 'necesita', 'tieneDisponible',
+    'cubiertos', 'activo', 'updatedAt',
   ],
+  // Compatibilidad generica; el consentimiento v1 usa la allowlist separada sin foto.
   voluntariosPublicos: [
     'nombre', 'zona', 'habilidades', 'fotoPublicaPath', 'activo', 'createdAt',
   ],
@@ -20,12 +23,38 @@ export const PUBLIC_PROJECTION_FIELDS = {
     'numero', 'tokenPublico', 'necesidad', 'montoObjetivo', 'recaudado', 'estado',
     'moneda', 'createdAt',
   ],
+  // `lugarId` guarda el NOMBRE NORMALIZADO del lugar, no su id: la ventana
+  // `historial` solo conoce el nombre y el indice disponible es
+  // (lugarId, createdAt, __name__). Ver Task 2.2 del plan.
   historialPublico: [
-    'entidadPublicaId', 'tipo', 'estado', 'descripcionPublica', 'createdAt',
+    'lugarId', 'lugar', 'insumo', 'cantidad', 'unidad', 'tipo', 'descripcion',
+    'origen', 'entidadPublicaId', 'estado', 'descripcionPublica', 'createdAt',
   ],
   entregasPublicas: [
     'facturaPublicaId', 'estado', 'createdAt', 'evidenciaPublicaPath',
   ],
+  trayectosPublicos: [
+    'motorizadoId', 'nombreMotorizado', 'origen', 'destino', 'kmRecorridos',
+    'insumo', 'insumoTransportado', 'createdAt',
+  ],
+  donacionesMotorizadosPublicos: [
+    'motorizadoId', 'nombreMotorizado', 'monto', 'tipo', 'donante', 'ciudad',
+    'createdAt',
+  ],
+  // Sin nombres, contacto, direccion ni GPS: solo el codigo y el agregado.
+  familiasPublicas: [
+    'codigo', 'municipio', 'estadoGeo', 'numPersonas', 'numMenores', 'perdioCasa',
+    'perdioVehiculo', 'perdioFamiliar', 'necesidadMedica', 'rangosEdad', 'estado',
+    'insumosNecesarios', 'createdAt',
+  ],
+  // Documento unico `estadisticas/global`.
+  estadisticas: [
+    'centrosRegistrados', 'hospitalesRegistrados', 'voluntariosActivos',
+    'motorizadosRegistrados', 'personasReportadas', 'personasLocalizadas',
+    'donacionesRegistradas', 'facturasAbiertas', 'montoRecaudadoTotal', 'actualizado',
+  ],
+  // Documento unico `tasas/actual`.
+  tasas: ['efectiva', 'diaria', 'fuente', 'fecha', 'capturadaAt'],
 } as const;
 
 export const VOLUNTEER_PUBLIC_PROFILE_FIELDS = [

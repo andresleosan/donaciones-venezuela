@@ -145,6 +145,12 @@ export function kmEntre(aLat: number, aLng: number, bLat: number, bLng: number):
   return Math.round(R * 2 * Math.asin(Math.sqrt(h)) * 10) / 10;
 }
 
+// Coordenadas de un centro en el directorio: 3 decimales (~110 m). Ubican el
+// lugar en el mapa sin senalar una puerta concreta.
+export function coordsPublicas(lat: number, lng: number): { lat: number; lng: number } {
+  return { lat: Math.round(lat * 1000) / 1000, lng: Math.round(lng * 1000) / 1000 };
+}
+
 // Coordenadas publicas: ~1 km de precision, no localizan una casa.
 export function coordsAproximadas(lat: number, lng: number): { lat: number; lng: number } {
   return { lat: Math.round(lat * 100) / 100, lng: Math.round(lng * 100) / 100 };
