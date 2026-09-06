@@ -16,18 +16,12 @@
     supabaseKey: ''
   };
 
-  // La cola local solo contiene formularios públicos. Nunca guardamos credenciales,
-  // tokens de administración ni sesiones de Supabase en IndexedDB.
+  // La cola parte cerrada y solo admite acciones declaradas seguras e idempotentes
+  // por la politica cargada antes de este cliente.
   const OFFLINE_DB = 'donaciones-venezuela-offline-v1';
   const OFFLINE_DB_VERSION = 1;
   const OFFLINE_QUEUE = 'outbox';
   const OFFLINE_CACHE = 'snapshots';
-  const ACCIONES_OFFLINE = new Set([
-    'registrar_lugar', 'registrar_voluntario', 'registrar_rescatista',
-    'registrar_motorizado', 'reportar_persona', 'ofrecer_insumo',
-    'donar_dinero', 'donar_motorizado', 'registrar_trayecto',
-    'registrar_recogida', 'registrar_entrega_final'
-  ]);
   let dbPromise = null;
   let flushing = null;
 
@@ -88,7 +82,7 @@
   }
 
   function esAccionOffline(payload) {
-    return payload && ACCIONES_OFFLINE.has(String(payload.accion || ''));
+    return Boolean(window.DVOfflinePolicy && window.DVOfflinePolicy.isQueueable(payload));
   }
 
   function esErrorDeRed(err) {
@@ -107,9 +101,9 @@
     }).catch(() => {});
   }
 
-  async function encolar(payload, error) {
-    const id = 'offline-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-    const row = { id, payload, createdAt: Date.now(), attempts: 0, lastError: error ? String(error.message || error) : '' };
+  async function encolar(payload) {
+    if (!window.DVOfflinePolicy) throw new Error('offline-policy-unavailable');
+    const row = window.DVOfflinePolicy.createQueueEntry(payload);
     const saved = await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.put(row));
     if (!saved) throw new Error(traducir('messages.offlineQueueError', 'No se pudo guardar el formulario sin conexión'));
     registrarSync();
@@ -117,9 +111,23 @@
     return {
       success: true,
       queued: true,
-      queueId: id,
-      token: 'PENDIENTE-' + id.slice(-6).toUpperCase()
+      queueId: row.queueId,
+      token: 'PENDIENTE-' + row.queueId.slice(-6).toUpperCase()
     };
+  }
+
+  async function clearOfflineQueue() {
+    await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.clear());
+    return emitirCambioCola();
+  }
+
+  async function depurarCola(rows) {
+    for (const row of rows) {
+      if (!esAccionOffline(row.payload)
+          || window.DVOfflinePolicy.shouldDiscard(row)) {
+        await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.delete(row.id));
+      }
+    }
   }
 
   function configure(nextConfig) {
@@ -339,7 +347,7 @@
     try {
       return await requestPost(data);
     } catch (err) {
-      if (esAccionOffline(data) && esErrorDeRed(err)) return encolar(data, err);
+      if (esAccionOffline(data) && esErrorDeRed(err)) return encolar(data);
       throw err;
     }
   }
@@ -353,16 +361,21 @@
       if (!db) return { sent, pending: 0 };
       const rows = await transaccion(OFFLINE_QUEUE, 'readonly', (store) => store.getAll()) || [];
       rows.sort((a, b) => a.createdAt - b.createdAt);
-      for (const row of rows) {
+      await depurarCola(rows);
+      const pendingRows = rows.filter((row) =>
+        esAccionOffline(row.payload) && !window.DVOfflinePolicy.shouldDiscard(row));
+      for (const row of pendingRows) {
         try {
           await requestPost(row.payload);
           await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.delete(row.id));
           sent += 1;
         } catch (err) {
-          await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.put(Object.assign({}, row, {
-            attempts: Number(row.attempts || 0) + 1,
-            lastError: String(err.message || err)
-          })));
+          const failed = window.DVOfflinePolicy.recordFailure(row, err.name || 'request-failed');
+          if (window.DVOfflinePolicy.shouldDiscard(failed)) {
+            await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.delete(row.id));
+          } else {
+            await transaccion(OFFLINE_QUEUE, 'readwrite', (store) => store.put(failed));
+          }
           if (esErrorDeRed(err)) break;
         }
       }
@@ -402,7 +415,8 @@
     refrescarSesion,
     post,
     flushQueue,
-    getQueueCount: contarCola
+    getQueueCount: contarCola,
+    clearOfflineQueue
   };
   iniciarSincronizacion();
 })(window);

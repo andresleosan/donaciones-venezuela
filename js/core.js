@@ -556,6 +556,9 @@
     }
     function cerrarSesion() {
       try { localStorage.removeItem(SESION_KEY); } catch (err) { /* modo privado */ }
+      if (window.SheetsService && typeof window.SheetsService.clearOfflineQueue === 'function') {
+        window.SheetsService.clearOfflineQueue().catch(() => {});
+      }
       pintarBotonSesion();
     }
     function nombreSesion(s) {
