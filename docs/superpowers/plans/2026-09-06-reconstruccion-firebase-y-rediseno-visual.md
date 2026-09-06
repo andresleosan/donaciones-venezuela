@@ -281,8 +281,20 @@ Hallazgos para tareas posteriores: el bundle `dist/assets/main-*.js` queda en **
 
 **Files:** Create `functions/src/api/estadisticas.ts` (recalcular contadores dentro de las transacciones de cada dominio: `centrosRegistrados`, `hospitalesRegistrados`, `voluntariosActivos`, `motorizadosRegistrados`, `personasReportadas`, `personasLocalizadas`, `donacionesRegistradas`, `facturasAbiertas`, `montoRecaudadoTotal` (solo facturas `tipo: 'dinero'`), `actualizado`), `functions/src/jobs/reconciliar-proyecciones.ts` (acción admin `admin_reconstruir_proyecciones` que recorre las canónicas y reescribe todas las proyecciones y contadores por lotes de 400).
 
-- [ ] **Step 1:** Pruebas: incrementos atómicos; reconstrucción idempotente con Firestore falso.
-- [ ] **Step 2:** Implementar. Commit `feat: aggregate statistics document and projection rebuild action`.
+> **Hecha el 2026-09-06.** Notas:
+>
+> - `ajustarContadores(tx, db, deltas)` aplica `FieldValue.increment` sobre `estadisticas/global` dentro de la transacción del dominio. Un incremento **no puede** pasar por `sanitizePublicProjection` (el valor es un centinela, no un número), así que la allowlist se comprueba en el propio módulo: contador no declarado → `contador-desconocido`, valor no finito → `contador-no-numerico`. `fijarEstadisticas` (reemplazo completo, solo en la reconstrucción) sí pasa por `publicar`.
+> - `functions/src/api/tasas.ts`: documento único `tasas/actual` con `tasaPlausible` (200 < x < 5000, rango del legado) y la caída de `diaria` a `efectiva`. La captura desde Remitly/BCV sigue siendo de la Task 3.8.
+> - `functions/src/jobs/reconciliar-proyecciones.ts` implementa el **motor**, no los dominios: cada tarea de la Fase 3 llama a `registrarFuente({ coleccion, proyeccion, incluir?, mapear, contadores? })` al importarse, igual que `defineAction`. Hoy el registro está vacío y la acción responde `no hay proyecciones registradas`; escribir las fuentes ahora habría exigido inventarse los esquemas canónicos que la Fase 3 todavía no ha fijado.
+> - La reconciliación además **borra huérfanos**: tras reescribir, recorre cada colección pública y elimina los ids que ninguna fuente reclamó (documentos dados de baja o proyecciones de canónicas ya borradas).
+> - La acción `admin_reconstruir_proyecciones` (`auth: 'admin'`, cubo `admin`) queda registrada desde `functions/src/api/index.ts`.
+
+- [x] **Step 1:** Pruebas: incrementos atómicos; reconstrucción idempotente con Firestore falso. **17 pruebas** en `tests/functions/api-estadisticas.test.ts`.
+- [x] **Step 2:** Implementar. Commit `feat: aggregate statistics document and projection rebuild action`.
+
+Evidencia: `npm.cmd run test:unit` 30 archivos / **523** pruebas OK; `npm.cmd run test:emulators` 24 archivos / **350** pruebas OK; `npm.cmd --prefix functions run build` código 0.
+
+Pendiente para la Fase 3: cada tarea debe registrar su fuente en `reconciliar-proyecciones.ts` además de escribir la proyección en su transacción.
 
 ### Task 2.4: Seeds sintéticos para el emulador
 

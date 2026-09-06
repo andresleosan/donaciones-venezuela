@@ -8,6 +8,10 @@
 //   3.1 lugares e insumos · 3.2 personas · 3.3 vacantes · 3.4 facturas
 //   3.5 transporte · 3.6 denuncias y familias · 3.7 consola de datos
 //
+// El reconciliador registra `admin_reconstruir_proyecciones` y es donde cada
+// dominio declarara su fuente de proyeccion.
+import '../jobs/reconciliar-proyecciones.js';
+
 // import './lugares.js';
 // import './personas.js';
 // ...
