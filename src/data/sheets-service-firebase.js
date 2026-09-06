@@ -1,5 +1,5 @@
 import { collection, doc, documentId, getDoc, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
-import { getFirebaseApp } from '../firebase/firebase-config.js';
+import { getFirestoreDb } from '../firebase/firebase-config.js';
 import { getCurrentUser, getIdToken, register, signIn, signOut } from '../firebase/firebase-auth.js';
 import { post as postApi } from './api-client.js';
 import {
@@ -40,17 +40,6 @@ const MAX_TRASLADOS = 30;
 const MAX_FAMILIAS = 200;
 const MAX_VACANTES = 100;
 
-let dbPromise;
-
-async function obtenerDb() {
-  if (!dbPromise) {
-    dbPromise = getFirebaseApp().then(async (app) => {
-      const { getFirestore } = await import('firebase/firestore');
-      return getFirestore(app);
-    });
-  }
-  return dbPromise;
-}
 
 // ── Normalización de valores ──────────────────────────────────────────
 
@@ -94,7 +83,7 @@ async function listarProyeccion(nombre, opciones = {}) {
     maxPaginas = MAX_PAGINAS,
   } = opciones;
 
-  const referencia = collection(await obtenerDb(), nombre);
+  const referencia = collection(await getFirestoreDb(), nombre);
   const filas = [];
   let cursor = null;
 
@@ -115,7 +104,7 @@ async function listarProyeccion(nombre, opciones = {}) {
 }
 
 async function obtenerDocumento(ruta) {
-  const snapshot = await getDoc(doc(await obtenerDb(), ruta));
+  const snapshot = await getDoc(doc(await getFirestoreDb(), ruta));
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
 }
 

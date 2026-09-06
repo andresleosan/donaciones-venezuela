@@ -1,4 +1,4 @@
-export { firebaseConfig, getFirebaseApp, validateFirebaseConfig } from './firebase-config.js';
+export { EMULADORES_POR_DEFECTO, configuracionEmuladores, firebaseConfig, getAuthInstance, getFirebaseApp, getFirestoreDb, getStorageInstance, validateFirebaseConfig } from './firebase-config.js';
 export { configureAuthPersistence, getCurrentUser, getFirebaseAuth, getIdToken, getIdTokenResult, observeAuth, register, signIn, signOut } from './firebase-auth.js';
 export { createDocument, deleteDocument, getDocument, limit, listDocuments, orderBy, setDocument, updateDocument, where } from './firebase-firestore.js';
 export { MIME_EXTENSIONS, PRIVATE_FILE_CATEGORIES, PRIVATE_FILE_LIMITS, createPrivateFilePath, uploadPrivateFile } from './firebase-storage.js';

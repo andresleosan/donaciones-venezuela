@@ -17,6 +17,9 @@ const authMocks = vi.hoisted(() => ({
 vi.mock('firebase/auth', () => authMocks);
 vi.mock('../../src/firebase/firebase-config.js', () => ({
   getFirebaseApp: vi.fn(async () => ({ name: 'app' })),
+  // La instancia la crea firebase-config.js; aqui se devuelve el mismo objeto
+  // que falsea `getAuth` para poder mover `currentUser` entre casos.
+  getAuthInstance: vi.fn(async () => authState),
 }));
 
 import {

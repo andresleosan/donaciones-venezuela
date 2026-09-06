@@ -11,6 +11,7 @@ const storageMocks = vi.hoisted(() => ({
 vi.mock('firebase/storage', () => storageMocks);
 vi.mock('../../src/firebase/firebase-config.js', () => ({
   getFirebaseApp: vi.fn(async () => ({ name: 'app' })),
+  getStorageInstance: vi.fn(async () => ({ name: 'storage' })),
 }));
 
 import { uploadPrivateFile } from '../../src/firebase/firebase-storage.js';

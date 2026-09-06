@@ -42,3 +42,89 @@ export async function getFirebaseApp() {
   }
   return appPromise;
 }
+
+// --- Emulator Suite ---------------------------------------------------------
+//
+// Cada servicio se crea UNA sola vez y aqui: `getFirestore(app)` devuelve
+// siempre la misma instancia, y `connectFirestoreEmulator` sobre una instancia
+// ya conectada (o ya usada) lanza. Por eso ningun modulo llama a `getFirestore`,
+// `getAuth` ni `getStorage` por su cuenta.
+//
+// Se activa con `window.DV_ENTORNO.emuladores` (booleano u objeto con puertos) o
+// con `VITE_FIREBASE_EMULATORS` en el build. Los puertos por defecto son los de
+// `firebase.json`.
+
+export const EMULADORES_POR_DEFECTO = Object.freeze({
+  firestore: Object.freeze({ host: '127.0.0.1', port: 8080 }),
+  auth: Object.freeze({ host: '127.0.0.1', port: 9099 }),
+  storage: Object.freeze({ host: '127.0.0.1', port: 9199 }),
+});
+
+const HOST_LOCAL = /^(127\.0\.0\.1|::1|localhost)$/;
+
+export function configuracionEmuladores() {
+  const runtime = globalThis.DV_ENTORNO?.emuladores;
+  const elegido = runtime === undefined ? buildConfig.VITE_FIREBASE_EMULATORS : runtime;
+  if (!elegido || elegido === 'false' || elegido === '0') return null;
+
+  const config = typeof elegido === 'object'
+    ? { ...EMULADORES_POR_DEFECTO, ...elegido }
+    : { ...EMULADORES_POR_DEFECTO };
+
+  // Un emulador fuera de la maquina local no es un emulador: es un servidor
+  // ajeno hablando por Firebase. Mejor romper que autenticar contra el.
+  for (const [servicio, { host }] of Object.entries(config)) {
+    if (!HOST_LOCAL.test(String(host))) {
+      throw new Error(`Emulador ${servicio} fuera de la maquina local: ${host}`);
+    }
+  }
+  return config;
+}
+
+let firestorePromise;
+let authPromise;
+let storagePromise;
+
+export async function getFirestoreDb() {
+  if (!firestorePromise) {
+    firestorePromise = (async () => {
+      const app = await getFirebaseApp();
+      const { getFirestore, connectFirestoreEmulator } = await import('firebase/firestore');
+      const db = getFirestore(app);
+      const emuladores = configuracionEmuladores();
+      if (emuladores) connectFirestoreEmulator(db, emuladores.firestore.host, emuladores.firestore.port);
+      return db;
+    })();
+  }
+  return firestorePromise;
+}
+
+export async function getAuthInstance() {
+  if (!authPromise) {
+    authPromise = (async () => {
+      const app = await getFirebaseApp();
+      const { getAuth, connectAuthEmulator } = await import('firebase/auth');
+      const auth = getAuth(app);
+      const emuladores = configuracionEmuladores();
+      if (emuladores) {
+        connectAuthEmulator(auth, `http://${emuladores.auth.host}:${emuladores.auth.port}`, { disableWarnings: true });
+      }
+      return auth;
+    })();
+  }
+  return authPromise;
+}
+
+export async function getStorageInstance() {
+  if (!storagePromise) {
+    storagePromise = (async () => {
+      const app = await getFirebaseApp();
+      const { getStorage, connectStorageEmulator } = await import('firebase/storage');
+      const storage = getStorage(app);
+      const emuladores = configuracionEmuladores();
+      if (emuladores) connectStorageEmulator(storage, emuladores.storage.host, emuladores.storage.port);
+      return storage;
+    })();
+  }
+  return storagePromise;
+}

@@ -1,17 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
-import { getFirebaseApp } from './firebase-config.js';
+import { getFirestoreDb } from './firebase-config.js';
 
-let dbPromise;
-
-async function getFirestoreDb() {
-  if (!dbPromise) {
-    dbPromise = getFirebaseApp().then(async (app) => {
-      const { getFirestore } = await import('firebase/firestore');
-      return getFirestore(app);
-    });
-  }
-  return dbPromise;
-}
 
 export async function getDocument(path) {
   const snapshot = await getDoc(doc(await getFirestoreDb(), path));

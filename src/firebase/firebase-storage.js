@@ -1,5 +1,5 @@
 import { ref, uploadBytes } from 'firebase/storage';
-import { getFirebaseApp } from './firebase-config.js';
+import { getStorageInstance } from './firebase-config.js';
 
 export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports'];
 
@@ -17,17 +17,6 @@ export const PRIVATE_FILE_LIMITS = {
   'application/pdf': 10 * 1024 * 1024,
 };
 
-let storagePromise;
-
-async function getFirebaseStorage() {
-  if (!storagePromise) {
-    storagePromise = getFirebaseApp().then(async (app) => {
-      const { getStorage } = await import('firebase/storage');
-      return getStorage(app);
-    });
-  }
-  return storagePromise;
-}
 
 function validateFile(file) {
   if (
@@ -95,7 +84,7 @@ export async function uploadPrivateFile(uid, category, file, options = {}) {
   const extension = MIME_EXTENSIONS[file.type];
   const fileId = options.fileId ?? crypto.randomUUID();
   const path = createPrivateFilePath(uid, category, fileId, extension);
-  const snapshot = await uploadBytes(ref(await getFirebaseStorage(), path), file, {
+  const snapshot = await uploadBytes(ref(await getStorageInstance(), path), file, {
     contentType: file.type,
     cacheControl: 'private, max-age=0, no-store',
     customMetadata: { ownerUid: uid, category, visibility: 'private' },

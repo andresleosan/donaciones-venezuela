@@ -38,7 +38,10 @@ const cacheMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('firebase/firestore', () => firestoreMocks);
-vi.mock('../../src/firebase/firebase-config.js', () => ({ getFirebaseApp: vi.fn(async () => ({ name: 'app' })) }));
+vi.mock('../../src/firebase/firebase-config.js', () => ({
+  getFirebaseApp: vi.fn(async () => ({ name: 'app' })),
+  getFirestoreDb: vi.fn(async () => ({ name: 'firestore' })),
+}));
 vi.mock('../../src/firebase/firebase-auth.js', () => authMocks);
 vi.mock('../../src/data/api-client.js', () => clienteMocks);
 vi.mock('../../src/data/offline-cache.js', () => cacheMocks);

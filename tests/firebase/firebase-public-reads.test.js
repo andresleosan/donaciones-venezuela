@@ -15,6 +15,7 @@ const firestoreMocks = vi.hoisted(() => ({
 vi.mock('firebase/firestore', () => firestoreMocks);
 vi.mock('../../src/firebase/firebase-config.js', () => ({
   getFirebaseApp: vi.fn(async () => ({ name: 'app' })),
+  getFirestoreDb: vi.fn(async () => ({ name: 'firestore' })),
 }));
 
 import { listPublicPlaces, listPublicVacancies } from '../../src/firebase/firebase-public-reads.js';

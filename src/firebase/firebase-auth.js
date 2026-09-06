@@ -1,16 +1,9 @@
 import { browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, onAuthStateChanged, setPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
-import { getFirebaseApp } from './firebase-config.js';
+import { getAuthInstance } from './firebase-config.js';
 
-let authPromise;
-
+// La instancia (y su conexion opcional al emulador) vive en firebase-config.js.
 async function getFirebaseAuth() {
-  if (!authPromise) {
-    authPromise = getFirebaseApp().then(async (app) => {
-      const { getAuth } = await import('firebase/auth');
-      return getAuth(app);
-    });
-  }
-  return authPromise;
+  return getAuthInstance();
 }
 
 export async function configureAuthPersistence(mode = 'local') {

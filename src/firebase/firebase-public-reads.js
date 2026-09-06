@@ -1,19 +1,8 @@
 import { collection, documentId, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
-import { getFirebaseApp } from './firebase-config.js';
+import { getFirestoreDb } from './firebase-config.js';
 
 export const MAX_PUBLIC_PAGE_SIZE = 50;
 
-let dbPromise;
-
-async function getFirestoreDb() {
-  if (!dbPromise) {
-    dbPromise = getFirebaseApp().then(async (app) => {
-      const { getFirestore } = await import('firebase/firestore');
-      return getFirestore(app);
-    });
-  }
-  return dbPromise;
-}
 
 async function listPublicCollection(collectionName, orderField, options) {
   if (options === null) {

@@ -19,7 +19,11 @@ export const PUBLIC_PROJECTION_FIELDS = {
     'createdAt',
   ],
   vacantesPublicas: ['lugarId', 'titulo', 'descripcion', 'cupos', 'estado', 'createdAt'],
+  // El id del documento ES el token publico: `getSeguimiento(token)` hace un
+  // `get` directo y espera dentro la factura, su historial y el desglose
+  // anonimo de donaciones (mismo shape que el RPC `seguimiento_factura`).
   facturasPublicas: [
+    'factura', 'movimientos', 'evidencias', 'donacionesPublicas',
     'numero', 'tokenPublico', 'necesidad', 'montoObjetivo', 'recaudado', 'estado',
     'moneda', 'createdAt',
   ],

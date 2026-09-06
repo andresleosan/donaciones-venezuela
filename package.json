@@ -19,6 +19,7 @@
     "test:functions": "npm --prefix functions run build && node scripts/emulators-exec.mjs --project demo-donaciones-venezuela --only auth,firestore,functions \"npm run test:functions:run\"",
     "test:emulators:run": "vitest run tests/rules tests/functions tests/emulators",
     "test:emulators": "npm --prefix functions run build && node scripts/emulators-exec.mjs --project demo-donaciones-venezuela --only auth,firestore,storage,functions \"npm run test:emulators:run\"",
+    "seed:emulador": "npm --prefix functions run build && node scripts/emulators-exec.mjs --project demo-donaciones-venezuela --only auth,firestore --export-on-exit=./seeds/emulador \"node functions/scripts/semilla-firebase.mjs\"",
     "export:supabase": "node scripts/export-supabase.mjs",
     "export:supabase:dry-run": "node scripts/export-supabase.mjs --dry-run",
     "verify:export": "node scripts/verify-supabase-export.mjs",
