@@ -188,6 +188,27 @@ describe('Storage private files', () => {
     ));
   });
 
+  it('deniega sustituir el contenido de un archivo ya cargado', async () => {
+    const storage = owner();
+    await assertSucceeds(upload(storage, 'private/owner-uid/needs/file-fixed.png', 'image/png', 'needs', 3));
+    await assertFails(upload(storage, 'private/owner-uid/needs/file-fixed.png', 'image/png', 'needs', 7));
+  });
+
+  it('deniega archivos vacios', async () => {
+    await assertFails(upload(owner(), 'private/owner-uid/needs/file-empty.png', 'image/png', 'needs', 0));
+  });
+
+  it('deniega metadata con claves fuera del contrato', async () => {
+    await assertFails(uploadBytes(
+      ref(owner(), 'private/owner-uid/needs/file-extra.png'),
+      new Uint8Array(1),
+      {
+        contentType: 'image/png',
+        customMetadata: { ownerUid: 'owner-uid', category: 'needs', visibility: 'private', nota: 'libre' },
+      },
+    ));
+  });
+
   it('deniega panel y admin en espacios ajenos', async () => {
     for (const role of ['panel', 'admin'] as const) {
       await assertFails(upload(

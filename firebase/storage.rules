@@ -12,33 +12,51 @@ service firebase.storage {
         || category == 'reports';
     }
 
+    // Exactamente las tres claves del contrato: sin canal de datos libre en metadata.
     function hasPrivateMetadata(uid, category) {
-      return request.resource.metadata.keys().hasAll(['ownerUid', 'category', 'visibility'])
+      return request.resource.metadata.keys().hasOnly(['ownerUid', 'category', 'visibility'])
+        && request.resource.metadata.keys().hasAll(['ownerUid', 'category', 'visibility'])
         && request.resource.metadata.ownerUid == uid
         && request.resource.metadata.category == category
         && request.resource.metadata.visibility == 'private';
     }
 
     function isAllowedFile(fileName) {
-      return fileName.matches('[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp|pdf)');
+      return fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp|pdf)$');
     }
 
     function isAllowedContent(fileName) {
-      return (fileName.matches('[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp)')
+      return request.resource.size > 0
+        && ((fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp)$')
           && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
           && request.resource.size <= 5 * 1024 * 1024)
-        || (fileName.matches('[A-Za-z0-9][A-Za-z0-9_-]*\\.pdf')
+        || (fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.pdf$')
           && request.resource.contentType == 'application/pdf'
-          && request.resource.size <= 10 * 1024 * 1024);
+          && request.resource.size <= 10 * 1024 * 1024));
+    }
+
+    // Una actualizacion solo puede tocar metadata: el contenido ya revisado no se sustituye.
+    function keepsContent() {
+      return request.resource.size == resource.size
+        && request.resource.md5Hash == resource.md5Hash
+        && request.resource.contentType == resource.contentType;
     }
 
     match /private/{uid}/{category}/{fileName} {
       allow read, delete: if false;
-      allow create, update: if isOwner(uid)
+      allow create: if resource == null
+        && isOwner(uid)
         && isCategory(category)
         && isAllowedFile(fileName)
         && isAllowedContent(fileName)
         && hasPrivateMetadata(uid, category);
+      allow update: if resource != null
+        && isOwner(uid)
+        && isCategory(category)
+        && isAllowedFile(fileName)
+        && isAllowedContent(fileName)
+        && hasPrivateMetadata(uid, category)
+        && keepsContent();
     }
 
     match /{allPaths=**} {

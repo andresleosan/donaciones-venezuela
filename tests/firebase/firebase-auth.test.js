@@ -92,3 +92,4 @@ it('reexporta los helpers de sesion desde el indice Firebase', async () => {
   expect(firebase.getCurrentUser).toBe(getCurrentUser);
   expect(firebase.getIdTokenResult).toBe(getIdTokenResult);
 });
+

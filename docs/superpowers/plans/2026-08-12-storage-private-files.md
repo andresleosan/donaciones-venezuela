@@ -307,7 +307,7 @@ git commit -m "feat: enforce private storage rules"
   `authenticate(request): Promise<AuthContext>`,
   `getFile(path): PrivateStorageFile`,
   `rateLimiter('uid', uid, nowMs): Promise<RateLimitResult>`,
-  `now(): Date`, `signReadUrl(file, expiresAt): Promise<string>` y
+  `now(): Date`,
   `deleteFile(file): Promise<void>`.
 - `PrivateStorageFile` expone `exists(): Promise<[boolean]>`,
   `getMetadata(): Promise<[{ metadata?: Record<string, string> }]>` y

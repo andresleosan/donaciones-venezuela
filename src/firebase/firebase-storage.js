@@ -1,4 +1,4 @@
-import { deleteObject, ref, uploadBytes } from 'firebase/storage';
+import { ref, uploadBytes } from 'firebase/storage';
 import { getFirebaseApp } from './firebase-config.js';
 
 export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports'];
@@ -64,7 +64,7 @@ function validatePrivateIdentity(uid, category, file, options) {
       throw new Error('Extension no coincide con MIME');
     }
   }
-  if (options.fileId !== undefined && (typeof options.fileId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(options.fileId))) {
+  if (options.fileId !== undefined && (typeof options.fileId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(options.fileId))) {
     throw new Error('fileId invalido');
   }
 }
@@ -82,7 +82,7 @@ export function createPrivateFilePath(uid, category, fileId, extension) {
   if (!PRIVATE_FILE_CATEGORIES.includes(category)) {
     throw new Error('Categoria no permitida');
   }
-  if (typeof fileId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(fileId)) {
+  if (typeof fileId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(fileId)) {
     throw new Error('fileId invalido');
   }
   validateExtension(extension);
@@ -101,8 +101,4 @@ export async function uploadPrivateFile(uid, category, file, options = {}) {
     customMetadata: { ownerUid: uid, category, visibility: 'private' },
   });
   return { path: snapshot.ref.fullPath };
-}
-
-export async function deleteFile(path) {
-  await deleteObject(ref(await getFirebaseStorage(), path));
 }
