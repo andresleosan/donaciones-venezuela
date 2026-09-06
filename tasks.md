@@ -17,7 +17,7 @@ Estados: `completada`, `en curso`, `pendiente`, `bloqueada`.
 | T10 | pendiente | Rules, índices, rate limits y Emulator Suite | T05,T06,T07,T08 | suite de seguridad sin accesos indebidos |
 | T11 | pendiente | Vercel build, CSP y verificación manual | T03,T08 | build limpio y flujos principales operativos |
 | T12 | pendiente | Eliminar Supabase y generar informe final | T09,T10,T11 | búsqueda global limpia y `MIGRATION_REPORT.md` |
-| T13 | en curso | Reconstrucción greenfield sobre Firebase con la lógica legada + rediseño visual (sustituye a T08/T09: no hay datos que migrar) | T05,T06,T07 | Plan `docs/superpowers/plans/2026-09-06-reconstruccion-firebase-y-rediseno-visual.md`; diseño `docs/superpowers/specs/2026-09-06-reconstruccion-firebase-y-rediseno-visual-design.md`; evidencia 2026-09-06: `test:unit` 335 OK, `test:rules` 38 OK, `test:emulators` 170 OK tras arreglar JDK 21, TTL de `rateLimits`, índice inválido, CORS, `predeploy`, barrel y reglas de Storage |
+| T13 | en curso | Reconstrucción greenfield sobre Firebase con la lógica legada + rediseño visual (sustituye a T08/T09: no hay datos que migrar) | T05,T06,T07 | Plan `docs/superpowers/plans/2026-09-06-reconstruccion-firebase-y-rediseno-visual.md`; diseño `docs/superpowers/specs/2026-09-06-reconstruccion-firebase-y-rediseno-visual-design.md`; Fase 0, Fase 1 y **Fase 2 completas** (falta solo la comprobación manual en navegador de la Task 2.2, que necesita operador). Evidencia 2026-09-06 al cerrar la Fase 2: `test:unit` 30 archivos / 528 OK, `test:emulators` 24 archivos / 350 OK, `build` OK, `seed:emulador` OK |
 
 ## Criterio de no avance
 
