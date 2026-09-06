@@ -222,8 +222,12 @@ export const mov: (codigo: string, datos: Record<string, unknown>) => string; //
 
 **Interfaces:** `post(payload, { idToken })` → `fetch(\`${VITE_API_BASE}/api\`, { method:'POST', headers: { 'Content-Type':'application/json', Authorization? }, body })` con timeout 45 s; lanza `Error(data.error)` cuando `success === false`. `VITE_API_BASE` por defecto `http://127.0.0.1:5001/demo-donaciones-venezuela/us-east1` en `import.meta.env.DEV`.
 
-- [ ] **Step 1:** Mover el código de cola/caché con sus pruebas existentes (`tests/offline-queue-integration.test.js` debe seguir pasando apuntando al módulo nuevo). Pruebas del cliente: Bearer solo si hay token; timeout; error de red detectado como `esErrorDeRed`.
-- [ ] **Step 2:** `npm.cmd run test:unit` PASS. Commit `refactor: extract offline cache and api client modules`.
+> **Hecha el 2026-09-06.** `src/data/offline-cache.js` conserva la mecánica del legado (misma base, almacenes, versión, política de descarte y evento `dv-offline-change`); lo único que cambia es que el envío se inyecta: `enviarConCola(payload, enviar)` y `flushQueue(enviar)` reciben la función que hace la petición, así la fachada de la Task 2.2 decide el transporte. `enviarConCola` es el `post()` del legado sin el cliente Supabase dentro. `src/data/api-client.js` reutiliza `functionsBaseUrl` de `src/firebase/functions-base.js` y solo añade el valor por defecto del emulador cuando `import.meta.env.DEV` y no hay `VITE_API_BASE` ni `DV_ENTORNO.apiBase`; se deja `functions-base.js` intacto porque `private-files.js` depende de su resolución actual. `services/api.js` sigue en su sitio: lo retira la Task 2.2 al cambiar los `<script>`.
+
+- [x] **Step 1:** Mover el código de cola/caché con sus pruebas existentes (`tests/offline-queue-integration.test.js` debe seguir pasando apuntando al módulo nuevo). Pruebas del cliente: Bearer solo si hay token; timeout; error de red detectado como `esErrorDeRed`.
+- [x] **Step 2:** `npm.cmd run test:unit` PASS. Commit `refactor: extract offline cache and api client modules`.
+
+Evidencia: `npm.cmd run test:unit` 26 archivos / **449** pruebas OK (antes 24 / 419); `npm.cmd run test:emulators` 22 archivos / **311** pruebas OK; `npm.cmd run build` código 0.
 
 ### Task 2.2: `SheetsService` Firebase y arranque `src/main.js`
 

@@ -1,15 +1,25 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+// Integración de la cola de salida con la política real
+// (`services/offline-queue-policy.js`, allowlist vacía a propósito): ninguna
+// acción de hoy debe llegar a IndexedDB. La mecánica de la cola con una política
+// permisiva se prueba en `tests/data/offline-cache.test.js`.
+
+let cache;
+
 async function putLegacyRow(row) {
-  await globalThis.SheetsService.getQueueCount();
+  await cache.contarCola();
   await new Promise((resolve, reject) => {
     const request = globalThis.indexedDB.open('donaciones-venezuela-offline-v1', 1);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const transaction = request.result.transaction('outbox', 'readwrite');
       transaction.onerror = () => reject(transaction.error);
-      transaction.oncomplete = () => resolve();
+      transaction.oncomplete = () => {
+        request.result.close();
+        resolve();
+      };
       transaction.objectStore('outbox').put(row);
     };
   });
@@ -17,44 +27,34 @@ async function putLegacyRow(row) {
 
 beforeEach(async () => {
   vi.resetModules();
-  Object.defineProperty(globalThis, 'window', {
-    value: globalThis,
-    configurable: true,
-  });
   Object.defineProperty(globalThis, 'navigator', {
     value: { onLine: false },
     configurable: true,
   });
   globalThis.addEventListener = vi.fn();
   globalThis.dispatchEvent = vi.fn();
-  globalThis.CustomEvent = class CustomEvent {
-    constructor(type, init) {
-      this.type = type;
-      this.detail = init?.detail;
-    }
-  };
   await import('../services/offline-queue-policy.js');
-  await import('../services/api.js');
+  cache = await import('../src/data/offline-cache.js');
+  await cache.clearOfflineQueue();
 });
 
 afterEach(() => {
-  delete globalThis.window;
   delete globalThis.navigator;
   delete globalThis.addEventListener;
   delete globalThis.dispatchEvent;
-  delete globalThis.CustomEvent;
   delete globalThis.DVOfflinePolicy;
-  delete globalThis.SheetsService;
 });
 
 it('no persiste reportes sensibles cuando está offline', async () => {
-  await expect(globalThis.SheetsService.post({
+  const enviar = vi.fn().mockRejectedValue(new Error('Failed to fetch'));
+
+  await expect(cache.enviarConCola({
     accion: 'reportar_persona',
     documento: 'V-1',
     foto: 'data:image/png;base64,AA',
-  })).rejects.toThrow();
+  }, enviar)).rejects.toThrow();
 
-  expect(await globalThis.SheetsService.getQueueCount()).toBe(0);
+  expect(await cache.contarCola()).toBe(0);
 });
 
 it('purga entradas legacy que ya no cumplen la política', async () => {
@@ -65,11 +65,13 @@ it('purga entradas legacy que ya no cumplen la política', async () => {
     attempts: 0,
   });
   globalThis.navigator.onLine = true;
+  const enviar = vi.fn();
 
-  const result = await globalThis.SheetsService.flushQueue();
+  const result = await cache.flushQueue(enviar);
 
   expect(result).toEqual({ sent: 0, pending: 0 });
-  expect(await globalThis.SheetsService.getQueueCount()).toBe(0);
+  expect(enviar).not.toHaveBeenCalled();
+  expect(await cache.contarCola()).toBe(0);
 });
 
 it('expone una purga total para el cierre de sesión', async () => {
@@ -80,7 +82,7 @@ it('expone una purga total para el cierre de sesión', async () => {
     attempts: 0,
   });
 
-  await globalThis.SheetsService.clearOfflineQueue();
+  await cache.clearOfflineQueue();
 
-  expect(await globalThis.SheetsService.getQueueCount()).toBe(0);
+  expect(await cache.contarCola()).toBe(0);
 });
