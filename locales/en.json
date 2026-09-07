@@ -1744,6 +1744,7 @@
     "accessRegen": "Regenerate access",
     "accessRegenDone": "New access generated",
     "accessOf": "Centre #{id}",
-    "mapSet": "Point set at {lat}, {lng}"
+    "mapSet": "Point set at {lat}, {lng}",
+    "truncated": "there are more records than a single search can scan"
   }
 }

@@ -1744,6 +1744,7 @@
     "accessRegen": "Regenerar acceso",
     "accessRegenDone": "Acceso nuevo generado",
     "accessOf": "Centro #{id}",
-    "mapSet": "Punto fijado en {lat}, {lng}"
+    "mapSet": "Punto fijado en {lat}, {lng}",
+    "truncated": "hay más registros de los que caben en una búsqueda"
   }
 }

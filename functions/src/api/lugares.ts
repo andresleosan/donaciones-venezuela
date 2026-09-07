@@ -95,7 +95,7 @@ function datosDe(snapshot: { data(): unknown }): Record<string, unknown> {
   return (snapshot.data() ?? {}) as Record<string, unknown>;
 }
 
-type Lugar = {
+export type Lugar = {
   tipo: string;
   nombre: string;
   nombreNorm: string;
@@ -199,6 +199,11 @@ async function revocarPanel(uid: string): Promise<void> {
 // Id de documento del insumo. Coincide con el que ya usa la semilla
 // (`normalizar()`, con espacios) y ademas sustituye la barra, que `normalizar`
 // no toca y Firestore no admite en un id.
+// Referencia a la subcoleccion de insumos de un centro, para la consola.
+export function refInsumosDe(db: FirestoreLugares, lugarId: string) {
+  return refInsumos(db, lugarId);
+}
+
 export function claveInsumo(nombre: unknown): string {
   const clave = normalizar(nombre).replace(/\//g, '-').slice(0, 200);
   return clave === '.' || clave === '..' ? `_${clave}` : clave;
@@ -259,7 +264,7 @@ function comoCoordenada(valor: unknown): number | null {
   return Number.isFinite(numero) ? numero : null;
 }
 
-function comoLugar(datos: Record<string, unknown>): Lugar {
+export function comoLugar(datos: Record<string, unknown>): Lugar {
   return {
     tipo: s(datos.tipo, 40) || 'Centro',
     nombre: s(datos.nombre, 120),
@@ -274,7 +279,7 @@ function comoLugar(datos: Record<string, unknown>): Lugar {
   };
 }
 
-function comoInsumo(datos: Record<string, unknown>): Insumo {
+export function comoInsumo(datos: Record<string, unknown>): Insumo {
   return {
     nombre: s(datos.nombre, 120),
     categoria: s(datos.categoria, 60) || 'General',
@@ -388,6 +393,22 @@ function republicar(
   publicar(tx, ctx.db, PROYECCION, lugarId, documentoPublico(lugar, insumos));
 }
 
+// Republica la proyeccion de un centro leyendo su estado canonico. La usa la
+// consola de datos (Task 3.7) despues de tocar el centro o uno de sus insumos:
+// la vista publica de un centro incluye sus insumos, asi que editar un insumo
+// obliga a rehacerla entera.
+export async function republicarLugar(
+  tx: TxLugares,
+  ctx: ContextoMinimo,
+  lugarId: string,
+): Promise<void> {
+  const db = ctx.db as unknown as FirestoreLugares;
+  const lugar = await leerLugar(tx, db, lugarId);
+  if (!lugar) return;
+  const insumos = await leerInsumos(tx, db, lugarId);
+  republicar(tx, ctx, lugarId, lugar, insumos.map(({ datos }) => datos));
+}
+
 // --- Respuesta del panel ------------------------------------------------------
 
 // Forma exacta que espera `js/panel.js` (snake_case en las cantidades).
@@ -452,7 +473,9 @@ async function cargarPanel(
 
 // --- Escritura ----------------------------------------------------------------
 
-function deltaTipo(anterior: string | null, nuevo: string | null): Record<string, number> {
+// Exportado para la consola de datos (Task 3.7): crear o borrar un centro desde
+// ahi tiene que mover los mismos contadores del tablero que `registrar_lugar`.
+export function deltaTipo(anterior: string | null, nuevo: string | null): Record<string, number> {
   const contador = (tipo: string) => (tipo === 'Hospital' ? 'hospitalesRegistrados' : 'centrosRegistrados');
   const deltas: Record<string, number> = {};
   if (anterior) deltas[contador(anterior)] = (deltas[contador(anterior)] ?? 0) - 1;
@@ -463,7 +486,10 @@ function deltaTipo(anterior: string | null, nuevo: string | null): Record<string
 // Crea el lugar reservando el nombre en el mismo paso. La reserva es lo que
 // sustituye al `unique` de SQL: dos altas simultaneas del mismo nombre no pueden
 // crear dos centros.
-async function crearLugar(
+// Exportada por la misma razon que `deltaTipo`: un centro creado desde la
+// consola reserva su nombre en el indice de unicidad y publica su proyeccion
+// exactamente igual que uno creado desde el formulario publico.
+export async function crearLugar(
   tx: TxLugares,
   ctx: ActionContext,
   datos: {

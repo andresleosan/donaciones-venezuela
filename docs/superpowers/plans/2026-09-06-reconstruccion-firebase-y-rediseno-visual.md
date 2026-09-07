@@ -750,7 +750,75 @@ Evidencia: `npm.cmd run test:unit` 39 archivos / **889** pruebas OK; `npm.cmd ru
 
 **Invariantes:** portar la lista blanca `ENTIDADES` del catálogo (tablas → colecciones, columnas editables, tipos, opciones, naturales, hijos y modo de borrado); la ficha nunca devuelve `authUid`, hashes ni tokens; `deshacer` restaura `antes` desde `auditoriaAdmin`; `duplicados` compara `nombreNorm`/`emailNorm`/dígitos de teléfono sobre índices, no sobre 2000 filas en memoria; toda mutación auditada; búsqueda escapa `%`/`_` (ya no aplica ilike: usar `nombreNorm` prefijo + filtro en memoria de ≤ 500 documentos).
 
-- [ ] **Step 1..3:** reglas comunes.
+> **Hecha el 2026-09-07.** Dos ficheros: `functions/src/api/consola-entidades.ts` (la lista blanca y
+> la validación por columna, sin una sola dependencia de Firestore) y `functions/src/api/consola.ts`
+> (las 9 acciones). 52 pruebas de contrato y 2 de integración contra el emulador.
+>
+> **Decisiones tomadas:**
+>
+> 1. **El vocabulario de columnas sigue siendo el del legado** (`cantidad_necesaria`,
+>    `tipo_vehiculo`, `foto_cedula`), porque es el que la consola ya envía y pinta. Cada `ColDef`
+>    lleva su `campo` canónico de Firestore, y esa traducción es **la única que existe**: leer,
+>    escribir y deshacer pasan por ella. El mapa es **por entidad**, no global: en `voluntarios` la
+>    columna `email` es `emailNorm`, y en `centros_panel` es literalmente `email`.
+> 2. **Un insumo se direcciona con las dos mitades de su id** (`LUG-…/clave`), porque vive en la
+>    subcolección de su centro y una sola no direcciona nada. Es la misma decisión que
+>    `admin_donacion_anular` (3.4) con `token` + `id`. La consola lo devuelve así en `filas` y lo
+>    acepta así en `ficha`/`editar`/`borrar`, y como el cliente reenvía `item[pk]` verbatim, no hubo
+>    que tocar la pantalla. La lista sale de una consulta de **grupo de colecciones**.
+> 3. **`sincronizar()` en dos fases, y ésa es la parte que importa.** La consola es la única
+>    superficie que escribe colecciones canónicas ajenas a su dominio, así que después de tocar una
+>    fila hay que dejar su proyección pública y los contadores del tablero como los dejaría la acción
+>    de dominio. La fase 1 hace **todas las lecturas** y la fase 2 solo escribe: Firestore rechaza
+>    leer después de escribir, y la primera versión leía el centro y sus insumos *después* del
+>    `tx.set`. Habría reventado en producción; lo cazó el Firestore falso.
+> 4. **Un centro creado desde la consola pasa por `crearLugar`**, el mismo camino que
+>    `registrar_lugar`: reserva su nombre en el índice de unicidad, publica su proyección y mueve los
+>    contadores. Y **renombrarlo mueve la reserva**: sin eso el nombre viejo quedaría tomado para
+>    siempre y el nuevo, libre para que otro centro se lo llevara.
+> 5. **Borrar un centro llama a `borrarLugarEnCascada`** (Task 3.1 la dejó escrita para aquí):
+>    Firestore no tiene `on delete cascade`, así que los insumos, el acceso de panel, la proyección y
+>    la reserva del nombre se sueltan a mano. Y **revocar un acceso de panel** deja `panelUid` a
+>    `null` y republica el centro, porque `gestionado` es un campo derivado de la vista pública.
+> 6. **La búsqueda es un filtro en memoria sobre una ventana de 500**, que es lo que el plan fija.
+>    Firestore no tiene `LIKE`. De paso desaparece un defecto del legado: el texto del usuario iba
+>    al `ilike` de PostgREST, así que `%` y `_` llegaban como comodines —buscar `%` listaba la tabla
+>    entera— y `(`, `)`, `,` y `*` se **borraban** para que no rompieran el filtro. Aquí no hay
+>    lenguaje de patrones que romper: el texto se normaliza como una clave natural (sin acentos, en
+>    minúsculas) y se compara como subcadena. Y la respuesta lleva `truncado`, para que «250 de 250»
+>    en una colección de 900 no parezca la cuenta real.
+> 7. **`admin_datos_deshacer` NUNCA restaura un correo.** `auditar` los enmascara al escribir la
+>    bitácora (`ana@x.local` → `a***@x.local`), a propósito. Restaurar desde ahí machacaría el correo
+>    bueno del registro con la máscara —que además **pasa la validación de correo**, así que fallaría
+>    en silencio—. Lo que la bitácora no guarda no se puede deshacer: esa columna se deja como está.
+>    Lo encontró la prueba de integración; en producción habría ido corrompiendo correos de uno en
+>    uno, sin un solo error.
+> 8. **`auditoriaId` es texto.** En el legado era un entero autoincremental; el id de un documento de
+>    Firestore no lo es, y la consola hacía `Number(...)` sobre él.
+> 9. **La bitácora identifica al admin por su `uid`**, no por la IP. Sigue guardando la IP, pero
+>    quien firmó el cambio es el uid del ID token. Se pagina en memoria sobre una ventana: no hay
+>    índice compuesto `(entidad, fecha)` y crearlo por una pantalla que casi siempre mira la primera
+>    página no compensa.
+> 10. **Ni la ficha ni la lista devuelven URLs firmadas.** El legado firmaba una URL de una hora por
+>     cada foto en cada apertura de la ficha; la consola pide la firma de la que va a abrir. Es la
+>     misma decisión que en 3.4 (comprobantes) y 3.6 (vídeos y fotos de familias).
+> 11. **`centros_panel` no se crea desde la consola** y su columna humana es el correo, no el
+>     `token_centro` del legado: en Firebase la credencial del panel es un claim de Auth que concede
+>     `panel_crear`, no una fila que se pueda teclear. La ficha nunca devuelve el `authUid`, igual
+>     que el legado nunca devolvía `pin_hash` ni `pin_salt`.
+>
+> **Defectos encontrados por las pruebas y corregidos antes del commit:**
+>
+> | Defecto | Consecuencia |
+> |---|---|
+> | `sincronizar()` leía el centro y sus insumos **después** del `tx.set` | Lectura después de escritura: Firestore la rechaza. Habría reventado en producción, no en las pruebas. De ahí las dos fases. |
+> | El mapa de columnas → campo canónico era **global** | `centros_panel.email` se leía de `emailNorm`, que en esa colección no existe: la ficha de un acceso de panel salía sin correo, que es justo su columna humana. Ahora el mapa es por entidad. |
+> | `admin_datos_deshacer` restauraba el correo **enmascarado** de la bitácora | Deshacer una edición dejaba `a***@x.local` como correo real del voluntario, y pasaba la validación sin protestar. |
+> | El Firestore falso reutilizaba los ids automáticos y no resolvía el centinela de hora | Dos entradas de bitácora seguidas se pisaban, así que una prueba de la Task 3.5 pasaba **por la razón equivocada** (contaba 1 porque las tres se habían solapado). Corregidos el falso y la aserción. |
+
+- [x] **Step 1..3:** reglas comunes. Prueba de integración: crear, editar y borrar un centro desde la consola dejando el directorio público al día (con su insumo, su índice de unicidad y su cascada), y el ciclo de duplicados, validación por columna y deshacer sobre un voluntario. En la UI: las fotos de una ficha se abren con una URL firmada a demanda, `auditoriaId` viaja como texto, la bitácora enseña el uid del admin y la lista avisa cuando la ventana de 500 se queda corta.
+
+Evidencia: `npm.cmd run test:unit` 40 archivos / **941** pruebas OK; `npm.cmd run test:emulators` 42 archivos / **776** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0; `npm.cmd run seed:emulador` código 0; `python scripts/verificar-idioma.py` 1515 claves OK.
 
 ### Task 3.8: Integraciones: tasa de cambio y Telegram
 

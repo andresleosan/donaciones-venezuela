@@ -10,7 +10,7 @@
     const DV_DATOS_PANELES = {};
 
     const DV_POR_PAGINA = 25;
-    let dvLista = { entidad: '', pagina: 1, busca: '', total: 0, filas: [] };
+    let dvLista = { entidad: '', pagina: 1, busca: '', total: 0, filas: [], truncado: false };
     let dvCentrosCache = null;
 
     function dvTexto(clave, params) { return t('datos.' + clave, params); }
@@ -124,6 +124,7 @@
           busca: dvLista.busca, pagina: dvLista.pagina, porPagina: DV_POR_PAGINA });
         dvLista.filas = r.filas || [];
         dvLista.total = r.total || 0;
+        dvLista.truncado = r.truncado === true;
       } catch (err) { dvError(err); return; }
       const pk = cfg.pk || 'id';
       cont.innerHTML = dvLista.filas.map((item) =>
@@ -133,7 +134,8 @@
         b.addEventListener('click', () => dvDatosFicha(cfg, b.dataset.datosId)));
       const desde = dvLista.total ? (dvLista.pagina - 1) * DV_POR_PAGINA + 1 : 0;
       const hasta = Math.min(dvLista.pagina * DV_POR_PAGINA, dvLista.total);
-      $('#datos-cuenta').textContent = dvTexto('showing', { desde, hasta, total: dvLista.total });
+      $('#datos-cuenta').textContent = dvTexto('showing', { desde, hasta, total: dvLista.total })
+        + (dvLista.truncado ? ` · ${dvTexto('truncated')}` : '');
     }
 
     // ---- Ficha ----
@@ -149,10 +151,12 @@
     async function dvPintarFicha(cfg, fila, fotos, dependientes, id) {
       const campos = await dvCamposResueltos(cfg);
       const etiqueta = cfg.etiqueta || 'nombre';
+      // Las fotos llegan como RUTA privada, no como URL: se firma la que el
+      // admin abre (15 min) en vez de firmar todas al pintar la ficha.
       const fotosHtml = fotos.length ? `
         <div class="datos-fotos">
           <h4>${e(dvTexto('photos'))}</h4>
-          ${fotos.map((f) => `<a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${e(f.url)}">${e(dvTexto('photoOpen'))} · ${e(f.campo)}</a>`).join('')}
+          ${fotos.map((f) => `<button class="btn btn-soft btn-small" type="button" data-datos-foto="${e(f.path)}">${e(dvTexto('photoOpen'))} · ${e(f.campo)}</button>`).join('')}
         </div>` : '';
       const titulo = id ? `${cfg.titulo} · ${String(fila[etiqueta] || '')}` : `${cfg.titulo} · ${dvTexto('new')}`;
       $('#admin-console').innerHTML = marcoGestion(titulo, `
@@ -168,6 +172,14 @@
           </div>
         </div>`);
       bindGestMenu();
+      $$('#admin-console [data-datos-foto]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          const { url } = await window.DVFirebase.getPrivateFileUrl(b.dataset.datosFoto);
+          window.open(url, '_blank', 'noopener');
+        } catch (err) { dvError(err); }
+        b.disabled = false;
+      }));
       $('#datos-volver').addEventListener('click', () => dvDatosLista(cfg));
       $('#datos-guardar').addEventListener('click', () => dvGuardar(cfg, campos, id, false));
       if (id) $('#datos-borrar').addEventListener('click', () => dvBorrar(cfg, fila, dependientes, id));
@@ -280,7 +292,7 @@
             <strong>${e(dvTexto(clave))} ${e(String(nombre))}</strong>
             <span class="badge gray">${e(String(c.entidad))}</span>
           </div>
-          <p class="meta">${e(fechaRelativa(c.fecha))} · ${e(String(c.ip))}</p>
+          <p class="meta">${e(fechaRelativa(c.fecha))} · <code>${e(String(c.actor_uid || c.ip || ''))}</code></p>
           ${c.accion === 'editar' ? `<div class="card-actions">
             <button class="btn btn-soft btn-small" type="button" data-log-undo="${e(String(c.id))}">${e(dvTexto('logUndo'))}</button>
           </div>` : ''}
@@ -289,7 +301,7 @@
       $$('#log-filas [data-log-undo]').forEach((b) => b.addEventListener('click', async () => {
         b.disabled = true;
         try {
-          await postAdmin({ accion: 'admin_datos_deshacer', auditoriaId: Number(b.dataset.logUndo) });
+          await postAdmin({ accion: 'admin_datos_deshacer', auditoriaId: b.dataset.logUndo });
           toast(dvTexto('logUndone'));
           dvPanelBitacora(entidad);
         } catch (err) { b.disabled = false; dvError(err); }

@@ -1699,6 +1699,16 @@ sanean con `s(campo, límite)`.
   columna dejó de ser editable, ese valor sencillamente no se restaura (silencio, no error). Si las
   reglas se endurecieron (p. ej. un teléfono viejo con 5 dígitos), la restauración falla con
   `"telefono: teléfono demasiado corto"`.
+  > **Divergencia deliberada en Firebase (Task 3.7, 2026-09-07).** `auditoriaId` es **texto** (el id
+  > de un documento de Firestore no es un entero autoincremental), y deshacer **nunca restaura un
+  > correo**: `auditar` los enmascara al escribir la bitácora, así que restaurarlo desde ahí dejaría
+  > `a***@x.local` como correo real del registro —y pasaría la validación sin protestar—. Lo que la
+  > bitácora no guarda no se puede deshacer. La búsqueda de `admin_datos_listar` ya no es un `ilike`:
+  > es un filtro en memoria sobre una ventana de 500 documentos, sin acentos y sin comodines que
+  > romper (en el legado, buscar `%` listaba la tabla entera). Ni la ficha ni la lista devuelven URLs
+  > firmadas: dan la **ruta**, y la consola firma la foto que abre. Un insumo se direcciona con
+  > `<lugarId>/<clave>` porque vive en la subcolección de su centro, y `centros_panel` no se crea
+  > desde la consola: su credencial es un claim de Auth, no una fila que se pueda teclear.
 
 ### admin_datos_borrar (`index.ts:1915-1933`)
 

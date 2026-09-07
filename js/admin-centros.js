@@ -133,7 +133,7 @@
       icono: '🔑',
       titulo: () => dvTexto('titleAccess'),
       abrir: () => dvDatosLista({
-        entidad: 'centros_panel', pk: 'id', etiqueta: 'token_centro',
+        entidad: 'centros_panel', pk: 'id', etiqueta: 'email',
         titulo: dvTexto('titleAccess'),
         fila: (c) => dvpFila(
           c.token_centro || '',

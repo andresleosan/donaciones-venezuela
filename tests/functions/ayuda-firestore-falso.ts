@@ -19,12 +19,36 @@ export function crearDb(inicial: Record<string, Documento> = {}) {
   const documentos: Record<string, Documento> = {};
   for (const [ruta, datos] of Object.entries(inicial)) documentos[ruta] = { ...datos };
 
+  // Ids automáticos únicos en TODA la base, no por consulta: dos entradas de
+  // bitácora seguidas son dos documentos, no uno que pisa al otro. En Firestore
+  // real `collection().doc()` nunca repite.
+  let autoId = 0;
+  // El centinela de hora del servidor se resuelve al aplicar la escritura, como
+  // hace Firestore. Sin esto, `orderBy('fecha')` compararía objetos idénticos y
+  // la bitácora saldría en un orden cualquiera.
+  let reloj = new Date('2026-09-07T12:00:00.000Z').getTime();
+
+  // `firebase-admin` solo esta instalado dentro de functions/, asi que el
+  // centinela de `FieldValue.serverTimestamp()` se reconoce por su forma: una
+  // instancia de clase (su prototipo no es el de un objeto literal) que no es ni
+  // Date ni array. El incremento se comprueba antes, por su `operand`.
+  function esCentinela(valor: unknown): boolean {
+    return Boolean(valor)
+      && typeof valor === 'object'
+      && !(valor instanceof Date)
+      && !Array.isArray(valor)
+      && Object.getPrototypeOf(valor) !== Object.prototype;
+  }
+
   function aplicar(ruta: string, datos: Documento, merge: boolean) {
     const previo = merge ? { ...(documentos[ruta] ?? {}) } : {};
     for (const [clave, valor] of Object.entries(datos)) {
       const incremento = valor as { operand?: unknown } | null;
       if (incremento && typeof incremento === 'object' && typeof incremento.operand === 'number') {
         previo[clave] = Number(previo[clave] ?? 0) + incremento.operand;
+      } else if (esCentinela(valor)) {
+        reloj += 1000;
+        previo[clave] = new Date(reloj);
       } else {
         previo[clave] = valor;
       }
@@ -32,11 +56,24 @@ export function crearDb(inicial: Record<string, Documento> = {}) {
     documentos[ruta] = previo;
   }
 
-  function hijosDe(prefijo: string): Array<{ id: string; data(): Documento }> {
+  function hijosDe(prefijo: string): Array<{ id: string; ref: { path: string }; data(): Documento }> {
     return Object.keys(documentos)
       .filter((ruta) => ruta.startsWith(`${prefijo}/`) && !ruta.slice(prefijo.length + 1).includes('/'))
       .sort()
-      .map((ruta) => ({ id: ruta.slice(prefijo.length + 1), data: () => documentos[ruta]! }));
+      .map((ruta) => ({ id: ruta.slice(prefijo.length + 1), ref: { path: ruta }, data: () => documentos[ruta]! }));
+  }
+
+  // Grupo de colecciones: todo documento cuyo penúltimo segmento sea `nombre`.
+  // Es lo que necesita la consola de datos para listar los insumos de todos los
+  // centros sin recorrer centro por centro.
+  function grupoDe(nombre: string): Array<{ id: string; ref: { path: string }; data(): Documento }> {
+    return Object.keys(documentos)
+      .filter((ruta) => {
+        const partes = ruta.split('/');
+        return partes.length >= 2 && partes[partes.length - 2] === nombre;
+      })
+      .sort()
+      .map((ruta) => ({ id: ruta.split('/').pop()!, ref: { path: ruta }, data: () => documentos[ruta]! }));
   }
 
   function ordenable(valor: unknown): number | string {
@@ -69,15 +106,15 @@ export function crearDb(inicial: Record<string, Documento> = {}) {
   }
 
   function consulta(ruta: string, filtros: Filtro[], orden: Orden | null, tope: number): Documento {
-    let auto = 0;
     return {
       path: ruta,
-      doc: (id?: string) => referencia(`${ruta}/${id ?? `auto-${(auto += 1)}`}`),
+      doc: (id?: string) => referencia(`${ruta}/${id ?? `auto-${(autoId += 1)}`}`),
       where: (campo: string, operador: string, valor: unknown) => consulta(ruta, [...filtros, { campo, operador, valor }], orden, tope),
       orderBy: (campo: string, direccion: 'asc' | 'desc' = 'asc') => consulta(ruta, filtros, { campo, direccion }, tope),
       limit: (cantidad: number) => consulta(ruta, filtros, orden, cantidad),
       get: async () => {
-        let filas = hijosDe(ruta).filter((fila) => filtros.every((filtro) => cumple(fila.data(), filtro)));
+        const origen = ruta.startsWith('@grupo/') ? grupoDe(ruta.slice(7)) : hijosDe(ruta);
+        let filas = origen.filter((fila) => filtros.every((filtro) => cumple(fila.data(), filtro)));
         if (orden) {
           filas = [...filas].sort((a, b) => {
             const x = ordenable(a.data()[orden.campo]);
@@ -106,6 +143,7 @@ export function crearDb(inicial: Record<string, Documento> = {}) {
 
   const db = {
     collection: coleccion,
+    collectionGroup: (nombre: string) => consulta(`@grupo/${nombre}`, [], null, Number.MAX_SAFE_INTEGER),
     async runTransaction<T>(fn: (tx: unknown) => Promise<T>): Promise<T> {
       const pendientes: Array<() => void> = [];
       let huboEscritura = false;

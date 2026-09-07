@@ -924,7 +924,10 @@ describe('admin_viaje_resolver', () => {
     expect(documentos[`viajes/${viajeId}`]).toMatchObject({ resuelto: true, abierto: false, venceAlerta: null });
     // Lo comprado sigue comprado: resolver el viaje no deshace la compra.
     expect(facturaDe(documentos)).toMatchObject({ estado: 'Comprada', viajeVigenteId: null });
-    expect(rutas(documentos, 'auditoriaAdmin/')).toHaveLength(1);
+    // La bitácora ya traía las entradas de crear y comprar el presupuesto: lo
+    // que importa es que resolver el viaje deja la suya.
+    const auditoria = rutas(documentos, 'auditoriaAdmin/').map((ruta) => documentos[ruta]!);
+    expect(auditoria.some((e) => e.entidad === 'viajes' && e.entidadId === viajeId)).toBe(true);
   });
 
   it('después de resolverlo, otra persona puede reservar el mismo trabajo', async () => {
