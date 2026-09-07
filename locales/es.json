@@ -1452,7 +1452,9 @@
     "slotsMissing": "Faltan {count}",
     "slotsOf": "{covered} de {total} cubiertos",
     "shiftLabel": "Turno",
-    "applyCta": "Me registro"
+    "applyCta": "Me registro",
+    "contactCta": "Ver contacto",
+    "contactError": "No se pudo obtener el contacto ahora mismo."
   },
   "wizard": {
     "menu": "Menú",

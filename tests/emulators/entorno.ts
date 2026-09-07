@@ -26,3 +26,24 @@ export const EMULADORES = {
   firestore: { host: '127.0.0.1', port: 8080 },
   storage: { host: '127.0.0.1', port: 9199 },
 } as const;
+
+// Concede claims a una cuenta del emulador de Auth.
+//
+// El emulador no ejecuta Admin SDK dentro de la prueba, pero expone la misma API
+// de Identity Toolkit autenticada con el token literal `owner`. Sin esto no hay
+// forma de probar una accion `admin` de punta a punta: `authenticateRequest` lee
+// el rol del ID token, no de una variable de la prueba.
+//
+// Tras llamarla hay que pedir `getIdToken(true)`: el token en memoria se emitio
+// antes de los claims y el despachador responderia 403.
+export async function darClaims(uid: string, claims: Record<string, unknown>): Promise<void> {
+  const url = `${EMULADORES.auth}/identitytoolkit.googleapis.com/v1/projects/${DEMO_PROJECT_ID}/accounts:update`;
+  const respuesta = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({ localId: uid, customAttributes: JSON.stringify(claims) }),
+  });
+  if (!respuesta.ok) {
+    throw new Error(`no se pudieron asignar claims (${respuesta.status}): ${await respuesta.text()}`);
+  }
+}

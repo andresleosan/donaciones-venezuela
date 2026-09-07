@@ -638,9 +638,21 @@ export function crearSheetsServiceFirebase() {
     return { telefono: String(respuesta.telefono ?? ''), nombre: String(respuesta.nombre ?? '') };
   }
 
+  // Lo mismo para el contacto de una vacante de voluntariado (Task 3.3). Una
+  // vacante ya cubierta o cerrada responde 404: el puesto no existe.
+  async function contactarVacante(id) {
+    const respuesta = await post({ accion: 'contactar_vacante', id });
+    return {
+      telefono: String(respuesta.telefono ?? ''),
+      rol: String(respuesta.rol ?? ''),
+      lugarNombre: String(respuesta.lugarNombre ?? ''),
+    };
+  }
+
   return {
     configure() {},
     contactarMotorizado,
+    contactarVacante,
     getAll,
     getLugares,
     getVoluntarios,

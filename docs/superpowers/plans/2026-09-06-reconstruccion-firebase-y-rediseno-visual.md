@@ -447,7 +447,45 @@ ya no dice *dónde* se vio por última vez a la persona, que es buena parte de p
 
 **Invariantes:** `cantidadCubierta` se actualiza en transacción y nunca supera `cantidadNecesaria`; al alcanzarla `estado = 'Cubierta'` y se retira de la proyección; `check` de `urgencia` y `lugarTipo` iguales al catálogo.
 
-- [ ] **Step 1..3:** reglas comunes.
+> **Hecha el 2026-09-06.** `functions/src/api/vacantes.ts` con las 3 acciones del plan más
+> `contactar_vacante`. 28 pruebas de contrato en `tests/functions/api-vacantes.test.ts` + 1 de integración
+> que recorre el ciclo entero contra el emulador.
+>
+> **Decisiones tomadas:**
+>
+> 1. **`cantidadCubierta` se recorta a `cantidadNecesaria` y el cierre es automático.** El legado no validaba
+>    ninguna de las dos cosas: se podían registrar 30 cubiertos en una vacante de 4 (y `cupos_faltantes` de la
+>    vista pública se iba a negativo), y una vacante llena se seguía anunciando en el directorio hasta que
+>    alguien se acordaba de cerrarla a mano. Al alcanzar el cupo, `estado` pasa a `Cubierta` y la proyección se
+>    retira en la misma transacción.
+> 2. **Solo se publican las abiertas.** Los KPIs de la UI cuentan «todas las abiertas»; una vacante cubierta o
+>    cerrada en el directorio es una llamada a un puesto que ya no existe. Reabrirla la vuelve a publicar.
+> 3. **`contactar_vacante` (nueva) reutiliza el cubo `contacto`** de la Task 3.2 (30/h por uid) y responde 404
+>    si la vacante ya está cubierta o cerrada: repartir el contacto de un puesto lleno es mandar gente a un
+>    sitio donde no hace falta.
+> 4. **`admin_actualizar_vacante` responde 404** con un id inexistente y devuelve `{ id, estado,
+>    cantidadCubierta, cuposFaltantes }` en vez del `{}` del legado, para que la consola vea el cierre
+>    automático sin recargar. El legado propagaba crudo el error de PostgREST («JSON object requested, multiple
+>    (or no) rows returned») hasta la pantalla del admin.
+> 5. **`admin_listar_vacantes` deja subir el fallo de lectura.** El legado no comprobaba el error y devolvía
+>    `{ vacantes: [] }` con `success: true`: una consola vacía por un fallo se veía igual que una sin vacantes.
+> 6. **`lugarNombre` sigue siendo texto libre**, sin referencia a `lugares`, y `lugarTipo` admite el cuarto
+>    valor `Zona de derrumbe`, que no está en `TIPOS_LUGAR`. Un tipo o una urgencia fuera de lista caen al valor
+>    por defecto sin dar error, igual que el legado.
+>
+> **Añadido reutilizable:** `darClaims(uid, claims)` en `tests/emulators/entorno.ts`. Ninguna prueba de
+> emulador cubría una acción `admin` porque el rol vive en el ID token y no había forma de acuñarlo desde la
+> prueba; ahora se pide a la API de Identity Toolkit del emulador (autenticada con el token literal `owner`) y
+> se fuerza `getIdToken(true)`. Lo necesitan las Tasks 3.4 a 3.7 enteras.
+
+- [x] **Step 1..3:** reglas comunes. En la UI, la tarjeta pública de vacante cambia el enlace directo de
+  WhatsApp por un botón «Ver contacto» que llama a `contactar_vacante` y, sin sesión, lleva a `#acceso` (mismo
+  patrón que la tarjeta de transportista). Dos claves i18n nuevas en ambos idiomas.
+
+Evidencia: `npm.cmd run test:unit` 33 archivos / **660** pruebas OK; `npm.cmd run test:emulators` 30 archivos /
+**489** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0;
+`npm.cmd run seed:emulador` código 0 (la vacante semilla pasa a la forma canónica, con teléfono);
+`python scripts/verificar-idioma.py` 1508 claves OK.
 
 ### Task 3.4: Facturas, donaciones, presupuestos, ofertas y seguimiento
 

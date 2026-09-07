@@ -150,6 +150,7 @@ const VACANTES = [
     cantidadNecesaria: 4,
     cantidadCubierta: 1,
     turno: 'Mañana',
+    telefono: '+58 412 000 0004',
     estado: 'Abierta',
   },
 ];
@@ -348,12 +349,27 @@ function sembrarPersonas(lote) {
 
 function sembrarVacantes(lote) {
   for (const vacante of VACANTES) {
-    lote.set(db.collection('vacantes').doc(vacante.id), { ...vacante, createdAt: AHORA });
+    lote.set(db.collection('vacantes').doc(vacante.id), {
+      ...vacante,
+      lugarNombreNorm: normalizar(vacante.lugarNombre),
+      cantidadCubierta: vacante.cantidadCubierta ?? 0,
+      createdAt: AHORA,
+      actualizado: AHORA,
+    });
+    // Sin telefono: el contacto pasa por `contactar_vacante`, y la tarjeta solo
+    // sabe que lo hay. Mismos campos que publica `admin_crear_vacante`.
     lote.set(db.collection('vacantesPublicas').doc(vacante.id), proyeccionPublica('vacantesPublicas', {
-      lugarId: vacante.lugarId,
-      titulo: vacante.rol,
+      rol: vacante.rol,
+      lugarNombre: vacante.lugarNombre,
+      lugarTipo: vacante.lugarTipo,
+      ubicacion: vacante.ubicacion,
       descripcion: vacante.descripcion,
-      cupos: vacante.cantidadNecesaria,
+      urgencia: vacante.urgencia,
+      cantidadNecesaria: vacante.cantidadNecesaria,
+      cantidadCubierta: vacante.cantidadCubierta ?? 0,
+      cuposFaltantes: Math.max(0, vacante.cantidadNecesaria - (vacante.cantidadCubierta ?? 0)),
+      turno: vacante.turno,
+      tieneContacto: true,
       estado: vacante.estado,
       createdAt: AHORA,
     }));

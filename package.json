@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Plataforma de respuesta humanitaria Venezuela",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "build": "vite build",
@@ -15,7 +15,7 @@
     "test:unit": "vitest run --exclude tests/rules/** --exclude tests/emulators/**",
     "test:rules:run": "vitest run tests/rules",
     "test:rules": "node scripts/emulators-exec.mjs --project demo-donaciones-venezuela --only firestore,storage \"npm run test:rules:run\"",
-    "test:functions:run": "vitest run tests/functions tests/emulators/health.integration.test.ts tests/emulators/auth.integration.test.ts tests/emulators/volunteer-consent.integration.test.ts tests/emulators/api.integration.test.ts tests/emulators/api-lugares.integration.test.ts tests/emulators/api-personas.integration.test.ts",
+    "test:functions:run": "vitest run tests/functions tests/emulators/health.integration.test.ts tests/emulators/auth.integration.test.ts tests/emulators/volunteer-consent.integration.test.ts tests/emulators/api.integration.test.ts tests/emulators/api-lugares.integration.test.ts tests/emulators/api-personas.integration.test.ts tests/emulators/api-vacantes.integration.test.ts",
     "test:functions": "npm --prefix functions run build && node scripts/emulators-exec.mjs --project demo-donaciones-venezuela --only auth,firestore,functions \"npm run test:functions:run\"",
     "test:emulators:run": "vitest run tests/rules tests/functions tests/emulators",
     "test:emulators": "npm --prefix functions run build && node scripts/emulators-exec.mjs --project demo-donaciones-venezuela --only auth,firestore,storage,functions \"npm run test:emulators:run\"",

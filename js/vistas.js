@@ -265,11 +265,34 @@
           ${v.turno ? `<p class="meta"><strong>${e(t('vacancies.shiftLabel'))}</strong> ${e(v.turno)}</p>` : ''}
           ${v.descripcion ? `<p class="meta">${e(v.descripcion)}</p>` : ''}
           <div class="card-actions">
-            ${soloDigitos(v.telefono) ? `<a class="btn btn-soft btn-small" target="_blank" rel="noopener" href="${waHref(v.telefono)}">${e(t('common.whatsapp'))}</a>` : ''}
+            ${v.tieneContacto ? `<button class="btn btn-soft btn-small" type="button" data-contacto-vac="${e(String(v.id))}">${e(t('vacancies.contactCta'))}</button>` : ''}
             <button class="btn btn-primary btn-small" type="button" data-vac-postular="${e(v.rol)}">${e(t('vacancies.applyCta'))}</button>
           </div>
         </article>`;
       }).join('');
+      // El teléfono ya no viene en la proyección pública: se pide de uno en uno
+      // con `contactar_vacante`, que exige sesión. Sin sesión, lleva al acceso.
+      $$('[data-contacto-vac]').forEach((btn) => btn.addEventListener('click', async () => {
+        if (!(typeof sesionActual === 'function' && sesionActual())) {
+          try { sessionStorage.setItem('dv-retorno', window.location.hash || '#voluntarios'); } catch (err) { /* privado */ }
+          window.location.hash = '#acceso';
+          return;
+        }
+        btn.disabled = true;
+        try {
+          const { telefono } = await window.SheetsService.contactarVacante(btn.dataset.contactoVac);
+          const enlace = document.createElement('a');
+          enlace.className = 'btn btn-soft btn-small';
+          enlace.target = '_blank';
+          enlace.rel = 'noopener';
+          enlace.href = waHref(telefono);
+          enlace.textContent = t('common.whatsapp');
+          btn.replaceWith(enlace);
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = t('vacancies.contactError');
+        }
+      }));
       // «Me registro»: abre el formulario plegado, pre-llena la profesión si
       // coincide con una opción y lleva el foco al primer campo.
       $$('[data-vac-postular]').forEach((btn) => btn.addEventListener('click', () => {

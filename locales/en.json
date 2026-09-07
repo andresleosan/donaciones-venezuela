@@ -1452,7 +1452,9 @@
     "slotsMissing": "{count} needed",
     "slotsOf": "{covered} of {total} filled",
     "shiftLabel": "Shift",
-    "applyCta": "Sign me up"
+    "applyCta": "Sign me up",
+    "contactCta": "Show contact",
+    "contactError": "The contact could not be retrieved right now."
   },
   "wizard": {
     "menu": "Menu",

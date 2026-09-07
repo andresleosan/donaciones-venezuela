@@ -24,7 +24,15 @@ export const PUBLIC_PROJECTION_FIELDS = {
     'tieneContacto', 'totalTrayectos', 'totalKm', 'aporteDonado', 'ultimoTrayecto',
     'createdAt',
   ],
-  vacantesPublicas: ['lugarId', 'titulo', 'descripcion', 'cupos', 'estado', 'createdAt'],
+  // Sin `telefono` (Task 3.3): el contacto pasa por `contactar_vacante` y la
+  // tarjeta solo sabe si lo hay. `lugarId`, `titulo` y `cupos` son los nombres
+  // que uso la semilla antes de portar el dominio; se mantienen para que un
+  // documento publicado por aquella siga siendo legible por la fachada.
+  vacantesPublicas: [
+    'rol', 'lugarNombre', 'lugarTipo', 'ubicacion', 'descripcion', 'urgencia',
+    'cantidadNecesaria', 'cantidadCubierta', 'cuposFaltantes', 'turno',
+    'tieneContacto', 'estado', 'lugarId', 'titulo', 'cupos', 'createdAt',
+  ],
   // El id del documento ES el token publico: `getSeguimiento(token)` hace un
   // `get` directo y espera dentro la factura, su historial y el desglose
   // anonimo de donaciones (mismo shape que el RPC `seguimiento_factura`).
