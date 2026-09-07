@@ -9,16 +9,25 @@ export const PRIVATE_URL_TTL_MS = 15 * 60 * 1000;
 // de la recogida (Task 3.4). Las cuatro son documentos de identidad o el
 // domicilio de terceros: el rol 'panel' NO las lee (solo llega a `receipts` y
 // `needs`, ver `canAccessPrivateFile`). Solo el admin y quien las subio.
-const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers', 'deliveries']);
-const EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf']);
-const PATH_PATTERN = /^private\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\.(jpg|jpeg|png|webp|pdf)$/;
+const CATEGORIES = new Set([
+  'receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers', 'deliveries',
+  'families',
+]);
+const EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'webm', 'mp4']);
+const PATH_PATTERN = /^private\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\.(jpg|jpeg|png|webp|pdf|webm|mp4)$/;
+
+// El video solo cabe en `reports`: es el de una denuncia, y es el unico archivo
+// del sistema que puede pesar 30 MB. Admitirlo en cualquier categoria convertiria
+// cada formulario con foto en un canal de subida de video.
+const VIDEO_EXTENSIONS = new Set(['webm', 'mp4']);
+const VIDEO_CATEGORIES = new Set(['reports']);
 
 export type PrivateFileDescriptor = {
   path: string;
   ownerUid: string;
-  category: 'receipts' | 'needs' | 'reports' | 'centers' | 'volunteers' | 'drivers' | 'offers' | 'deliveries';
+  category: 'receipts' | 'needs' | 'reports' | 'centers' | 'volunteers' | 'drivers' | 'offers' | 'deliveries' | 'families';
   fileName: string;
-  extension: 'jpg' | 'jpeg' | 'png' | 'webp' | 'pdf';
+  extension: 'jpg' | 'jpeg' | 'png' | 'webp' | 'pdf' | 'webm' | 'mp4';
 };
 
 export function validatePrivateStoragePath(path: string): PrivateFileDescriptor {
@@ -38,6 +47,7 @@ export function validatePrivateStoragePath(path: string): PrivateFileDescriptor 
     || !CATEGORIES.has(category)
     || !extension
     || !EXTENSIONS.has(extension)
+    || (VIDEO_EXTENSIONS.has(extension) && !VIDEO_CATEGORIES.has(category))
   ) {
     throw new Error('invalid-private-storage-path');
   }

@@ -4,13 +4,17 @@ import { getStorageInstance } from './firebase-config.js';
 // `centers`: cedula del responsable y foto del sitio que pide `panel_crear`.
 // `offers`: fotos del insumo ofrecido, de quien lo ofrece y de la recogida.
 // A diferencia de `receipts` y `needs`, el rol 'panel' NO puede leer ninguna.
-export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers', 'deliveries'];
+// `families`: fotos de la vivienda destruida de una familia damnificada.
+// `reports`: el video de una denuncia, el unico archivo que no es una imagen.
+export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers', 'deliveries', 'families'];
 
 export const MIME_EXTENSIONS = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
   'application/pdf': 'pdf',
+  'video/webm': 'webm',
+  'video/mp4': 'mp4',
 };
 
 export const PRIVATE_FILE_LIMITS = {
@@ -18,7 +22,15 @@ export const PRIVATE_FILE_LIMITS = {
   'image/png': 5 * 1024 * 1024,
   'image/webp': 5 * 1024 * 1024,
   'application/pdf': 10 * 1024 * 1024,
+  // El tope del legado para el video de una denuncia.
+  'video/webm': 30 * 1024 * 1024,
+  'video/mp4': 30 * 1024 * 1024,
 };
+
+// El video solo se admite en `reports`. Se comprueba aqui ademas de en las
+// reglas: un error del cliente es un mensaje, no un 403 sin explicacion.
+const VIDEO_MIMES = ['video/webm', 'video/mp4'];
+const VIDEO_CATEGORIES = ['reports'];
 
 
 function validateFile(file) {
@@ -50,6 +62,9 @@ function validatePrivateIdentity(uid, category, file, options) {
     throw new Error('Categoria no permitida');
   }
   validateFile(file);
+  if (VIDEO_MIMES.includes(file.type) && !VIDEO_CATEGORIES.includes(category)) {
+    throw new Error('El video solo se admite en denuncias');
+  }
   if (options.extension !== undefined) {
     const expectedExtension = MIME_EXTENSIONS[file.type];
     if (options.extension !== expectedExtension) {

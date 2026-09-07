@@ -616,8 +616,8 @@
           : e(t('report.noCoords'));
         return `<article class="card den-card">
           <div class="badge-row"><span class="badge gray">${e(tValue('reportType', d.tipo))}</span><span class="badge">${e(tValue('reportState', d.estado))}</span></div>
-          ${d.video_url ? `<video class="den-video" controls preload="none" src="${e(d.video_url)}"></video>` : `<p class="meta">${e(t('report.videoUnavailable'))}</p>`}
-          <p class="meta"><strong>${e(t('report.reporter'))}:</strong> ${e(d.nombre || '')} · ${e(d.email || '')} · ${e(tValue('reportRole', d.rol) || d.rol || '')}</p>
+          ${d.tieneVideo ? `<button class="btn btn-soft btn-small" type="button" data-den-video="${e(d.id)}">${e(t('report.playVideo'))}</button><video class="den-video" controls preload="none" hidden></video>` : `<p class="meta">${e(t('report.videoUnavailable'))}</p>`}
+          <p class="meta"><strong>${e(t('report.reporter'))}:</strong> ${e(tValue('reportRole', d.rol) || d.rol || '')} · <code>${e(d.uid || '')}</code></p>
           <p class="meta">${e(fecha.toLocaleString())} · 📍 ${gps}</p>
           ${d.texto ? `<p class="meta">"${e(d.texto)}"</p>` : ''}
           ${d.factura_token ? `<p class="meta">🧾 ${e(d.factura_token)}</p>` : ''}
@@ -628,6 +628,17 @@
       }).join('') || `<p class="empty-state">${e(t('report.empty'))}</p>`;
       $('#admin-console').innerHTML = marcoGestion(t('admin.manageReports'), `<div class="admin-records den-admin-list">${filas}</div>`);
       bindGestMenu();
+      // El vídeo es un archivo privado: la URL se firma al pedirla (120 s) y no
+      // se guarda. El legado firmaba una de una hora por denuncia en cada
+      // apertura de la pantalla, mirase el admin cuál mirase.
+      $$('#admin-console [data-den-video]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          const { url } = await postAdmin({ accion: 'denuncia_video', id: b.dataset.denVideo });
+          const video = b.parentElement.querySelector('.den-video');
+          video.src = url; video.hidden = false; b.hidden = true;
+        } catch (err) { b.disabled = false; mensajeAdmin('#gest-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+      }));
       $$('#admin-console [data-den-estado]').forEach((b) => b.addEventListener('click', async () => {
         try {
           await postAdmin({ accion: 'admin_denuncia_estado', id: b.dataset.denId, estado: b.dataset.denEstado });
@@ -655,7 +666,9 @@
           if (m.notas) bits.push(e(m.notas));
           return `<li>${e(m.nombre || '')}${bits.length ? ' — ' + bits.join(' · ') : ''}</li>`;
         }).join('');
-        const fotos = (Array.isArray(f.fotos_urls) ? f.fotos_urls : []).map((u) => `<a href="${e(u)}" target="_blank" rel="noopener" class="fam-foto-link"><img src="${e(u)}" alt="" loading="lazy" /></a>`).join('');
+        // Rutas, no URLs: se firma la que el admin abre. El legado firmaba
+        // hasta 300 × 12 URLs de una hora en cada apertura de la pantalla.
+        const fotos = (Array.isArray(f.fotos) ? f.fotos : []).map((ruta, k) => `<button class="btn btn-soft btn-small" type="button" data-fam-foto="${e(ruta)}">${e(t('admin.famPhoto'))} ${k + 1}</button>`).join('');
         const perdidas = [];
         if (f.perdio_casa) perdidas.push(e(t('registro.lostHouse')));
         if (f.perdio_vehiculo) perdidas.push(e(t('registro.lostVehicle')) + (f.vehiculos_detalle ? ` (${e(f.vehiculos_detalle)})` : ''));
@@ -679,6 +692,14 @@
       }).join('') || `<p class="empty-state">${e(t('admin.famEmpty'))}</p>`;
       $('#admin-console').innerHTML = marcoGestion(t('admin.manageFamilies'), `<div class="admin-records fam-admin-list">${filas}</div>`);
       bindGestMenu();
+      $$('#admin-console [data-fam-foto]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          const { url } = await window.DVFirebase.getPrivateFileUrl(b.dataset.famFoto);
+          window.open(url, '_blank', 'noopener');
+        } catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+        b.disabled = false;
+      }));
       $$('#admin-console [data-fam-estado]').forEach((b) => b.addEventListener('click', async () => {
         try {
           await postAdmin({ accion: 'admin_damnificado_estado', id: b.dataset.famId, estado: b.dataset.famEstado });

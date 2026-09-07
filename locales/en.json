@@ -1121,7 +1121,8 @@
     "verify": "Verify",
     "viewSensitiveDetails": "View sensitive data",
     "volunteersIntro": "Volunteers' phone and email are available only here, for the administrator team.",
-    "volunteersNone": "No volunteers registered."
+    "volunteersNone": "No volunteers registered.",
+    "famPhoto": "Photo"
   },
   "lugar": {},
   "home": {
@@ -1550,7 +1551,10 @@
     "ctaTop": "File a report",
     "ctaList": "View reports",
     "langLocked": "You can't change language while recording.",
-    "reporter": "Reporter"
+    "reporter": "Reporter",
+    "playVideo": "Play video",
+    "needSessionToList": "Sign in to see the reports that have been filed.",
+    "goToLogin": "Sign in"
   },
   "registro": {
     "pageTitle": "Register my family",

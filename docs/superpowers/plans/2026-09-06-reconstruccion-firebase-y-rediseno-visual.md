@@ -678,7 +678,71 @@ Evidencia: `npm.cmd run test:unit` 37 archivos / **830** pruebas OK; `npm.cmd ru
 
 **Modelo:** `familiasDamnificadas/{id}` (PII privada; fotos `path` categoría `registro`), proyección `familiasPublicas` con edades en rangos y `necesidadMedica` booleana; `denuncias/{id}` con `videoPath` (subida directa progresiva con `uploadPrivateFile` categoría `denuncias`, `denuncia_parcial` solo registra progreso), GPS exacto privado y **redondeado a 2 decimales** en cualquier respuesta no admin; URLs firmadas de video con TTL de 120 s.
 
-- [ ] **Step 1..3:** reglas comunes.
+> **Hecha el 2026-09-07.** Dos módulos, porque son dos dominios independientes:
+> `functions/src/api/damnificados.ts` (3 acciones) y `functions/src/api/denuncias.ts` (7, una más
+> de las previstas). 59 pruebas de contrato y 2 de integración contra el emulador.
+>
+> **Decisiones tomadas:**
+>
+> 1. **`damnificado_registrar` sigue siendo anónima, y las fotos son opcionales.** Es el único
+>    formulario que rellena alguien que acaba de perder su casa: obligarle a crearse una cuenta antes
+>    de poder pedir ayuda costaría registros. Pero las reglas de Storage exigen sesión para escribir
+>    en `private/<uid>/…`, así que las fotos solo se aceptan cuando la hay —y la fachada las descarta
+>    en silencio si no— en vez de bloquear el envío. Sin cuenta la familia se registra igual, sin
+>    fotos; con la cuenta de quien la esté ayudando, con ellas. Categoría de Storage nueva:
+>    **`families`**, cerrada como `offers`.
+> 2. **El código ES el id del documento.** `familiasDamnificadas/{FAM-XXXXXXXX}` y
+>    `familiasPublicas/{FAM-…}` comparten identificador, que es además lo único que la familia se
+>    lleva del formulario. Nada de `idProyeccion` aquí.
+> 3. **Las edades salen en rangos y las condiciones médicas como un booleano.** «3 personas de 0-5 en
+>    el municipio X» es un agregado; «un niño de 4 con asma en la calle 4» es una ficha médica de un
+>    menor. `perdioFamiliar` se deriva de `fallecidos > 0` y el detalle nunca sale.
+> 4. **`denuncias` no tiene proyección pública.** Es la única colección de la fase que se lee entera
+>    desde la Function y no desde el cliente: una colección `denunciasPublicas` que el navegador
+>    pudiera listar sería el mapa de quién denunció y desde dónde, y las Rules no filtran campos.
+>    `denuncias_listar` la lee con el Admin SDK y proyecta ahí, con el filtro en un solo sitio.
+> 5. **`denuncias_listar` exige sesión y redondea el GPS a ~1 km.** El legado la servía **anónima**,
+>    con el punto **exacto** desde el que alguien grabó una denuncia sobre quien le pidió dinero. La
+>    sesión la pide el plan; el redondeo es el mismo criterio que las coordenadas de una oferta. El
+>    mini-mapa de la lista baja de zoom 15 a 13: con la coordenada ya redondeada, un zoom de calle
+>    daría a entender una precisión que el dato no tiene.
+> 6. **`denuncia_parcial` ya no sube vídeo, solo registra progreso** (es lo que pide el plan). El
+>    legado resubía el vídeo **entero** cada ~5 segundos —hasta 30 MB por parcial, decenas de veces—
+>    para acabar sustituyéndolo otra vez al enviar, y dejaba un objeto huérfano si el contenedor
+>    cambiaba de webm a mp4 por el camino. El cliente ya guarda los trozos en IndexedDB y ya tiene su
+>    banner de «pendiente de enviar», así que no se pierde nada: el vídeo sube una vez, al enviar.
+> 7. **Acción nueva: `denuncia_video`.** El legado firmaba una URL de **una hora por cada vídeo** en
+>    cada apertura de la lista (50 firmas por visita, todas reenviables durante esa hora, mirase
+>    alguien el vídeo o no). Ahora la lista dice `tieneVideo` y la URL —de **120 s**, como pide el
+>    plan— se firma al pulsar play, una sola, con su propio cupo (`archivos`, 60/h por uid). Mismo
+>    patrón que `contactar_motorizado` (3.2), `contactar_vacante` (3.3) y el comprobante de una
+>    donación (3.4): el dato caro y sensible sale de uno en uno.
+> 8. **`admin_damnificados` devuelve rutas, no URLs firmadas.** El legado firmaba hasta **300 × 12**
+>    URLs de una hora en cada apertura de la pantalla. La consola pide la firma de la foto que va a
+>    abrir, con `getPrivateFileUrl`.
+> 9. **El vídeo solo cabe en `reports`.** Es el único archivo del sistema que puede pesar 30 MB;
+>    admitir `webm`/`mp4` en cualquier categoría convertiría cada formulario con foto en un canal de
+>    subida de vídeo. La condición está en las tres capas: el cliente, las reglas de Storage y
+>    `validatePrivateStoragePath`.
+> 10. **La identidad de una denuncia es el `uid`, no el correo.** Misma razón que en la Task 3.5: el
+>     correo del legado venía del cuerpo de la petición. `admin_denuncias` devuelve `uid` y `rol`, y
+>     `admin_denuncia_crear` deja el uid del admin que la generó en vez del inventado
+>     `administracion@sistema.local`.
+> 11. **Los dos `*_estado` responden 404 cuando el id no existe.** El legado hacía un `update` de 0
+>     filas y respondía éxito: marcar como atendida una familia o una denuncia que no existe parecía
+>     funcionar.
+>
+> **Defecto encontrado por las pruebas y corregido antes del commit:**
+>
+> | Defecto | Consecuencia |
+> |---|---|
+> | `denuncia_crear` reescribía `tipo` y `gps` aunque el envío no los trajera | Cerrar una denuncia que los parciales ya habían abierto sin repetir el `tipo` la convertía de «Retención de insumos» en «Otro» y **borraba las coordenadas** del sitio. Un campo ausente no es un campo vacío: ahora solo se aplican los que vienen. Lo pilló la prueba de integración, no la de contrato. |
+>
+> **Costura que queda:** ninguna.
+
+- [x] **Step 1..3:** reglas comunes. Prueba de integración: una familia se registra sin sesión y su resumen público se lee sin sesión y sin un solo nombre, mientras la ficha canónica está cerrada; y una denuncia guarda su vídeo privado, no se sirve a nadie sin sesión, sale de la lista sin identidad ni texto y con el GPS a ~1 km, y el admin sí ve el punto exacto. En la UI: la lista de denuncias pide entrar, el vídeo se abre con una URL firmada a demanda y las fotos de una familia también.
+
+Evidencia: `npm.cmd run test:unit` 39 archivos / **889** pruebas OK; `npm.cmd run test:emulators` 40 archivos / **722** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0; `npm.cmd run seed:emulador` código 0 (dos familias y dos denuncias semilla); `python scripts/verificar-idioma.py` 1514 claves OK.
 
 ### Task 3.7: Consola de datos del admin y bitácora
 

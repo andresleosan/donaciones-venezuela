@@ -19,7 +19,9 @@ service firebase.storage {
         || category == 'offers'
         // `deliveries`: fotos del ciclo logistico (el local, el cargamento y
         // quien recibe en el centro). Cerradas como `offers`.
-        || category == 'deliveries';
+        || category == 'deliveries'
+        // `families`: fotos de la vivienda destruida de una familia damnificada.
+        || category == 'families';
     }
 
     // Exactamente las tres claves del contrato: sin canal de datos libre en metadata.
@@ -32,17 +34,23 @@ service firebase.storage {
     }
 
     function isAllowedFile(fileName) {
-      return fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp|pdf)$');
+      return fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp|pdf|webm|mp4)$');
     }
 
-    function isAllowedContent(fileName) {
+    // El video (30 MB) solo cabe en `reports`, la denuncia. Sin esa condicion,
+    // cada formulario con foto seria un canal de subida de video.
+    function isAllowedContent(category, fileName) {
       return request.resource.size > 0
         && ((fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.(jpg|jpeg|png|webp)$')
           && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
           && request.resource.size <= 5 * 1024 * 1024)
         || (fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.pdf$')
           && request.resource.contentType == 'application/pdf'
-          && request.resource.size <= 10 * 1024 * 1024));
+          && request.resource.size <= 10 * 1024 * 1024)
+        || (category == 'reports'
+          && fileName.matches('^[A-Za-z0-9][A-Za-z0-9_-]*\\.(webm|mp4)$')
+          && request.resource.contentType in ['video/webm', 'video/mp4']
+          && request.resource.size <= 30 * 1024 * 1024));
     }
 
     // Una actualizacion solo puede tocar metadata: el contenido ya revisado no se sustituye.
@@ -58,13 +66,13 @@ service firebase.storage {
         && isOwner(uid)
         && isCategory(category)
         && isAllowedFile(fileName)
-        && isAllowedContent(fileName)
+        && isAllowedContent(category, fileName)
         && hasPrivateMetadata(uid, category);
       allow update: if resource != null
         && isOwner(uid)
         && isCategory(category)
         && isAllowedFile(fileName)
-        && isAllowedContent(fileName)
+        && isAllowedContent(category, fileName)
         && hasPrivateMetadata(uid, category)
         && keepsContent();
     }

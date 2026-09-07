@@ -45,6 +45,9 @@ const { claveInsumo, documentoPublico } = await import('../lib/api/lugares.js');
 // propio dominio, asi que la semilla no puede describir una forma que la app ya
 // no escriba (y no puede publicar el contacto de una oferta por descuido).
 const facturas = await import('../lib/api/facturas.js');
+// El filtro de PII de una familia vive en `documentoPublico`, y en ningun otro
+// sitio: la semilla lo usa igual que la accion y que el reconciliador.
+const damnificados = await import('../lib/api/damnificados.js');
 // Las dos vistas publicas propias de la Task 3.4: la del presupuesto (lo que
 // pinta la pagina de necesidades) y la de la oferta (sin contacto ni punto
 // exacto). Tambien las arma el dominio.
@@ -128,6 +131,83 @@ const VOLUNTARIOS = [
 const MOTORIZADOS = [
   { id: 'MOT-SEED-1', nombre: 'PRUEBA · Ana Motorizada', zona: 'Caracas Oeste', zonaOperacion: 'Caracas Oeste', tipoVehiculo: 'Moto', telefono: '+58 424 000 0001', placa: 'AB123CD', emailNorm: 'ana.moto@prueba.local' },
   { id: 'MOT-SEED-2', nombre: 'PRUEBA · Luis Motorizado', zona: 'La Guaira', zonaOperacion: 'La Guaira', tipoVehiculo: 'Camión', telefono: '+58 424 000 0002', placa: 'EF456GH', emailNorm: 'luis.moto@prueba.local' },
+];
+
+// Familias damnificadas (Task 3.6). La ficha canonica lleva PII de verdad;
+// `familiasPublicas` solo agregados. La semilla escribe las dos con el mismo
+// mapeo que la accion, que es donde vive el filtro.
+const FAMILIAS = [
+  {
+    codigo: 'FAM-SEED0001',
+    responsableNombre: 'PRUEBA · Carmen Rodríguez',
+    responsableTelefono: '+58 412 000 0011',
+    responsableEmail: 'carmen@prueba.local',
+    alojamiento: 'PRUEBA · Casa de su hermana, calle 4',
+    municipio: 'PRUEBA · Vargas',
+    estadoGeo: 'PRUEBA · La Guaira',
+    gpsLat: 10.6013,
+    gpsLng: -66.9331,
+    integrantes: [
+      { nombre: 'PRUEBA · Carmen Rodríguez', parentesco: 'Madre', edad: 41, ocupacion: 'Costurera' },
+      { nombre: 'PRUEBA · Luis', parentesco: 'Hijo', edad: 9, condicionMedica: 'Asma' },
+      { nombre: 'PRUEBA · Ana', parentesco: 'Hija', edad: 3 },
+    ],
+    fallecidos: 1,
+    fallecidosDetalle: 'PRUEBA · Su esposo',
+    perdioCasa: true,
+    perdioVehiculo: false,
+    sustentoPrincipal: 'Costura',
+    bienesPerdidos: 'PRUEBA · Todo el mobiliario',
+    estado: 'nuevo',
+  },
+  {
+    codigo: 'FAM-SEED0002',
+    responsableNombre: 'PRUEBA · Pedro Salas',
+    responsableTelefono: '+58 412 000 0012',
+    responsableEmail: '',
+    alojamiento: 'PRUEBA · Refugio Catia',
+    municipio: 'PRUEBA · Libertador',
+    estadoGeo: 'PRUEBA · Distrito Capital',
+    gpsLat: null,
+    gpsLng: null,
+    integrantes: [
+      { nombre: 'PRUEBA · Pedro Salas', parentesco: 'Padre', edad: 63 },
+      { nombre: 'PRUEBA · Marta', parentesco: 'Esposa', edad: 60 },
+    ],
+    fallecidos: 0,
+    fallecidosDetalle: '',
+    perdioCasa: true,
+    perdioVehiculo: true,
+    sustentoPrincipal: 'Pensión',
+    bienesPerdidos: '',
+    estado: 'contactado',
+  },
+];
+
+// Denuncias (Task 3.6). Sin proyeccion publica: la lista la arma la accion.
+// Sin video, porque el objeto de Storage tendria que existir de verdad para que
+// `denuncia_video` pudiera firmarlo.
+const DENUNCIAS = [
+  {
+    id: 'DEN-SEED0001',
+    tipo: 'Retención de insumos',
+    gpsLat: 10.5061,
+    gpsLng: -66.9146,
+    gpsPrecision: 14,
+    texto: 'PRUEBA · Pidieron dinero por entregar las cajas.',
+    origen: 'usuario',
+    estado: 'Recibida',
+  },
+  {
+    id: 'DEN-SEED0002',
+    tipo: 'Otro',
+    gpsLat: null,
+    gpsLng: null,
+    gpsPrecision: null,
+    texto: 'Generada por administración: el transportista PRUEBA · Luis Motorizado no se reportó; retraso de 5 h en el tramo 2.',
+    origen: 'admin',
+    estado: 'En revisión',
+  },
 ];
 
 // Apoyo a transportistas (Task 3.5): los dos registros sueltos que el legado
@@ -492,6 +572,47 @@ function sembrarTransporte(lote) {
   return { donacionesRegistradas: APORTES_MOTORIZADOS.length };
 }
 
+function sembrarEmergencias(lote) {
+  for (const familia of FAMILIAS) {
+    const integrantes = damnificados.integrantesDe(familia.integrantes);
+    const canonica = {
+      ...familia,
+      integrantes,
+      numPersonas: integrantes.length,
+      numMenores: integrantes.filter((it) => it.menor).length,
+      vehiculosDetalle: '',
+      insumosNecesarios: '',
+      notas: '',
+      fotosPath: [],
+      authUid: '',
+      createdAt: AHORA,
+      actualizado: AHORA,
+    };
+    // El codigo ES el id, igual que en la accion.
+    lote.set(db.collection('familiasDamnificadas').doc(familia.codigo), canonica);
+    lote.set(
+      db.collection('familiasPublicas').doc(familia.codigo),
+      proyeccionPublica('familiasPublicas', damnificados.documentoPublico(damnificados.comoFamilia(canonica))),
+    );
+  }
+
+  for (const denuncia of DENUNCIAS) {
+    const { id, ...datos } = denuncia;
+    lote.set(db.collection('denuncias').doc(id), {
+      ...datos,
+      uid: '',
+      rol: datos.origen === 'admin' ? 'admin' : 'user',
+      videoPath: '',
+      duracionS: datos.origen === 'admin' ? 0 : 42,
+      facturaToken: '',
+      createdAt: AHORA,
+      actualizado: AHORA,
+    });
+  }
+
+  return {};
+}
+
 function sembrarVacantes(lote) {
   for (const vacante of VACANTES) {
     lote.set(db.collection('vacantes').doc(vacante.id), {
@@ -646,6 +767,7 @@ const contadores = {
   ...sembrarPersonas(lote),
   ...sembrarVacantes(lote),
   ...sembrarFacturas(lote),
+  ...sembrarEmergencias(lote),
 };
 // `donacionesRegistradas` la alimentan dos fuentes (facturas y apoyo a
 // transportistas), asi que se suma en vez de sobrescribirse con el spread.
@@ -667,6 +789,8 @@ process.stdout.write(`${JSON.stringify({
   motorizados: MOTORIZADOS.length,
   personas: PERSONAS.length,
   vacantes: VACANTES.length,
+  familias: FAMILIAS.length,
+  denuncias: DENUNCIAS.length,
   facturas: FACTURAS.length,
   trayectos: TRAYECTOS.length,
   aportesMotorizados: APORTES_MOTORIZADOS.length,

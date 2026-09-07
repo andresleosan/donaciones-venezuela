@@ -117,7 +117,13 @@ service cloud.firestore {
     match /indices/{coleccion}/{documento=**} { allow read, write: if false; }
     match /centrosPanel/{id} { allow read, write: if false; }
     match /personas/{id} { allow read, write: if false; }
+    // PII de una familia que perdio su casa: nombres y edades de menores,
+    // domicilio de acogida y condiciones medicas. Su unica salida publica es
+    // `familiasPublicas`, con agregados y sin un solo nombre.
     match /familiasDamnificadas/{id} { allow read, write: if false; }
+    // Sin proyeccion publica a proposito (Task 3.6): una coleccion que el
+    // cliente pudiera listar seria el mapa de quien denuncio y desde donde.
+    // `denuncias_listar` la lee por la Function, con sesion y sin identidad.
     match /denuncias/{id} { allow read, write: if false; }
     match /facturas/{id}/{documento=**} { allow read, write: if false; }
     // Telefono, nombre y domicilio de quien ofrece un insumo. Vive fuera de

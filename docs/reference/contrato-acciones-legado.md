@@ -1189,6 +1189,16 @@ sanean con `s(campo, límite)`.
 - **Respuesta:** `{ id: string, estado: 'Recibida' }` (literal, aunque la fila ya tuviera otro estado).
 - **Notas:** el público solo ve `denuncias_public` (`denuncias_listar`); identidad, rol, texto y
   precisión GPS son solo-admin. El movimiento `denunciaRegistrada` sí es público en el token.
+  > **Divergencia deliberada en Firebase (Task 3.6, 2026-09-07).** `denuncia_parcial` **no sube
+  > vídeo**: solo registra el progreso. El legado resubía el vídeo entero cada ~5 s (hasta 30 MB por
+  > parcial, decenas de veces) para acabar sustituyéndolo otra vez al enviar; el cliente ya guarda
+  > los trozos en IndexedDB, así que el vídeo sube una vez, en `denuncia_crear`. Y un campo ausente
+  > en el envío final ya no reescribe el guardado: enviar sin `tipo` convertía la denuncia en «Otro»
+  > y borraba sus coordenadas. `denuncias` **no tiene proyección pública**: `denuncias_listar` la lee
+  > desde la Function, exige sesión y redondea el GPS a 2 decimales; la ruta del vídeo no sale nunca
+  > y su URL la firma `denuncia_video` (acción nueva, 120 s) al pulsar play, en vez de las 50 URLs de
+  > una hora que el legado emitía en cada apertura de la lista. La identidad es el `uid` del ID
+  > token, no el correo del cuerpo de la petición.
 
 ### denuncias_listar (`index.ts:1541-1554`)
 

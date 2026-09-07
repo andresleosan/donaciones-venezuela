@@ -224,10 +224,12 @@
       if (navigator.onLine === false || den.enVuelo) return;
       den.enVuelo = true;
       try {
-        const dataUrl = await blobADataURL(new Blob(den.chunks, { type: den.mime }));
+        // Solo se anota que la grabación sigue viva: el vídeo se sube una vez,
+        // al enviar. El legado resubía el vídeo entero cada ~5 s (hasta 30 MB
+        // por parcial) para acabar sustituyéndolo otra vez al final.
         const resp = await window.SheetsService.post({
           accion: 'denuncia_parcial', accessToken: (sesionActual() || {}).access_token,
-          denunciaId: den.id, videoBase64: dataUrl, duracionS: Math.round((Date.now() - den.t0) / 1000),
+          denunciaId: den.id, duracionS: Math.round((Date.now() - den.t0) / 1000),
           tipo: den.tipo, gps: den.gps, facturaToken: den.facturaToken });
         if (resp && resp.id) den.id = resp.id;
       } catch (err) { /* se reintenta en el próximo chunk o al enviar */ }
@@ -322,6 +324,13 @@
       if (!shell) return;
       cambiarVista('denuncias');
       if (!/^#denuncias$/i.test(window.location.hash)) window.location.hash = '#denuncias';
+      // La lista pide sesión: cada fila lleva la zona desde donde alguien
+      // denunció, y eso no se sirve a cualquiera que abra la página.
+      if (!sesionActual()) {
+        shell.innerHTML = `<p class="empty-state">${e(t('report.needSessionToList'))}</p>
+          <p><a class="btn btn-primary" href="#acceso">${e(t('report.goToLogin'))}</a></p>`;
+        return;
+      }
       shell.innerHTML = `<p class="meta">${e(t('report.loading'))}</p>`;
       let filas = [];
       try { filas = (await window.SheetsService.post({ accion: 'denuncias_listar' })).denuncias || []; }
@@ -340,18 +349,32 @@
         const mapa = (d.gps_lat != null && d.gps_lng != null) ? `<div class="den-mini-map" id="den-map-${i}" data-lat="${e(String(d.gps_lat))}" data-lng="${e(String(d.gps_lng))}"></div>` : '';
         return `<article class="card den-card">
           <div class="badge-row"><span class="badge gray">${e(tValue('reportType', d.tipo))}</span><span class="badge">${e(tValue('reportState', d.estado))}</span></div>
-          ${d.video_url ? `<video class="den-video" controls preload="none" src="${e(d.video_url)}"></video>` : `<p class="meta">${e(t('report.videoUnavailable'))}</p>`}
+          ${d.tieneVideo ? `<button class="btn btn-soft btn-small" type="button" data-den-video="${e(d.id)}">${e(t('report.playVideo'))}</button><video class="den-video" controls preload="none" hidden></video>` : `<p class="meta">${e(t('report.videoUnavailable'))}</p>`}
           <p class="meta">${e(fecha.toLocaleDateString())} · ${e(fecha.toLocaleTimeString())}</p>
           <p class="meta">📍 ${e(coords)}</p>
           ${mapa}
         </article>`;
       }).join('');
-      // Mini-mapas Leaflet (si está cargado): un punto por denuncia.
+      // El vídeo no viene con la lista: se pide una URL firmada de 120 s al
+      // pulsar play, y solo del que se va a mirar. El legado firmaba una de una
+      // hora por cada vídeo en cada apertura de la página.
+      $$('#denuncias-shell [data-den-video]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          const { url } = await window.SheetsService.post({ accion: 'denuncia_video', id: b.dataset.denVideo });
+          const video = b.parentElement.querySelector('.den-video');
+          video.src = url; video.hidden = false; b.hidden = true;
+          video.play().catch(() => { /* el navegador puede exigir un gesto más */ });
+        } catch (err) { b.disabled = false; toast(String((err && err.message) || t('report.loadError'))); }
+      }));
+      // Mini-mapas Leaflet (si está cargado): un punto por denuncia. El zoom es
+      // corto a propósito: la coordenada va redondeada a ~1 km y un zoom de
+      // calle daría a entender una precisión que el dato ya no tiene.
       if (window.L) filas.forEach((d, i) => {
         const cont = $(`#den-map-${i}`);
         if (!cont || d.gps_lat == null) return;
         const m = L.map(cont, { attributionControl: false, zoomControl: false, dragging: false, scrollWheelZoom: false })
-          .setView([Number(d.gps_lat), Number(d.gps_lng)], 15);
+          .setView([Number(d.gps_lat), Number(d.gps_lng)], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
         L.marker([Number(d.gps_lat), Number(d.gps_lng)]).addTo(m);
         setTimeout(() => m.invalidateSize(), 60);

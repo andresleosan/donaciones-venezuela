@@ -19,6 +19,8 @@ import './facturas.js';
 import './presupuestos.js';
 import './ofertas.js';
 import './viajes.js';
+import './damnificados.js';
+import './denuncias.js';
 
 export { apiHandler, API_MESSAGES } from './http.js';
 export { defineAction, getAction, listActions } from './registry.js';

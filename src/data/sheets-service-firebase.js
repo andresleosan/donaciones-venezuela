@@ -627,6 +627,17 @@ export function crearSheetsServiceFirebase() {
       // nuevo y mandar los dos subiría la misma imagen dos veces.
       descartar: ['fotoEntrega'],
     },
+    // Las fotos de la vivienda destruida van a `families`, y solo si hay
+    // sesión: `damnificado_registrar` sigue siendo anónima a propósito, así que
+    // sin cuenta la familia se registra igual, sin fotos.
+    damnificado_registrar: {
+      categoria: 'families',
+      listas: { fotos: 'fotosPath' },
+      opcional: true,
+    },
+    // El video de una denuncia es el único archivo que no es una imagen. Se
+    // sube UNA vez, al enviar; `denuncia_parcial` ya no resube nada.
+    denuncia_crear: { categoria: 'reports', campos: { videoBase64: 'videoPath' } },
     // Los tres archivos del ciclo de compra los sube el admin con su cuenta. El
     // legado los ponía en un bucket público e irrevocable.
     admin_crear_presupuesto: { categoria: 'receipts', campos: { adjunto: 'adjuntoPath' } },
@@ -658,7 +669,12 @@ export function crearSheetsServiceFirebase() {
     if (!sueltos.length && !listas.length) return salida;
 
     const usuario = await getCurrentUser();
-    if (!usuario) throw new Error('Entra con tu cuenta para continuar');
+    // `opcional`: la acción se puede enviar sin los archivos. Sin sesión se
+    // descartan en silencio en vez de bloquear el envío.
+    if (!usuario) {
+      if (regla.opcional) return salida;
+      throw new Error('Entra con tu cuenta para continuar');
+    }
 
     const subir = (dataUrl) => uploadPrivateFile(
       usuario.uid,

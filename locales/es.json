@@ -1121,7 +1121,8 @@
     "verify": "Verificar",
     "viewSensitiveDetails": "Ver datos sensibles",
     "volunteersIntro": "El teléfono y el correo de los voluntarios solo están disponibles aquí, para el equipo administrador.",
-    "volunteersNone": "No hay voluntarios registrados."
+    "volunteersNone": "No hay voluntarios registrados.",
+    "famPhoto": "Foto"
   },
   "lugar": {},
   "home": {
@@ -1550,7 +1551,10 @@
     "ctaTop": "Hacer una denuncia",
     "ctaList": "Ver denuncias",
     "langLocked": "No puedes cambiar de idioma mientras grabas.",
-    "reporter": "Denunciante"
+    "reporter": "Denunciante",
+    "playVideo": "Ver el video",
+    "needSessionToList": "Entra con tu cuenta para ver las denuncias registradas.",
+    "goToLogin": "Entrar"
   },
   "registro": {
     "pageTitle": "Registrar a mi familia",
