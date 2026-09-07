@@ -14,8 +14,14 @@ export const PUBLIC_PROJECTION_FIELDS = {
     'nombre', 'zona', 'especialidades', 'capacidadOperativa', 'fotoPublicaPath',
     'activo', 'createdAt',
   ],
+  // Sin telefono ni placa (Task 3.2): el contacto pasa por la accion
+  // `contactar_motorizado`, y la tarjeta publica solo sabe si lo hay
+  // (`tieneContacto`). Los cuatro acumulados los alimenta la Task 3.5
+  // (trayectos y apoyo), y estan declarados aqui porque `publicar` filtra por
+  // esta allowlist: sin declararlos, esa tarea escribiria al vacio.
   motorizadosPublicos: [
     'nombre', 'zona', 'tipoVehiculo', 'capacidad', 'fotoPublicaPath', 'activo',
+    'tieneContacto', 'totalTrayectos', 'totalKm', 'aporteDonado', 'ultimoTrayecto',
     'createdAt',
   ],
   vacantesPublicas: ['lugarId', 'titulo', 'descripcion', 'cupos', 'estado', 'createdAt'],

@@ -3,17 +3,19 @@ import type { AuthContext } from './auth/authorization.js';
 export const PRIVATE_URL_TTL_MS = 15 * 60 * 1000;
 
 // `centers` guarda la cedula de la persona responsable y la foto del sitio que
-// exige `panel_crear`. Es la unica categoria que NO puede leer el rol 'panel':
-// son documentos de identidad de terceros, y quien opera un panel no tiene por
-// que ver los de otro centro. Solo el admin y quien la subio.
-const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers']);
+// exige `panel_crear`; `volunteers` la cedula de un voluntario y `drivers` la
+// placa, el vehiculo y la cedula de un transportista (Task 3.2). Las tres son
+// documentos de identidad de terceros: el rol 'panel' NO las lee (solo llega a
+// `receipts` y `needs`, ver `canAccessPrivateFile`). Solo el admin y quien las
+// subio.
+const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers']);
 const EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf']);
 const PATH_PATTERN = /^private\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\.(jpg|jpeg|png|webp|pdf)$/;
 
 export type PrivateFileDescriptor = {
   path: string;
   ownerUid: string;
-  category: 'receipts' | 'needs' | 'reports' | 'centers';
+  category: 'receipts' | 'needs' | 'reports' | 'centers' | 'volunteers' | 'drivers';
   fileName: string;
   extension: 'jpg' | 'jpeg' | 'png' | 'webp' | 'pdf';
 };

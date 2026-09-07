@@ -2,7 +2,7 @@
 // las lecturas públicas se guardan en IndexedDB desde src/data/offline-cache.js.
 // El módulo de arranque (src/main.js) no se precachea: Vite lo publica con un
 // nombre con hash, y el manejador cache-first de abajo lo guarda al vuelo.
-const VERSION = '109';
+const VERSION = '110';
 const CACHE = 'ayuda-ve-v' + VERSION;
 const OFFLINE_URL = '/offline.html';
 // El sufijo sale de VERSION: antes estaba cableado (?v=60) mientras las páginas

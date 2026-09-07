@@ -306,7 +306,10 @@
     "kilometers": "{count} km",
     "contribution": "{amount} contribution",
     "routesButton": "Routes",
-    "supportButton": "Register support"
+    "supportButton": "Register support",
+    "contactCta": "Show contact",
+    "contactNeedSession": "Sign in to see this driver’s contact details.",
+    "contactError": "The contact could not be retrieved right now."
   },
   "family": {
     "title": "Find family",
@@ -337,7 +340,11 @@
     "reportSaving": "Saving the report...",
     "reportSaved": "Report saved. It will remain unverified until the team confirms it.",
     "reportError": "The report could not be saved",
-    "unverifiedBadge": "Unverified"
+    "unverifiedBadge": "Unverified",
+    "signInRequired": "Sign in to search the register of reported people.",
+    "signInCta": "Sign in to search",
+    "idMatch": "ID number matches",
+    "privacyNote": "For privacy, results do not show ID number, location or contact."
   },
   "tracking": {
     "searchUnavailable": "The tracking registry could not be queried.",

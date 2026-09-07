@@ -308,7 +308,7 @@
         return true;
       });
       $('#conteo-motorizados').textContent = t('drivers.count', { shown: lista.length, total: estado.motorizados.length });
-      $('#grid-motorizados').innerHTML = lista.length ? lista.map((m) => `<article class="card card-bordered"><div class="card-top"><div><span class="badge">${e(mostrarTransporte(m.tipoVehiculo) || t('drivers.vehicleFallback'))}</span><h3>${e(m.nombre)}</h3></div><div class="icon-box" aria-hidden="true">↗</div></div><p class="meta">${e(m.zonaOperacion || m.operaEn || t('drivers.zonePending'))}${m.placa ? ' · ' + e(t('drivers.plate')) + ' ' + e(m.placa) : ''}</p><div class="badge-row"><span class="badge green">${e(t('drivers.routes', { count: m.totalTrayectos || 0 }))}</span><span class="badge">${e(t('drivers.kilometers', { count: m.totalKm || 0 }))}</span><span class="badge yellow">${e(t('drivers.contribution', { amount: m.aporteDonado || 0 }))}</span></div><div class="card-actions"><button class="btn btn-soft btn-small" data-trayectos="${e(m.id)}" type="button">${e(t('drivers.routesButton'))}</button><button class="btn btn-ghost btn-small" data-donar-mot="${e(m.id)}" type="button">${e(t('drivers.supportButton'))}</button>${m.telefono ? `<a class="btn btn-ghost btn-small" target="_blank" rel="noopener" href="${waHref(m.telefono)}">${e(t('common.whatsapp'))}</a>` : ''}</div></article>`).join('') : `<div class="empty-state">${e(t('drivers.empty'))}</div>`;
+      $('#grid-motorizados').innerHTML = lista.length ? lista.map((m) => `<article class="card card-bordered"><div class="card-top"><div><span class="badge">${e(mostrarTransporte(m.tipoVehiculo) || t('drivers.vehicleFallback'))}</span><h3>${e(m.nombre)}</h3></div><div class="icon-box" aria-hidden="true">↗</div></div><p class="meta">${e(m.zonaOperacion || m.operaEn || t('drivers.zonePending'))}${m.placa ? ' · ' + e(t('drivers.plate')) + ' ' + e(m.placa) : ''}</p><div class="badge-row"><span class="badge green">${e(t('drivers.routes', { count: m.totalTrayectos || 0 }))}</span><span class="badge">${e(t('drivers.kilometers', { count: m.totalKm || 0 }))}</span><span class="badge yellow">${e(t('drivers.contribution', { amount: m.aporteDonado || 0 }))}</span></div><div class="card-actions"><button class="btn btn-soft btn-small" data-trayectos="${e(m.id)}" type="button">${e(t('drivers.routesButton'))}</button><button class="btn btn-ghost btn-small" data-donar-mot="${e(m.id)}" type="button">${e(t('drivers.supportButton'))}</button>${m.tieneContacto ? `<button class="btn btn-ghost btn-small" data-contacto-mot="${e(m.id)}" type="button">${e(t('drivers.contactCta'))}</button>` : ''}</div></article>`).join('') : `<div class="empty-state">${e(t('drivers.empty'))}</div>`;
       $$('[data-trayectos]').forEach((btn) => btn.addEventListener('click', () => {
         const m = estado.motorizados.find((x) => String(x.id) === String(btn.dataset.trayectos));
         irAVentana('trayectos', { id: btn.dataset.trayectos, nombre: m ? m.nombre : '' });
@@ -316,6 +316,31 @@
       $$('[data-donar-mot]').forEach((btn) => btn.addEventListener('click', () => {
         const m = estado.motorizados.find((x) => String(x.id) === String(btn.dataset.donarMot));
         irAVentana('apoyar-transportista', { id: btn.dataset.donarMot, nombre: m ? m.nombre : '' });
+      }));
+      // El teléfono ya no viene en la proyección pública (así no se puede
+      // recolectar en bloque): se pide de uno en uno con `contactar_motorizado`,
+      // que exige sesión. Sin sesión, el botón lleva al acceso.
+      $$('[data-contacto-mot]').forEach((btn) => btn.addEventListener('click', async () => {
+        const id = btn.dataset.contactoMot;
+        if (!(typeof sesionActual === 'function' && sesionActual())) {
+          try { sessionStorage.setItem('dv-retorno', window.location.hash || '#transportistas'); } catch (err) { /* privado */ }
+          window.location.hash = '#acceso';
+          return;
+        }
+        btn.disabled = true;
+        try {
+          const { telefono } = await window.SheetsService.contactarMotorizado(id);
+          const enlace = document.createElement('a');
+          enlace.className = 'btn btn-ghost btn-small';
+          enlace.target = '_blank';
+          enlace.rel = 'noopener';
+          enlace.href = waHref(telefono);
+          enlace.textContent = t('common.whatsapp');
+          btn.replaceWith(enlace);
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = t('drivers.contactError');
+        }
       }));
     }
 

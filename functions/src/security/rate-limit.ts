@@ -22,6 +22,12 @@ export const RATE_LIMITS = {
   rafaga: { limit: 12, windowMs: 1000, key: 'ip' },
   // URLs firmadas y borrado de archivos privados.
   archivos: { limit: 60, windowMs: 60 * 60 * 1000, key: 'uid' },
+  // Revelar un dato de contacto de una persona, de uno en uno
+  // (`contactar_motorizado`, y `contactar_vacante` en la Task 3.3). Va por uid y
+  // no por IP a proposito: el cubo `lectura` (240/h por IP) dejaria a un solo
+  // host recolectar cientos de telefonos por hora, que es justo lo que se evita
+  // sacandolos de la proyeccion publica.
+  contacto: { limit: 30, windowMs: 60 * 60 * 1000, key: 'uid' },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

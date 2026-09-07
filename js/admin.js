@@ -1812,6 +1812,17 @@
     async function buscarFamiliar(query) {
       query = (query || '').trim();
       if (!query) return;
+      // El registro de personas buscadas dejó de ser un RPC público: `buscar_familiar`
+      // exige sesión. Sin ella la petición volvería 401 y la UI mostraría un error
+      // genérico, así que se pide entrar antes de gastar el viaje.
+      if (!(window.sesionActual && window.sesionActual())) {
+        try { sessionStorage.setItem('dv-retorno', window.location.hash || '#familiares'); } catch (err) { /* privado */ }
+        const aviso = $('#familiar-message');
+        aviso.textContent = t('family.signInRequired');
+        aviso.classList.add('visible');
+        $('#familiar-resultados').innerHTML = `<div class="empty-state">${e(t('family.signInRequired'))} <a href="#acceso">${e(t('family.signInCta'))}</a></div>`;
+        return;
+      }
       $('#familiar-resultados').innerHTML = `<div class="empty-state">${e(t('family.searching'))}</div>`;
       try {
         const res = await window.SheetsService.getFamiliares(query);
@@ -1832,10 +1843,13 @@
         $('#familiar-resultados').innerHTML = `<div class="empty-state">${e(t('family.notFound'))}</div>`;
         return;
       }
-      $('#familiar-resultados').innerHTML = resultados.map((p) => {
+      // `buscar_familiar` solo devuelve `nombre`, `estado`, `verificada`,
+      // `actualizado` y `cedulaCoincide`. Ni cédula, ni ubicación, ni contacto,
+      // ni fuente: es el dato más sensible del sistema y esta es su única salida.
+      $('#familiar-resultados').innerHTML = `${resultados.map((p) => {
         const delicado = normalizar(p.estado).includes('fallec');
-        return `<article class="card card-bordered family-card"><div class="badge-row"><span class="badge ${delicado ? 'gray' : 'green'}">${e(mostrarEstadoFamiliar(p.estado))}</span>${p.verificada === false ? `<span class="badge yellow">${e(t('family.unverifiedBadge'))}</span>` : ''}</div><h3>${e(p.nombre)}</h3><div class="meta-grid"><span><strong>${e(t('family.idLabel'))}</strong> ${e(p.cedula)}</span>${p.ubicacion ? `<span><strong>${e(t('family.locationLabel'))}</strong> ${e(mostrarUbicacionFamiliar(p.ubicacion))}</span>` : ''}${p.fuente ? `<span><strong>${e(t('family.sourceLabel'))}</strong> ${e(mostrarFuente(p.fuente))}</span>` : ''}<span><strong>${e(t('family.updatedLabel'))}</strong> ${e(fechaRelativa(p.actualizado))}</span></div>${delicado ? `<p class="meta">${e(t('family.supportLine'))}</p>` : ''}</article>`;
-      }).join('');
+        return `<article class="card card-bordered family-card"><div class="badge-row"><span class="badge ${delicado ? 'gray' : 'green'}">${e(mostrarEstadoFamiliar(p.estado))}</span>${p.cedulaCoincide ? `<span class="badge green">${e(t('family.idMatch'))}</span>` : ''}${p.verificada === false ? `<span class="badge yellow">${e(t('family.unverifiedBadge'))}</span>` : ''}</div><h3>${e(p.nombre)}</h3><div class="meta-grid"><span><strong>${e(t('family.updatedLabel'))}</strong> ${e(fechaRelativa(p.actualizado))}</span></div>${delicado ? `<p class="meta">${e(t('family.supportLine'))}</p>` : ''}</article>`;
+      }).join('')}<p class="meta">${e(t('family.privacyNote'))}</p>`;
     }
 
     function tokenClienteValido(token) {

@@ -306,7 +306,10 @@
     "kilometers": "{count} km",
     "contribution": "{amount} aporte",
     "routesButton": "Trayectos",
-    "supportButton": "Registrar apoyo"
+    "supportButton": "Registrar apoyo",
+    "contactCta": "Ver contacto",
+    "contactNeedSession": "Entra con tu cuenta para ver el contacto del transportista.",
+    "contactError": "No se pudo obtener el contacto ahora mismo."
   },
   "family": {
     "title": "Buscar familiar",
@@ -337,7 +340,11 @@
     "reportSaving": "Guardando el reporte...",
     "reportSaved": "Reporte guardado. Quedará como sin verificar hasta que el equipo lo confirme.",
     "reportError": "No se pudo guardar el reporte",
-    "unverifiedBadge": "Sin verificar"
+    "unverifiedBadge": "Sin verificar",
+    "signInRequired": "Entra con tu cuenta para consultar el registro de personas.",
+    "signInCta": "Entrar para buscar",
+    "idMatch": "Coincide la cédula",
+    "privacyNote": "Por privacidad, el resultado no muestra cédula, ubicación ni contacto."
   },
   "tracking": {
     "searchUnavailable": "No se pudo consultar el registro de seguimiento.",

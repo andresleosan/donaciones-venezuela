@@ -3,7 +3,7 @@ import { getStorageInstance } from './firebase-config.js';
 
 // `centers`: cedula del responsable y foto del sitio que pide `panel_crear`.
 // A diferencia de las otras tres, el rol 'panel' NO puede leerla.
-export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports', 'centers'];
+export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers'];
 
 export const MIME_EXTENSIONS = {
   'image/jpeg': 'jpg',

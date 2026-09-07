@@ -179,6 +179,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "personas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "verificada",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

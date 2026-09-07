@@ -2,6 +2,7 @@ import { collection, doc, documentId, getDoc, getDocs, limit, orderBy, query, st
 import { getFirestoreDb } from '../firebase/firebase-config.js';
 import { getCurrentUser, getIdToken, register, signIn, signOut } from '../firebase/firebase-auth.js';
 import { post as postApi } from './api-client.js';
+import { archivoDesdeDataUrl, uploadPrivateFile } from '../firebase/firebase-storage.js';
 import {
   clearOfflineQueue,
   contarCola,
@@ -569,6 +570,51 @@ export function crearSheetsServiceFirebase() {
   }
 
   // ── Escrituras ──────────────────────────────────────────────────────
+
+  // El backend legado recibia la foto como dataURL en el JSON y la subia el
+  // servidor. En Firebase la sube el cliente a `private/<uid>/<categoria>/` y
+  // la accion solo recibe el `path`, que ademas comprueba que sea del propio
+  // uid. Los formularios de `js/` siguen mandando dataURL: la traduccion vive
+  // aqui, que es la capa de compatibilidad, y no en catorce sitios de la UI.
+  const FOTOS_DE_REGISTRO = {
+    registrar_voluntario: { categoria: 'volunteers', campos: { fotoCedula: 'fotoCedulaPath' } },
+    registrar_motorizado: {
+      categoria: 'drivers',
+      campos: {
+        fotoPlaca: 'fotoPlacaPath',
+        fotoVehiculo: 'fotoVehiculoPath',
+        fotoCedula: 'fotoCedulaPath',
+      },
+    },
+  };
+
+  async function subirFotosDeRegistro(payload) {
+    const regla = FOTOS_DE_REGISTRO[payload && payload.accion];
+    if (!regla) return payload;
+
+    const usuario = await getCurrentUser();
+    if (!usuario) throw new Error('Entra con tu cuenta para continuar');
+
+    const salida = { ...payload };
+    for (const [campo, destino] of Object.entries(regla.campos)) {
+      const valor = salida[campo];
+      // Un `path` ya subido (reintento de la cola offline) no se vuelve a subir.
+      if (salida[destino]) { delete salida[campo]; continue; }
+      if (typeof valor !== 'string' || !valor.startsWith('data:')) continue;
+
+      const { path } = await uploadPrivateFile(
+        usuario.uid,
+        regla.categoria,
+        archivoDesdeDataUrl(valor),
+      );
+      salida[destino] = path;
+      // La dataURL NO viaja en el JSON: pesa megabytes y duplicaria el
+      // documento de identidad en el cuerpo de la peticion.
+      delete salida[campo];
+    }
+    return salida;
+  }
+
   // El rol ya no viaja en el cuerpo: la Function lo resuelve por claims del
   // ID token. Los campos `accessToken`/`adminKey`/`token`+`pin` que la UI
   // legada aún adjunta son ignorados por el servidor.
@@ -577,7 +623,7 @@ export function crearSheetsServiceFirebase() {
   }
 
   async function post(payload) {
-    const respuesta = await enviarConCola(payload, enviar);
+    const respuesta = await enviarConCola(await subirFotosDeRegistro(payload), enviar);
     // `panel_crear` acaba de asignar el claim `panelLugarId`. El ID token en
     // memoria todavia no lo lleva: sin forzar la renovacion, la primera
     // accion del panel recien creado responderia 403.
@@ -585,8 +631,16 @@ export function crearSheetsServiceFirebase() {
     return respuesta;
   }
 
+  // El telefono de un transportista salio de la proyeccion publica para que no
+  // se pueda recolectar en bloque: se pide de uno en uno, con sesion.
+  async function contactarMotorizado(id) {
+    const respuesta = await post({ accion: 'contactar_motorizado', id });
+    return { telefono: String(respuesta.telefono ?? ''), nombre: String(respuesta.nombre ?? '') };
+  }
+
   return {
     configure() {},
+    contactarMotorizado,
     getAll,
     getLugares,
     getVoluntarios,

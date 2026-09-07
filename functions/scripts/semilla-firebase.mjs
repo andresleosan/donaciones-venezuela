@@ -96,14 +96,45 @@ const LUGARES = [
   },
 ];
 
+// `zona` y `habilidades` alimentan la proyeccion publica; el resto es la ficha
+// canonica tal y como la escribe `registrar_voluntario`. Solo la primera tiene
+// consentimiento publico: la segunda comprueba que sin el no se publica.
 const VOLUNTARIOS = [
-  { id: 'VOL-SEED-1', nombre: 'PRUEBA · Dora Voluntaria', zona: 'Caracas', habilidades: ['logística'], email: 'dora.vol@prueba.local' },
-  { id: 'VOL-SEED-2', nombre: 'PRUEBA · Elio Voluntario', zona: 'La Guaira', habilidades: ['salud'], email: 'elio.vol@prueba.local' },
+  {
+    id: 'VOL-SEED-1', nombre: 'PRUEBA · Dora Voluntaria', apellido: 'Pérez',
+    zona: 'Caracas', habilidades: ['logística'], emailNorm: 'dora.vol@prueba.local',
+    telefono: '+58 412 000 0001', ciudad: 'Caracas', estado: 'Distrito Capital',
+    profesion: 'Logística', disponibilidad: 'Fines de semana', medioTransporte: 'Moto',
+    observaciones: '', consentimiento: true,
+  },
+  {
+    id: 'VOL-SEED-2', nombre: 'PRUEBA · Elio Voluntario', apellido: 'Rojas',
+    zona: 'La Guaira', habilidades: ['salud'], emailNorm: 'elio.vol@prueba.local',
+    telefono: '+58 412 000 0002', ciudad: 'La Guaira', estado: 'La Guaira',
+    profesion: 'Enfermería', disponibilidad: 'Turno nocturno', medioTransporte: 'A pie',
+    observaciones: '', consentimiento: false,
+  },
 ];
 
 const MOTORIZADOS = [
-  { id: 'MOT-SEED-1', nombre: 'PRUEBA · Ana Motorizada', zona: 'Caracas Oeste', tipoVehiculo: 'Moto', telefono: '+58 424 000 0001', placa: 'AB123CD', email: 'ana.moto@prueba.local' },
-  { id: 'MOT-SEED-2', nombre: 'PRUEBA · Luis Motorizado', zona: 'La Guaira', tipoVehiculo: 'Camión', telefono: '+58 424 000 0002', placa: 'EF456GH', email: 'luis.moto@prueba.local' },
+  { id: 'MOT-SEED-1', nombre: 'PRUEBA · Ana Motorizada', zona: 'Caracas Oeste', zonaOperacion: 'Caracas Oeste', tipoVehiculo: 'Moto', telefono: '+58 424 000 0001', placa: 'AB123CD', emailNorm: 'ana.moto@prueba.local' },
+  { id: 'MOT-SEED-2', nombre: 'PRUEBA · Luis Motorizado', zona: 'La Guaira', zonaOperacion: 'La Guaira', tipoVehiculo: 'Camión', telefono: '+58 424 000 0002', placa: 'EF456GH', emailNorm: 'luis.moto@prueba.local' },
+];
+
+// Reportes de personas buscadas: la unica salida es `buscar_familiar`, que exige
+// sesion. Una verificada y una en la cola de moderacion del admin.
+const PERSONAS = [
+  {
+    id: 'PER-SEED-1', nombre: 'PRUEBA · José Ramírez', cedula: 'V-12345678',
+    estado: 'Hospitalizado', ubicacion: 'Última vez: Catia',
+    contacto: '+58 412 000 0003', fuente: 'Registro hospitalario',
+    reportadoPor: 'PRUEBA · Hermana', verificada: true,
+  },
+  {
+    id: 'PER-SEED-2', nombre: 'PRUEBA · Marta Suárez', cedula: '',
+    estado: 'Sin información reciente', ubicacion: '', contacto: '',
+    fuente: 'Reporte familiar', reportadoPor: 'PRUEBA · Vecino', verificada: false,
+  },
 ];
 
 const VACANTES = [
@@ -229,9 +260,37 @@ function sembrarLugares(lote, panelUid) {
   return { centrosRegistrados: centros, hospitalesRegistrados: hospitales };
 }
 
+// `indices/cuentasPorEmail/claves/<correo>` es lo que hace que un correo no
+// pueda ser a la vez voluntario y transportista, y lo que resuelve
+// `acceso_perfil`. Sin sembrarlo, entrar con una cuenta semilla no daria rol.
+function reservarCorreo(lote, correo, tipo, id) {
+  lote.set(db.collection('indices/cuentasPorEmail/claves').doc(normalizar(correo)), {
+    valor: `${tipo}:${id}`,
+    createdAt: AHORA,
+  });
+}
+
 function sembrarPersonas(lote) {
-  for (const voluntario of VOLUNTARIOS) {
-    lote.set(db.collection('voluntarios').doc(voluntario.id), { ...voluntario, createdAt: AHORA, activo: true });
+  for (const { consentimiento, ...voluntario } of VOLUNTARIOS) {
+    lote.set(db.collection('voluntarios').doc(voluntario.id), {
+      ...voluntario,
+      authUid: null,
+      fotoCedulaPath: '',
+      publicProfileConsent: {
+        enabled: consentimiento,
+        version: 'volunteer-public-v1',
+        consentedAt: consentimiento ? AHORA : null,
+        consentedByUid: null,
+        revokedAt: null,
+        revokedByUid: null,
+      },
+      createdAt: AHORA,
+      activo: true,
+    });
+    reservarCorreo(lote, voluntario.emailNorm, 'voluntario', voluntario.id);
+
+    // El perfil publico de un voluntario existe SOLO con consentimiento v1.
+    if (!consentimiento) continue;
     lote.set(db.collection('voluntariosPublicos').doc(voluntario.id), proyeccionPublica('voluntariosPublicos', {
       nombre: voluntario.nombre,
       zona: voluntario.zona,
@@ -242,20 +301,48 @@ function sembrarPersonas(lote) {
   }
 
   for (const motorizado of MOTORIZADOS) {
-    lote.set(db.collection('motorizados').doc(motorizado.id), { ...motorizado, createdAt: AHORA, activo: true });
-    // Sin telefono ni placa: el contacto pasa por `contactar_motorizado`.
+    lote.set(db.collection('motorizados').doc(motorizado.id), {
+      ...motorizado,
+      authUid: null,
+      fotoPlacaPath: '',
+      fotoVehiculoPath: '',
+      fotoCedulaPath: '',
+      createdAt: AHORA,
+      activo: true,
+    });
+    reservarCorreo(lote, motorizado.emailNorm, 'transportista', motorizado.id);
+    // Sin telefono ni placa: el contacto pasa por `contactar_motorizado`, y la
+    // tarjeta publica solo sabe que lo hay.
     lote.set(db.collection('motorizadosPublicos').doc(motorizado.id), proyeccionPublica('motorizadosPublicos', {
       nombre: motorizado.nombre,
       zona: motorizado.zona,
       tipoVehiculo: motorizado.tipoVehiculo,
       activo: true,
+      tieneContacto: true,
       createdAt: AHORA,
     }));
   }
 
+  let localizadas = 0;
+  for (const persona of PERSONAS) {
+    lote.set(db.collection('personas').doc(persona.id), {
+      ...persona,
+      nombreNorm: normalizar(persona.nombre),
+      cedulaNorm: persona.cedula.replace(/[^0-9]/g, ''),
+      createdAt: AHORA,
+      actualizado: AHORA,
+    });
+    // Mismo criterio que el legado: `estado ilike 'localiz%' or 'hospital%'`.
+    const clave = normalizar(persona.estado);
+    if (clave.startsWith('localiz') || clave.startsWith('hospital')) localizadas += 1;
+  }
+
   return {
+    // Cuentan todos, hayan dado consentimiento o no: `count(*) from voluntarios`.
     voluntariosActivos: VOLUNTARIOS.length,
     motorizadosRegistrados: MOTORIZADOS.length,
+    personasReportadas: PERSONAS.length,
+    personasLocalizadas: localizadas,
   };
 }
 
@@ -355,6 +442,7 @@ process.stdout.write(`${JSON.stringify({
   lugares: LUGARES.length,
   voluntarios: VOLUNTARIOS.length,
   motorizados: MOTORIZADOS.length,
+  personas: PERSONAS.length,
   vacantes: VACANTES.length,
   facturas: FACTURAS.length,
   usuarios: usuarios.map(({ email, uid }) => ({ email, uid })),

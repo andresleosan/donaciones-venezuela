@@ -57,12 +57,15 @@ const upload = (
 );
 
 describe('Storage private files', () => {
-  it('permite carga valida del propietario para las cuatro categorias', async () => {
+  it('permite carga valida del propietario para las seis categorias', async () => {
     for (const [category, extension, contentType] of [
       ['receipts', 'pdf', 'application/pdf'],
       ['needs', 'png', 'image/png'],
       ['reports', 'webp', 'image/webp'],
       ['centers', 'jpg', 'image/jpeg'],
+      // Task 3.2: cedula del voluntario y placa/vehiculo/cedula del transportista.
+      ['volunteers', 'jpg', 'image/jpeg'],
+      ['drivers', 'png', 'image/png'],
     ] as const) {
       await assertSucceeds(upload(
         owner(),

@@ -23,13 +23,21 @@ export type DocumentoCanonico = { id: string; datos: Record<string, unknown> };
 export type FuenteProyeccion = {
   // Coleccion canonica de la que se deriva.
   coleccion: string;
-  proyeccion: ProjectionName;
+  // Ausente = fuente de SOLO CONTADORES: recorre la coleccion para recomponer
+  // el tablero y no publica ni borra nada. Lo necesitan las colecciones que
+  // alimentan `estadisticas/global` sin tener proyeccion publica (voluntarios
+  // sin consentimiento, personas reportadas). Declararlas contra una proyeccion
+  // ajena y filtrarlas con `incluir` no vale: el barrido de huerfanos borraria
+  // esa proyeccion entera.
+  proyeccion?: ProjectionName;
   // Documentos que NO deben aparecer en publico (bajas, vacantes cerradas...).
+  // No afecta a `contadores`: el tablero legado contaba `count(*)`, bajas
+  // incluidas, y `incluir` decide que se PUBLICA, no que existe.
   incluir?(documento: DocumentoCanonico): boolean;
   // Documento privado -> documento que recibe `proyeccionPublica`. Recibe la
   // base porque una proyeccion puede depender de una subcoleccion (los insumos
   // de un lugar, sin ir mas lejos) y sin ella la reconstruccion la vaciaria.
-  mapear(documento: DocumentoCanonico, db: FirestoreReconciliable): Record<string, unknown> | Promise<Record<string, unknown>>;
+  mapear?(documento: DocumentoCanonico, db: FirestoreReconciliable): Record<string, unknown> | Promise<Record<string, unknown>>;
   // Aporte de este documento a `estadisticas/global`.
   contadores?(documento: DocumentoCanonico): Deltas;
 };
@@ -37,7 +45,8 @@ export type FuenteProyeccion = {
 const fuentes = new Map<string, FuenteProyeccion>();
 
 export function registrarFuente(fuente: FuenteProyeccion): FuenteProyeccion {
-  const clave = `${fuente.coleccion}->${fuente.proyeccion}`;
+  if (fuente.proyeccion && !fuente.mapear) throw new Error('fuente-sin-mapear');
+  const clave = `${fuente.coleccion}->${fuente.proyeccion ?? 'contadores'}`;
   if (fuentes.has(clave)) throw new Error(`fuente-duplicada:${clave}`);
   fuentes.set(clave, fuente);
   return fuente;
@@ -124,28 +133,36 @@ export async function reconstruirProyecciones(
   const vigentes = new Map<ProjectionName, Set<string>>();
 
   for (const fuente of listarFuentes()) {
-    const vistos = vigentes.get(fuente.proyeccion) ?? new Set<string>();
-    vigentes.set(fuente.proyeccion, vistos);
+    const proyeccion = fuente.proyeccion;
+    const vistos = proyeccion ? vigentes.get(proyeccion) ?? new Set<string>() : null;
+    if (proyeccion && vistos) vigentes.set(proyeccion, vistos);
 
     for await (const docs of porLotes(db, fuente.coleccion, tamanoLote)) {
       const lote = db.batch();
+      let escrituras = 0;
       for (const snapshot of docs) {
         const documento = { id: snapshot.id, datos: snapshot.data() ?? {} };
-        if (fuente.incluir && !fuente.incluir(documento)) continue;
 
-        lote.set(
-          db.collection(fuente.proyeccion).doc(documento.id),
-          proyeccionPublica(fuente.proyeccion, await fuente.mapear(documento, db)),
-        );
-        vistos.add(documento.id);
-        publicados += 1;
+        // Antes del filtro: un documento excluido del directorio publico sigue
+        // existiendo y sigue contando en el tablero.
         if (fuente.contadores) {
           const aporte = fuente.contadores(documento);
           for (const clave of Object.keys(aporte)) cubiertos.add(clave as Contador);
           contadores = sumarEstadisticas(contadores, aporte);
         }
+
+        if (fuente.incluir && !fuente.incluir(documento)) continue;
+        if (!proyeccion || !vistos || !fuente.mapear) continue;
+
+        lote.set(
+          db.collection(proyeccion).doc(documento.id),
+          proyeccionPublica(proyeccion, await fuente.mapear(documento, db)),
+        );
+        vistos.add(documento.id);
+        publicados += 1;
+        escrituras += 1;
       }
-      await lote.commit();
+      if (escrituras) await lote.commit();
     }
   }
 

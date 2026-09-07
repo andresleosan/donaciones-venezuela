@@ -13,8 +13,9 @@
 import '../jobs/reconciliar-proyecciones.js';
 
 import './lugares.js';
+import './personas.js';
 
-// import './personas.js';
+// import './vacantes.js';
 // ...
 
 export { apiHandler, API_MESSAGES } from './http.js';

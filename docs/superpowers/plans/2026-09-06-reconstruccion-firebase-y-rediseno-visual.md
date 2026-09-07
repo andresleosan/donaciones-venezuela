@@ -311,7 +311,7 @@ Pendiente para la Fase 3: cada tarea debe registrar su fuente en `reconciliar-pr
 - [x] **Step 0 (traído de la Task 2.2):** cablear el Emulator Suite en el Web SDK. `getFirestore(app)` devuelve **una sola instancia** por app, así que la conexión no puede repetirse en cada módulo: centralizar la creación de Firestore, Auth y Storage en `firebase-config.js` (una promesa por servicio) y conectar `connectFirestoreEmulator` / `connectAuthEmulator` / `connectStorageEmulator` solo cuando `DV_ENTORNO.emuladores` o `VITE_FIREBASE_EMULATORS` lo pidan. Actualizar los mocks de `firebase-config.js` en las pruebas que hoy solo falsean `getFirebaseApp`. **Añadido:** un host que no sea de bucle local lanza — un "emulador" remoto es un servidor ajeno hablando por Firebase.
 - [x] **Step 1:** El script usa Admin SDK contra `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` y `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`; se niega a correr si esas variables no apuntan a `127.0.0.1`. Crea: 3 lugares con insumos, 2 voluntarios, 2 motorizados, 1 vacante, 2 facturas, `tasas/actual`, los tres usuarios con sus claims, `estadisticas/global` y `config/contadores`; todas las proyecciones salen de `proyeccionPublica()`.
 - [x] **Step 2:** Exportar y versionar `seeds/emulador/` (+ `seeds/README.md`). Commit `feat: deterministic emulator seeds`.
-- [ ] **Step 3 (Task 2.2, pendiente de operador):** comprobación manual en el navegador. `npx.cmd firebase emulators:start --project demo-donaciones-venezuela --import=./seeds/emulador` + `npm.cmd run dev`, con `js/entorno.js` definiendo `window.DV_ENTORNO = { emuladores: true, apiBase: …, firebaseConfig: … }` (plantilla en `seeds/README.md`). No se puede hacer desde una sesión sin navegador.
+- [x] **Step 3 (Task 2.2):** comprobación manual en el navegador, **hecha el 2026-09-06** con Playwright sobre el Chrome instalado (`channel: 'chrome'`), contra `emulators:start --import=./seeds/emulador` + `npm.cmd run dev` y un `js/entorno.js` temporal con la plantilla de `seeds/README.md` (restaurado al terminar; en el repositorio sigue siendo el stub). Resultado: la app arranca (`Respuesta Humanitaria Venezuela`, vista `inicio`), el directorio pinta **3 de 3 centros** de la semilla, transportistas pinta 2 tarjetas **sin teléfono ni placa en el DOM y con 0 enlaces `wa.me` directos**, «Buscar familiar» sin sesión pide entrar en vez de lanzar la consulta, con sesión (`user@prueba.local`) devuelve exactamente `nombre/estado/verificada/actualizado/cedulaCoincide`, `contactar_motorizado` entrega el teléfono, y el tablero sale de `estadisticas/global`. **Único error de consola:** 400 `accion desconocida` en `listar_presupuestos`, `listar_ofertas` y `listar_comprados`, que son de la Task 3.4 y todavía no están portadas. Capturas a 1440 y 390.
 
 Evidencia: `npm.cmd run seed:emulador` código 0 (3 lugares, 2 voluntarios, 2 motorizados, 1 vacante, 2 facturas, 3 cuentas); `npm.cmd run test:unit` 30 archivos / **528** pruebas OK; `npm.cmd run test:emulators` 24 archivos / **350** pruebas OK; `npm.cmd run build` código 0.
 
@@ -378,7 +378,68 @@ Evidencia: `npm.cmd run test:unit` 31 archivos / **571** pruebas OK; `npm.cmd ru
 
 **Invariantes:** ids generados por servidor (`VOL`/`RES`/`MOT` + 8 hex), nunca del cliente; `acceso_perfil` resuelve rol por `indices/cuentasPorEmail` (motorizado → voluntario → centro → donante); `buscar_familiar` exige sesión, mínimo 4 caracteres, devuelve máximo 25 con solo `nombre`, `estado`, `verificada`, `actualizado` y `cedulaCoincide: boolean` (la cédula solo se compara por igualdad exacta, nunca se devuelve); la UI de "Buscar familiar" pide iniciar sesión antes de buscar (patrón de referencia: resultados con estado, Saturn Calendar `https://mobbin.com/screens/0e8a7a73-af4e-4395-96c4-e1d6722342e8`). El contacto con un transportista pasa por la acción `contactar_motorizado` (`auth: 'user'`) que devuelve `telefono`; el botón de WhatsApp en la tarjeta pública abre el acceso si no hay sesión.
 
-- [ ] **Step 1..3:** reglas comunes.
+> **Hecha el 2026-09-06.** `functions/src/api/personas.ts` con las 12 acciones (las 11 del plan más
+> `contactar_motorizado`). 56 pruebas de contrato en `tests/functions/api-personas.test.ts` + 3 de integración
+> contra el emulador.
+>
+> **Decisiones tomadas:**
+>
+> 1. **`registrar_voluntario` y `registrar_motorizado` pasan a `auth: 'user'`** (el catálogo los daba como
+>    anónimos). No es una preferencia: las reglas de Storage exigen `request.auth != null` para escribir en
+>    `private/<uid>/…`, así que un anónimo **no puede subir** la foto que esas dos acciones declaran obligatoria.
+>    Misma decisión que ya se tomó para `panel_crear` en la Task 3.1. `registrar_rescatista` y `reportar_persona`
+>    siguen siendo anónimas: no llevan fotos.
+> 2. **Dos categorías de Storage nuevas**, `volunteers` y `drivers`. Como `canAccessPrivateFile` solo abre
+>    `receipts` y `needs` al rol `panel`, quedan cerradas a todo el mundo salvo el admin y quien las subió, igual
+>    que `centers`.
+> 3. **La fachada traduce la foto**: los formularios de `js/` siguen mandando la dataURL que mandaban al legado;
+>    `src/data/sheets-service-firebase.js` la sube a Storage y manda el `path`, y **borra la dataURL del JSON**.
+>    La traducción vive en la capa de compatibilidad y no en catorce sitios de la UI.
+> 4. **Un correo, una cuenta.** `indices/cuentasPorEmail/claves/{emailNorm}` guarda `tipo:id` (`reservarClaveUnica`
+>    almacena texto, no un objeto). Un correo no puede ser a la vez voluntario y transportista, que es el agujero
+>    que el catálogo documenta del legado.
+> 5. **`acceso_perfil` lee el correo de Admin Auth por uid**, no del cuerpo: el `accessToken` que sigue enviando
+>    `js/admin.js:1593` se ignora, porque si decidiera de quién son los roles cualquiera podría pedir los de otra
+>    persona. El rol de centro sale del claim `panelLugarId`, no del índice de correos.
+> 6. **`buscar_familiar` devuelve cinco campos y nada más** (`nombre`, `estado`, `verificada`, `actualizado`,
+>    `cedulaCoincide`). Firestore no tiene `ilike '%q%'`: la búsqueda por nombre es un rango de prefijo sobre
+>    `nombreNorm` y la cédula se compara solo por igualdad exacta. La ordenación `by fecha desc` del legado pasa a
+>    hacerse en memoria sobre 50 candidatos como mucho, porque con un filtro de rango Firestore obliga a ordenar
+>    primero por el campo del rango.
+> 7. **`contactar_motorizado` (acción nueva) usa un cubo nuevo, `contacto`** (30/h **por uid**). El cubo `lectura`
+>    va por IP y con 240/h dejaría a un solo host recolectar cientos de teléfonos por hora, que es exactamente lo
+>    que se evita sacándolos de la proyección pública. Lo reutilizará `contactar_vacante` en la Task 3.3.
+> 8. **Los rescatistas no tienen proyección pública.** Su ficha lleva teléfono, capacidad y equipo, y
+>    `filtrarLista` de la UI busca sobre `Object.values(fila).join(' ')`: publicarla sería publicarlo todo.
+> 9. **`admin_verificar_persona` responde 404** con un id inexistente. El legado hacía `update … where id` y 0
+>    filas no era un error; en Firestore un `set` habría creado una persona fantasma con solo `verificada: true`.
+>
+> **Dos correcciones fuera del alcance estricto, ambas necesarias para que el dominio funcione:**
+>
+> | Corrección | Por qué |
+> |---|---|
+> | El reconciliador admite **fuentes de solo contadores** (`proyeccion` opcional) | Voluntarios y personas alimentan `estadisticas/global` sin tener proyección propia. Declararlas contra una proyección ajena y filtrarlas con `incluir` habría hecho que el barrido de huérfanos **borrara esa proyección entera**. |
+> | `contadores` se cuenta **antes** de `incluir` | `incluir` decide qué se PUBLICA, no qué existe. El tablero legado contaba `count(*) from lugares`, bajas incluidas, y los contadores incrementales tampoco descuentan al desactivar: contar solo lo publicado dejaba la reconstrucción por debajo de la realidad. Cambia dos pruebas de `api-estadisticas.test.ts`, actualizadas. |
+>
+> `voluntariosPublicos` sí se reconstruye, pero **solo con quien consintió** (`publicProfileConsent.enabled`) y con
+> la allowlist reducida del endpoint de consentimiento: sin la fuente, una desincronización de esa proyección no
+> tendría reparación; con el filtro mal puesto, la reconstrucción publicaría a quien nunca dio permiso.
+
+- [x] **Step 1..3:** reglas comunes. La UI cambia en dos sitios: «Buscar familiar» pide sesión antes de consultar y
+  ya no pinta cédula, ubicación ni fuente (con una nota de privacidad y una insignia «Coincide la cédula»); la
+  tarjeta pública de transportista cambia el enlace directo de WhatsApp por un botón «Ver contacto» que llama a
+  `contactar_motorizado`, y sin sesión lleva a `#acceso`. Siete claves i18n nuevas en ambos idiomas.
+
+Evidencia: `npm.cmd run test:unit` 32 archivos / **632** pruebas OK; `npm.cmd run test:emulators` 28 archivos /
+**460** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0;
+`npm.cmd run seed:emulador` código 0 (semillas regeneradas con la forma canónica del dominio, 2 personas nuevas y
+el índice de correos); `python scripts/verificar-idioma.py` 1506 claves OK; comprobación en navegador según la
+Task 2.2, Step 3.
+
+**Pendiente para la Fase 4:** los formularios largos de voluntario y transportista siguen siendo de un solo paso y
+sin vista previa de la foto; el paso por pasos y la compresión en cliente son la Task 4.7. Y una consecuencia de la
+decisión 6 que conviene revisar con datos reales: al no devolver `ubicacion`, un resultado de «Buscar familiar»
+ya no dice *dónde* se vio por última vez a la persona, que es buena parte de para qué se busca.
 
 ### Task 3.3: Vacantes de voluntariado
 

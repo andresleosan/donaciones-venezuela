@@ -255,12 +255,16 @@ describe('reconstruirProyecciones', () => {
     const resumen = await reconstruirProyecciones(db as never, { tamanoLote: 2 });
 
     expect(resumen.publicados).toBe(2);
-    expect(resumen.contadores).toMatchObject({ centrosRegistrados: 1, hospitalesRegistrados: 1 });
+    // Tres lugares, dos publicados: `incluir` decide qué se PUBLICA, no qué
+    // existe, y el tablero legado contaba `count(*) from lugares`, bajas
+    // incluidas. Contar solo lo publicado dejaría la reconstrucción por debajo
+    // de los contadores incrementales, que tampoco descuentan al desactivar.
+    expect(resumen.contadores).toMatchObject({ centrosRegistrados: 2, hospitalesRegistrados: 1 });
     expect(documentos['lugaresPublicos/lugar-1']).toMatchObject({ nombre: 'Centro Chacao' });
     expect(documentos['lugaresPublicos/lugar-1']).not.toHaveProperty('telefono');
     expect(documentos).not.toHaveProperty('lugaresPublicos/lugar-3');
     expect(documentos['estadisticas/global']).toMatchObject({
-      centrosRegistrados: 1,
+      centrosRegistrados: 2,
       hospitalesRegistrados: 1,
     });
     // Solo se escriben los contadores que la fuente alimenta.
@@ -318,11 +322,38 @@ describe('reconstruirProyecciones', () => {
     await reconstruirProyecciones(db as never, { tamanoLote: 400 });
 
     expect(documentos['estadisticas/global']).toMatchObject({
-      centrosRegistrados: 1,
+      centrosRegistrados: 2,
       hospitalesRegistrados: 1,
       voluntariosActivos: 7,
       facturasAbiertas: 3,
     });
+  });
+
+  // Una colección puede alimentar el tablero sin tener proyección pública
+  // (voluntarios sin consentimiento, personas reportadas). Declararla contra una
+  // proyección ajena y filtrarla con `incluir` no vale: el barrido de huérfanos
+  // borraría esa proyección entera.
+  it('admite fuentes de solo contadores, que no publican ni borran nada', async () => {
+    const { db, documentos } = crearDb({
+      ...canonicos,
+      'voluntarios/vol-1': { nombre: 'Ana' },
+      'voluntarios/vol-2': { nombre: 'Beto' },
+      'voluntariosPublicos/vol-1': { nombre: 'Ana', activo: true },
+    });
+    registrarFuente({ coleccion: 'voluntarios', contadores: () => ({ voluntariosActivos: 1 }) });
+
+    const resumen = await reconstruirProyecciones(db as never, { tamanoLote: 400 });
+
+    expect(resumen.contadores).toMatchObject({ voluntariosActivos: 2 });
+    expect(resumen.publicados).toBe(2);
+    // La proyección ajena sigue intacta: la fuente sin `proyeccion` no la mira.
+    expect(documentos['voluntariosPublicos/vol-1']).toMatchObject({ nombre: 'Ana' });
+    expect(documentos).not.toHaveProperty('voluntariosPublicos/vol-2');
+  });
+
+  it('rechaza una fuente con proyección y sin mapeo', () => {
+    expect(() => registrarFuente({ coleccion: 'x', proyeccion: 'lugaresPublicos' }))
+      .toThrow('fuente-sin-mapear');
   });
 
   it('sella actualizado con la hora del servidor', async () => {
