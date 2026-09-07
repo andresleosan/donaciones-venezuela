@@ -14,7 +14,9 @@ service firebase.storage {
         || category == 'centers'
         // Cedula de un voluntario y placa/vehiculo/cedula de un transportista.
         || category == 'volunteers'
-        || category == 'drivers';
+        || category == 'drivers'
+        // Fotos del insumo ofrecido, de quien lo ofrece y de la recogida.
+        || category == 'offers';
     }
 
     // Exactamente las tres claves del contrato: sin canal de datos libre en metadata.

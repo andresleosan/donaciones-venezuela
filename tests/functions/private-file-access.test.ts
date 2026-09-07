@@ -71,7 +71,8 @@ it('reserva la categoria centers al admin y a quien la subio', () => {
   expect(canDeletePrivateFile({ uid: 'panel-1', role: 'panel' }, centers)).toBe(false);
 });
 
-// `volunteers` y `drivers` (Task 3.2) llevan cedulas y la placa de un vehiculo.
+// `volunteers` y `drivers` (Task 3.2) llevan cedulas y la placa de un vehiculo;
+// `offers` (Task 3.4) la cedula de quien ofrece un insumo y una foto de su casa.
 // Como `canAccessPrivateFile` solo abre `receipts` y `needs` al rol 'panel',
 // bastaba anadirlas a la lista de categorias para que quedaran cerradas; esta
 // prueba fija esa consecuencia, que es la que importa.
@@ -80,6 +81,8 @@ it('reserva las categorias de identidad de personas al admin y a quien las subio
     'private/owner-1/volunteers/cedula.jpg',
     'private/owner-1/drivers/placa.png',
     'private/owner-1/drivers/cedula.jpg',
+    'private/owner-1/offers/cedula.jpg',
+    'private/owner-1/offers/lugar.jpg',
   ]) {
     const descriptor = validatePrivateStoragePath(ruta);
 

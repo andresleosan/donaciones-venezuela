@@ -45,6 +45,11 @@ const { claveInsumo, documentoPublico } = await import('../lib/api/lugares.js');
 // propio dominio, asi que la semilla no puede describir una forma que la app ya
 // no escriba (y no puede publicar el contacto de una oferta por descuido).
 const facturas = await import('../lib/api/facturas.js');
+// Las dos vistas publicas propias de la Task 3.4: la del presupuesto (lo que
+// pinta la pagina de necesidades) y la de la oferta (sin contacto ni punto
+// exacto). Tambien las arma el dominio.
+const presupuestos = await import('../lib/api/presupuestos.js');
+const ofertas = await import('../lib/api/ofertas.js');
 
 const db = getFirestore();
 const auth = getAuth();
@@ -195,6 +200,46 @@ const FACTURAS = [
     movimientos: [
       { tipo: 'Ingreso', codigo: 'dineroRecibido', datos: { referencia: 'REF-SEED-0000-0001' }, monto: 50000, creado: '2026-09-02T10:00:00.000Z' },
       { tipo: 'Ingreso', codigo: 'dineroRecibido', datos: { referencia: 'REF-SEED-0000-0002' }, monto: 25000, creado: '2026-09-03T10:00:00.000Z' },
+    ],
+    evidencias: [],
+  },
+  {
+    id: 'FCT-SEED0003',
+    token: 'DV-SEED-OFER-0003',
+    numero: 'FAC-2026-000003',
+    tipo: 'oferta',
+    moneda: 'unidades',
+    objetivo: 'Oferta: Colchonetas (PRUEBA · Chacao)',
+    descripcion: '',
+    meta: {
+      insumo: 'Colchonetas',
+      cantidad: 12,
+      unidad: 'unidades',
+      zona: 'PRUEBA · Chacao',
+      centro: 'PRUEBA · Refugio Catia',
+      // Redondeadas a 2 decimales (~1 km): el punto exacto vive en
+      // `facturasContacto`, junto al telefono.
+      latAprox: 10.5,
+      lngAprox: -66.85,
+    },
+    // El contacto NO va en la factura: esa es la fuga del legado que la Task 3.4
+    // cierra. Vive en `facturasContacto/{facturaId}`, que las reglas deniegan.
+    contacto: {
+      telefono: '+58 412 000 0009',
+      nombreDonante: 'PRUEBA · Ana Pérez',
+      ubicacion: 'PRUEBA · Casa de Ana, callejón El Rosal nº 4',
+      lat: 10.4971,
+      lng: -66.8534,
+      fotosInsumoPath: [],
+      fotoCedulaPath: '',
+      fotoLugarPath: '',
+      authUid: '',
+    },
+    estado: 'Ofrecida',
+    montoRequerido: 12,
+    donaciones: [],
+    movimientos: [
+      { tipo: 'Oferta', codigo: 'donacionOfrecida', datos: { cantidad: 12, unidad: 'unidades', insumo: 'Colchonetas', ubicacion: 'PRUEBA · Chacao' }, monto: 12, creado: '2026-09-05T10:00:00.000Z' },
     ],
     evidencias: [],
   },
@@ -477,6 +522,9 @@ function sembrarFacturas(lote) {
 
     for (const { id, datos } of subDonaciones) lote.set(referencia.collection('donaciones').doc(id), datos);
     for (const { id, datos } of subMovimientos) lote.set(referencia.collection('movimientos').doc(id), datos);
+    if (factura.contacto) {
+      lote.set(db.collection('facturasContacto').doc(factura.id), { ...factura.contacto, createdAt: AHORA });
+    }
 
     // Los dos indices que sostienen las invariantes: token -> factura y un solo
     // hilo `Abierta` por objetivo.
@@ -498,6 +546,21 @@ function sembrarFacturas(lote) {
         evidencias: [],
       })),
     );
+
+    // Las dos vistas propias del sabor: se derivan de la misma factura y se
+    // indexan por token, igual que en la accion.
+    if (factura.tipo === 'presupuesto') {
+      lote.set(
+        db.collection('presupuestosPublicos').doc(factura.token),
+        proyeccionPublica('presupuestosPublicos', presupuestos.documentoPublico(facturas.comoFactura(canonica))),
+      );
+    }
+    if (factura.tipo === 'oferta') {
+      lote.set(
+        db.collection('ofertasPublicas').doc(factura.token),
+        proyeccionPublica('ofertasPublicas', ofertas.documentoPublico(facturas.comoFactura(canonica))),
+      );
+    }
 
     if (factura.estado === 'Abierta') abiertas += 1;
     if (factura.moneda !== 'unidades') recaudado += montoRecaudado;

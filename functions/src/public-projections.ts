@@ -41,6 +41,21 @@ export const PUBLIC_PROJECTION_FIELDS = {
     'numero', 'tokenPublico', 'necesidad', 'montoObjetivo', 'recaudado', 'estado',
     'moneda', 'createdAt',
   ],
+  // Vista publica de un presupuesto (`presupuestoUI` del contrato §1.14). No
+  // lleva `necesidadId`, `tiendaLat/Lng`, `tiendaUrl` ni el adjunto privado: son
+  // datos de gestion, no de transparencia.
+  presupuestosPublicos: [
+    'token', 'objetivo', 'estado', 'centro', 'insumo', 'tienda', 'direccion',
+    'cantidad', 'presentacion', 'moneda', 'precio', 'recaudado', 'createdAt',
+  ],
+  // Vista publica de una oferta (`ofertaPublicaUI`). Sin telefono, sin nombre de
+  // quien dona, sin el nombre de referencia del sitio y con las coordenadas
+  // redondeadas a 2 decimales (~1 km): el contacto vive en `facturasContacto` y
+  // solo lo entrega `reserva_detalle` a quien tiene la reserva viva.
+  ofertasPublicas: [
+    'token', 'estado', 'insumo', 'cantidad', 'unidad', 'zona', 'centro',
+    'coordsAprox', 'createdAt',
+  ],
   // `lugarId` guarda el NOMBRE NORMALIZADO del lugar, no su id: la ventana
   // `historial` solo conoce el nombre y el indice disponible es
   // (lugarId, createdAt, __name__). Ver Task 2.2 del plan.

@@ -629,6 +629,13 @@ export async function crearFactura(
   if (tokenTomado && tokenTomado !== facturaId) {
     throw new ApiError('no se pudo generar el token, intenta de nuevo', 409);
   }
+  // Una sola factura `Abierta` por objetivo. El legado no tenia restriccion:
+  // dos facturas con el mismo objetivo repartian las donaciones entre dos hilos
+  // publicos y ninguna llegaba a su meta. Quien QUIERE reutilizar la abierta
+  // (`donar_necesidad`) resuelve el indice antes y no llega hasta aqui.
+  if (esAbierta(estado) && await leerIndice(tx, ctx, INDICE_OBJETIVO, objetivo)) {
+    throw new ApiError('Ya hay una factura abierta con ese objetivo', 409);
+  }
   const { numero } = await siguienteNumeroFactura(tx, ctx);
 
   const factura: Factura = {
@@ -1105,12 +1112,9 @@ defineAction({
     return db.runTransaction(async (tx) => {
       const ctxMin = contextoMinimo(ctx);
 
-      // El legado no comprobaba duplicados: dos facturas manuales con el mismo
-      // objetivo repartian las donaciones entre dos hilos y ninguna llegaba a
-      // su meta. Aqui el indice de objetivos abiertos lo impide.
-      const abiertaId = await leerIndice(tx, ctxMin, INDICE_OBJETIVO, objetivo);
-      if (abiertaId) throw new ApiError('Ya hay una factura abierta con ese objetivo', 409);
-
+      // El duplicado de objetivo lo corta `crearFactura`, que es donde se
+      // reserva el indice: el legado no lo comprobaba y dos facturas manuales
+      // con el mismo objetivo repartian las donaciones entre dos hilos.
       const cargada = await crearFactura(tx, ctxMin, {
         tipo: 'dinero',
         moneda: monedaFactura(payload.moneda),

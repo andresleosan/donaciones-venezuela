@@ -590,31 +590,71 @@ export function crearSheetsServiceFirebase() {
     // el admin que lo verifica. Por eso `donar_dinero` pasó a exigir sesión
     // (Task 3.4): las reglas de Storage no dejan escribir sin ella.
     donar_dinero: { categoria: 'receipts', campos: { comprobante: 'comprobantePath' } },
+    // `offers` es la categoría más cerrada del sistema: lleva la cédula de quien
+    // ofrece y una foto de su casa. Ni el rol `panel` la lee.
+    ofrecer_insumo: {
+      categoria: 'offers',
+      campos: { fotoCedula: 'fotoCedulaPath', fotoLugar: 'fotoLugarPath' },
+      listas: { fotosInsumo: 'fotosInsumoPath' },
+      descartar: ['fotoInsumo'],
+    },
+    recoger_oferta: {
+      categoria: 'offers',
+      campos: {
+        fotoSitio: 'fotoSitioPath',
+        fotoInsumo: 'fotoInsumoPath',
+        fotoPersona: 'fotoPersonaPath',
+      },
+    },
+    // Los tres archivos del ciclo de compra los sube el admin con su cuenta. El
+    // legado los ponía en un bucket público e irrevocable.
+    admin_crear_presupuesto: { categoria: 'receipts', campos: { adjunto: 'adjuntoPath' } },
+    admin_presupuesto_transferido: { categoria: 'receipts', campos: { consolidado: 'consolidadoPath' } },
+    admin_presupuesto_comprado: { categoria: 'receipts', campos: { factura: 'facturaPath' } },
   };
+
+  const esDataUrl = (valor) => typeof valor === 'string' && valor.startsWith('data:');
 
   async function subirFotosDeRegistro(payload) {
     const regla = FOTOS_DE_REGISTRO[payload && payload.accion];
     if (!regla) return payload;
 
+    const salida = { ...payload };
+    // Campos que la UI legada duplica (`fotoInsumo` es `fotosInsumo[0]`).
+    for (const campo of regla.descartar ?? []) delete salida[campo];
+
+    const sueltos = Object.entries(regla.campos ?? {})
+      // Un `path` ya subido (reintento de la cola offline) no se vuelve a subir.
+      .filter(([campo, destino]) => !salida[destino] && esDataUrl(salida[campo]));
+    const listas = Object.entries(regla.listas ?? {})
+      .filter(([campo, destino]) => !(Array.isArray(salida[destino]) && salida[destino].length)
+        && Array.isArray(salida[campo]) && salida[campo].some(esDataUrl));
+
+    // Los `path` que ya vienen puestos no necesitan sesión aquí: la acción la
+    // exigirá igual en el servidor, pero pedirla antes de tiempo rompía el
+    // reintento de la cola offline, que ya trae el archivo subido.
+    for (const [campo] of [...sueltos, ...listas]) delete salida[campo];
+    if (!sueltos.length && !listas.length) return salida;
+
     const usuario = await getCurrentUser();
     if (!usuario) throw new Error('Entra con tu cuenta para continuar');
 
-    const salida = { ...payload };
-    for (const [campo, destino] of Object.entries(regla.campos)) {
-      const valor = salida[campo];
-      // Un `path` ya subido (reintento de la cola offline) no se vuelve a subir.
-      if (salida[destino]) { delete salida[campo]; continue; }
-      if (typeof valor !== 'string' || !valor.startsWith('data:')) continue;
+    const subir = (dataUrl) => uploadPrivateFile(
+      usuario.uid,
+      regla.categoria,
+      archivoDesdeDataUrl(dataUrl),
+    ).then(({ path }) => path);
 
-      const { path } = await uploadPrivateFile(
-        usuario.uid,
-        regla.categoria,
-        archivoDesdeDataUrl(valor),
-      );
-      salida[destino] = path;
-      // La dataURL NO viaja en el JSON: pesa megabytes y duplicaria el
-      // documento de identidad en el cuerpo de la peticion.
-      delete salida[campo];
+    // La dataURL NO viaja en el JSON: pesa megabytes y duplicaría el documento
+    // de identidad en el cuerpo de la petición.
+    for (const [campo, destino] of sueltos) salida[destino] = await subir(payload[campo]);
+
+    for (const [campo, destino] of listas) {
+      const rutas = [];
+      for (const valor of payload[campo]) {
+        if (esDataUrl(valor)) rutas.push(await subir(valor));
+      }
+      if (rutas.length) salida[destino] = rutas;
     }
     return salida;
   }

@@ -27,6 +27,13 @@ const authMocks = vi.hoisted(() => ({
 
 const clienteMocks = vi.hoisted(() => ({ post: vi.fn(async () => ({ success: true })) }));
 
+const storageMocks = vi.hoisted(() => ({
+  archivoDesdeDataUrl: vi.fn((dataUrl) => ({ dataUrl })),
+  uploadPrivateFile: vi.fn(async (uid, categoria, archivo) => ({
+    path: `private/${uid}/${categoria}/subida-${archivo.dataUrl.slice(-1)}.jpg`,
+  })),
+}));
+
 const cacheMocks = vi.hoisted(() => ({
   clearOfflineQueue: vi.fn(async () => 0),
   contarCola: vi.fn(async () => 0),
@@ -45,6 +52,7 @@ vi.mock('../../src/firebase/firebase-config.js', () => ({
 vi.mock('../../src/firebase/firebase-auth.js', () => authMocks);
 vi.mock('../../src/data/api-client.js', () => clienteMocks);
 vi.mock('../../src/data/offline-cache.js', () => cacheMocks);
+vi.mock('../../src/firebase/firebase-storage.js', () => storageMocks);
 
 import { crearSheetsServiceFirebase } from '../../src/data/sheets-service-firebase.js';
 
@@ -364,6 +372,60 @@ describe('post y sesión', () => {
       { accion: 'donar_dinero', monto: 5 },
       { idToken: 'id-token-1' },
     );
+  });
+
+  // La fachada traduce las dataURL de los formularios legados a rutas privadas de
+  // Storage. `donar_dinero`, `ofrecer_insumo` y el ciclo de compra del admin se
+  // sumaron a esa lista en la Task 3.4.
+  it('sube el comprobante de donar_dinero y manda solo la ruta', async () => {
+    authMocks.getCurrentUser.mockResolvedValue({ uid: 'uid-donante' });
+
+    await servicio.post({ accion: 'donar_dinero', token: 'DV-1', comprobante: 'data:image/jpeg;base64,A' });
+
+    expect(storageMocks.uploadPrivateFile).toHaveBeenCalledWith(
+      'uid-donante', 'receipts', { dataUrl: 'data:image/jpeg;base64,A' },
+    );
+    expect(clienteMocks.post).toHaveBeenCalledWith(
+      { accion: 'donar_dinero', token: 'DV-1', comprobantePath: 'private/uid-donante/receipts/subida-A.jpg' },
+      expect.anything(),
+    );
+  });
+
+  it('sube el array de fotos de una oferta y descarta el duplicado de la UI legada', async () => {
+    authMocks.getCurrentUser.mockResolvedValue({ uid: 'uid-donante' });
+
+    await servicio.post({
+      accion: 'ofrecer_insumo',
+      insumo: 'Colchonetas',
+      fotosInsumo: ['data:image/jpeg;base64,A', 'data:image/jpeg;base64,B'],
+      // La UI legada manda además `fotoInsumo = fotosInsumo[0]`.
+      fotoInsumo: 'data:image/jpeg;base64,A',
+      fotoCedula: 'data:image/jpeg;base64,C',
+    });
+
+    const [enviado] = clienteMocks.post.mock.calls.at(-1);
+    expect(enviado).toEqual({
+      accion: 'ofrecer_insumo',
+      insumo: 'Colchonetas',
+      fotosInsumoPath: [
+        'private/uid-donante/offers/subida-A.jpg',
+        'private/uid-donante/offers/subida-B.jpg',
+      ],
+      fotoCedulaPath: 'private/uid-donante/offers/subida-C.jpg',
+    });
+    // Ninguna dataURL viaja en el JSON.
+    expect(JSON.stringify(enviado)).not.toContain('data:image');
+  });
+
+  // Un reintento de la cola offline ya trae el archivo subido: pedir sesión ahí
+  // rompería el reenvío.
+  it('no pide sesión cuando el payload ya trae las rutas', async () => {
+    authMocks.getCurrentUser.mockResolvedValue(null);
+
+    await expect(servicio.post({
+      accion: 'donar_dinero', token: 'DV-1', comprobantePath: 'private/uid-donante/receipts/x.jpg',
+    })).resolves.toBeDefined();
+    expect(storageMocks.uploadPrivateFile).not.toHaveBeenCalled();
   });
 
   it('pasa por la cola offline', async () => {

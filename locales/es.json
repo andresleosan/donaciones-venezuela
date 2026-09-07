@@ -1426,6 +1426,7 @@
     "placePhotoCopy": "Una foto de la entrada o el punto exacto donde el transportista debe llegar.",
     "placePhotoRequired": "Toma una foto del sitio de recogida.",
     "needSession": "Inicia sesión para recoger una donación.",
+    "needSessionToOffer": "Entra con tu cuenta para ofrecer un insumo: tus fotos y tu contacto quedan privados y solo los ve quien va a recoger.",
     "continueCta": "Continuar el viaje",
     "centerLabel": "Centro de destino",
     "centerHelp": "¿A qué centro llevará la donación el transportista?",

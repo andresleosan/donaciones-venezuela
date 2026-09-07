@@ -495,7 +495,105 @@ Evidencia: `npm.cmd run test:unit` 33 archivos / **660** pruebas OK; `npm.cmd ru
 
 **Invariantes:** `montoRecaudado` = suma de donaciones `Confirmada` no archivadas, recalculado en la misma transacción (no hay trigger); una sola factura `Abierta` por objetivo (índice); `donar_dinero` decide `PorComprar` en la transacción y emite `metaCubierta` una sola vez; `admin_donacion_anular` es idempotente (`Registrada|Confirmada` → `Anulada`, segunda vez 409); todas las transiciones de estado verifican el estado previo; `registrarEntrega` (desde `panel_insumo`) cierra la factura de necesidad al cubrirla; `tasas/actual` obligatoria para `donar_dinero` (error `tasa de cambio no disponible, intenta más tarde`).
 
-- [ ] **Step 1..3:** reglas comunes. Prueba de integración obligatoria: donar → seguimiento por token muestra `porcentaje` correcto → panel confirma recepción → factura `Cerrada` y movimiento `necesidadCubierta`.
+> **Hecha el 2026-09-07, en dos pasadas.** `functions/src/api/facturas.ts` (modelo, máquina de
+> estados, proyección de seguimiento, `donar_necesidad`, `donar_dinero`, los seis `admin_*`
+> genéricos y el enganche `registrarEntrega` que la Task 3.1 dejó preparado), y después
+> `presupuestos.ts` (8 acciones) y `ofertas.ts` (4). 144 pruebas de contrato en tres archivos +
+> 4 de integración contra el emulador.
+>
+> **Decisiones tomadas:**
+>
+> 1. **Dos identificadores por factura.** `facturas/{FCT-XXXXXXXX}` es la identidad interna y no
+>    cambia nunca; `tokenPublico` (`DV-…`) es una **capacidad**: quien lo tiene lee la factura
+>    entera sin identificarse. Separarlos deja rotar un token filtrado —un cartel fotografiado, un
+>    token pegado en un grupo— sin mover documentos ni romper las referencias que la Task 3.5
+>    guardará en `viajes.facturaId`, y evita que la consola de datos (Task 3.7) liste capacidades
+>    como si fueran ids. El precio es una lectura de índice por token, y a cambio el reconciliador
+>    aprendió `idProyeccion`, que la Task 3.6 volverá a necesitar (`familiasPublicas` va por
+>    `codigo`).
+> 2. **El contacto de una oferta vive en otra colección.** `facturasContacto/{facturaId}` guarda
+>    teléfono, nombre, el sitio exacto, las coordenadas finas y las fotos. Es el arreglo de la fuga
+>    del §1.14 del catálogo: `seguimiento_factura` devolvía la `descripcion` íntegra, así que con
+>    el token de una oferta cualquiera obtenía el teléfono, el nombre y las coordenadas de quien
+>    donaba. No basta con filtrar la proyección: el contacto **no está** en `facturas`, ninguna
+>    función de publicación puede alcanzarlo, y las reglas lo deniegan por su nombre. Su única
+>    salida es `reserva_detalle`. Lo público es la **zona**, también en el movimiento
+>    `donacionOfrecida` y en la descripción `{k:'oferta'}`, donde el legado ponía el nombre de
+>    referencia del sitio.
+> 3. **Tres acciones pasan a `auth: 'user'`**: `donar_dinero` (comprobante), `ofrecer_insumo`
+>    (fotos) y `recoger_oferta` (evidencias). No es preferencia: las reglas de Storage exigen
+>    `request.auth != null` para escribir en `private/<uid>/…`, así que un anónimo no puede subir
+>    los archivos que esas acciones declaran obligatorios. Misma decisión que `panel_crear` (3.1) y
+>    `registrar_voluntario` (3.2). Categoría de Storage nueva: **`offers`**, cerrada al rol `panel`
+>    igual que `centers`, `volunteers` y `drivers`.
+> 4. **No hay bucket público.** El legado subía el adjunto de la cotización, el consolidado de
+>    transferencias y la factura del proveedor a un bucket **público e irrevocable**. En Firebase
+>    todo Storage es privado: los tres son `private/<uid del admin>/receipts/…`, se registran como
+>    evidencia pública (aparecen en el seguimiento con su descripción y su fecha) pero la **ruta no
+>    se publica** —sin firmar no sirve, y publicarla solo diría de quién es—. Para publicar un
+>    enlace de verdad sigue estando `admin_registrar_evidencia`, que acepta una URL `https` externa.
+>    Consecuencia a la vista: el «ver presupuesto» del seguimiento (`§6.3`, `meta.adjunto`) ya no
+>    aparece.
+> 5. **El recaudado de una necesidad lo lleva el centro, no las promesas.** Las donaciones en
+>    especie nacen `Registrada` y nadie las confirma nunca, así que el legado dejaba
+>    `monto_recaudado = 0` y la barra del seguimiento marcaba 0 % desde la primera donación hasta
+>    el cierre, aunque el centro ya hubiera recibido la mitad. Ahora `registrarEntrega` fija
+>    `montoRecaudado = min(recibida, montoRequerido)`. Para el resto de sabores sigue siendo
+>    Σ donaciones `Confirmada`, recalculada en la misma transacción (Firestore no tiene el
+>    disparador `trg_recalcular_recaudado`).
+> 6. **Una sola factura `Abierta` por objetivo, y la comprobación vive en `crearFactura`.**
+>    `donar_necesidad` reutiliza la abierta (resuelve el índice antes de crear); `admin_crear_factura`
+>    y `admin_crear_presupuesto` responden 409. Dos presupuestos del mismo insumo y centro en
+>    **tiendas distintas** siguen conviviendo, porque el objetivo lleva la tienda: es el diseño
+>    («una farmacia cotiza 200, otra 1000»).
+> 7. **`admin_donacion_anular` pide `token` + `id`** (las donaciones son una subcolección, el id
+>    solo no direcciona nada) y responde **409 la segunda vez**. El legado no comprobaba el estado
+>    previo: anular dos veces pasaba por éxito.
+> 8. **`admin_donaciones_presupuesto` devuelve la ruta, no una URL firmada.** El legado firmaba una
+>    URL de una hora por **cada** donación en cada apertura de la pantalla. Ahora la consola pide
+>    la firma de 15 minutos al endpoint de archivos privados, y solo del comprobante que va a
+>    mirar.
+> 9. **`admin_listar_facturas` no vuelve a leer todos los movimientos.** Era la lectura más cara
+>    del legado (todos los movimientos de 100 facturas para quedarse con 100 fechas);
+>    `actualizado` se mantiene en cada escritura y sale de la propia fila.
+> 10. **`facturasAbiertas` cuenta literalmente el estado `Abierta`** y `montoRecaudadoTotal` solo
+>     agrega lo que está en dinero: sumar bolívares con colchonetas daba un número sin significado.
+>     `numDonaciones` se guarda en la cabecera porque el reconciliador solo recorre colecciones de
+>     primer nivel y nunca vería la subcolección.
+> 11. **`reserva_detalle` y `recoger_oferta` fallan cerradas** hasta que la Task 3.5 conecte
+>     `conectarReservaDeViaje`. No es un cabo suelto: sin viajes **no existe** ninguna reserva
+>     viva, así que «Tu reserva venció; vuelve a reservarla» es la respuesta correcta, y fallar
+>     cerrado es lo único aceptable en la acción que entrega un teléfono. Las pruebas de contrato
+>     recorren el ciclo entero con una reserva falsa, así que la lógica sí está cubierta hoy.
+>     `recoger_oferta` **persiste el centro de destino** en la factura, que el catálogo señala como
+>     ausente en el legado (la entrega posterior usaba el centro original).
+>
+> **Del plan viejo `2026-07-24-compra-verificada-presupuestos`** (contrastado con el catálogo): el
+> ciclo `PorComprar → Transferida → Comprada` y el desglose anónimo ya estaban recogidos. Lo que
+> **no** estaba en el catálogo y sí en aquel plan son dos intenciones de diseño, y las dos se
+> conservan: que el consolidado y la factura de compra sean **públicos e irrevocables** por
+> transparencia —imposible aquí sin un bucket público, ver la decisión 4— y que el paso a
+> `Comprada` sea lo único que abre el presupuesto al transportista, que es lo que hace
+> `listar_comprados`.
+>
+> **Cinco defectos encontrados por las pruebas y corregidos antes del commit:**
+>
+> | Defecto | Consecuencia |
+> |---|---|
+> | `crearFactura` reservaba el token **después** de pedir el número de factura | `siguienteNumeroFactura` escribe el contador, así que la reserva era una lectura después de una escritura: Firestore la rechaza. Habría reventado en producción, no en las pruebas. |
+> | El duplicado de objetivo solo se comprobaba en `admin_crear_factura` | Dos presupuestos idénticos en la misma tienda se pisaban la entrada del índice y repartían las donaciones entre dos hilos. Ahora la comprobación vive en `crearFactura`, que es donde se reserva. |
+> | `Number(null) === 0` en las coordenadas de la tienda y de la oferta | Una tienda o una oferta sin coordenadas se aceptaba y quedaba marcada en el golfo de Guinea. Mismo defecto que ya se corrigió en `lugares` en la Task 3.1. |
+> | La fachada exigía sesión antes de mirar si había algo que subir | Un reintento de la cola offline ya trae el `path` subido: pedir la sesión ahí rompía el reenvío. |
+> | La proyección de seguimiento se escribía con el id canónico | El reconciliador habría creado un documento `facturasPublicas/FCT-…` y borrado el bueno por «huérfano». De ahí sale `idProyeccion`. |
+>
+> **Pendiente, y a la vista:** `donar_dinero` necesita `tasas/actual`, que la escribe el trabajo
+> programado de la Task 3.8. Sin ella responde `tasa de cambio no disponible, intenta más tarde`,
+> así que la prueba de integración la siembra con `sembrarDocumento()` (nuevo en
+> `tests/emulators/entorno.ts`, mismo mecanismo que `darClaims`).
+
+- [x] **Step 1..3:** reglas comunes. Prueba de integración obligatoria: donar → seguimiento por token muestra `porcentaje` correcto → panel confirma recepción → factura `Cerrada` y movimiento `necesidadCubierta`. **Hecha** en `tests/emulators/api-facturas.integration.test.ts`. En la UI: «Donar dinero» y «Tengo un insumo para donar» piden entrar antes de abrir su asistente (dos claves i18n nuevas en ambos idiomas), y el comprobante de una donación se abre con una URL firmada a demanda en vez de venir firmado en la respuesta.
+
+Evidencia: `npm.cmd run test:unit` 36 archivos / **759** pruebas OK; `npm.cmd run test:emulators` 35 archivos / **587** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0; `npm.cmd run seed:emulador` código 0 (facturas en la forma canónica, más una oferta semilla con su contacto separado); `python scripts/verificar-idioma.py` 1510 claves OK.
 
 ### Task 3.5: Transporte: trayectos, apoyo a motorizados, viajes y entregas
 

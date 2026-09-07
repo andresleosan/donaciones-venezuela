@@ -57,7 +57,7 @@ const upload = (
 );
 
 describe('Storage private files', () => {
-  it('permite carga valida del propietario para las seis categorias', async () => {
+  it('permite carga valida del propietario para las siete categorias', async () => {
     for (const [category, extension, contentType] of [
       ['receipts', 'pdf', 'application/pdf'],
       ['needs', 'png', 'image/png'],
@@ -66,6 +66,9 @@ describe('Storage private files', () => {
       // Task 3.2: cedula del voluntario y placa/vehiculo/cedula del transportista.
       ['volunteers', 'jpg', 'image/jpeg'],
       ['drivers', 'png', 'image/png'],
+      // Task 3.4: fotos del insumo ofrecido, cedula de quien lo ofrece y las de
+      // la recogida. Cerrada al rol `panel`, como las tres anteriores.
+      ['offers', 'jpg', 'image/jpeg'],
     ] as const) {
       await assertSucceeds(upload(
         owner(),

@@ -47,3 +47,38 @@ export async function darClaims(uid: string, claims: Record<string, unknown>): P
     throw new Error(`no se pudieron asignar claims (${respuesta.status}): ${await respuesta.text()}`);
   }
 }
+
+// Escribe un documento saltandose las reglas, para montar el estado que una
+// accion necesita pero ninguna accion puede crear todavia.
+//
+// El caso real: `donar_dinero` exige `tasas/actual`, las reglas prohiben
+// escribir esa coleccion desde el cliente y quien la rellena es el trabajo
+// programado de la Task 3.8. Sin esto, el ciclo de compra verificada no se
+// puede probar de punta a punta contra el emulador.
+//
+// Mismo mecanismo que `darClaims`: la API REST del emulador de Firestore
+// autenticada con el token literal `owner` ignora las reglas, igual que el
+// Admin SDK.
+export async function sembrarDocumento(
+  ruta: string,
+  campos: Record<string, string | number | boolean>,
+): Promise<void> {
+  const valor = (dato: string | number | boolean) => {
+    if (typeof dato === 'boolean') return { booleanValue: dato };
+    if (typeof dato === 'number') return { doubleValue: dato };
+    return { stringValue: dato };
+  };
+
+  const { host, port } = EMULADORES.firestore;
+  const url = `http://${host}:${port}/v1/projects/${DEMO_PROJECT_ID}/databases/(default)/documents/${ruta}`;
+  const respuesta = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({
+      fields: Object.fromEntries(Object.entries(campos).map(([clave, dato]) => [clave, valor(dato)])),
+    }),
+  });
+  if (!respuesta.ok) {
+    throw new Error(`no se pudo sembrar ${ruta} (${respuesta.status}): ${await respuesta.text()}`);
+  }
+}

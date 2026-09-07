@@ -705,7 +705,7 @@
         <p><strong>≈ $${e(Number(d.monto_usd || 0).toFixed(2))}</strong> · ${e(formatearMonto(d.monto))}${d.nombre_donante ? ' · ' + e(d.nombre_donante) : ''}</p>
         <p class="meta">${e(fechaPublica(d.fecha))}${d.referencia_pago ? ' · ' + e(d.referencia_pago) : ''}</p>
         <div class="form-actions">
-          ${d.comprobante_url ? `<a class="btn btn-soft btn-small" href="${e(d.comprobante_url)}" target="_blank" rel="noopener">${e(t('admin.purchase.viewProof'))}</a>` : `<span class="meta">${e(t('admin.purchase.noProof'))}</span>`}
+          ${d.comprobante ? `<button class="btn btn-soft btn-small" type="button" data-comprobante="${e(d.comprobante)}">${e(t('admin.purchase.viewProof'))}</button>` : `<span class="meta">${e(t('admin.purchase.noProof'))}</span>`}
           ${d.estado !== 'Anulada' ? `<button class="btn btn-danger btn-small" type="button" data-anular="${e(d.id)}">${e(t('admin.purchase.void'))}</button>` : ''}
         </div>
       </article>`).join('') || `<p class="empty-state">${e(t('admin.purchase.noDonations'))}</p>`;
@@ -731,10 +731,23 @@
         <h3>${e(t('admin.purchase.actionsTitle'))}</h3>
         ${accionesHtml}
         <div id="compra-msg" class="form-message" role="status" aria-live="polite"></div>`;
+      // El comprobante es un archivo privado: la URL se firma al pedirla (15 min)
+      // y no se guarda. El legado firmaba una de una hora por cada donación en
+      // cada apertura de la pantalla, mirase el admin cuál mirase.
+      $$('#admin-console [data-comprobante]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          const { url } = await window.DVFirebase.getPrivateFileUrl(b.dataset.comprobante);
+          window.open(url, '_blank', 'noopener');
+        } catch (err) { mensajeAdmin('#compra-msg', 'error', String((err && err.message) || t('admin.authError'))); }
+        b.disabled = false;
+      }));
+      // Las donaciones viven en una subcolección de la factura: hacen falta las
+      // dos mitades del identificador, no solo el id.
       $$('#admin-console [data-anular]').forEach((b) => b.addEventListener('click', async () => {
         if (!window.confirm(t('admin.purchase.voidConfirm'))) return;
         b.disabled = true;
-        try { await postAdmin({ accion: 'admin_donacion_anular', id: b.dataset.anular }); await refrescarAdminData(); panelCompra(token); }
+        try { await postAdmin({ accion: 'admin_donacion_anular', token: token, id: b.dataset.anular }); await refrescarAdminData(); panelCompra(token); }
         catch (err) { b.disabled = false; mensajeAdmin('#compra-msg', 'error', String((err && err.message) || t('admin.authError'))); }
       }));
       const btnT = $('#compra-transferido');
@@ -1091,6 +1104,15 @@
     function abrirOfrecerInsumo(datos) {
       const shell = $('#ofrecer-shell');
       if (!shell) return;
+      // `ofrecer_insumo` exige sesión (Task 3.4): las fotos van a
+      // `private/<uid>/offers/` y las reglas de Storage no dejan escribir ahí sin
+      // cuenta. Se pide antes del asistente, no después de tomar veinte fotos.
+      if (!(window.sesionActual && window.sesionActual())) {
+        try { sessionStorage.setItem('dv-retorno', '#ofrecer'); } catch (err) { /* privado */ }
+        if (typeof toast === 'function') toast(t('offer.needSessionToOffer'));
+        window.location.hash = '#acceso';
+        return;
+      }
       const pre = datos || {};
       if (typeof cambiarVista === 'function') cambiarVista('ofrecer');
       if (!/^#ofrecer$/i.test(window.location.hash)) window.location.hash = '#ofrecer';

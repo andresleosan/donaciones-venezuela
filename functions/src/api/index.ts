@@ -16,10 +16,8 @@ import './lugares.js';
 import './personas.js';
 import './vacantes.js';
 import './facturas.js';
-
-// import './presupuestos.js';
-// import './ofertas.js';
-// ...
+import './presupuestos.js';
+import './ofertas.js';
 
 export { apiHandler, API_MESSAGES } from './http.js';
 export { defineAction, getAction, listActions } from './registry.js';

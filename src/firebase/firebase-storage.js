@@ -2,8 +2,9 @@ import { ref, uploadBytes } from 'firebase/storage';
 import { getStorageInstance } from './firebase-config.js';
 
 // `centers`: cedula del responsable y foto del sitio que pide `panel_crear`.
-// A diferencia de las otras tres, el rol 'panel' NO puede leerla.
-export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers'];
+// `offers`: fotos del insumo ofrecido, de quien lo ofrece y de la recogida.
+// A diferencia de `receipts` y `needs`, el rol 'panel' NO puede leer ninguna.
+export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers'];
 
 export const MIME_EXTENSIONS = {
   'image/jpeg': 'jpg',

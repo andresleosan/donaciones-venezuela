@@ -4,18 +4,19 @@ export const PRIVATE_URL_TTL_MS = 15 * 60 * 1000;
 
 // `centers` guarda la cedula de la persona responsable y la foto del sitio que
 // exige `panel_crear`; `volunteers` la cedula de un voluntario y `drivers` la
-// placa, el vehiculo y la cedula de un transportista (Task 3.2). Las tres son
-// documentos de identidad de terceros: el rol 'panel' NO las lee (solo llega a
-// `receipts` y `needs`, ver `canAccessPrivateFile`). Solo el admin y quien las
-// subio.
-const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers']);
+// placa, el vehiculo y la cedula de un transportista (Task 3.2); `offers` las
+// fotos del insumo ofrecido, la cedula de quien lo ofrece, la de su casa y las
+// de la recogida (Task 3.4). Las cuatro son documentos de identidad o el
+// domicilio de terceros: el rol 'panel' NO las lee (solo llega a `receipts` y
+// `needs`, ver `canAccessPrivateFile`). Solo el admin y quien las subio.
+const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers']);
 const EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf']);
 const PATH_PATTERN = /^private\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\.(jpg|jpeg|png|webp|pdf)$/;
 
 export type PrivateFileDescriptor = {
   path: string;
   ownerUid: string;
-  category: 'receipts' | 'needs' | 'reports' | 'centers' | 'volunteers' | 'drivers';
+  category: 'receipts' | 'needs' | 'reports' | 'centers' | 'volunteers' | 'drivers' | 'offers';
   fileName: string;
   extension: 'jpg' | 'jpeg' | 'png' | 'webp' | 'pdf';
 };

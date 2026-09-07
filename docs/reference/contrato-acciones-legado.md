@@ -390,6 +390,14 @@ distinguidos por el contenido de `descripcion`:
 - **Fuga a tener en cuenta**: `seguimiento_factura(tok)` devuelve `descripcion` íntegra, así que con
   el token de una oferta cualquiera ve `telefono`, `nombreDonante`, `ubicacion` y `coords`. Firebase
   debería guardar el contacto fuera del documento público.
+  > **Divergencia deliberada en Firebase (Task 3.4, 2026-09-07).** El sabor ya no se deduce de
+  > `descripcion`: es la columna `tipo`, y los campos del JSON viven en `meta`. El contacto de una
+  > oferta (`telefono`, `nombreDonante`, `ubicacion` exacta, `coords` finas y las fotos) está en
+  > **otra colección**, `facturasContacto/{facturaId}`, que las reglas deniegan y ninguna función de
+  > proyección puede alcanzar; su única salida es `reserva_detalle`. Lo público es la **zona**,
+  > también en el movimiento `donacionOfrecida`. Y `presupuestoUI.adjunto` ya no es una URL pública:
+  > los archivos del ciclo de compra son rutas privadas de Storage y solo se abren firmados, porque
+  > en Firebase no hay bucket público.
 
 ### 1.15 Máquina de estados de `facturas`
 

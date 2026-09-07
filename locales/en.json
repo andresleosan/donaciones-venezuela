@@ -1426,6 +1426,7 @@
     "placePhotoCopy": "A photo of the entrance or the exact spot the driver has to reach.",
     "placePhotoRequired": "Take a photo of the pickup place.",
     "needSession": "Sign in to pick up a donation.",
+    "needSessionToOffer": "Sign in to offer a supply: your photos and contact stay private and only the person picking it up sees them.",
     "continueCta": "Continue the trip",
     "centerLabel": "Destination center",
     "centerHelp": "Which center will the driver take the donation to?",

@@ -120,6 +120,11 @@ service cloud.firestore {
     match /familiasDamnificadas/{id} { allow read, write: if false; }
     match /denuncias/{id} { allow read, write: if false; }
     match /facturas/{id}/{documento=**} { allow read, write: if false; }
+    // Telefono, nombre y domicilio de quien ofrece un insumo. Vive fuera de
+    // `facturas` a proposito (Task 3.4): asi ninguna funcion de proyeccion puede
+    // alcanzarlo ni por descuido. Solo `reserva_detalle` lo entrega, y solo a
+    // quien tiene la reserva viva del trabajo.
+    match /facturasContacto/{id} { allow read, write: if false; }
 
     match /{document=**} {
       allow read, write: if false;
