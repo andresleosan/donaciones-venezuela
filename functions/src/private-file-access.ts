@@ -9,14 +9,14 @@ export const PRIVATE_URL_TTL_MS = 15 * 60 * 1000;
 // de la recogida (Task 3.4). Las cuatro son documentos de identidad o el
 // domicilio de terceros: el rol 'panel' NO las lee (solo llega a `receipts` y
 // `needs`, ver `canAccessPrivateFile`). Solo el admin y quien las subio.
-const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers']);
+const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers', 'volunteers', 'drivers', 'offers', 'deliveries']);
 const EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf']);
 const PATH_PATTERN = /^private\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\.(jpg|jpeg|png|webp|pdf)$/;
 
 export type PrivateFileDescriptor = {
   path: string;
   ownerUid: string;
-  category: 'receipts' | 'needs' | 'reports' | 'centers' | 'volunteers' | 'drivers' | 'offers';
+  category: 'receipts' | 'needs' | 'reports' | 'centers' | 'volunteers' | 'drivers' | 'offers' | 'deliveries';
   fileName: string;
   extension: 'jpg' | 'jpeg' | 'png' | 'webp' | 'pdf';
 };

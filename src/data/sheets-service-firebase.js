@@ -606,6 +606,27 @@ export function crearSheetsServiceFirebase() {
         fotoPersona: 'fotoPersonaPath',
       },
     },
+    // Las fotos del ciclo logístico las sube el transportista con su cuenta:
+    // el local donde compró, el cargamento y quien recibe en el centro.
+    // Categoría `deliveries`, cerrada igual que `offers`.
+    registrar_recogida: {
+      categoria: 'deliveries',
+      campos: {
+        fotoSitio: 'fotoSitioPath',
+        fotoInsumo: 'fotoInsumoPath',
+        fotoPersona: 'fotoPersonaPath',
+      },
+    },
+    registrar_entrega_final: {
+      categoria: 'deliveries',
+      campos: {
+        fotoCentro: 'fotoCentroPath',
+        fotoEncargado: 'fotoEncargadoPath',
+      },
+      // `fotoEntrega` es el nombre viejo de `fotoCentro`; la UI ya manda el
+      // nuevo y mandar los dos subiría la misma imagen dos veces.
+      descartar: ['fotoEntrega'],
+    },
     // Los tres archivos del ciclo de compra los sube el admin con su cuenta. El
     // legado los ponía en un bucket público e irrevocable.
     admin_crear_presupuesto: { categoria: 'receipts', campos: { adjunto: 'adjuntoPath' } },

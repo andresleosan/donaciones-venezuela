@@ -603,7 +603,74 @@ Evidencia: `npm.cmd run test:unit` 36 archivos / **759** pruebas OK; `npm.cmd ru
 
 **Invariantes:** reserva viva = `paso1.ts + eta + 60 min`; solo el dueño (`authUid`) avanza pasos; GPS validado con `geoValida`; km con `kmEntre`; evidencias fotográficas como `path` de Storage categoría `evidencias`.
 
-- [ ] **Step 1..3:** reglas comunes.
+> **Hecha el 2026-09-07.** `functions/src/api/viajes.ts`: las 7 acciones, el modelo del viaje y el
+> relleno de la costura `conectarReservaDeViaje` que la Task 3.4 dejo abierta. 71 pruebas de
+> contrato y 3 de integración contra el emulador.
+>
+> **Decisiones tomadas:**
+>
+> 1. **La identidad de la reserva es el `uid`, no el correo.** El legado guardaba `viajes.email` y
+>    comparaba correos en minúsculas; ese correo venía del cuerpo de la petición y no lo verificaba
+>    nadie, así que cualquiera podía reclamar el trabajo de otra persona escribiendo su dirección.
+>    Ahora el dueño es el `uid` del ID token. Consecuencia visible: `admin_viajes_atrasados` ya **no
+>    devuelve `email`** (la consola ya lo pintaba condicionalmente, así que degrada sola); devuelve
+>    `uid`, y para localizar a quien conduce está `contactar_motorizado`.
+> 2. **El viaje vigente lo apunta la factura (`viajeVigenteId`), no una consulta por fecha.** El
+>    legado resolvía la reserva con «la última fila sin `paso3_ts`, ordenada por fecha», comprobaba
+>    y después insertaba: dos transportistas que reservaran a la vez creaban dos filas y **ganaba la
+>    más reciente**. Aquí la comprobación y la escritura caen sobre el mismo documento dentro de una
+>    transacción, así que Firestore aborta y reintenta al segundo, que ya ve la reserva del primero.
+>    De paso, resolver la reserva es una lectura por id en vez de una consulta ordenada.
+> 3. **`venceReserva` y `venceAlerta` se precalculan al escribir.** La vista `viajes_atrasados` del
+>    legado (§1.19) recorría la tabla aplicando aritmética de fechas fila a fila; en Firestore eso
+>    sería una lectura facturada por viaje en cada apertura de la consola. Con la fecha guardada,
+>    `admin_viajes_atrasados` es una consulta de dos campos (`abierto`, `venceAlerta`) con su índice.
+>    Por eso **no hay trabajo programado**: el plan preveía un `onSchedule('every 15 minutes')` para
+>    mantener la lista, y con el campo precalculado no hay nada que mantener —además de que un job
+>    programado no se puede ejercitar en el emulador.
+> 4. **`abierto` es un campo, no la ausencia de `paso3`.** En Firestore `null` ordena **antes** que
+>    cualquier fecha, así que `venceAlerta <= now` sobre viajes cerrados (con `venceAlerta` nulo) los
+>    devolvería a todos como los más atrasados. El booleano los deja fuera del filtro.
+> 5. **La entrega cierra el viaje aunque no haya GPS.** El catálogo lo señala como defecto: sin GPS
+>    válido el legado dejaba `paso3_ts` nulo y el viaje seguía apareciendo en la alerta de atrasados
+>    para siempre, con la factura ya `Entregada`. Aquí el paso 3 se sella siempre, con las
+>    coordenadas a `null` si no las hay, y los km salen `null` en vez de inventados.
+> 6. **Una oferta `EnCamino` con la reserva vencida se puede volver a reservar.** También lo invita
+>    el catálogo (§1.15): en el legado quedaba bloqueada para siempre, porque `viaje_iniciar` exigía
+>    `Ofrecida` y `recoger_oferta` exigía reserva viva. El estado no vuelve atrás (sigue `EnCamino`);
+>    lo que cambia es que una reserva muerta deja de bloquear a quien sí puede ir a recogerla.
+> 7. **`viaje_iniciar` devuelve el contacto de una oferta, y es la única acción nueva que lo hace.**
+>    Es lo que hacía el legado (`detalle` con el contacto completo) y lo que la UI necesita para
+>    llamar a quien dona. La diferencia es que ahora ese contacto vive en `facturasContacto` y sale
+>    por dos puertas contadas —ésta y `reserva_detalle`—, las dos con sesión y con la reserva viva.
+> 8. **Categoría de Storage nueva: `deliveries`**, cerrada como `offers` (ni el rol `panel` la lee).
+>    Las fotos del ciclo retratan un local, un cargamento y a quien recibe en el centro; se registran
+>    como evidencias **privadas** de la factura, así que no salen por el seguimiento público. El plan
+>    la llamaba «`evidencias`»: se usa el nombre en inglés por coherencia con las siete que ya había.
+> 9. **`registrar_trayecto` y `donar_motorizado` validan lo que el legado no validaba.** Unos `km`
+>    negativos **restaban** del acumulado público de un transportista, y un aporte de -1000 hacía lo
+>    mismo con su total donado; ninguno de los dos tenía tope. Y un `idMotorizado` inexistente
+>    producía el error crudo `23503` de PostgREST hasta la UI: ahora es un 404 que se puede enseñar.
+> 10. **Los cuatro acumulados del transportista se escriben como números, no como incrementos.**
+>     `publicar` filtra por allowlist y un centinela `FieldValue.increment` no pasa por ese filtro
+>     (es el mismo motivo por el que `ajustarContadores` vive aparte). Como la acción ya lee el
+>     documento del transportista para validarlo, el total se calcula ahí y se escribe resuelto en la
+>     ficha canónica y en la tarjeta pública.
+> 11. **`viajes` no tiene proyección pública ni fuente en el reconciliador.** Lleva el GPS exacto de
+>     una persona en tres instantes con fecha: no hay nada de eso que publicar. `trayectos` y
+>     `donacionesMotorizados` sí, con las allowlists que la Task 3.2 ya había reservado.
+>
+> **Defectos encontrados por las pruebas:** ninguno de producción. Los cuatro fallos de la primera
+> pasada fueron de las propias pruebas (fotos de la carpeta de otra persona, que el guardia de rutas
+> rechaza antes de llegar a la reserva; y una evidencia de más, que era la factura del proveedor que
+> deja la compra).
+>
+> **Costura que queda:** ninguna. `reserva_detalle` y `recoger_oferta`, que la Task 3.4 dejó fallando
+> cerradas, funcionan de punta a punta desde esta tarea.
+
+- [x] **Step 1..3:** reglas comunes. Prueba de integración: reservar → recoger → entregar contra el emulador, con la reserva disputada entre dos cuentas de Auth distintas, `viajes` ilegible desde el cliente y el hilo público sin coordenadas ni rutas de Storage. En la UI: la fachada sube las fotos del ciclo a `private/<uid>/deliveries/` y manda los `path`; la pantalla del viaje no cambia.
+
+Evidencia: `npm.cmd run test:unit` 37 archivos / **830** pruebas OK; `npm.cmd run test:emulators` 37 archivos / **661** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0; `npm.cmd run seed:emulador` código 0 (tres trayectos y dos aportes semilla, con los acumulados de cada transportista derivados de ellos); `python scripts/verificar-idioma.py` 1510 claves OK.
 
 ### Task 3.6: Familias damnificadas y denuncias
 

@@ -264,8 +264,9 @@ it('publica una oferta sin el contacto y solo lo entrega a quien tiene la reserv
   const lista = await llamar('listar_ofertas', {});
   expect((lista.cuerpo.ofertas as Array<Record<string, unknown>>).map((o) => o.token)).toContain(token);
 
-  // Y el contacto no sale por ninguna otra vía: sin la reserva de viaje (Task
-  // 3.5) las dos acciones que lo entregan fallan cerradas.
+  // Y el contacto no sale por ninguna otra vía: sin una reserva viva las dos
+  // acciones que lo entregan fallan cerradas. El ciclo completo, ya con la
+  // reserva de la Task 3.5, está en `api-viajes.integration.test.ts`.
   expect((await llamar('reserva_detalle', { token })).estado).toBe(401);
   const detalle = await llamar('reserva_detalle', { token }, tokenMoto);
   expect(detalle.estado).toBe(403);

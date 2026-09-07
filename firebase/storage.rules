@@ -16,7 +16,10 @@ service firebase.storage {
         || category == 'volunteers'
         || category == 'drivers'
         // Fotos del insumo ofrecido, de quien lo ofrece y de la recogida.
-        || category == 'offers';
+        || category == 'offers'
+        // `deliveries`: fotos del ciclo logistico (el local, el cargamento y
+        // quien recibe en el centro). Cerradas como `offers`.
+        || category == 'deliveries';
     }
 
     // Exactamente las tres claves del contrato: sin canal de datos libre en metadata.

@@ -100,6 +100,11 @@ export type ReservaViva = {
   viajeId: string;
   uid: string;
   nombre: string;
+  // Punto donde empezo el tramo en curso. Viaja DENTRO de la reserva porque
+  // `registrarRecogida` calcula los km despues de las primeras escrituras de la
+  // accion, y Firestore prohibe leer despues de escribir: sin esto habria que
+  // volver a leer el viaje justo cuando ya no se puede.
+  origen?: { lat: number | null; lng: number | null };
 };
 
 export type ReservaDeViaje = {
@@ -237,6 +242,18 @@ export function detallePrivado(factura: Factura, contacto: ContactoOferta): Reco
 
 function refContacto(db: FirestoreOfertas, facturaId: string): Referencia {
   return db.collection(COLECCION_CONTACTO).doc(facturaId);
+}
+
+// Unica lectura del contacto fuera de este modulo. La usa `viaje_iniciar`
+// (Task 3.5) para devolverle el telefono a quien acaba de quedarse el trabajo,
+// que es lo que hacia el legado; sigue exigiendo la reserva viva.
+export async function cargarContacto(
+  tx: TransaccionMinima,
+  ctx: ContextoMinimo,
+  facturaId: string,
+): Promise<ContactoOferta> {
+  const documento = await tx.get(refContacto(ctx.db as unknown as FirestoreOfertas, facturaId));
+  return comoContacto((documento.data() ?? {}) as Record<string, unknown>);
 }
 
 export function republicar(tx: TransaccionMinima, ctx: ContextoMinimo, cargada: FacturaCargada): void {
@@ -413,8 +430,7 @@ defineAction({
       }
       if (cargada.factura.tipo !== TIPO) throw new ApiError('Trabajo no encontrado', 404);
 
-      const documento = await tx.get(refContacto(db, cargada.id));
-      const contacto = comoContacto((documento.data() ?? {}) as Record<string, unknown>);
+      const contacto = await cargarContacto(tx, ctxMin, cargada.id);
       return { detalle: detallePrivado(cargada.factura, contacto) };
     });
   },

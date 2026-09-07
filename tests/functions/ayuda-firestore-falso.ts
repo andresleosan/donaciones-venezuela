@@ -52,6 +52,19 @@ export function crearDb(inicial: Record<string, Documento> = {}) {
     const valor = fila[filtro.campo];
     if (filtro.operador === 'in') return Array.isArray(filtro.valor) && filtro.valor.includes(valor);
     if (filtro.operador === '!=') return valor !== filtro.valor;
+    // Rangos: la alerta de viajes atrasados consulta `venceAlerta <= now`, y
+    // Firestore compara fechas, no referencias. `ordenable` las normaliza igual
+    // que para `orderBy`.
+    if (filtro.operador === '<=' || filtro.operador === '<'
+      || filtro.operador === '>=' || filtro.operador === '>') {
+      if (valor === undefined || valor === null) return false;
+      const x = ordenable(valor);
+      const y = ordenable(filtro.valor);
+      if (filtro.operador === '<=') return x <= y;
+      if (filtro.operador === '<') return x < y;
+      if (filtro.operador === '>=') return x >= y;
+      return x > y;
+    }
     return valor === filtro.valor;
   }
 

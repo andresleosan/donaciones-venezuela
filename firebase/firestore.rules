@@ -125,6 +125,11 @@ service cloud.firestore {
     // alcanzarlo ni por descuido. Solo `reserva_detalle` lo entrega, y solo a
     // quien tiene la reserva viva del trabajo.
     match /facturasContacto/{id} { allow read, write: if false; }
+    // GPS exacto del transportista, del local de compra y del centro, en tres
+    // instantes con fecha. No tiene proyeccion publica a proposito (Task 3.5).
+    match /viajes/{id} { allow read, write: if false; }
+    match /trayectos/{id} { allow read, write: if false; }
+    match /donacionesMotorizados/{id} { allow read, write: if false; }
 
     match /{document=**} {
       allow read, write: if false;

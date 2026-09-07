@@ -130,6 +130,33 @@ const MOTORIZADOS = [
   { id: 'MOT-SEED-2', nombre: 'PRUEBA · Luis Motorizado', zona: 'La Guaira', zonaOperacion: 'La Guaira', tipoVehiculo: 'Camión', telefono: '+58 424 000 0002', placa: 'EF456GH', emailNorm: 'luis.moto@prueba.local' },
 ];
 
+// Apoyo a transportistas (Task 3.5): los dos registros sueltos que el legado
+// guardaba fuera del ciclo de facturas. Sus proyecciones publicas son las que
+// pintan la ficha de un transportista en la consola del admin.
+const TRAYECTOS = [
+  { id: 'TRY-SEED-1', motorizadoId: 'MOT-SEED-1', origen: 'PRUEBA · Catia', destino: 'PRUEBA · Refugio Catia', kmRecorridos: 8.2, insumo: 'Agua potable' },
+  { id: 'TRY-SEED-2', motorizadoId: 'MOT-SEED-1', origen: 'PRUEBA · Chacao', destino: 'PRUEBA · Hospital Vargas', kmRecorridos: 12.5, insumo: 'Medicinas' },
+  { id: 'TRY-SEED-3', motorizadoId: 'MOT-SEED-2', origen: 'PRUEBA · La Guaira', destino: 'PRUEBA · Refugio Catia', kmRecorridos: 31, insumo: 'Colchonetas' },
+];
+
+const APORTES_MOTORIZADOS = [
+  { id: 'DMO-SEED-1', motorizadoId: 'MOT-SEED-1', monto: 20, tipo: 'Gasolina', donante: 'PRUEBA · Marta', ciudad: 'Caracas' },
+  { id: 'DMO-SEED-2', motorizadoId: 'MOT-SEED-2', monto: 15, tipo: 'Mantenimiento', donante: 'Anónimo', ciudad: 'La Guaira' },
+];
+
+// Los cuatro acumulados de la tarjeta publica, derivados de lo de arriba: la
+// semilla no puede inventarlos por su cuenta o la reconciliacion los cambiaria.
+function acumuladosDe(motorizadoId) {
+  const suyos = TRAYECTOS.filter((t) => t.motorizadoId === motorizadoId);
+  const aportes = APORTES_MOTORIZADOS.filter((a) => a.motorizadoId === motorizadoId);
+  return {
+    totalTrayectos: suyos.length,
+    totalKm: Math.round(suyos.reduce((total, t) => total + t.kmRecorridos, 0) * 10) / 10,
+    aporteDonado: aportes.reduce((total, a) => total + a.monto, 0),
+    ultimoTrayecto: suyos.length ? AHORA : null,
+  };
+}
+
 // Reportes de personas buscadas: la unica salida es `buscar_familiar`, que exige
 // sesion. Una verificada y una en la cola de moderacion del admin.
 const PERSONAS = [
@@ -393,6 +420,7 @@ function sembrarPersonas(lote) {
       fotoCedulaPath: '',
       createdAt: AHORA,
       activo: true,
+      ...acumuladosDe(motorizado.id),
     });
     reservarCorreo(lote, motorizado.emailNorm, 'transportista', motorizado.id);
     // Sin telefono ni placa: el contacto pasa por `contactar_motorizado`, y la
@@ -404,6 +432,7 @@ function sembrarPersonas(lote) {
       activo: true,
       tieneContacto: true,
       createdAt: AHORA,
+      ...acumuladosDe(motorizado.id),
     }));
   }
 
@@ -428,6 +457,39 @@ function sembrarPersonas(lote) {
     personasReportadas: PERSONAS.length,
     personasLocalizadas: localizadas,
   };
+}
+
+// No se siembra ningun viaje en curso: una reserva viva a nombre de un uid que
+// no existe dejaria el presupuesto comprado bloqueado para quien pruebe el ciclo
+// del transportista, que es justo lo que la semilla quiere dejar disponible.
+function sembrarTransporte(lote) {
+  for (const trayecto of TRAYECTOS) {
+    const { id, ...datos } = trayecto;
+    const fila = {
+      ...datos,
+      nombreMotorizado: MOTORIZADOS.find((m) => m.id === datos.motorizadoId)?.nombre ?? '',
+      insumoTransportado: '',
+      createdAt: AHORA,
+    };
+    lote.set(db.collection('trayectos').doc(id), fila);
+    lote.set(db.collection('trayectosPublicos').doc(id), proyeccionPublica('trayectosPublicos', fila));
+  }
+
+  for (const aporte of APORTES_MOTORIZADOS) {
+    const { id, ...datos } = aporte;
+    const fila = {
+      ...datos,
+      nombreMotorizado: MOTORIZADOS.find((m) => m.id === datos.motorizadoId)?.nombre ?? '',
+      createdAt: AHORA,
+    };
+    lote.set(db.collection('donacionesMotorizados').doc(id), fila);
+    lote.set(
+      db.collection('donacionesMotorizadosPublicos').doc(id),
+      proyeccionPublica('donacionesMotorizadosPublicos', fila),
+    );
+  }
+
+  return { donacionesRegistradas: APORTES_MOTORIZADOS.length };
 }
 
 function sembrarVacantes(lote) {
@@ -585,6 +647,9 @@ const contadores = {
   ...sembrarVacantes(lote),
   ...sembrarFacturas(lote),
 };
+// `donacionesRegistradas` la alimentan dos fuentes (facturas y apoyo a
+// transportistas), asi que se suma en vez de sobrescribirse con el spread.
+contadores.donacionesRegistradas += sembrarTransporte(lote).donacionesRegistradas;
 
 lote.set(db.collection('tasas').doc('actual'), proyeccionPublica('tasas', { ...TASA, capturadaAt: TASA.fecha }));
 lote.set(db.collection('estadisticas').doc('global'), proyeccionPublica('estadisticas', {
@@ -603,6 +668,8 @@ process.stdout.write(`${JSON.stringify({
   personas: PERSONAS.length,
   vacantes: VACANTES.length,
   facturas: FACTURAS.length,
+  trayectos: TRAYECTOS.length,
+  aportesMotorizados: APORTES_MOTORIZADOS.length,
   usuarios: usuarios.map(({ email, uid }) => ({ email, uid })),
   contadores,
 }, null, 2)}\n`);

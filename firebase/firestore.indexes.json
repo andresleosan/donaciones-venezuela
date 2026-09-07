@@ -247,6 +247,24 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "viajes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "abierto",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "venceAlerta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

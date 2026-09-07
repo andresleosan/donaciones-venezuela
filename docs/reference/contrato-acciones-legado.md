@@ -219,6 +219,16 @@ Las acciones con sesión toman el nombre del actor como
   que pasa a ser la vigente. El paso 3 (`paso3_ts`) cierra el viaje.
 - `admin_viaje_resolver` pone `resuelto = true` → `reservaViva` devuelve `null` aunque el plazo
   no haya vencido (libera el trabajo), pero **no** cambia el estado de la factura.
+  > **Divergencia deliberada en Firebase (Task 3.5, 2026-09-07).** El dueño de la reserva es el
+  > `uid` del ID token, no el correo: el que guardaba `viajes.email` venía del cuerpo de la petición
+  > y nadie lo verificaba, así que bastaba escribir la dirección de otra persona para quedarse con su
+  > trabajo. Por eso `admin_viajes_atrasados` **no devuelve `email`** (devuelve `uid`; la consola ya
+  > lo pintaba condicionalmente). El viaje vigente lo apunta `facturas.viajeVigenteId` en vez de
+  > resolverse con «la última fila sin `paso3_ts`», así que dos reservas simultáneas chocan en un
+  > documento y una se reintenta, en lugar de convivir y que gane la más reciente. `venceReserva` y
+  > `venceAlerta` van precalculados en la fila: la vista `viajes_atrasados` pasa a ser una consulta
+  > de dos campos. Y el paso 3 se sella **siempre**, con GPS o sin él, que es lo que este mismo
+  > catálogo recomienda en `registrar_entrega_final`.
 
 ### 1.8 Archivos: fotos, video, adjuntos y comprobantes (`index.ts:135-207`; buckets en `vistas.sql`)
 
