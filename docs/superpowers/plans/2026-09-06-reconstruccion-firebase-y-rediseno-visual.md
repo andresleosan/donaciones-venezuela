@@ -368,7 +368,7 @@ Reglas comunes a todas las tareas de esta fase:
 
 Evidencia: `npm.cmd run test:unit` 31 archivos / **571** pruebas OK; `npm.cmd run test:emulators` 26 archivos / **396** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0; `npm.cmd run seed:emulador` código 0; `python scripts/verificar-idioma.py` 1499 claves OK.
 
-**Pendiente de decisión del operador, heredado del legado:** `registrar_lugar` deja que cualquier anónimo cambie el `estado` y la `categoria` de un insumo de **cualquier** centro con solo conocer su nombre (catálogo, "Notas" de la acción). Marcar como `Cubierto` la necesidad crítica de un hospital la hace desaparecer del directorio. El catálogo lo documenta como comportamiento deliberado del legado, así que se portó tal cual; endurecerlo (permitir crear un insumo pero no rebajar el estado de uno existente) es una decisión de producto, no de implementación.
+**Decidido por el operador el 2026-09-06 — endurecido:** `registrar_lugar` ya no deja que un anónimo cambie el `estado` ni la `categoria` de un insumo que **ya existe** en cualquier centro con solo conocer su nombre (así lo hacía el legado, y marcar como `Cubierto` la necesidad crítica de un hospital la hacía desaparecer del directorio). El reporte público conserva su utilidad —da de alta un insumo nuevo con el estado y la categoría que indique, y sobre uno existente refresca `actualizado` y deja la entrada de historial con el estado **real**—, pero rebajar el estado o recategorizar quedan en `panel_insumo` y en el admin. Documentado como divergencia deliberada en la ficha de `registrar_lugar` del catálogo.
 
 ### Task 3.2: Personas: voluntarios, rescatistas, transportistas, reportes y búsqueda familiar
 

@@ -652,6 +652,13 @@ sanean con `s(campo, límite)`.
   violación de `lugares.nombre unique` cuyo mensaje crudo se devuelve al cliente; Firebase debe
   usar el nombre como clave de documento o una transacción. Cuando el lugar ya existe, su
   `actualizado` no cambia (solo cambia el del insumo).
+- **Divergencia deliberada en Firebase (2026-09-06, decisión del operador):** el puerto
+  **no** deja que un anónimo cambie el `estado` ni la `categoria` de un insumo que ya existe.
+  Un reporte público puede dar de alta un insumo nuevo (con el `estado` y la `categoria` que
+  indique) y, sobre uno existente, refresca `actualizado` y escribe la entrada de historial con
+  el estado **real**; bajar un `Necesita` a `Cubierto` queda reservado a `panel_insumo` y al
+  admin. Motivo: con el comportamiento legado bastaba acertar el nombre de un hospital para
+  marcar su necesidad crítica como `Cubierto` y hacerla desaparecer del directorio.
 
 ### registrar_voluntario (`index.ts:939-956`)
 

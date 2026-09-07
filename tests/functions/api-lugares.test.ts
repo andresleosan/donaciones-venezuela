@@ -261,33 +261,79 @@ describe('registrar_lugar', () => {
     expect(Object.keys(documentos).filter((r) => r.startsWith('historialPublico/'))).toHaveLength(0);
   });
 
-  it('añade el insumo conservando cantidades y escribe la bitácora', async () => {
+  it('da de alta un insumo nuevo con el estado y la categoría reportados', async () => {
     const { db, documentos } = baseConCentro();
 
     await ejecutar('registrar_lugar', ANON(db), {
-      nombre: 'Centro Chacao', insumo: 'Agua potable', categoria: 'Agua', estado: 'Tiene disponible',
+      nombre: 'Centro Chacao', insumo: 'Colchonetas', categoria: 'Refugio', estado: 'Tiene disponible',
     });
 
-    expect(documentos['lugares/LUG-AAAA1111/insumos/agua potable']).toMatchObject({
-      categoria: 'Agua',
+    expect(documentos['lugares/LUG-AAAA1111/insumos/colchonetas']).toMatchObject({
+      nombre: 'Colchonetas',
+      categoria: 'Refugio',
       estado: 'Disponible',
-      // Las cantidades del insumo existente se conservan.
-      cantidadNecesaria: 100,
-      cantidadRecibida: 20,
-      unidad: 'litros',
+      cantidadNecesaria: 1,
+      cantidadRecibida: 0,
+      urgencia: 'Normal',
+      unidad: 'unidades',
     });
     const bitacora = Object.entries(documentos).find(([r]) => r.startsWith('historialMovimientos/'));
     expect(bitacora?.[1]).toMatchObject({
       lugar: 'Centro Chacao',
-      insumo: 'Agua potable',
-      descripcion: 'Reporte: Agua potable (Disponible)',
+      insumo: 'Colchonetas',
+      descripcion: 'Reporte: Colchonetas (Disponible)',
       origen: 'publico',
       cantidad: 0,
       tipo: 'Reporte',
     });
-    // El insumo pasa al bucket público correcto.
+    // El insumo nuevo entra en el bucket público que dice su estado.
     expect(documentos['lugaresPublicos/LUG-AAAA1111']).toMatchObject({
-      necesita: [], tieneDisponible: [{ nombre: 'Agua potable' }],
+      tieneDisponible: [{ nombre: 'Colchonetas' }],
+    });
+  });
+
+  // Endurecimiento del 2026-09-06 (decisión del operador). El legado dejaba que
+  // cualquier anónimo marcara como `Cubierto` la necesidad crítica de un
+  // hospital con solo acertar su nombre, y eso la borraba del directorio.
+  it('no deja que un anónimo cambie el estado ni la categoría de un insumo existente', async () => {
+    const { db, documentos } = baseConCentro();
+
+    await ejecutar('registrar_lugar', ANON(db), {
+      nombre: 'Centro Chacao', insumo: 'Agua potable', categoria: 'Agua', estado: 'Cubierto',
+    });
+
+    expect(documentos['lugares/LUG-AAAA1111/insumos/agua potable']).toMatchObject({
+      // Ni el estado ni la categoría del payload llegan al documento.
+      categoria: 'Alimentos',
+      estado: 'Necesita',
+      // Cantidades, urgencia y unidad se conservan igual que antes.
+      cantidadNecesaria: 100,
+      cantidadRecibida: 20,
+      urgencia: 'Alta',
+      unidad: 'litros',
+    });
+    // La necesidad sigue publicada: el reporte no la hace desaparecer.
+    expect(documentos['lugaresPublicos/LUG-AAAA1111']).toMatchObject({
+      necesita: [{ nombre: 'Agua potable' }], tieneDisponible: [], cubiertos: [],
+    });
+  });
+
+  it('deja constancia del reporte con el estado real, no con el pedido', async () => {
+    const { db, documentos } = baseConCentro();
+
+    await ejecutar('registrar_lugar', ANON(db), {
+      nombre: 'Centro Chacao', insumo: 'Agua potable', estado: 'Tiene disponible',
+    });
+
+    const bitacora = Object.entries(documentos).find(([r]) => r.startsWith('historialMovimientos/'));
+    expect(bitacora?.[1]).toMatchObject({
+      lugar: 'Centro Chacao',
+      insumo: 'Agua potable',
+      descripcion: 'Reporte: Agua potable (Necesita)',
+      origen: 'publico',
+      cantidad: 0,
+      unidad: 'litros',
+      tipo: 'Reporte',
     });
   });
 });

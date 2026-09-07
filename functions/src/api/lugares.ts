@@ -555,10 +555,22 @@ defineAction({
       if (!clave) return {};
 
       const previo = insumos.find((item) => item.id === clave);
+
+      // Endurecimiento (decision del operador, 2026-09-06). El legado dejaba
+      // que cualquier anonimo cambiara el `estado` y la `categoria` de un
+      // insumo que YA existe con solo acertar el nombre del centro: marcar
+      // como `Cubierto` la necesidad critica de un hospital la borraba del
+      // directorio. Ahora un reporte publico solo puede DAR DE ALTA un insumo
+      // nuevo; sobre uno existente refresca `actualizado` y deja constancia en
+      // el historial, pero el estado y la categoria solo los mueven el panel
+      // del centro (`panel_insumo`) y el admin.
+      const estadoEfectivo = previo ? previo.datos.estado : estado;
+      const categoriaEfectiva = previo ? previo.datos.categoria : categoria;
+
       const insumo: Insumo = {
         nombre: insumoNombre,
-        categoria,
-        estado,
+        categoria: categoriaEfectiva,
+        estado: estadoEfectivo,
         cantidadNecesaria: previo ? previo.datos.cantidadNecesaria : 1,
         cantidadRecibida: previo ? previo.datos.cantidadRecibida : 0,
         urgencia: previo ? previo.datos.urgencia : 'Normal',
@@ -574,7 +586,7 @@ defineAction({
         lugarId,
         lugarNombre: lugar.nombre,
         insumo: insumoNombre,
-        descripcion: `Reporte: ${insumoNombre} (${estado})`,
+        descripcion: `Reporte: ${insumoNombre} (${estadoEfectivo})`,
         origen: 'publico',
         cantidad: 0,
         unidad: insumo.unidad,
