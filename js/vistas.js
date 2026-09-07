@@ -625,8 +625,22 @@
       bindTarjetasColapsables('#grid-presupuestos');
       $$('[data-donar-dinero]').forEach((btn) => btn.addEventListener('click', () => {
         const pr = (estado.presupuestos || []).find((x) => x.token === btn.dataset.donarDinero);
-        if (pr) abrirDonarDinero(pr);
+        if (pr) donarDineroConSesion(pr);
       }));
+    }
+
+    // Donar dinero exige sesión (Task 3.4): el comprobante de la transferencia se
+    // sube a `private/<uid>/receipts/` y las reglas de Storage no dejan escribir
+    // ahí sin cuenta. Mismo patrón que «Voy a recogerla».
+    function donarDineroConSesion(pr) {
+      const sesion = (typeof sesionActual === 'function' && sesionActual()) || null;
+      if (!sesion) {
+        try { sessionStorage.setItem('dv-retorno', window.location.hash || '#ayudar'); } catch (err) { /* privado */ }
+        toast(t('money.needSession'));
+        window.location.hash = '#acceso';
+        return;
+      }
+      abrirDonarDinero(pr);
     }
 
     // ── Ofertas: donantes que YA TIENEN el insumo, localizadas para recoger ──

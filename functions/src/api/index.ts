@@ -15,8 +15,10 @@ import '../jobs/reconciliar-proyecciones.js';
 import './lugares.js';
 import './personas.js';
 import './vacantes.js';
+import './facturas.js';
 
-// import './facturas.js';
+// import './presupuestos.js';
+// import './ofertas.js';
 // ...
 
 export { apiHandler, API_MESSAGES } from './http.js';

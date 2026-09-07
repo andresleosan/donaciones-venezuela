@@ -1315,7 +1315,8 @@
     "copyText": "Reference: {referencia} · Tracking code: {token}",
     "proofLabel": "Proof of your transfer",
     "proofHelp": "Upload the screenshot or PDF of your transfer. Only the team sees it, to confirm the contribution is real.",
-    "proofRequired": "Attach the proof of your transfer to continue."
+    "proofRequired": "Attach the proof of your transfer to continue.",
+    "needSession": "Sign in to donate: your transfer receipt is private and only you and the verifier can see it."
   },
   "cycle": {
     "title": "Purchased supplies, ready for pickup",

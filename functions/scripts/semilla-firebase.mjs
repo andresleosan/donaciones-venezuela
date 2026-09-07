@@ -41,6 +41,10 @@ const { estadisticasVacias } = await import('../lib/api/estadisticas.js');
 // La proyeccion y el id de insumo salen del propio dominio: si cambia el
 // modelo, la semilla cambia con el y no queda describiendo una app anterior.
 const { claveInsumo, documentoPublico } = await import('../lib/api/lugares.js');
+// Lo mismo con las facturas: la proyeccion publica por token la construye el
+// propio dominio, asi que la semilla no puede describir una forma que la app ya
+// no escriba (y no puede publicar el contacto de una oferta por descuido).
+const facturas = await import('../lib/api/facturas.js');
 
 const db = getFirestore();
 const auth = getAuth();
@@ -155,29 +159,63 @@ const VACANTES = [
   },
 ];
 
+// Facturas en la forma canonica de la Task 3.4: `tipo` y `moneda` explicitos,
+// `meta` con los campos del sabor y las tres subcolecciones. Una en dinero (un
+// presupuesto a medio recaudar, que es lo que pinta la vista de necesidades) y
+// una en especie (una necesidad con una donacion registrada sin confirmar, que
+// es por lo que su recaudado sigue en cero).
 const FACTURAS = [
   {
+    id: 'FCT-SEED0001',
     token: 'DV-SEED-PRES-0001',
     numero: 'FAC-2026-000001',
-    tipo: 'dinero',
-    objetivo: 'PRUEBA · Agua potable → Hospital Vargas',
+    tipo: 'presupuesto',
+    moneda: 'VES',
+    objetivo: 'Agua potable → PRUEBA · Hospital Vargas · PRUEBA · Farmacia Sur',
+    descripcion: '',
+    meta: {
+      centro: 'PRUEBA · Hospital Vargas',
+      insumo: 'Agua potable',
+      tienda: 'PRUEBA · Farmacia Sur',
+      direccion: 'Av. Principal, La Guaira',
+      cantidad: 500,
+      presentacion: 'Bidón de 20 L',
+      necesidadId: 'agua potable',
+      tiendaLat: 10.6,
+      tiendaLng: -66.93,
+      tiendaUrl: '',
+      adjunto: '',
+    },
     estado: 'Abierta',
-    montoRequerido: 850,
-    montoRecaudado: 300,
+    montoRequerido: 75000,
     donaciones: [
-      { monto_usd: 200, monto: 50000, creado: '2026-09-02T10:00:00.000Z' },
-      { monto_usd: 100, monto: 25000, creado: '2026-09-03T10:00:00.000Z' },
+      { nombreDonante: 'PRUEBA · Anónimo', monto: 50000, montoUsd: 200, tasa: 250, estado: 'Confirmada', referenciaPago: 'REF-SEED-0000-0001', creado: '2026-09-02T10:00:00.000Z' },
+      { nombreDonante: 'PRUEBA · Anónimo', monto: 25000, montoUsd: 100, tasa: 250, estado: 'Confirmada', referenciaPago: 'REF-SEED-0000-0002', creado: '2026-09-03T10:00:00.000Z' },
     ],
+    movimientos: [
+      { tipo: 'Ingreso', codigo: 'dineroRecibido', datos: { referencia: 'REF-SEED-0000-0001' }, monto: 50000, creado: '2026-09-02T10:00:00.000Z' },
+      { tipo: 'Ingreso', codigo: 'dineroRecibido', datos: { referencia: 'REF-SEED-0000-0002' }, monto: 25000, creado: '2026-09-03T10:00:00.000Z' },
+    ],
+    evidencias: [],
   },
   {
+    id: 'FCT-SEED0002',
     token: 'DV-SEED-NEC-0002',
     numero: 'FAC-2026-000002',
-    tipo: 'necesidad',
-    objetivo: 'PRUEBA · Colchonetas → Refugio Catia',
-    estado: 'Comprada',
-    montoRequerido: 420,
-    montoRecaudado: 420,
-    donaciones: [],
+    tipo: 'especie',
+    moneda: 'unidades',
+    objetivo: 'Colchonetas → PRUEBA · Refugio Catia',
+    descripcion: 'Necesidad publicada por PRUEBA · Refugio Catia',
+    meta: null,
+    estado: 'Abierta',
+    montoRequerido: 80,
+    donaciones: [
+      { nombreDonante: 'PRUEBA · Casa Solidaria', monto: 10, montoUsd: null, tasa: null, estado: 'Registrada', referenciaPago: '', creado: '2026-09-04T10:00:00.000Z' },
+    ],
+    movimientos: [
+      { tipo: 'Ingreso', codigo: 'donacionRegistrada', datos: { cantidad: 10, unidad: 'unidades', insumo: 'Colchonetas' }, monto: 10, creado: '2026-09-04T10:00:00.000Z' },
+    ],
+    evidencias: [],
   },
 ];
 
@@ -383,45 +421,86 @@ function sembrarFacturas(lote) {
   let donaciones = 0;
 
   for (const factura of FACTURAS) {
-    lote.set(db.collection('facturas').doc(factura.token), {
+    // Solo suman las `Confirmada`, igual que en la accion: una necesidad con
+    // una donacion `Registrada` mantiene el recaudado en cero.
+    const montoRecaudado = factura.donaciones
+      .filter((donacion) => donacion.estado === 'Confirmada')
+      .reduce((total, donacion) => total + donacion.monto, 0);
+
+    const canonica = {
       numeroFactura: factura.numero,
       tokenPublico: factura.token,
       tipo: factura.tipo,
+      moneda: factura.moneda,
       objetivo: factura.objetivo,
-      estado: factura.estado,
+      objetivoNorm: normalizar(factura.objetivo),
+      descripcion: factura.descripcion,
+      meta: factura.meta,
       montoRequerido: factura.montoRequerido,
-      montoRecaudado: factura.montoRecaudado,
+      montoRecaudado,
+      estado: factura.estado,
+      viajeVigenteId: null,
+      numDonaciones: factura.donaciones.length,
+      numMovimientos: factura.movimientos.length,
+      numEvidencias: factura.evidencias.length,
       createdAt: AHORA,
-    });
+      actualizado: AHORA,
+      fechaCierre: null,
+    };
+    const referencia = db.collection('facturas').doc(factura.id);
+    lote.set(referencia, canonica);
 
-    // El documento publico se lee por token (`getSeguimiento`), asi que lleva
-    // dentro la factura, sus movimientos y el desglose anonimo de donaciones.
-    lote.set(db.collection('facturasPublicas').doc(factura.token), proyeccionPublica('facturasPublicas', {
-      factura: {
-        numero_factura: factura.numero,
-        objetivo: factura.objetivo,
-        descripcion: factura.objetivo,
-        estado: factura.estado,
-        monto_requerido: factura.montoRequerido,
-        monto_recaudado: factura.montoRecaudado,
-        porcentaje: Math.round((100 * factura.montoRecaudado) / factura.montoRequerido),
-        token_publico: factura.token,
-        fecha_creacion: AHORA.toISOString(),
-        fecha_cierre: '',
+    const subDonaciones = factura.donaciones.map((donacion, indice) => ({
+      id: `DON-SEED${factura.id.slice(-4)}${indice + 1}`,
+      datos: {
+        nombreDonante: donacion.nombreDonante,
+        monto: donacion.monto,
+        montoUsd: donacion.montoUsd,
+        tasa: donacion.tasa,
+        comprobantePath: '',
+        referenciaPago: donacion.referenciaPago,
+        estado: donacion.estado,
+        secuencia: indice + 1,
+        createdAt: new Date(donacion.creado),
       },
-      movimientos: factura.donaciones.map((donacion) => ({
-        tipo: 'Donación',
-        monto: donacion.monto_usd,
-        descripcion: JSON.stringify({ k: 'mov', c: 'donacion' }),
-        fecha: donacion.creado,
-      })),
-      evidencias: [],
-      donacionesPublicas: factura.donaciones,
-      createdAt: AHORA,
+    }));
+    const subMovimientos = factura.movimientos.map((movimiento, indice) => ({
+      id: `MOV-SEED${factura.id.slice(-4)}${indice + 1}`,
+      datos: {
+        tipo: movimiento.tipo,
+        descripcion: JSON.stringify({ k: 'mov', c: movimiento.codigo, ...movimiento.datos }),
+        monto: movimiento.monto,
+        secuencia: indice + 1,
+        createdAt: new Date(movimiento.creado),
+      },
     }));
 
+    for (const { id, datos } of subDonaciones) lote.set(referencia.collection('donaciones').doc(id), datos);
+    for (const { id, datos } of subMovimientos) lote.set(referencia.collection('movimientos').doc(id), datos);
+
+    // Los dos indices que sostienen las invariantes: token -> factura y un solo
+    // hilo `Abierta` por objetivo.
+    lote.set(db.collection('indices/facturasPorToken/claves').doc(normalizar(factura.token)), { valor: factura.id, createdAt: AHORA });
+    if (factura.estado === 'Abierta') {
+      lote.set(db.collection('indices/facturasAbiertasPorObjetivo/claves').doc(normalizar(factura.objetivo)), { valor: factura.id, createdAt: AHORA });
+    }
+
+    // El documento publico se lee por token (`getSeguimiento`) y lo arma el
+    // dominio, no la semilla: lleva dentro la factura, sus movimientos y el
+    // desglose anonimo de donaciones, y nada mas.
+    lote.set(
+      db.collection('facturasPublicas').doc(factura.token),
+      proyeccionPublica('facturasPublicas', facturas.documentoPublico({
+        id: factura.id,
+        factura: facturas.comoFactura(canonica),
+        donaciones: subDonaciones.map(({ id, datos }) => ({ id, datos: facturas.comoDonacion(datos) })),
+        movimientos: subMovimientos.map(({ id, datos }) => ({ id, datos: facturas.comoMovimiento(datos) })),
+        evidencias: [],
+      })),
+    );
+
     if (factura.estado === 'Abierta') abiertas += 1;
-    if (factura.tipo === 'dinero') recaudado += factura.montoRecaudado;
+    if (factura.moneda !== 'unidades') recaudado += montoRecaudado;
     donaciones += factura.donaciones.length;
   }
 

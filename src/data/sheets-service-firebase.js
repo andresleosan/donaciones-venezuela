@@ -586,6 +586,10 @@ export function crearSheetsServiceFirebase() {
         fotoCedula: 'fotoCedulaPath',
       },
     },
+    // El comprobante de la transferencia es privado: solo lo ven quien dona y
+    // el admin que lo verifica. Por eso `donar_dinero` pasó a exigir sesión
+    // (Task 3.4): las reglas de Storage no dejan escribir sin ella.
+    donar_dinero: { categoria: 'receipts', campos: { comprobante: 'comprobantePath' } },
   };
 
   async function subirFotosDeRegistro(payload) {

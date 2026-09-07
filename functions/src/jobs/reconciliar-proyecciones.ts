@@ -38,6 +38,12 @@ export type FuenteProyeccion = {
   // base porque una proyeccion puede depender de una subcoleccion (los insumos
   // de un lugar, sin ir mas lejos) y sin ella la reconstruccion la vaciaria.
   mapear?(documento: DocumentoCanonico, db: FirestoreReconciliable): Record<string, unknown> | Promise<Record<string, unknown>>;
+  // Id del documento publico cuando NO coincide con el del canonico. Las
+  // facturas se publican por su TOKEN (`facturasPublicas/{DV-…}`), porque la
+  // pantalla de seguimiento hace un `get` directo con el token que le dan; sin
+  // esto la reconstruccion escribiria un segundo documento con el id interno y
+  // luego borraria el bueno por «huerfano».
+  idProyeccion?(documento: DocumentoCanonico): string;
   // Aporte de este documento a `estadisticas/global`.
   contadores?(documento: DocumentoCanonico): Deltas;
 };
@@ -154,11 +160,13 @@ export async function reconstruirProyecciones(
         if (fuente.incluir && !fuente.incluir(documento)) continue;
         if (!proyeccion || !vistos || !fuente.mapear) continue;
 
+        const idPublico = fuente.idProyeccion ? fuente.idProyeccion(documento) : documento.id;
+        if (!idPublico) continue;
         lote.set(
-          db.collection(proyeccion).doc(documento.id),
+          db.collection(proyeccion).doc(idPublico),
           proyeccionPublica(proyeccion, await fuente.mapear(documento, db)),
         );
-        vistos.add(documento.id);
+        vistos.add(idPublico);
         publicados += 1;
         escrituras += 1;
       }

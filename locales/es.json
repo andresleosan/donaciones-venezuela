@@ -1315,7 +1315,8 @@
     "copyText": "Referencia: {referencia} · Código de seguimiento: {token}",
     "proofLabel": "Comprobante de tu transferencia",
     "proofHelp": "Sube la captura o el PDF de tu transferencia. Solo lo ve el equipo, para confirmar que el aporte es real.",
-    "proofRequired": "Adjunta el comprobante de tu transferencia para continuar."
+    "proofRequired": "Adjunta el comprobante de tu transferencia para continuar.",
+    "needSession": "Entra con tu cuenta para donar: el comprobante de tu transferencia es privado y solo lo verás tú y quien lo verifica."
   },
   "cycle": {
     "title": "Insumos comprados, listos para recoger",

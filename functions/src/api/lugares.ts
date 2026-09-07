@@ -108,7 +108,7 @@ type Lugar = {
   actualizado: Date;
 };
 
-type Insumo = {
+export type Insumo = {
   nombre: string;
   categoria: string;
   estado: string;
@@ -305,6 +305,20 @@ export async function leerInsumos(
   return snapshot.docs
     .map((doc) => ({ id: doc.id, datos: comoInsumo(doc.data()) }))
     .sort((a, b) => a.datos.nombre.localeCompare(b.datos.nombre));
+}
+
+// Un solo insumo por su clave. `donar_necesidad` (Task 3.4) solo necesita uno:
+// leer la subcoleccion entera seria una lectura facturada por insumo del centro
+// en cada donacion.
+export async function leerInsumo(
+  tx: TxLugares,
+  db: FirestoreLugares,
+  lugarId: string,
+  clave: string,
+): Promise<Insumo | null> {
+  if (!clave) return null;
+  const snapshot = await tx.get(refInsumos(db, lugarId).doc(clave));
+  return snapshot.exists ? comoInsumo(datosDe(snapshot)) : null;
 }
 
 // Resuelve un nombre de centro a su id por el indice de unicidad. Es la unica
