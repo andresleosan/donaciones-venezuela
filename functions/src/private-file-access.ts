@@ -2,14 +2,18 @@ import type { AuthContext } from './auth/authorization.js';
 
 export const PRIVATE_URL_TTL_MS = 15 * 60 * 1000;
 
-const CATEGORIES = new Set(['receipts', 'needs', 'reports']);
+// `centers` guarda la cedula de la persona responsable y la foto del sitio que
+// exige `panel_crear`. Es la unica categoria que NO puede leer el rol 'panel':
+// son documentos de identidad de terceros, y quien opera un panel no tiene por
+// que ver los de otro centro. Solo el admin y quien la subio.
+const CATEGORIES = new Set(['receipts', 'needs', 'reports', 'centers']);
 const EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf']);
 const PATH_PATTERN = /^private\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\.(jpg|jpeg|png|webp|pdf)$/;
 
 export type PrivateFileDescriptor = {
   path: string;
   ownerUid: string;
-  category: 'receipts' | 'needs' | 'reports';
+  category: 'receipts' | 'needs' | 'reports' | 'centers';
   fileName: string;
   extension: 'jpg' | 'jpeg' | 'png' | 'webp' | 'pdf';
 };

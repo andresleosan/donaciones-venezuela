@@ -80,8 +80,10 @@ function crearDb(inicial: Record<string, Documento> = {}) {
     batch() {
       const operaciones: Array<() => void> = [];
       return {
-        set(ref: { path: string }, datos: Documento) {
-          operaciones.push(() => aplicar(ref.path, datos, false));
+        // `merge` cuenta tambien en un lote: sin esto la prueba de la
+        // reconstruccion pasaria por el motivo equivocado.
+        set(ref: { path: string }, datos: Documento, opciones?: { merge: boolean }) {
+          operaciones.push(() => aplicar(ref.path, datos, Boolean(opciones?.merge)));
         },
         delete(ref: { path: string }) {
           operaciones.push(() => { delete documentos[ref.path]; });
@@ -260,8 +262,9 @@ describe('reconstruirProyecciones', () => {
     expect(documentos['estadisticas/global']).toMatchObject({
       centrosRegistrados: 1,
       hospitalesRegistrados: 1,
-      voluntariosActivos: 0,
     });
+    // Solo se escriben los contadores que la fuente alimenta.
+    expect(documentos['estadisticas/global']).not.toHaveProperty('voluntariosActivos');
   });
 
   it('borra proyecciones huérfanas y las de documentos ya excluidos', async () => {
@@ -301,6 +304,25 @@ describe('reconstruirProyecciones', () => {
 
     await expect(reconstruirProyecciones(db as never, { tamanoLote: 501 }))
       .rejects.toThrow('tamano-lote-invalido');
+  });
+
+  // La fase 3 va registrando fuentes dominio a dominio. Si la reconstruccion
+  // reemplazara el documento entero, correrla a mitad de camino pondria a cero
+  // los contadores de los dominios todavia sin portar.
+  it('no toca los contadores que ninguna fuente alimenta', async () => {
+    const { db, documentos } = crearDb({
+      ...canonicos,
+      'estadisticas/global': { centrosRegistrados: 99, voluntariosActivos: 7, facturasAbiertas: 3 },
+    });
+
+    await reconstruirProyecciones(db as never, { tamanoLote: 400 });
+
+    expect(documentos['estadisticas/global']).toMatchObject({
+      centrosRegistrados: 1,
+      hospitalesRegistrados: 1,
+      voluntariosActivos: 7,
+      facturasAbiertas: 3,
+    });
   });
 
   it('sella actualizado con la hora del servidor', async () => {

@@ -57,11 +57,12 @@ const upload = (
 );
 
 describe('Storage private files', () => {
-  it('permite carga valida del propietario para las tres categorias', async () => {
+  it('permite carga valida del propietario para las cuatro categorias', async () => {
     for (const [category, extension, contentType] of [
       ['receipts', 'pdf', 'application/pdf'],
       ['needs', 'png', 'image/png'],
       ['reports', 'webp', 'image/webp'],
+      ['centers', 'jpg', 'image/jpeg'],
     ] as const) {
       await assertSucceeds(upload(
         owner(),

@@ -26,8 +26,10 @@ export type FuenteProyeccion = {
   proyeccion: ProjectionName;
   // Documentos que NO deben aparecer en publico (bajas, vacantes cerradas...).
   incluir?(documento: DocumentoCanonico): boolean;
-  // Documento privado -> documento que recibe `proyeccionPublica`.
-  mapear(documento: DocumentoCanonico): Record<string, unknown>;
+  // Documento privado -> documento que recibe `proyeccionPublica`. Recibe la
+  // base porque una proyeccion puede depender de una subcoleccion (los insumos
+  // de un lugar, sin ir mas lejos) y sin ella la reconstruccion la vaciaria.
+  mapear(documento: DocumentoCanonico, db: FirestoreReconciliable): Record<string, unknown> | Promise<Record<string, unknown>>;
   // Aporte de este documento a `estadisticas/global`.
   contadores?(documento: DocumentoCanonico): Deltas;
 };
@@ -58,12 +60,16 @@ type Consulta = {
   limit(cantidad: number): Consulta;
   get(): Promise<{ docs: Snapshot[] }>;
 };
+type DocumentoRef = {
+  path?: string;
+  collection?(nombre: string): { get(): Promise<{ docs: Snapshot[] }> };
+};
 type Coleccion = {
-  doc(id: string): { path?: string };
+  doc(id: string): DocumentoRef;
   orderBy(campo: string): Consulta;
 };
 type Lote = {
-  set(referencia: unknown, datos: Record<string, unknown>): void;
+  set(referencia: unknown, datos: Record<string, unknown>, opciones?: { merge: boolean }): void;
   delete(referencia: unknown): void;
   commit(): Promise<void>;
 };
@@ -106,6 +112,11 @@ export async function reconstruirProyecciones(
   }
 
   let contadores = estadisticasVacias();
+  // Solo se reescriben los contadores que ALGUNA fuente alimenta. Con las
+  // fuentes registradas a medias (la fase 3 las va anadiendo dominio a dominio),
+  // un reemplazo completo pondria a cero los contadores de los dominios que
+  // todavia no se han portado.
+  const cubiertos = new Set<Contador>();
   let publicados = 0;
   let eliminados = 0;
   // Por proyeccion, los ids que deben quedar publicados. Lo que sobre en la
@@ -124,11 +135,15 @@ export async function reconstruirProyecciones(
 
         lote.set(
           db.collection(fuente.proyeccion).doc(documento.id),
-          proyeccionPublica(fuente.proyeccion, fuente.mapear(documento)),
+          proyeccionPublica(fuente.proyeccion, await fuente.mapear(documento, db)),
         );
         vistos.add(documento.id);
         publicados += 1;
-        if (fuente.contadores) contadores = sumarEstadisticas(contadores, fuente.contadores(documento));
+        if (fuente.contadores) {
+          const aporte = fuente.contadores(documento);
+          for (const clave of Object.keys(aporte)) cubiertos.add(clave as Contador);
+          contadores = sumarEstadisticas(contadores, aporte);
+        }
       }
       await lote.commit();
     }
@@ -145,15 +160,19 @@ export async function reconstruirProyecciones(
     }
   }
 
+  const parciales: Record<string, number> = {};
+  for (const clave of cubiertos) parciales[clave] = contadores[clave];
+
   const lote = db.batch();
   // Mismo camino que cualquier otra proyeccion: allowlist + denylist.
   lote.set(
     db.collection('estadisticas').doc('global'),
-    proyeccionPublica('estadisticas', { ...contadores, actualizado: marcaServidor() }),
+    proyeccionPublica('estadisticas', { ...parciales, actualizado: marcaServidor() }),
+    { merge: true },
   );
   await lote.commit();
 
-  return { publicados, eliminados, contadores };
+  return { publicados, eliminados, contadores: parciales as Record<Contador, number> };
 }
 
 defineAction({

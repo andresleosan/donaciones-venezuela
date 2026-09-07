@@ -1,7 +1,9 @@
 import { ref, uploadBytes } from 'firebase/storage';
 import { getStorageInstance } from './firebase-config.js';
 
-export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports'];
+// `centers`: cedula del responsable y foto del sitio que pide `panel_crear`.
+// A diferencia de las otras tres, el rol 'panel' NO puede leerla.
+export const PRIVATE_FILE_CATEGORIES = ['receipts', 'needs', 'reports', 'centers'];
 
 export const MIME_EXTENSIONS = {
   'image/jpeg': 'jpg',
@@ -77,6 +79,17 @@ export function createPrivateFilePath(uid, category, fileId, extension) {
   validateExtension(extension);
 
   return `private/${uid}/${category}/${fileId}.${extension}`;
+}
+
+// La camara de los formularios entrega `data:<mime>;base64,<datos>`. Storage
+// necesita un Blob con `type` y `size`, que es lo que valida `validateFile`.
+export function archivoDesdeDataUrl(dataUrl) {
+  const match = /^data:([^;,]+);base64,(.*)$/s.exec(String(dataUrl ?? ''));
+  if (!match) throw new Error('Formato de imagen no reconocido');
+  const binario = atob(match[2]);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i += 1) bytes[i] = binario.charCodeAt(i);
+  return new Blob([bytes], { type: match[1] });
 }
 
 export async function uploadPrivateFile(uid, category, file, options = {}) {

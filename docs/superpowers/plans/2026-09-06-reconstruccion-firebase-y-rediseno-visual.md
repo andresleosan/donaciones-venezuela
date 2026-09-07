@@ -333,7 +333,42 @@ Reglas comunes a todas las tareas de esta fase:
 
 **Invariantes (de la auditoría):** `registrar_lugar` nunca sobreescribe un lugar existente; `panel_crear` exige `auth: 'user'`, rechaza si el nombre existe, crea lugar + `centrosPanel` + claims `{ role: 'panel', panelLugarId }` **en ese orden dentro de una transacción y con las fotos ya subidas por el cliente** (no queda lugar huérfano); `panel_insumo` calcula el `delta` de `cantidadRecibida` dentro de la transacción y llama a `registrarEntrega` (Task 3.4) con él; `panel_insumo_borrar` elimina el subdocumento; `admin_regenerar_panel(email)` busca el usuario por correo con Admin Auth y reasigna claims (si no existe: error `Esa persona debe registrarse primero con ese correo`), auditado.
 
-- [ ] **Step 1..3:** según las reglas comunes. La UI del panel (`js/panel.js`) cambia token+PIN por "entrar con tu cuenta": si `role !== 'panel'` muestra el mensaje `panel.sinAcceso` (nueva clave i18n); tras `panel_crear` la fachada llama `getIdToken(true)`.
+> **Hecha el 2026-09-06.** `functions/src/api/lugares.ts` con las 8 acciones, `borrarLugarEnCascada` (que llamará la Task 3.7) y su fuente en el reconciliador. 40 pruebas de contrato + 3 de integración contra el emulador.
+>
+> **Decisiones tomadas** (la extracción del contrato con 12 agentes dejó 9 abiertas):
+>
+> 1. **`lugarId` opaco del servidor** (`LUG-XXXXXXXX`, `idEntidad()` nuevo en `contract.ts`), no derivado del nombre: renombrar un centro no obliga a mover documentos ni invalida el claim `panelLugarId` ya emitido. La búsqueda por nombre pasa por `indices/lugaresPorNombre/claves/{normalizado}`.
+> 2. **Id del insumo** = `normalizar(nombre)` con la barra sustituida (`claveInsumo`), que es lo que ya usaba la semilla; `claveDocumento()` habría dejado inalcanzables los insumos sembrados.
+> 3. **`gestionado` es derivado** (`Boolean(panelUid)`), no columna, y se recalcula en la misma transacción que concede o revoca el panel.
+> 4. **Un admin en una acción `panel_*`** llega con `panelLugarId` nulo (el despachador le deja pasar): recibe el mismo 403 que un panel sin centro en vez de un 500.
+> 5. **`historial` escribe `tipo` y `unidad`**, que el legado no escribía y que son justo los dos campos que pinta el modal (`js/admin.js:914`): sin ellos toda entrada se veía como « · Agua potable / 0 ».
+> 6. **`panel_insumo` conserva la `unidad`** cuando el payload no la trae. La UI nunca la envía y el `upsert` del legado la devolvía a `'unidades'` en cada guardado, corrompiendo el «Faltan N litros» del admin.
+> 7. **`admin_listar_necesidades` corta en 500** y responde `truncado`; devuelve además `lugarId` junto al `id` del insumo, porque con la subcolección el id dejó de ser único (lo consume `admin_crear_presupuesto`, Task 3.4).
+> 8. **`panel_crear` / `admin_regenerar_panel` no devuelven token ni PIN**: `{ lugarId, nombre }` y `{ lugarId, nombre, email }`. Las tres pantallas que pintaban el recibo de token+PIN (`js/panel.js`, `js/admin.js`, `js/admin-centros.js`) se rehicieron, y las siete claves i18n del token y el PIN se retiraron de ambos idiomas.
+> 9. **Categoría de Storage `centers`** (decisión del operador) para la cédula del responsable y la foto del sitio: es la única que el rol `panel` **no** puede leer. `panel_crear` exige que el `path` sea `private/<uid propio>/centers/…`.
+> 10. **`registrar_lugar` mapea** `Punto de ayuda` → `Centro` y `Tiene disponible` → `Disponible` (decisión del operador): el legado degradaba la segunda a `Necesita`, es decir publicaba una oferta de insumos como si fuera una necesidad.
+>
+> **Corregido también, fuera del alcance estricto:** `functions/src/api/http.ts` cobraba el cupo antirráfaga **después** de resolver la acción, así que un atacante podía martillear con acciones inexistentes sin gastar cuota. Ahora se cobra antes (paridad con el legado, §1.5 del catálogo).
+>
+> **Nueve defectos encontrados por la revisión adversarial** (5 dimensiones × 3 refutadores por hallazgo; 46 hallazgos en bruto, 9 sobrevivieron) y corregidos antes del commit:
+>
+> | Defecto | Consecuencia |
+> |---|---|
+> | `admin_regenerar_panel` no revocaba al titular anterior | Traspasar un centro daba acceso al nuevo responsable **sin quitárselo** al anterior, que podía seguir borrando todos sus insumos. Ahora se le limpia el claim, se revocan sus tokens y —lo que de verdad cierra el agujero— cada acción del panel comprueba `lugar.panelUid === ctx.uid`, porque un ID token ya emitido vive hasta una hora. |
+> | `setCustomUserClaims` reemplaza, no fusiona | Un administrador que registrara su propio centro perdía el rol `admin` para siempre. |
+> | `panel_crear` no miraba `ctx.panelLugarId` | Quien ya administraba un centro podía crear otro y dejar el primero sin nadie que pudiera abrirlo. |
+> | Fechas releídas como 1970 | Firestore devuelve `Timestamp`, no `Date`: `actualizado` volvía siempre como epoch y el directorio habría mostrado «actualizado hace 56 años» en cada centro. |
+> | `lat`/`lng` nulos publicados como 0 | `Number(null) === 0` y `Number.isFinite(0)` es cierto: un centro sin coordenadas se publicaba en el golfo de Guinea. |
+> | El enganche `registrarEntrega` corría después de las escrituras | Ese enganche (Task 3.4) **lee** la factura abierta, y Firestore prohíbe leer después de escribir dentro de una transacción: habría reventado en producción, no en las pruebas. Ahora corre antes. |
+> | La reconstrucción ponía a cero los contadores ajenos | Con las fuentes registradas a medias (la Fase 3 las añade dominio a dominio), `admin_reconstruir_proyecciones` escribía 0 en los siete contadores de los dominios sin portar. Ahora solo reescribe los que alguna fuente alimenta. |
+> | Consulta de grupo de colección sin índice | `collectionGroup('insumos').where('estado','==','Necesita')` necesita un índice de ámbito `COLLECTION_GROUP`; el emulador no lo exige y producción sí. Declarado en `firestore.indexes.json`. |
+> | El panel preguntaba por la sesión una sola vez | Firebase restaura la sesión de forma asíncrona: quien ya había entrado veía «entra con tu cuenta» al abrir `/panel-centro`. `window.DVSesion.listo` resuelve la carrera. El enlace de acceso apuntaba además a `#acceso`, que no existe en `ventana.html`. |
+
+- [x] **Step 1..3:** según las reglas comunes. La UI del panel (`js/panel.js`) cambia token+PIN por "entrar con tu cuenta": si `role !== 'panel'` muestra el mensaje `panel.noAccess` (clave i18n nueva; el plan la llamaba `panel.sinAcceso`); tras `panel_crear` la fachada llama `getIdToken(true)`.
+
+Evidencia: `npm.cmd run test:unit` 31 archivos / **571** pruebas OK; `npm.cmd run test:emulators` 26 archivos / **396** pruebas OK; `npm.cmd --prefix functions run build` código 0; `npm.cmd run build` código 0; `npm.cmd run seed:emulador` código 0; `python scripts/verificar-idioma.py` 1499 claves OK.
+
+**Pendiente de decisión del operador, heredado del legado:** `registrar_lugar` deja que cualquier anónimo cambie el `estado` y la `categoria` de un insumo de **cualquier** centro con solo conocer su nombre (catálogo, "Notas" de la acción). Marcar como `Cubierto` la necesidad crítica de un hospital la hace desaparecer del directorio. El catálogo lo documenta como comportamiento deliberado del legado, así que se portó tal cual; endurecerlo (permitir crear un insumo pero no rebajar el estado de uno existente) es una decisión de producto, no de implementación.
 
 ### Task 3.2: Personas: voluntarios, rescatistas, transportistas, reportes y búsqueda familiar
 

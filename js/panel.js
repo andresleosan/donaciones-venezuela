@@ -1,7 +1,10 @@
 // Modulo generado por modularizacion (build-loop S7). Scope global compartido.
 'use strict';
-    // ===== Panel interno por centro (token + PIN) =====
-    let credencialesPanel = null;
+    // ===== Panel interno por centro (Firebase Auth + claims) =====
+    //
+    // Ya no hay token CTR-… ni PIN: el acceso al panel ES la cuenta. El servidor
+    // resuelve el centro desde el claim `panelLugarId`, asi que ninguna accion
+    // del panel lleva credenciales en el cuerpo.
 
     // Catálogo de insumos frecuentes: el centro los agrega tocando una tarjeta;
     // si falta alguno, usa "Otro insumo". Los nombres son canónicos y se
@@ -17,40 +20,44 @@
     ];
     const CATEGORIAS_INSUMO = ['Agua potable', 'Alimentos', 'Medicamentos', 'Insumos médicos', 'Higiene', 'Ropa', 'Otros'];
 
-    function abrirPanelCentro(tokenPrefill) {
-      credencialesPanel = null;
+    function abrirPanelCentro() {
       abrirModal(t('panel.title'), `
-        <form id="panel-auth-form">
-          <p class="meta">${e(t('panel.intro'))}</p>
-          <div class="form-grid">
-            <div class="field"><label for="panel-token">${e(t('panel.tokenLabel'))}</label><input id="panel-token" required placeholder="CTR-XXXX-XXXX-XXXX" value="${e(tokenPrefill || '')}" autocomplete="off" /></div>
-            <div class="field"><label for="panel-pin">${e(t('panel.pinLabel'))}</label><input id="panel-pin" type="password" inputmode="numeric" required minlength="4" maxlength="8" autocomplete="off" /></div>
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-primary" type="submit">${e(t('panel.enter'))}</button>
-            <button class="btn btn-ghost" type="button" id="panel-crear-link">${e(t('panel.createCta'))}</button>
-          </div>
-          <div id="panel-msg" class="form-message"></div>
-        </form>
+        <p class="meta">${e(t('panel.intro'))}</p>
+        <div id="panel-msg" class="form-message"></div>
+        <div class="form-actions" id="panel-acciones"></div>
         <div id="panel-body"></div>`);
-      $('#panel-auth-form').addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const token = $('#panel-token').value.trim().toUpperCase();
-        const pin = $('#panel-pin').value.trim();
-        mensajePanel('info', t('panel.checking'));
-        try {
-          const data = await window.SheetsService.post({ accion: 'panel_ver', token, pin });
-          credencialesPanel = { token, pin };
-          // El token queda en ESTE dispositivo para que el centro no lo reescriba cada
-          // vez. El servidor ya no lo entrega por correo (V02); esta copia es local.
-          try { localStorage.setItem('dv-token-centro', token); } catch (err) { /* modo privado */ }
-          $('#panel-auth-form').hidden = true;
-          renderPanelCentro(data);
-        } catch (err) {
-          mensajePanel('error', String(err && err.message || t('panel.authError')));
-        }
-      });
+      return cargarPanelCentro();
+    }
+
+    async function cargarPanelCentro() {
+      // Esperar a que Firebase termine de restaurar la sesión guardada: si no,
+      // quien ya había entrado ve «entra con tu cuenta» al abrir /panel-centro.
+      if (window.DVSesion && window.DVSesion.listo) await window.DVSesion.listo;
+      const acciones = $('#panel-acciones');
+      acciones.innerHTML = `<button class="btn btn-ghost" type="button" id="panel-crear-link">${e(t('panel.createCta'))}</button>`;
       $('#panel-crear-link').addEventListener('click', abrirCrearPanel);
+
+      if (typeof sesionActual === 'function' && !sesionActual()) {
+        mensajePanel('info', t('panel.needSession'));
+        // /panel-centro es ventana.html: no tiene router de hash ni vista de acceso.
+        acciones.insertAdjacentHTML('afterbegin', `<a class="btn btn-primary" href="/#acceso">${e(t('session.login'))}</a>`);
+        return;
+      }
+
+      mensajePanel('info', t('panel.checking'));
+      try {
+        const data = await window.SheetsService.post({ accion: 'panel_ver' });
+        mensajePanel('info', '');
+        $('#panel-msg').className = 'form-message';
+        acciones.innerHTML = '';
+        renderPanelCentro(data);
+      } catch (err) {
+        // 403 = la cuenta existe pero no administra ningun centro: es el caso
+        // normal de quien entra a mirar, no un error que haya que depurar.
+        const sinAcceso = err && err.status === 403;
+        mensajePanel(sinAcceso ? 'info' : 'error',
+          sinAcceso ? t('panel.noAccess') : String((err && err.message) || t('panel.openError')));
+      }
     }
 
     function mensajePanel(tipo, texto) {
@@ -169,7 +176,6 @@
     }
 
     async function guardarDatosLugarPanel() {
-      if (!credencialesPanel) return;
       const coords = parsearCoords($('#pd-coords').value) || {};
       try {
         const data = await window.SheetsService.post(Object.assign({
@@ -177,7 +183,7 @@
           tipo: $('#pd-tipo').value,
           ubicacion: $('#pd-ubicacion').value.trim(),
           telefono: $('#pd-telefono').value.trim()
-        }, coords, credencialesPanel));
+        }, coords));
         renderPanelCentro(data);
         mensajePanel2('success', t('panel.saved'));
         cargarTodo();
@@ -209,10 +215,9 @@
     // Re-render tras cada acción conservando la posición de scroll (evita el
     // salto al tope cuando se edita una tarjeta al final de la lista).
     async function persistirInsumo(payload, msgOkKey) {
-      if (!credencialesPanel) return;
       const y = window.scrollY;
       try {
-        const data = await window.SheetsService.post(Object.assign({ accion: payload.accion }, credencialesPanel, payload.datos));
+        const data = await window.SheetsService.post(Object.assign({ accion: payload.accion }, payload.datos));
         renderPanelCentro(data);
         window.scrollTo({ top: y });
         mensajePanel2('success', t(msgOkKey));
@@ -256,7 +261,6 @@
             ${pasoCamaraHtml('pc-sitio', t('panel.sitePhoto'), t('panel.sitePhotoHelp'))}
             <div class="field"><label for="pc-telefono">${e(t('panel.phoneLabel'))}</label><input id="pc-telefono" type="tel" required /></div>
             <div class="field"><label for="pc-email">${e(t('common.email'))}</label><input id="pc-email" type="email" required autocomplete="email" /></div>
-            <div class="field"><label for="pc-pin">${e(t('panel.pinNewLabel'))}</label><input id="pc-pin" type="password" inputmode="numeric" required minlength="4" maxlength="8" /></div>
             ${pasoCamaraHtml('pc-cedula', t('modal.photoId'), t('modal.photoIdHelp'), { guia: 'cedula' })}
           </div>
           <div class="form-actions"><button class="btn btn-primary" type="submit">${e(t('panel.create'))}</button></div>
@@ -270,6 +274,14 @@
       $('#panel-crear-form').addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const msg = $('#panel-crear-msg');
+        // `panel_crear` exige sesion: la cuenta es la que queda como responsable
+        // del centro, no un PIN elegido en el formulario.
+        if (window.DVSesion && window.DVSesion.listo) await window.DVSesion.listo;
+        if (typeof sesionActual === 'function' && !sesionActual()) {
+          msg.className = 'form-message visible error';
+          msg.textContent = t('panel.needSession');
+          return;
+        }
         if (!fotoCedula.length) {
           msg.className = 'form-message visible error';
           msg.textContent = t('messages.volunteerPhotoMissing');
@@ -280,25 +292,33 @@
           msg.textContent = t('panel.sitePhotoMissing');
           return;
         }
-        msg.className = 'form-message visible info';
-        msg.textContent = t('panel.creating');
         try {
+          // Las fotos ya no viajan en el JSON: se suben a Storage privado
+          // (categoria `centers`, que solo lee el admin) y la accion recibe el
+          // path. Asi un formulario grande no depende de un cuerpo de 4 MB.
+          msg.className = 'form-message visible info';
+          msg.textContent = t('panel.uploading');
+          const [cedula, sitio] = await Promise.all([
+            window.DVFirebase.subirFotoPrivada('centers', fotoCedula[0]),
+            window.DVFirebase.subirFotoPrivada('centers', fotoSitio[0])
+          ]);
+
+          msg.className = 'form-message visible info';
+          msg.textContent = t('panel.creating');
           const coords = parsearCoords($('#pc-coords').value) || {};
-          const data = await window.SheetsService.post(Object.assign({
+          await window.SheetsService.post(Object.assign({
             accion: 'panel_crear',
             nombre: $('#pc-nombre').value.trim(),
             tipo: $('#pc-tipo').value,
             ubicacion: $('#pc-ubicacion').value.trim(),
             telefono: $('#pc-telefono').value.trim(),
             email: $('#pc-email').value.trim(),
-            fotoCedula: fotoCedula[0],
-            fotoSitio: fotoSitio[0],
-            pin: $('#pc-pin').value.trim()
+            fotoCedulaPath: cedula.path,
+            fotoSitioPath: sitio.path
           }, coords));
           $('#panel-crear-form').innerHTML = `
-            <div class="notice success visible">${e(t('panel.tokenCreated'))}</div>
-            <p class="tracking-code" style="font-size:1.3rem">${e(data.token)}</p>
-            <p class="meta">${e(t('panel.tokenHint'))}</p>`;
+            <div class="notice success visible">${e(t('panel.created'))}</div>
+            <p class="meta">${e(t('panel.createdHint'))}</p>`;
           cargarTodo();
         } catch (err) {
           msg.className = 'form-message visible error';
@@ -312,8 +332,9 @@
     // inicio. Los deep-links a páginas (centro/admin) redirigen a su página.
     function abrirPanelDesdeUrl() {
       const hashRaw = decodeURIComponent(window.location.hash || '');
-      const match = hashRaw.match(/^#centro\/(CTR-[A-Z0-9-]+)$/i);
-      if (match) { window.location.href = '/panel-centro?token=' + encodeURIComponent(match[1].toUpperCase()); return; }
+      // Los enlaces #centro/CTR-… de la epoca del token siguen llegando desde
+      // mensajes antiguos: se aceptan, pero el token ya no significa nada.
+      if (/^#centro(\/|$)/i.test(hashRaw)) { window.location.href = '/panel-centro'; return; }
       if (/^#admin$/i.test(hashRaw)) { window.location.href = '/admin'; return; }
       // El token de seguimiento (#seguimiento/DV-…) lo pinta cargarSeguimientoDesdeUrl.
       if (/^#seguimiento\//i.test(hashRaw)) return;

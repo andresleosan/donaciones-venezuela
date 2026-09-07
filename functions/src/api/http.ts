@@ -187,16 +187,17 @@ export async function apiHandler(
     }
 
     const payload = cuerpo as Record<string, unknown>;
+
+    // Anti-rafaga por IP antes de resolver la accion: si se cobrara despues, un
+    // atacante podria martillear con acciones inexistentes sin gastar cupo.
+    if (ip !== 'desconocida') await dependencies.rateLimiter('rafaga', ip, nowMs);
+
     const nombre = s(payload.accion, 40);
     const definicion = dependencies.lookupAction(nombre);
     if (!definicion) {
       fallo(res, 400, MENSAJES.desconocida);
       return;
     }
-
-    // Anti-rafaga por IP antes que nada: acota un flood aunque la accion sea
-    // publica y aunque el cuerpo sea basura.
-    if (ip !== 'desconocida') await dependencies.rateLimiter('rafaga', ip, nowMs);
 
     const context = await resolverIdentidad(req, definicion, dependencies);
 

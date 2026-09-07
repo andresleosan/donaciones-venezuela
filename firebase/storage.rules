@@ -9,7 +9,9 @@ service firebase.storage {
     function isCategory(category) {
       return category == 'receipts'
         || category == 'needs'
-        || category == 'reports';
+        || category == 'reports'
+        // Cedula del responsable y foto del sitio de un centro (panel_crear).
+        || category == 'centers';
     }
 
     // Exactamente las tres claves del contrato: sin canal de datos libre en metadata.

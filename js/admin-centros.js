@@ -155,19 +155,15 @@
           boton.addEventListener('click', async () => {
             boton.disabled = true;
             try {
-              // admin_regenerar_panel identifica el centro por NOMBRE, no por id.
+              // admin_regenerar_panel identifica el centro por NOMBRE, no por id,
+              // y ahora necesita ademas el correo de quien lo administrara.
               const centros = await dvCentros();
               const centro = centros.find((c) => String(c.id) === String(fila.lugar_id));
               if (!centro) throw new Error(dvTexto('empty'));
-              const r = await postAdmin({ accion: 'admin_regenerar_panel', nombre: centro.nombre });
-              $('#acc-regen-out').innerHTML = `
-                <div class="recibo">
-                  <div class="recibo-row"><span class="meta">${e(t('access.centerTitle'))}</span>
-                    <span class="token-value"><strong>${e(r.token)}</strong></span></div>
-                  <div class="recibo-row"><span class="meta">PIN</span>
-                    <span class="token-value"><strong>${e(r.pin)}</strong></span></div>
-                  <p class="meta">${e(t('admin.tokenHint'))}</p>
-                </div>`;
+              const correo = String(fila.email || '').trim();
+              if (!correo) throw new Error(t('admin.regenEmail'));
+              const r = await postAdmin({ accion: 'admin_regenerar_panel', nombre: centro.nombre, email: correo });
+              $('#acc-regen-out').innerHTML = `<div class="recibo"><div class="recibo-row"><span class="meta">${e(t('access.centerTitle'))}</span><span class="token-value"><strong>${e(r.nombre)}</strong></span></div><div class="recibo-row"><span class="meta">${e(t('common.email'))}</span><span class="token-value"><strong>${e(r.email)}</strong></span></div><p class="meta">${e(t('admin.panelRegenerated'))}</p></div>`;
               toast(dvTexto('accessRegenDone'));
             } catch (err) {
               boton.disabled = false;

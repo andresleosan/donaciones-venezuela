@@ -106,6 +106,17 @@ describe('envoltura HTTP', () => {
     expect(result.body).toEqual({ success: false, error: API_MESSAGES.desconocida });
   });
 
+  // Si el cupo antirrafaga se cobrara despues de resolver la accion, un atacante
+  // podria martillear con acciones inexistentes sin gastar nada.
+  it('cobra el cupo antirrafaga aunque la accion no exista', async () => {
+    const { res } = createResponse();
+    const deps = dependencias();
+
+    await apiHandler(peticion({ accion: 'no_existe' }), res, deps);
+
+    expect(deps.rateLimiter).toHaveBeenCalledWith('rafaga', expect.any(String), expect.any(Number));
+  });
+
   it('devuelve success:true y fusiona el resultado de la accion', async () => {
     const { res, result } = createResponse();
     handlers.publica.mockResolvedValueOnce({ token: 'DV-AAAA-BBBB-CCCC', recaudado: 10 } as never);

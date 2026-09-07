@@ -59,6 +59,18 @@ it('aplica la matriz de acceso y eliminación', () => {
   expect(canDeletePrivateFile({ uid: 'admin-1', role: 'admin' }, needs)).toBe(true);
 });
 
+// `centers` lleva la cedula de la persona responsable de un centro: es la unica
+// categoria que el rol 'panel' NO puede leer, ni siquiera la de otro centro.
+it('reserva la categoria centers al admin y a quien la subio', () => {
+  const centers = validatePrivateStoragePath('private/owner-1/centers/cedula.jpg');
+
+  expect(centers.category).toBe('centers');
+  expect(canAccessPrivateFile({ uid: 'owner-1', role: 'user' }, centers)).toBe(true);
+  expect(canAccessPrivateFile({ uid: 'admin-1', role: 'admin' }, centers)).toBe(true);
+  expect(canAccessPrivateFile({ uid: 'panel-1', role: 'panel' }, centers)).toBe(false);
+  expect(canDeletePrivateFile({ uid: 'panel-1', role: 'panel' }, centers)).toBe(false);
+});
+
 it('rechaza contextos sin UID aunque tengan rol privilegiado', () => {
   const descriptor = validatePrivateStoragePath('private/owner-1/needs/photo.png');
 

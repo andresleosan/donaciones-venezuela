@@ -576,8 +576,13 @@ export function crearSheetsServiceFirebase() {
     return postApi(payload, { idToken: await getIdToken() });
   }
 
-  function post(payload) {
-    return enviarConCola(payload, enviar);
+  async function post(payload) {
+    const respuesta = await enviarConCola(payload, enviar);
+    // `panel_crear` acaba de asignar el claim `panelLugarId`. El ID token en
+    // memoria todavia no lo lleva: sin forzar la renovacion, la primera
+    // accion del panel recien creado responderia 403.
+    if (payload && payload.accion === 'panel_crear') await getIdToken(true);
+    return respuesta;
   }
 
   return {

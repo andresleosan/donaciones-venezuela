@@ -894,14 +894,21 @@
         <div class="admin-form-card">
           <p class="section-copy">${e(t('admin.regenIntro'))}</p>
           <div class="field"><label for="regen-nombre">${e(t('admin.centerName'))}</label><input id="regen-nombre" /></div>
+          <div class="field"><label for="regen-email">${e(t('admin.regenEmail'))}</label><input id="regen-email" type="email" autocomplete="off" /></div>
           <div class="form-actions"><button class="btn btn-primary" type="button" id="regen-btn">${e(t('admin.regenerate'))}</button></div>
           <div id="regen-out"></div>
         </div>`);
       bindGestMenu();
       $('#regen-btn').addEventListener('click', async () => {
         try {
-          const r = await postAdmin({ accion: 'admin_regenerar_panel', nombre: $('#regen-nombre').value.trim() });
-          $('#regen-out').innerHTML = `<div class="recibo"><div class="recibo-row"><span class="meta">${e(t('access.centerTitle'))}</span><span class="token-value"><strong>${e(r.token)}</strong></span></div><div class="recibo-row"><span class="meta">PIN</span><span class="token-value"><strong>${e(r.pin)}</strong></span></div><p class="meta">${e(t('admin.tokenHint'))}</p></div>`;
+          // Ya no hay token ni PIN que entregar: el acceso queda ligado a la
+          // cuenta de esa persona, que entra con su propio correo.
+          const r = await postAdmin({
+            accion: 'admin_regenerar_panel',
+            nombre: $('#regen-nombre').value.trim(),
+            email: $('#regen-email').value.trim()
+          });
+          $('#regen-out').innerHTML = `<div class="recibo"><div class="recibo-row"><span class="meta">${e(t('access.centerTitle'))}</span><span class="token-value"><strong>${e(r.nombre)}</strong></span></div><div class="recibo-row"><span class="meta">${e(t('common.email'))}</span><span class="token-value"><strong>${e(r.email)}</strong></span></div><p class="meta">${e(t('admin.panelRegenerated'))}</p></div>`;
         } catch (err) { mensajeAdmin('#gest-msg', 'error', String((err && err.message) || '')); }
       });
     }
@@ -1530,11 +1537,9 @@
         if (r.tipo === 'voluntario') {
           return `<li><strong>${e(t('access.volunteerTitle'))}</strong> · ${e(r.nombre)} — <a href="#voluntarios">${e(t('access.goVolunteer'))}</a></li>`;
         }
-        // V02: el token ya no viaja desde el servidor. Si este dispositivo lo tiene
-      // guardado, se prellena; si no, el centro lo escribe en el panel.
-      const tokLocal = (function () { try { return localStorage.getItem('dv-token-centro') || ''; } catch (err) { return ''; } })();
-      const hrefCentro = tokLocal ? `/panel-centro?token=${encodeURIComponent(tokLocal)}` : '/panel-centro';
-      return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="${e(hrefCentro)}">${e(t('access.goCenter'))}</a></li>`;
+        // El panel se abre con la cuenta: el servidor resuelve el centro desde
+        // el claim `panelLugarId`, asi que el enlace ya no lleva token.
+        return `<li><strong>${e(t('access.centerTitle'))}</strong> · ${e(r.nombre)} — <a href="/panel-centro">${e(t('access.goCenter'))}</a></li>`;
       }).join('');
       // El donante inicia sesión sin ningún rol: en vez de rechazarlo, se le
       // ofrecen los registros disponibles (problema 2).

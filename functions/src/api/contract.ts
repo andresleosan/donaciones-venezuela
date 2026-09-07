@@ -93,6 +93,17 @@ export function tokenAlfa(prefijo: string, random: (length: number) => Uint8Arra
   return `${prefijo}-${cuerpo.slice(0, 4)}-${cuerpo.slice(4, 8)}-${cuerpo.slice(8, 12)}`;
 }
 
+// Id opaco de entidad generado por el servidor: PREFIJO-XXXXXXXX (8 hex).
+// Nunca lo elige el cliente y no deriva del nombre, asi que renombrar una
+// entidad no obliga a mover su documento ni invalida los claims ya emitidos.
+export function idEntidad(
+  prefijo: string,
+  random: (length: number) => Uint8Array = (length) => new Uint8Array(randomBytes(length)),
+): string {
+  const hex = Array.from(random(4)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${prefijo}-${hex.toUpperCase()}`;
+}
+
 export const TOKEN_PATRON: Record<'DV' | 'CTR' | 'REF' | 'C', RegExp> = {
   DV: /^DV-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/,
   CTR: /^CTR-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/,

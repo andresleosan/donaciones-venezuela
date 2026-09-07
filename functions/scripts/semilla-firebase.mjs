@@ -36,8 +36,11 @@ initializeApp({ projectId });
 const { getFirestore } = await import('firebase-admin/firestore');
 const { getAuth } = await import('firebase-admin/auth');
 const { proyeccionPublica } = await import('../lib/api/publicar.js');
-const { normalizar, coordsPublicas } = await import('../lib/api/contract.js');
+const { normalizar } = await import('../lib/api/contract.js');
 const { estadisticasVacias } = await import('../lib/api/estadisticas.js');
+// La proyeccion y el id de insumo salen del propio dominio: si cambia el
+// modelo, la semilla cambia con el y no queda describiendo una app anterior.
+const { claveInsumo, documentoPublico } = await import('../lib/api/lugares.js');
 
 const db = getFirestore();
 const auth = getAuth();
@@ -157,21 +160,6 @@ const USUARIOS = [
   { email: 'user@prueba.local', password: 'prueba1234', claims: {} },
 ];
 
-function insumosPublicos(insumos, estado) {
-  return insumos
-    .filter((insumo) => insumo.estado === estado)
-    .map(({ nombre, categoria, cantidadNecesaria, cantidadRecibida, urgencia, unidad }) => ({
-      nombre,
-      categoria,
-      cantidadNecesaria,
-      cantidadRecibida,
-      urgencia,
-      unidad,
-      porcentaje: cantidadNecesaria > 0 ? Math.round((100 * cantidadRecibida) / cantidadNecesaria) : 0,
-      yaCubierto: cantidadNecesaria > 0 && cantidadRecibida >= cantidadNecesaria,
-    }));
-}
-
 async function sembrarUsuarios() {
   const creados = [];
   for (const { email, password, claims } of USUARIOS) {
@@ -192,7 +180,6 @@ function sembrarLugares(lote, panelUid) {
   let hospitales = 0;
 
   for (const lugar of LUGARES) {
-    const coords = coordsPublicas(lugar.lat, lugar.lng);
     const canonico = {
       tipo: lugar.tipo,
       nombre: lugar.nombre,
@@ -201,31 +188,39 @@ function sembrarLugares(lote, panelUid) {
       telefono: lugar.telefono,
       lat: lugar.lat,
       lng: lugar.lng,
-      actualizado: AHORA,
+      activo: true,
       panelUid: lugar.gestionado ? panelUid : null,
+      actualizado: AHORA,
     };
+    const insumos = lugar.insumos.map((insumo) => ({ ...insumo, actualizado: AHORA }));
+
     lote.set(db.collection('lugares').doc(lugar.id), canonico);
-    for (const insumo of lugar.insumos) {
+    for (const insumo of insumos) {
       lote.set(
-        db.collection('lugares').doc(lugar.id).collection('insumos').doc(normalizar(insumo.nombre)),
-        { ...insumo, actualizado: AHORA },
+        db.collection('lugares').doc(lugar.id).collection('insumos').doc(claveInsumo(insumo.nombre)),
+        insumo,
       );
     }
+    // Sin la reserva del nombre, `registrar_lugar` crearia un centro duplicado
+    // sobre uno sembrado y `admin_regenerar_panel` no lo encontraria.
+    lote.set(
+      db.collection(`indices/lugaresPorNombre/claves`).doc(canonico.nombreNorm),
+      { valor: lugar.id, createdAt: AHORA },
+    );
+    if (lugar.gestionado) {
+      lote.set(db.collection('centrosPanel').doc(lugar.id), {
+        authUid: panelUid,
+        email: 'panel@prueba.local',
+        fotoCedulaPath: `private/${panelUid}/centers/cedula.jpg`,
+        fotoSitioPath: `private/${panelUid}/centers/sitio.jpg`,
+        creado: AHORA,
+      });
+    }
 
-    lote.set(db.collection('lugaresPublicos').doc(lugar.id), proyeccionPublica('lugaresPublicos', {
-      nombre: lugar.nombre,
-      nombreNorm: canonico.nombreNorm,
-      tipo: lugar.tipo,
-      ubicacionPublica: lugar.ubicacion,
-      contactoPublico: lugar.telefono,
-      lat: coords.lat,
-      lng: coords.lng,
-      gestionado: lugar.gestionado,
-      activo: true,
-      necesita: insumosPublicos(lugar.insumos, 'Necesita'),
-      tieneDisponible: insumosPublicos(lugar.insumos, 'Disponible'),
-      cubiertos: insumosPublicos(lugar.insumos, 'Cubierto'),
-    }));
+    lote.set(
+      db.collection('lugaresPublicos').doc(lugar.id),
+      proyeccionPublica('lugaresPublicos', documentoPublico(canonico, insumos)),
+    );
 
     if (lugar.tipo === 'Hospital') hospitales += 1;
     else centros += 1;

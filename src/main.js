@@ -1,5 +1,10 @@
-import { configureAuthPersistence, observeAuth } from './firebase/firebase-auth.js';
-import { getPrivateFileUrl, requestPrivateFileDeletion, uploadPrivateFile } from './firebase/index.js';
+import { configureAuthPersistence, getCurrentUser, observeAuth } from './firebase/firebase-auth.js';
+import {
+  archivoDesdeDataUrl,
+  getPrivateFileUrl,
+  requestPrivateFileDeletion,
+  uploadPrivateFile,
+} from './firebase/index.js';
 import { crearSheetsServiceFirebase } from './data/sheets-service-firebase.js';
 
 // Arranque del cliente Firebase.
@@ -19,12 +24,21 @@ import { crearSheetsServiceFirebase } from './data/sheets-service-firebase.js';
 // legible por cualquier script de la página. `js/core.js` lee y escribe aquí.
 function crearAlmacenSesion() {
   let sesion = null;
+  // Firebase restaura la sesión de IndexedDB de forma asíncrona. Sin esta
+  // promesa, una página que pregunte «¿hay sesión?» nada más cargar siempre
+  // recibe «no» y manda a iniciar sesión a quien ya la tiene.
+  let resolverListo;
+  const listo = new Promise((resolve) => { resolverListo = resolve; });
 
   function avisar() {
     globalThis.dispatchEvent(new CustomEvent('dv-sesion-change', { detail: { sesion } }));
   }
 
   return {
+    listo,
+    resuelta() {
+      resolverListo(sesion);
+    },
     get() {
       return sesion;
     },
@@ -45,7 +59,20 @@ const servicio = crearSheetsServiceFirebase();
 
 globalThis.DVSesion = almacenSesion;
 globalThis.SheetsService = servicio;
-globalThis.DVFirebase = { getPrivateFileUrl, requestPrivateFileDeletion, uploadPrivateFile };
+// Los formularios legados capturan la foto con la camara y la tenian en una
+// `data:` URL dentro del JSON. Ahora la suben antes y mandan solo el `path`.
+async function subirFotoPrivada(categoria, dataUrl) {
+  const usuario = await getCurrentUser();
+  if (!usuario) throw new Error('Entra con tu cuenta para continuar');
+  return uploadPrivateFile(usuario.uid, categoria, archivoDesdeDataUrl(dataUrl));
+}
+
+globalThis.DVFirebase = {
+  getPrivateFileUrl,
+  requestPrivateFileDeletion,
+  subirFotoPrivada,
+  uploadPrivateFile,
+};
 
 servicio.iniciarSincronizacion();
 
@@ -61,6 +88,7 @@ function arrancarAuth() {
     .then(() => observeAuth(async (usuario) => {
       if (!usuario) {
         almacenSesion.clear();
+        almacenSesion.resuelta();
         return;
       }
       try {
@@ -73,11 +101,16 @@ function arrancarAuth() {
         });
       } catch (err) {
         console.error('No se pudo leer la sesión de Firebase', err);
+      } finally {
+        almacenSesion.resuelta();
       }
     }))
     // Si falta alguna `VITE_*`, la app sigue en pie con la sesión vacía y el
     // error queda en consola, igual que cualquier fallo de lectura.
-    .catch((err) => console.error('No se pudo iniciar Firebase Auth', err));
+    .catch((err) => {
+      console.error('No se pudo iniciar Firebase Auth', err);
+      almacenSesion.resuelta();
+    });
 }
 
 if (document.readyState === 'loading') {

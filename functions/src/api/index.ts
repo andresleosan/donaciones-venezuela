@@ -12,7 +12,8 @@
 // dominio declarara su fuente de proyeccion.
 import '../jobs/reconciliar-proyecciones.js';
 
-// import './lugares.js';
+import './lugares.js';
+
 // import './personas.js';
 // ...
 
