@@ -21,7 +21,7 @@ jobs:
       - name: Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.23.4'
           cache: npm
 
       # Emulator Suite corre sobre la JVM y firebase-tools exige JDK 21 o superior.
