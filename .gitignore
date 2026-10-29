@@ -13,7 +13,9 @@ Thumbs.db
 
 # Variables de entorno (no hay backend Node, pero por si acaso)
 .env
-.env.local
+.env.*
+!.env.example
+!.env.*.example
 
 # Vercel
 .vercel
@@ -27,3 +29,7 @@ service-account.json
 *.pem
 *.key
 *.p12
+
+# Incremental TypeScript cache
+*.tsbuildinfo
+*serviceAccount*.json
