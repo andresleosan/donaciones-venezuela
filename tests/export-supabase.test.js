@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import {
@@ -944,7 +944,7 @@ describe('export staging and command runner', () => {
       expect(paths.root).toContain('2026-08-06T120000Z');
       for (const name of ['root', 'postgres', 'auth', 'storage', 'reconciliation', 'temp']) {
         expect(paths[name]).toBeDefined();
-        if (name !== 'root') expect(paths[name].startsWith(paths.root + '\\')).toBe(true);
+        if (name !== 'root') expect(relative(paths.root, paths[name])).toBe(name);
         expect(existsSync(paths[name])).toBe(true);
       }
       expect(JSON.parse(readFileSync(join(paths.root, 'run.json'), 'utf8'))).toMatchObject({

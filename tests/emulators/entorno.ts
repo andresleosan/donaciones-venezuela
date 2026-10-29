@@ -3,8 +3,8 @@
 // Existia una costura real: el cliente apuntaba a `<proyecto>.firebasestorage.app`,
 // las pruebas de emulador cableaban `<proyecto>.appspot.com` y Functions resolvia
 // un tercer valor con el bucket por defecto. Nadie cubria el punto de union.
-// Ahora el bucket se declara aqui y en `functions/.env.<proyecto>`, y una prueba
-// comprueba que ambos coinciden.
+// El bucket de prueba se declara aqui y en `functions/.env.demo.example`;
+// el contrato compara ambos sin leer configuraciones locales ignoradas.
 export const DEMO_PROJECT_ID = 'demo-donaciones-venezuela';
 
 // El emulador de Storage sirve el nombre historico `.appspot.com` para un

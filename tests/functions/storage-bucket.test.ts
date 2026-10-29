@@ -18,21 +18,23 @@ function leerEnv(ruta: string): Record<string, string> {
   );
 }
 
-it('el proyecto de desarrollo usa el mismo bucket en cliente y en Functions', () => {
+it('la plantilla de Functions coincide con el bucket del cliente al configurar el proyecto', () => {
   const cliente = leerEnv('.env.example');
-  const servidor = leerEnv('functions/.env.donaciones-venezuela-4fc29');
+  const servidor = leerEnv('functions/.env.example');
 
-  expect(servidor.STORAGE_BUCKET).toBe(cliente.VITE_FIREBASE_STORAGE_BUCKET);
+  expect(cliente.VITE_FIREBASE_PROJECT_ID).toBeTruthy();
+  expect(servidor.STORAGE_BUCKET.replace('your-project-id', cliente.VITE_FIREBASE_PROJECT_ID))
+    .toBe(cliente.VITE_FIREBASE_STORAGE_BUCKET);
   expect(servidor.STORAGE_BUCKET).toBeTruthy();
 });
 
-it('el proyecto de pruebas declara el bucket que sirve el emulador', () => {
-  const servidor = leerEnv('functions/.env.demo-donaciones-venezuela');
+it('la plantilla demo declara el bucket que sirve el emulador', () => {
+  const servidor = leerEnv('functions/.env.demo.example');
 
   expect(servidor.STORAGE_BUCKET).toBe(DEMO_STORAGE_BUCKET);
 });
 
-it('cada proyecto declara su modo de App Check', () => {
-  expect(leerEnv('functions/.env.demo-donaciones-venezuela').APP_CHECK_MODE).toBe('disabled');
-  expect(leerEnv('functions/.env.donaciones-venezuela-4fc29').APP_CHECK_MODE).toBe('log-only');
+it('las plantillas limitan App Check deshabilitado al emulador y exigen enforced fuera de el', () => {
+  expect(leerEnv('functions/.env.demo.example').APP_CHECK_MODE).toBe('disabled');
+  expect(leerEnv('functions/.env.example').APP_CHECK_MODE).toBe('enforced');
 });
