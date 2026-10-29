@@ -5,10 +5,6 @@
 .env.*
 !.env.example
 !.env.*.example
-# Configuracion NO secreta de Functions por proyecto (modo App Check, origenes
-# permitidos). Debe viajar en el repositorio: el despliegue depende de ella.
-!functions/.env.demo-donaciones-venezuela
-!functions/.env.donaciones-venezuela-4fc29
 *.pem
 *.key
 credentials*.json
@@ -73,3 +69,7 @@ exports/
 *.age
 /exports/**/*.jsonl
 /exports/**/*.sql
+
+# Incremental TypeScript cache
+*.tsbuildinfo
+*serviceAccount*.json

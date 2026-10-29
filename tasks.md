@@ -29,3 +29,19 @@ El repositorio tiene **solo `main`** desde el 2026-09-06: `firebase-greenfield` 
 No se abre Firestore/Storage, no se eliminan migraciones SQL y no se despliega producción mientras una tarea de seguridad, backup, contrato o prueba esté pendiente.
 
 La validación Cronos del 2026-08-06 bloquea además el inicio de `T04` hasta cerrar el gate de `MIGRATION_VALIDATION.md`. `T02` y `T03` están verificados solo como preparación local aislada y no constituyen una migración funcional.
+
+
+## Auditoría adicional de dependencias — 2026-10-27
+
+- Prioridad: P0 de seguridad; autorizada por el propietario.
+- Estado: correcciones locales en verificación; sin commit, push ni despliegue.
+- Alcance: versiones de producción afectadas, lockfile reproducible y compatibilidad de las APIs utilizadas.
+- Evidencia: `E:\SecurityAudit-2026-10-26\execution\round2-20261027\projects\npm-donaciones-venezuela\validation.json`, `audits.json` e `integration.json`. Consultar los registros antes de considerar el trabajo verificado.
+- Aceptación: pruebas pertinentes sin regresiones nuevas; auditorías consultadas correctamente; cambios ajenos e índice Git preservados. Los fallos de línea base y límites externos se documentan, no se desactivan.
+- Reversión: snapshot protegido en el mismo directorio de auditoría; restaurar únicamente los archivos revisados y reinstalar el lockfile previo. No restaura ni modifica datos remotos.
+
+## Auditoría complementaria de seguridad — 2026-10-28
+
+- Estado: en verificación local; conserva los cambios previos y no publica ni despliega.
+- Alcance autorizado: runtime Node, dependencias vulnerables y consistencia de CI; revisión de archivos sensibles versionados.
+- Evidencia y reversión por archivo: `E:\Proyectos\.codex-audit-20261028\audit_firebase.json`, `logs/` y `before/`.

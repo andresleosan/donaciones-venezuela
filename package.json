@@ -12,7 +12,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "test": "npm run test:unit",
-    "test:unit": "vitest run --exclude tests/rules/** --exclude tests/emulators/**",
+    "test:unit": "vitest run --exclude \"tests/rules/**\" --exclude \"tests/emulators/**\"",
     "test:rules:run": "vitest run tests/rules",
     "test:rules": "node scripts/emulators-exec.mjs --project demo-donaciones-venezuela --only firestore,storage \"npm run test:rules:run\"",
     "test:functions:run": "vitest run tests/functions tests/emulators/health.integration.test.ts tests/emulators/auth.integration.test.ts tests/emulators/volunteer-consent.integration.test.ts tests/emulators/api.integration.test.ts tests/emulators/api-lugares.integration.test.ts tests/emulators/api-personas.integration.test.ts tests/emulators/api-vacantes.integration.test.ts tests/emulators/api-facturas.integration.test.ts tests/emulators/api-presupuestos.integration.test.ts tests/emulators/api-viajes.integration.test.ts tests/emulators/api-denuncias.integration.test.ts tests/emulators/api-consola.integration.test.ts",
@@ -32,7 +32,7 @@
     "@firebase/rules-unit-testing": "5.0.1",
     "fake-indexeddb": "6.2.5",
     "firebase-tools": "15.34.1",
-    "vite": "7.3.7",
+    "vite": "8.3.5",
     "vitest": "4.1.12"
   },
   "overrides": {
